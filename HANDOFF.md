@@ -15,8 +15,10 @@ Then open **http://127.0.0.1:5000** in your browser. That’s the web UI. For th
 The Docker container uses **gunicorn** (production WSGI server) instead of Flask's development server. For local production testing:
 ```bash
 pip install -r requirements.txt
-gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 120 app:app
+gunicorn --bind 0.0.0.0:5000 --workers 1 --timeout 120 app:app
 ```
+
+**IMPORTANT:** Use `--workers 1` (not 4+) because the app uses a global `memStorage` dictionary. Multiple workers have separate memory, causing "No data uploaded" errors. See "Production Deployment Notes" below for details.
 
 **Note:** `python app.py` uses Flask's built-in development server (not suitable for production). Use gunicorn or another production WSGI server for production deployments.
 
@@ -99,7 +101,8 @@ python scripts/check_requirements.py
 python app.py
 
 # Production server (gunicorn - for production)
-gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 120 app:app
+# NOTE: Using 1 worker due to memStorage limitation (see Production Deployment Notes)
+gunicorn --bind 0.0.0.0:5000 --workers 1 --timeout 120 app:app
 
 # Docker build & run (uses gunicorn automatically)
 docker build -f deploy/docker/Dockerfile -t digiterra:local .
@@ -116,14 +119,19 @@ helm install digiterra deploy/helm/digiterra --set image.repository=<your-regist
 ## Production Deployment Notes
 
 - **Development vs Production:** `python app.py` runs Flask's development server (single-threaded, not suitable for production). For production, use **gunicorn** (included in requirements.txt) or another production WSGI server.
-- **Docker:** The Dockerfile automatically uses gunicorn with 4 workers. Adjust worker count based on your CPU cores: `(2 * CPU cores) + 1` is a good default.
+- **CRITICAL - Worker Count:** **Always use `--workers 1`** when running gunicorn (both in Docker and when running directly). The app uses a global `memStorage` dictionary for in-memory state. With multiple workers, each process has separate memory, so data uploaded/preprocessed in one worker isn't visible to other workers, causing "No data uploaded" errors when training models.
+- **Docker:** The Dockerfile uses gunicorn with **1 worker** (not the typical 4+ workers) for the reason above.
+- **Multi-Worker Limitation:** The current architecture (`memStorage` global dict) is designed for single-process use. To support multiple workers/users properly, refactor to:
+  - **Session-based storage:** Use Flask sessions with a session store (Redis, database, or encrypted cookies)
+  - **Shared storage:** Use Redis or a database to store state that all workers can access
+  - **File-based storage:** Persist state to disk (slower but works)
 - **Desktop App:** `desktop_app.py` still uses Flask's development server internally (fine for single-user desktop app).
 
 ## Summary
 
 - **`app.py`** = HTTP API + orchestration; **`desktop_app.py`** = desktop wrapper.  
-- **`memStorage`** = in-memory, single-user; change this for multi-user web.  
+- **`memStorage`** = in-memory, single-user, single-process; **MUST be refactored for multi-worker/multi-user web deployments**. Current gunicorn config uses 1 worker to work around this limitation.  
 - **Security:** upload validation and download path traversal are addressed; add CSRF, reverse proxy, HTTPS, and dependency pinning for production web use.  
 - **Paths:** `USER_VIS_DIR`, `DIGITERRA_OUTPUT_DIR`, and `DIGITERRA_BASE_DIR` control where things live.
-- **Production:** Use gunicorn for production web deployments. Docker container is configured with gunicorn automatically.
+- **Production:** Use gunicorn for production web deployments. Docker container is configured with gunicorn (1 worker due to memStorage limitation).
 
