@@ -31,11 +31,11 @@ Then open **http://127.0.0.1:5000** in your browser. That’s the web UI. For th
 ## Important Behaviors to Know
 
 - **Single-user, in-memory state**  
-  `app.py` uses a global `memStorage` dict for models, data, scalers, and feature order. Fine for desktop or a single-user lab tool. **If you put this behind a multi-user website**, you’ll need to replace this with something like session-based storage or a proper backend store.
+  `app.py` uses a global `memStorage` dict for models, data, scalers, and feature order. Fine for desktop or a single-user lab tool. 
 
 - **CSV only**  
-  Upload and prediction endpoints accept only `.csv`. Validation is in `allowed_file()` and we use `secure_filename()` for safe filenames. Keep that in mind if you add new upload types.
-
+  Upload and prediction endpoints accept only `.csv`. Validation is in `allowed_file()` and we use `secure_filename()` for safe filenames.
+  
 - **Outputs**  
   Plots, PDFs, and Excel files go to `USER_VIS_DIR` (see “Paths” below). The UI fetches them via `/user-visualizations/<filename>` (for display) and `/download/<path:filename>` (for download). Path traversal is blocked on the download route.
 
@@ -65,26 +65,9 @@ Then open **http://127.0.0.1:5000** in your browser. That’s the web UI. For th
 - CSV read errors are caught and returned as clear HTTP responses instead of 500s.
 - Input validation on important routes (preprocess, model training, correlation matrices, pairplot, etc.).
 
-**If you deploy this as a public or multi-user web app:**
-
-1. **`memStorage`**: Replace with per-user/session storage so one user’s models and data don’t leak to another.
-2. **CSRF**: Flask doesn’t add CSRF by default. Add something like `Flask-WTF` or CSRF tokens for state-changing requests.
-3. **Reverse proxy**: Run behind nginx or similar. Don’t expose the Flask dev server directly to the internet.
-4. **HTTPS**: Use TLS at the proxy; the app itself doesn’t handle SSL.
-5. **Dependencies**: `requirements.txt` currently omits version pins. Consider pinning versions (e.g. in a `requirements.lock` or similar) for reproducible, auditable builds.
-
-**`ast.literal_eval`:**  
-Used only for MLP `hidden_layer_sizes` (tuple of ints from the UI). Safer than `eval`, but if you ever accept less trusted input there, add validation (e.g. check type and value ranges) to avoid surprises.
 
 ---
 
-## Integrating Into a Website
-
-- The app is a standard Flask app. You can run it as a WSGI app (e.g. gunicorn + nginx) or keep using the Docker image and put the container behind your existing web stack.
-- The UI is one HTML page + JS + CSS. You could embed it in an iframe, or reverse-proxy specific paths to this service. Just ensure `/`, `/static/`, `/user-visualizations/`, `/download/`, and the API routes your JS calls are all proxied correctly.
-- CORS isn’t configured. If the front end is served from another origin, you’ll need to add CORS headers (e.g. `flask-cors`) for the relevant routes.
-
----
 
 ## Existing Docs to Use
 
@@ -121,4 +104,3 @@ helm install digiterra deploy/helm/digiterra --set image.repository=<your-regist
 - **Security:** upload validation and download path traversal are addressed; add CSRF, reverse proxy, HTTPS, and dependency pinning for production web use.  
 - **Paths:** `USER_VIS_DIR`, `DIGITERRA_OUTPUT_DIR`, and `DIGITERRA_BASE_DIR` control where things live.
 
-If something’s unclear or you find a gotcha, consider dropping a note in `HANDOFF.md` or `ISSUES_FOUND.md` for the next person. Good luck with the website integration.
