@@ -94,16 +94,14 @@ Yes and No, the version approved by EDX will be an internal tool for data analys
 ## Section 5: CI/CD Pipeline Best Practices
 
 ### 15. CI/CD Pipeline Usage
-Currently, the application is built manually using PyInstaller. 
+Currently, the application is built manually using PyInstaller. There is no CI/CD Pipeline. 
 
 ### 16. Branch Protection Rules
-*[To be filled in by applicant - indicate if branch protection is implemented]*
-
+Yes, but cannot be applied until public repository. 
 ### 17. Pull Request Requirements
-*[To be filled in by applicant - indicate if PRs are required for protected branches]*
-
+Yes, or at least we are converting to this when deploying. 
 ### 18. Commit Approvals
-*[To be filled in by applicant - indicate minimum number of approving reviews required]*
+Yes, 1. 
 
 ---
 
