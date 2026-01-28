@@ -41,6 +41,9 @@ class DesktopApi:
     def __init__(self, output_dir: Path, window=None) -> None:
         self.output_dir = output_dir
         self.window = window
+        # Guard to prevent multiple simultaneous save dialogs, which on macOS
+        # can manifest as many app icons / windows being spawned.
+        self._saving = False
 
     def test_api(self) -> str:
         """Test method to verify API is accessible from JavaScript."""
@@ -53,6 +56,14 @@ class DesktopApi:
             return "API error"
 
     def save_file(self, filename: str, download_name: str | None = None) -> bool:
+        # Simple re-entrancy guard: if a save dialog is already open/processing,
+        # ignore additional requests. This prevents rapid repeated JS calls from
+        # opening many native save panels (and duplicate Dock icons on macOS).
+        if self._saving:
+            logging.info("save_file called while another save is in progress; ignoring")
+            return False
+
+        self._saving = True
         try:
             source_path = self.output_dir / filename
             if not source_path.exists():
@@ -104,6 +115,9 @@ class DesktopApi:
         except Exception as error:
             _log_exception("Failed to save file", error)
             return False
+        finally:
+            # Always release the guard so future saves work
+            self._saving = False
 
 
 def _configure_logging(debug: bool) -> None:
