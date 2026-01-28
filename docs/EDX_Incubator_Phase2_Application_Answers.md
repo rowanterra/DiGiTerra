@@ -8,6 +8,7 @@ Completed by Rowan Terra and Paige DiGirolamo
 
 ### 2. Primary Technical Point of Contact (Name & Email)
 Rowan Terra, terrar@duq.edu, rowan.terra@netl.doe.gov
+Paige DiGirolamo, paige@digirolamo.me
 
 ---
 
@@ -36,6 +37,7 @@ The application can be deployed in two ways:
 2. **Web Application** (Optional): Containerized application deployable to Kubernetes
 
 ### 6. Primary Tasks
+- Hosting a NETL-approved executable that can be downloaded
 - Upload and explore CSV datasets
 - Perform statistical analysis and generate visualizations
 - Preprocess data (handling missing values, scaling, feature selection)
@@ -67,7 +69,8 @@ If deploying only as a desktop application, I believe this just falls under hte 
 
 ### 10. Source Code Repository Location
 
-Current repository: `https://github.com/rowanterra/DiGiTerra`
+Current Private repository: `https://github.com/rowanterra/DiGiTerra`
+Note: Several beta testers are listed as collaboraters at this time for access reasons. 
 
 ### 11. Confirmation of EDX Team Access
 Yes, Provided access to AVN email
@@ -107,9 +110,9 @@ Currently, the application is built manually using PyInstaller.
 ## Section 6: Application Containerization
 
 ### 19. Containerization Status
-**Yes** - The application has Docker containerization assets available in `deploy/docker/`, but the primary deployment method is a standalone desktop application compiled with PyInstaller.
+Yes. The application has Docker containerization assets available in `deploy/docker/`, but the primary deployment method is a standalone desktop application compiled with PyInstaller.
 
-**Note:** The desktop application (compiled macOS `.app`) does not require containerization as it runs natively. Containerization is available for web deployment scenarios.
+The desktop application (compiled macOS `.app`) does not require containerization as it runs natively. Containerization is available for web deployment scenarios.
 
 ---
 
@@ -125,12 +128,10 @@ Currently, the application is built manually using PyInstaller.
 - `PYTHONUNBUFFERED=1`: Ensures Python output is unbuffered for proper logging
 
 ### 22. Multi-Stage Builds
-**No** - Single-stage build using `python:3.11-slim` base image.
+No, Single-stage build using `python:3.11-slim` base image.
 
 ### 23. Base Image Selection
-**Base Image**: `python:3.11-slim`
-
-**Reason**: 
+**Base Image**: `python:3.11-slim` 
 - Lightweight Debian-based image
 - Includes Python 3.11 runtime
 - Sufficient for Flask application and scikit-learn dependencies
@@ -144,11 +145,11 @@ Currently, the application is built manually using PyInstaller.
 - **CMD**: `["python", "app.py"]`
 
 ### 26. Graceful Shutdown (SIGTERM Handling)
-**Yes** - Flask development server handles SIGTERM gracefully. The application can be enhanced with proper signal handling for production use (e.g., using gunicorn with proper worker management).
+Yes, Flask development server handles SIGTERM. The application can be enhanced with proper signal handling for production use (e.g., using gunicorn with proper worker management).
 
 ### 27. Image Size and Optimization
 - **Base image**: `python:3.11-slim` (~45 MB)
-- **Estimated final size**: ~500-800 MB (includes Python, Flask, scikit-learn, pandas, matplotlib, seaborn, SHAP, and other ML dependencies)
+- **Estimated final size**: ~400 MB (includes Python, Flask, scikit-learn, pandas, matplotlib, seaborn, SHAP, and other ML dependencies)
 - **Optimization strategies**:
   - Uses `--no-cache-dir` for pip installs
   - Single-stage build to minimize layers
@@ -156,9 +157,7 @@ Currently, the application is built manually using PyInstaller.
 
 ### 28. Logging Configuration
 **Logging**: Application logs to stdout/stderr (standard Python logging)
-
 **Log file location** (desktop app): `~/Library/Logs/DiGiTerra/digiterra.log`
-
 **Container logging**: All output goes to stdout/stderr for Kubernetes log aggregation.
 
 ### 29. Log File Details
@@ -166,20 +165,20 @@ Currently, the application is built manually using PyInstaller.
 - **Containerized application**: Logs to stdout/stderr (no file-based logging in container)
 
 ### 30. Container User / Permissions
-**Yes** - Application runs as non-root user:
+Yes, Application runs as non-root user:
 - User: `app`
 - Group: `app`
 - UID/GID: System-assigned (created with `adduser --system`)
 
 ### 31. Reason for Root Privileges
-**N/A** - Application does not require root privileges. All operations are performed with non-root user permissions.
+Not applicable.
 
 ---
 
 ## Section 8: Helm Chart Availability
 
 ### 32. Helm Chart Availability
-**Yes** - Helm chart is available at `deploy/helm/digiterra/`
+Yes, Helm chart is available at `deploy/helm/digiterra/`
 
 ---
 
@@ -198,7 +197,7 @@ Currently, the application is built manually using PyInstaller.
     - `_helpers.tpl`: Template helpers
 
 ### 34. Configurability via values.yaml
-**Yes** - Chart is highly configurable via `values.yaml`:
+Yes, Chart is highly configurable via `values.yaml`:
 - `replicaCount`: Number of pod replicas
 - `image.repository` and `image.tag`: Container image location
 - `service.port`: Service port (default: 5000)
@@ -221,11 +220,10 @@ Currently, the application is built manually using PyInstaller.
 - **Recommended limits**:
   - CPU: 2000m-4000m
   - Memory: 4Gi-8Gi
-
 These can be set in `values.yaml` under the `resources` section.
 
 ### 37. Health Checks (Liveness and Readiness Probes)
-**Yes** - Both probes are configured in `deployment.yaml`:
+Yes, Both probes are configured in `deployment.yaml`:
 - **Liveness Probe**:
   - HTTP GET on path `/` port `http`
   - `initialDelaySeconds: 10`
@@ -246,14 +244,14 @@ Configuration is managed via:
 ## Section 10: Details for Apps Without a Helm Chart
 
 ### 39. CPU / RAM Utilization Estimates
-**N/A** - Helm chart is available. See Section 9 for details.
+Helm chart is available. See Section 9 for details.
 
 If deploying without Helm:
 - **CPU**: 500m-2000m typical usage
 - **RAM**: 2-4 GB typical usage (can spike during model training with large datasets)
 
 ### 40. Persistent Storage Requirements
-**N/A** - Helm chart includes PVC support. See Section 9.
+Helm chart includes PVC support. See Section 9.
 
 If deploying without Helm:
 - **Storage needed**: 1-5 GB for user uploads and generated files
@@ -261,7 +259,7 @@ If deploying without Helm:
 - **Mount path**: `/home/app/Library/Application Support/DiGiTerra` (or custom path)
 
 ### 41. GCS Fuse Mounts
-**Not currently configured** - Can be added if needed for accessing GCS buckets directly.
+No. 
 
 ---
 
@@ -285,6 +283,7 @@ python app.py  # For browser-based interface
 - **Desktop Application**: macOS (currently), can be extended to Windows and Linux
 - **Web Application**: Linux (containerized)
 - **Python Version**: 3.11+
+- **Cross OS Guides** are available per the README.md. 
 
 ### 44. Required System & Application Packages
 **Python Dependencies** (see `requirements.txt`):
@@ -326,37 +325,25 @@ python app.py  # For browser-based interface
 - **Estimated total**: 1-5 GB per active user per year
 
 ### 48. Multi-Region Requirements
-**No** - Single region deployment is sufficient. Application does not require multi-region deployment.
+No, Single region deployment is sufficient. Application does not require multi-region deployment.
 
 ### 49. Multi-Region Details
-**N/A** - Not applicable.
+Not applicable.
 
 ### 50. Data Lifecycle Policy
 - **User uploads**: Can be deleted after processing (temporary)
-- **Generated visualizations**: Retained for user download, can be cleaned up after a retention period (e.g., 30-90 days)
+- **Generated visualizations**: Retained for user download, can be cleaned up after a retention period 
 - **Model outputs**: Retained for user download, can be cleaned up after retention period
-- **Recommendations**: Implement cleanup job to remove files older than 90 days
 
 ### 51. Application Secrets
-**Currently none** - Application does not use secrets or API keys. 
-
-**Current State**: The application does not require authentication, API keys, or external service credentials. All functionality is self-contained.
-
-**Future Considerations**: If authentication, external API integration, or database connections are added in the future, secrets management would be needed. Recommended approach:
-- Use Kubernetes Secrets for sensitive data
-- Use environment variables for configuration (non-sensitive)
-- Consider using a secrets management service (e.g., HashiCorp Vault, GCP Secret Manager) for production deployments
-- Never commit secrets to version control
+Application does not use secrets or API keys. 
+The application does not require authentication, API keys, or external service credentials. All functionality is self-contained.
 
 ### 52. Autoscaling Requirements
-**Not currently configured** - Application can be configured for horizontal pod autoscaling (HPA) based on CPU/memory usage if needed.
-
-**Recommendations**: 
-- Start with 1-2 replicas
-- Configure HPA if usage patterns indicate need for scaling
-- Consider vertical pod autoscaling (VPA) for memory-intensive model training
+**Not currently configured** - Application can be configured for V/HPA based on CPU/memory usage if needed.
 
 ### 53. Replicas and Scalability Details
+If downloaded as an application that is fully compiled, this should not have to be considered. 
 - **Initial replicas**: 1 (configurable via `replicaCount` in Helm values)
 - **Scaling strategy**: 
   - Stateless application (no session state), can scale horizontally
@@ -382,17 +369,11 @@ python app.py  # For browser-based interface
    - Review changelogs for breaking changes
 
 3. **Deployment**:
-   - Apply critical security patches immediately (within 24-48 hours)
-   - Apply non-critical patches during scheduled maintenance windows
+   - Apply critical security patches immediately
+   - Apply non-critical patches during scheduled maintenance windows. Each month during the first twelve months, and then to quarterly and biannual or as needed. 
    - Use blue-green or rolling deployment strategy to minimize downtime
    - Maintain rollback capability via Helm chart versioning
 
-4. **Automation** (if CI/CD is implemented):
-   - Automated dependency scanning in CI/CD pipeline
-   - Automated security scanning of Docker images
-   - Automated testing after dependency updates
-
-**Note**: See `SECURITY_REVIEW.md` for comprehensive security assessment and current security measures.
 
 ### 55. Process for Application Hot Fixes
 
@@ -400,17 +381,14 @@ python app.py  # For browser-based interface
 1. **Critical Hot Fixes** (security, data loss, service outage):
    - Immediate assessment and development
    - Deploy to staging environment for validation
-   - Fast-track deployment to production (within hours if critical)
    - Post-deployment monitoring and verification
 
 2. **Non-Critical Hot Fixes**:
    - Deploy to staging environment first
    - Full testing in staging before production
    - Deploy during scheduled maintenance windows when possible
-   - Use feature flags for gradual rollout if appropriate
 
 3. **Deployment Strategy**:
-   - Use blue-green or rolling deployment strategy to minimize downtime
    - Maintain rollback capability via Helm chart versioning
    - Document all hot fixes in change log
    - Communicate changes to users if needed
@@ -421,6 +399,8 @@ python app.py  # For browser-based interface
    - Update documentation as needed
 
 ### 56. Process for Application Version Upgrades
+
+Has not been fully applied yet. 
 
 **Process**:
 1. **Versioning**:
