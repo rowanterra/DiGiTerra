@@ -1,8 +1,5 @@
 # DiGiTerra: Handoff Notes for New Developers
 
-Hi there, welcome to the project. These notes are here to make your life easier when you pick this up, integrate it into a website, or hand it off again. Think of this as “what we wish we’d had on day one.”
-
----
 
 ## Quick Start (Get It Running in ~2 Minutes)
 
