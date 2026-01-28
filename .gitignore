@@ -1,0 +1,86 @@
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+# Note: build/ directory contains build scripts and spec files - these should be tracked
+# Only ignore PyInstaller build artifacts, not the build/ directory itself
+build/DiGiTerra/
+build/*.toc
+build/*.pkg
+build/*.pyz
+build/*.html
+build/warn-*.txt
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+build/DiGiTerra/  # PyInstaller build artifacts (not the build/ directory itself)
+# Note: *.spec files should be tracked - they contain build configuration
+# Spec files in build/ are intentionally committed to version control
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Application specific
+*.pkl
+*.pickle
+user_visualizations/
+uploads/
+
+# Generated files in static directory (user-generated artifacts)
+# These files are created at runtime and should not be committed
+static/userVisualizations/
+static/exploration_graphics_*.pdf
+static/*_graphics_*.pdf

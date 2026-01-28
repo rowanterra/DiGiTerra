@@ -1,0 +1,15 @@
+# DiGiTerra dependencies. No version pins yet — consider pinning for production (see HANDOFF.md).
+flask
+requests
+matplotlib
+numpy
+openpyxl
+pandas
+scikit-learn
+scipy
+scikit-optimize
+seaborn
+shap
+werkzeug
+xlsxwriter
+pywebview

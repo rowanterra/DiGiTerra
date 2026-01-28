@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "digiterra.fullname" . }}
+  labels:
+    {{- include "digiterra.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "digiterra.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "digiterra.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ include "digiterra.name" . }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          env:
+            - name: DIGITERRA_HOST
+              value: {{ .Values.env.DIGITERRA_HOST | quote }}
+            - name: DIGITERRA_PORT
+              value: {{ .Values.env.DIGITERRA_PORT | quote }}
+            {{- if .Values.persistence.enabled }}
+            - name: XDG_DATA_HOME
+              value: {{ .Values.persistence.mountPath | quote }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- if .Values.persistence.enabled }}
+          volumeMounts:
+            - name: digiterra-data
+              mountPath: {{ .Values.persistence.mountPath | quote }}
+          {{- end }}
+      {{- if .Values.persistence.enabled }}
+      volumes:
+        - name: digiterra-data
+          persistentVolumeClaim:
+            claimName: {{ include "digiterra.fullname" . }}
+      {{- end }}
