@@ -6,19 +6,17 @@
 **DiGiTerra**
 
 ### 2. Primary Technical Point of Contact (Name & Email)
-*[To be filled in by applicant]*
+Rowan Terra, terrar@duq.edu, rowan.terra@netl.doe.gov
 
 ---
 
 ## Section 2: User Account Provisioning
 
 ### 3. User Access Requirements
-*[To be filled in by applicant - list NETL users who need GCP access]*
-
-**Note:** If deploying only as a desktop application (compiled with PyInstaller), GCP access may not be required. GCP access would only be needed if deploying the containerized web version.
+If deploying only as a desktop application (compiled with PyInstaller), GCP access may not be required. GCP access would only be needed if deploying the containerized web version.
 
 ### 4. Required Access Levels
-*[To be filled in by applicant - specify access levels for listed users]*
+If deploying only as a desktop application (compiled with PyInstaller), GCP access may not be required. GCP access would only be needed if deploying the containerized web version.
 
 ---
 
@@ -33,7 +31,7 @@ DiGiTerra is a desktop application for data exploration, preprocessing, and mach
 - Inference on new data using trained models
 
 The application can be deployed in two ways:
-1. **Desktop Application** (Primary): Standalone macOS application compiled with PyInstaller
+1. **Desktop Application** (Primary): Standalone application compiled with PyInstaller
 2. **Web Application** (Optional): Containerized Flask application deployable to Kubernetes
 
 ### 6. Primary Tasks
@@ -60,61 +58,44 @@ The application can be deployed in two ways:
 - **Long-running jobs**: Model training can take several minutes for large datasets, but jobs are synchronous (user waits for completion)
 
 ### 9. GCP Use Case Type
-*[To be filled in by applicant - indicate if this is an EDX Incubator Sandbox or Development/Production environment]*
-
-**Note:** If deploying only as a desktop application, this question may not apply.
+If deploying only as a desktop application, this question may not apply.
 
 ---
 
 ## Section 4: General Hosting Requirements & Compliance
 
 ### 10. Source Code Repository Location
-*[To be filled in by applicant - provide NETL Enterprise GitHub or NETL IRC repository URL]*
 
-Current repository: `https://github.com/rowanterra/DiGiTerra_MacOS` (may need to be migrated to NETL Enterprise GitHub)
+Current repository: `https://github.com/rowanterra/DiGiTerra`
 
 ### 11. Confirmation of EDX Team Access
-*[To be filled in by applicant - confirm access provided to EDX Development team]*
+Provided access to AVN email
 
 ### 12. TIC 3.0 Compliance Confirmation
-*[To be filled in by applicant - confirm TIC 3.0 compliance]*
+We would like to know more about TIC compliance so that we can check this application complies.
 
-**Desktop Application**: Runs locally and does not require network access beyond initial download. TIC 3.0 compliance not applicable for desktop deployment.
+**Web Application**: If deployed as a web service, TIC 3.0 compliance would be required. 
 
-**Web Application**: If deployed as a web service, TIC 3.0 compliance would be required. The application would need to:
-- Follow TIC 3.0 security guidelines for network architecture
-- Implement appropriate security controls
-- Work with EDX team to ensure compliance
+**Desktop Application**: Runs locally and does not require network access beyond initial download. TIC 3.0 compliance not applicable for desktop deployment?
 
 **Security Measures**: See `SECURITY_REVIEW.md` for current security measures and recommendations for web deployment.
 
+
 ### 13. EDX Security (Cloud Armor) Compliance Confirmation
-*[To be filled in by applicant - confirm Cloud Armor compliance]*
 
-**Desktop Application**: Cloud Armor compliance not applicable for desktop deployment.
+**Desktop Application**: Cloud Armor compliance may not be applicable for desktop deployment.
 
-**Web Application**: If deployed as a web service on GCP, Cloud Armor compliance would be required. The application would need to:
-- Configure Cloud Armor security policies
-- Implement DDoS protection
-- Configure WAF rules as needed
-- Work with EDX team to ensure compliance
-
-**Current Security**: The application implements file upload validation, path traversal protection, and input validation. See `SECURITY_REVIEW.md` for comprehensive security assessment.
+**Current Security**: The application implements file upload validation, path traversal protection, and input validation. See `SECURITY_REVIEW.md` for comprehensive security assessment. We are unsure if this meets DOE Cloud Armor Compliance. 
 
 ### 14. Public Facing Application Approval
-**No** - This is an internal tool for data analysis and machine learning. If deployed as a web application, it would be internal-facing only (not public).
+**Yes** - The version approved by EDX will be an internal tool for data analysis and machine learning. Updated public facing versions may be available eslewhere. 
 
 ---
 
 ## Section 5: CI/CD Pipeline Best Practices
 
 ### 15. CI/CD Pipeline Usage
-*[To be filled in by applicant - indicate if CI/CD pipeline is set up]*
-
-**Note:** Currently, the application is built manually using PyInstaller. CI/CD could be set up for:
-- Automated testing
-- Building Docker images
-- Automated deployment to GCP
+Currently, the application is built manually using PyInstaller. 
 
 ### 16. Branch Protection Rules
 *[To be filled in by applicant - indicate if branch protection is implemented]*
