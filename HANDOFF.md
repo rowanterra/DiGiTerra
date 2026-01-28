@@ -3,12 +3,22 @@
 
 ## Quick Start (Get It Running in ~2 Minutes)
 
+**For Development/Testing:**
 ```bash
 pip install -r requirements.txt
 python app.py
 ```
 
 Then open **http://127.0.0.1:5000** in your browser. That’s the web UI. For the desktop app (pywebview wrapper), run `python desktop_app.py` instead.
+
+**For Production Deployment:**
+The Docker container uses **gunicorn** (production WSGI server) instead of Flask's development server. For local production testing:
+```bash
+pip install -r requirements.txt
+gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 120 app:app
+```
+
+**Note:** `python app.py` uses Flask's built-in development server (not suitable for production). Use gunicorn or another production WSGI server for production deployments.
 
 ---
 
@@ -85,7 +95,13 @@ Then open **http://127.0.0.1:5000** in your browser. That’s the web UI. For th
 # Dependency check (catches missing imports)
 python scripts/check_requirements.py
 
-# Docker build & run
+# Development server (Flask built-in - NOT for production)
+python app.py
+
+# Production server (gunicorn - for production)
+gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 120 app:app
+
+# Docker build & run (uses gunicorn automatically)
 docker build -f deploy/docker/Dockerfile -t digiterra:local .
 docker run --rm -p 5000:5000 digiterra:local
 
@@ -97,10 +113,17 @@ helm install digiterra deploy/helm/digiterra --set image.repository=<your-regist
 
 ---
 
+## Production Deployment Notes
+
+- **Development vs Production:** `python app.py` runs Flask's development server (single-threaded, not suitable for production). For production, use **gunicorn** (included in requirements.txt) or another production WSGI server.
+- **Docker:** The Dockerfile automatically uses gunicorn with 4 workers. Adjust worker count based on your CPU cores: `(2 * CPU cores) + 1` is a good default.
+- **Desktop App:** `desktop_app.py` still uses Flask's development server internally (fine for single-user desktop app).
+
 ## Summary
 
 - **`app.py`** = HTTP API + orchestration; **`desktop_app.py`** = desktop wrapper.  
 - **`memStorage`** = in-memory, single-user; change this for multi-user web.  
 - **Security:** upload validation and download path traversal are addressed; add CSRF, reverse proxy, HTTPS, and dependency pinning for production web use.  
 - **Paths:** `USER_VIS_DIR`, `DIGITERRA_OUTPUT_DIR`, and `DIGITERRA_BASE_DIR` control where things live.
+- **Production:** Use gunicorn for production web deployments. Docker container is configured with gunicorn automatically.
 

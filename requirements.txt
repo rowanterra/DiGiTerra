@@ -1,5 +1,6 @@
 # DiGiTerra dependencies. No version pins. (see HANDOFF.md).
 flask
+gunicorn
 requests
 matplotlib
 numpy
