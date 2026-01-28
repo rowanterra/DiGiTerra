@@ -20,6 +20,9 @@ USER app
 EXPOSE 5000
 
 # Use gunicorn for production WSGI server
-# Workers: (2 * CPU cores) + 1 is a good default
+# IMPORTANT: Using 1 worker because app uses global memStorage dict for state.
+# Each worker process has separate memory, so multi-worker breaks data persistence.
+# For proper multi-user/multi-worker support, refactor to use session-based storage
+# or shared storage (Redis, database, file system).
 # Bind to 0.0.0.0 to accept connections from outside container
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "1", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-", "app:app"]
