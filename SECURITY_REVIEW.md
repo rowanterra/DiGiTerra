@@ -69,127 +69,6 @@ The application has addressed critical security vulnerabilities and is productio
 
 ---
 
-## Security Considerations for Web Deployment
-
-### ⚠️ Multi-User Web Deployment Risks
-
-If deploying as a **multi-user web application**, the following security measures should be implemented:
-
-#### 1. **Session/State Management** (HIGH PRIORITY)
-
-**Current State:**
-- Application uses global `memStorage = {}` dictionary for storing models, data, and scalers
-- Progress tracking uses global dictionaries keyed by `session_id`
-- **Risk:** Data leakage between users; one user could access another user's models/data
-
-**Recommendation:**
-- Replace `memStorage` with per-user/session storage
-- Use Flask sessions or a proper backend store (Redis, database)
-- Ensure `session_id` is properly authenticated/authorized
-- **Location:** `app.py` line 147, `python_scripts/preprocessing/progress_tracker.py`
-
-#### 2. **CSRF Protection** (HIGH PRIORITY)
-
-**Current State:**
-- No CSRF protection implemented
-- Flask does not include CSRF protection by default
-
-**Recommendation:**
-- Implement CSRF tokens for state-changing requests (POST, PUT, DELETE)
-- Use `Flask-WTF` or similar library
-- Protect routes: `/upload`, `/preprocess`, `/trainModel`, `/predict`, etc.
-
-#### 3. **Authentication & Authorization** (HIGH PRIORITY)
-
-**Current State:**
-- No authentication or authorization mechanisms
-- All routes are publicly accessible
-
-**Recommendation:**
-- Implement user authentication (e.g., OAuth, LDAP, API keys)
-- Add authorization checks to ensure users can only access their own data
-- Consider role-based access control (RBAC) if needed
-
-#### 4. **Rate Limiting** (MEDIUM PRIORITY)
-
-**Current State:**
-- No rate limiting on API endpoints
-- Risk of DoS attacks or resource exhaustion
-
-**Recommendation:**
-- Implement rate limiting (e.g., `Flask-Limiter`)
-- Set limits on file uploads, model training requests
-- Consider different limits for different endpoints
-
-#### 5. **Dependency Version Pinning** (MEDIUM PRIORITY)
-
-**Current State:**
-- `requirements.txt` does not pin dependency versions
-- Risk of installing vulnerable or incompatible versions
-
-**Recommendation:**
-- Pin all dependency versions (e.g., `flask==2.3.3`)
-- Use `pip freeze > requirements.lock` for reproducible builds
-- Regularly audit dependencies for vulnerabilities (`pip-audit`, GitHub Dependabot)
-- **Location:** `requirements.txt`
-
-#### 6. **Production WSGI Server** (MEDIUM PRIORITY)
-
-**Current State:**
-- Uses Flask development server (`app.run()`)
-- Not suitable for production use
-
-**Recommendation:**
-- Use production WSGI server (gunicorn, uWSGI, waitress)
-- Configure proper worker processes and timeouts
-- **Location:** `app.py` (end of file), `deploy/docker/Dockerfile`
-
-#### 7. **HTTPS/TLS** (HIGH PRIORITY)
-
-**Current State:**
-- No TLS/SSL configuration
-- Application does not handle HTTPS
-
-**Recommendation:**
-- Deploy behind reverse proxy (nginx, Apache) with TLS
-- Use Let's Encrypt or organization certificates
-- Enforce HTTPS-only connections
-
-#### 8. **Reverse Proxy** (HIGH PRIORITY)
-
-**Current State:**
-- Flask app exposed directly
-- No reverse proxy in front
-
-**Recommendation:**
-- Deploy behind nginx or similar reverse proxy
-- Configure security headers (HSTS, X-Frame-Options, CSP)
-- Handle SSL termination at proxy
-
-#### 9. **Input Validation Enhancement** (LOW PRIORITY)
-
-**Current State:**
-- `ast.literal_eval()` used for MLP `hidden_layer_sizes` parameter
-- Generally safe, but could be more restrictive
-
-**Recommendation:**
-- Add validation to ensure `hidden_layer_sizes` contains only positive integers
-- Validate tuple size and value ranges
-- **Location:** `app.py` lines 1439, 1475, 1744, 1773
-
-#### 10. **Logging & Monitoring** (MEDIUM PRIORITY)
-
-**Current State:**
-- Basic logging implemented
-- No security event logging
-
-**Recommendation:**
-- Log security events (failed uploads, path traversal attempts, authentication failures)
-- Implement log aggregation and monitoring
-- Set up alerts for suspicious activity
-
----
-
 ## Security Choices & Design Decisions
 
 ### Acceptable for Desktop Use
@@ -209,7 +88,7 @@ If deploying as a **multi-user web application**, the following security measure
    - **Rationale:** Desktop apps typically run on localhost only
    - **Action Required:** Use production WSGI server for web deployment
 
-### ⚠️ Security Trade-offs
+### Security Trade-offs
 
 1. **File Size Warnings (Non-Restrictive)**
    - **Decision:** Warn but don't block large files
@@ -225,31 +104,6 @@ If deploying as a **multi-user web application**, the following security measure
 
 ---
 
-## Security Checklist for Handoff
-
-### Desktop Deployment
-- [x] File upload validation
-- [x] Filename sanitization
-- [x] Path traversal protection
-- [x] Input validation on critical routes
-- [x] Error handling
-- [x] Cross-platform path handling
-- [x] Container runs as non-root
-
-### Web Deployment (Multi-User) ⚠️
-- [ ] Replace global `memStorage` with session/DB storage
-- [ ] Implement CSRF protection
-- [ ] Add authentication & authorization
-- [ ] Implement rate limiting
-- [ ] Pin dependency versions
-- [ ] Use production WSGI server
-- [ ] Deploy behind reverse proxy with HTTPS
-- [ ] Add security headers
-- [ ] Implement security event logging
-- [ ] Add file size limits (hard limits, not just warnings)
-
----
-
 ## Summary of Recommendations
 
 ### For Desktop Use (Current State)
@@ -258,7 +112,6 @@ If deploying as a **multi-user web application**, the following security measure
 No additional security measures required. Current security measures are appropriate for single-user desktop deployment.
 
 ### For Web Deployment (Future)
-**Status:** ⚠️ **Additional Hardening Required**
 
 Before deploying as a multi-user web service, implement:
 1. Session-based storage (replace `memStorage`)
@@ -279,4 +132,4 @@ Before deploying as a multi-user web service, implement:
 
 ---
 
-Next review: 3 months or after major changes
+Next review: 1-3 months or after major changes
