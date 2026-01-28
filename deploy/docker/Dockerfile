@@ -19,4 +19,7 @@ USER app
 
 EXPOSE 5000
 
-CMD ["python", "app.py"]
+# Use gunicorn for production WSGI server
+# Workers: (2 * CPU cores) + 1 is a good default
+# Bind to 0.0.0.0 to accept connections from outside container
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-", "app:app"]
