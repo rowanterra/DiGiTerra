@@ -369,7 +369,6 @@ If downloaded as an application that is fully compiled, this should not have to 
 3. **Deployment**:
    - Apply critical security patches immediately
    - Apply non-critical patches during scheduled maintenance windows. Each month during the first twelve months, and then to quarterly and biannual or as needed. 
-   - Use blue-green or rolling deployment strategy to minimize downtime
    - Maintain rollback capability via Helm chart versioning
 
 
@@ -415,7 +414,6 @@ Has not been fully applied yet.
 
 3. **Upgrade Deployment**:
    - Deploy during scheduled maintenance windows
-   - Use blue-green or rolling deployment strategy
    - Maintain rollback capability
    - Monitor application health during and after upgrade
 
@@ -423,7 +421,6 @@ Has not been fully applied yet.
    - Verify all functionality works as expected
    - Monitor logs and metrics for issues
    - Update documentation
-   - Collect user feedback
 
 ### 57. Reliability and Backup Requirements
 - **Backup strategy**: 
@@ -451,20 +448,13 @@ Has not been fully applied yet.
 **Note:** Desktop application does not require GCP services.
 
 ### 59. User Permissions Within Sandbox
-*[To be filled in by applicant - specify required permissions]*
 
-**Typical permissions**:
-- Read/write access to GCS buckets (if using)
 - Pull access to container registry
-- Deploy permissions for Kubernetes namespace
+- Download application to device. 
 
 ### 60. Sandbox Backup Requirements
-*[To be filled in by applicant - specify backup requirements]*
-
-**Recommendations**:
-- Regular backups of persistent volumes
-- Git repository serves as backup for application code
-- Consider automated backup jobs for user-generated data
+May not be applicable if downloadable app. 
+- Git repository serves as backup and updates for application code
 
 ---
 
@@ -488,7 +478,7 @@ This application has two deployment modes:
    - **Status**: Additional security hardening required for multi-user web deployment
    - **Security**: See `SECURITY_REVIEW.md` for required security measures (CSRF, authentication, rate limiting, etc.)
 
-**Recommendations**: Clarify with EDX team which deployment mode is intended, as this will determine which sections of the questionnaire are relevant.
+
 
 ### Security Documentation
 - **`SECURITY_REVIEW.md`**: Comprehensive security assessment, current security measures, and recommendations for web deployment
