@@ -113,7 +113,7 @@ No additional security measures required. Current security measures are appropri
 
 ### For Web Deployment (Future)
 
-Before deploying as a multi-user web service, implement:
+Before deploying as a multi-user web service:
 1. Session-based storage (replace `memStorage`)
 2. CSRF protection
 3. Authentication & authorization
