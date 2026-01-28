@@ -1,4 +1,5 @@
-# EDX Incubator Phase 2 Application - Question Set Answers
+# EDX Incubator Phase 2 Form
+Completed by Rowan Terra and Paige DiGirolamo
 
 ## Section 1: Basic Information
 
@@ -13,10 +14,10 @@ Rowan Terra, terrar@duq.edu, rowan.terra@netl.doe.gov
 ## Section 2: User Account Provisioning
 
 ### 3. User Access Requirements
-If deploying only as a desktop application (compiled with PyInstaller), GCP access may not be required. GCP access would only be needed if deploying the containerized web version.
+If deploying only as a desktop application (compiled with PyInstaller), GCP access may not be required. GCP access would only be needed if deploying the containerized web version. rowan.terra@netl.doe.gov, djuna.gulliver@netl.doe.gov, christina.lopano@netl.doe.gov should have initial access. 
 
 ### 4. Required Access Levels
-If deploying only as a desktop application (compiled with PyInstaller), GCP access may not be required. GCP access would only be needed if deploying the containerized web version.
+If deploying only as a desktop application (compiled with PyInstaller), GCP access may not be required. Admins, Djuna and Rowan. Rowan (and Paige not NETL), developers. Christina, viewer. 
 
 ---
 
@@ -32,7 +33,7 @@ DiGiTerra is a desktop application for data exploration, preprocessing, and mach
 
 The application can be deployed in two ways:
 1. **Desktop Application** (Primary): Standalone application compiled with PyInstaller
-2. **Web Application** (Optional): Containerized Flask application deployable to Kubernetes
+2. **Web Application** (Optional): Containerized application deployable to Kubernetes
 
 ### 6. Primary Tasks
 - Upload and explore CSV datasets
@@ -58,7 +59,7 @@ The application can be deployed in two ways:
 - **Long-running jobs**: Model training can take several minutes for large datasets, but jobs are synchronous (user waits for completion)
 
 ### 9. GCP Use Case Type
-If deploying only as a desktop application, this question may not apply.
+If deploying only as a desktop application, I believe this just falls under hte Incubator Development section. 
 
 ---
 
@@ -69,26 +70,21 @@ If deploying only as a desktop application, this question may not apply.
 Current repository: `https://github.com/rowanterra/DiGiTerra`
 
 ### 11. Confirmation of EDX Team Access
-Provided access to AVN email
+Yes, Provided access to AVN email
 
 ### 12. TIC 3.0 Compliance Confirmation
 We would like to know more about TIC compliance so that we can check this application complies.
 
-**Web Application**: If deployed as a web service, TIC 3.0 compliance would be required. 
-
-**Desktop Application**: Runs locally and does not require network access beyond initial download. TIC 3.0 compliance not applicable for desktop deployment?
-
-**Security Measures**: See `SECURITY_REVIEW.md` for current security measures and recommendations for web deployment.
+As the desktop app runs locally and does not require network access beyond initial download, TIC 3.0 compliance may not be applicable for desktop deployment?
 
 
 ### 13. EDX Security (Cloud Armor) Compliance Confirmation
 
-**Desktop Application**: Cloud Armor compliance may not be applicable for desktop deployment.
+We have questions about Cloud Armor compliance. Is Cloud Armor compliance applicable for desktop deployment?
 
-**Current Security**: The application implements file upload validation, path traversal protection, and input validation. See `SECURITY_REVIEW.md` for comprehensive security assessment. We are unsure if this meets DOE Cloud Armor Compliance. 
 
 ### 14. Public Facing Application Approval
-**Yes** - The version approved by EDX will be an internal tool for data analysis and machine learning. Updated public facing versions may be available eslewhere. 
+Yes and No, the version approved by EDX will be an internal tool for data analysis and machine learning. Updated public facing versions may be available eslewhere, such as at Rowan's partner university or personal website. 
 
 ---
 
