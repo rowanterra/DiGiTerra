@@ -1,4 +1,4 @@
-# DiGiTerra dependencies. No version pins yet — consider pinning for production (see HANDOFF.md).
+# DiGiTerra dependencies. No version pins. (see HANDOFF.md).
 flask
 requests
 matplotlib
