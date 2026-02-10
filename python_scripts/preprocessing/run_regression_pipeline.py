@@ -60,7 +60,7 @@ def run_regression(model, model_name,
     nump = X.select_dtypes(include=np.number).columns.tolist()
     catp = []
     if useTransformer == 'Yes':
-        catp=transformer_cols.tolist()
+        catp=transformer_cols
     textp=[]
     
     use_cols = nump + catp + textp + list(target_variables)
