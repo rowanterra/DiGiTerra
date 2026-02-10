@@ -2209,11 +2209,22 @@ def _run_model_training(session_id: str, data: dict):
             indicator_list = indicator_names.tolist() if hasattr(indicator_names, 'tolist') else list(indicator_names)
             predictor_list = predictor_names.tolist() if hasattr(predictor_names, 'tolist') else list(predictor_names)
             
+            # {'Adelie Penguin (Pygoscelis adeliae)': {'precision': 1.0, 'recall': 1.0, 'f1-score': 1.0, 'support': 34.0}, 
+            #  'Chinstrap penguin (Pygoscelis antarctica)': {'precision': 1.0, 'recall': 1.0, 'f1-score': 1.0, 'support': 11.0}, 
+            #  'Gentoo penguin (Pygoscelis papua)': {'precision': 1.0, 'recall': 1.0, 'f1-score': 1.0, 'support': 22.0}, 
+            #  'accuracy': 1.0, 'macro avg': {'precision': 1.0, 'recall': 1.0, 'f1-score': 1.0, 'support': 67.0}, 
+            #  'weighted avg': {'precision': 1.0, 'recall': 1.0, 'f1-score': 1.0, 'support': 67.0}}
+
             result = {
+                'accuracy': format(round(report['accuracy'], sigfig), fmt),
                 'precision': format(round(report['weighted avg']['precision'], sigfig), fmt),
                 'recall': format(round(report['weighted avg']['recall'], sigfig), fmt),
                 'f1score': format(round(report['weighted avg']['f1-score'], sigfig), fmt),
                 'support': format(round(report['weighted avg']['support'], sigfig), fmt),
+                'macro_precision': format(round(report['macro avg']['precision'], sigfig), fmt),
+                'macro_recall': format(round(report['macro avg']['recall'], sigfig), fmt),
+                'macro_f1score': format(round(report['macro avg']['f1-score'], sigfig), fmt),
+                'macro_support': format(round(report['macro avg']['support'], sigfig), fmt),
                 'indicators': [str(i) for i in indicator_list],
                 'predictors': [str(p) for p in predictor_list],
                 'cross_validation_file': cv_file,
