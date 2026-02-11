@@ -7079,11 +7079,16 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                             <div class="model-stats-table-wrapper">
                                 <table class="stats-table model-stats-table performance-table">
                                     <tr><th>Value</th><th>Average</th></tr>
-                                    <tr> <td>Precision</td> <td>${data.precision}</td> </tr>
-                                    <tr> <td>Recall</td> <td>${data.recall}</td> </tr>
-                                    <tr> <td>F1 Score</td> <td>${data.f1score}</td> </tr>
+                                    <tr> <td>Precision (weighted)</td> <td>${data.precision}</td> </tr>
+                                    <tr> <td>Recall (weighted)</td> <td>${data.recall}</td> </tr>
+                                    <tr> <td>F1 Score (weighted)</td> <td>${data.f1score}</td> </tr>
                                     <tr> <td>Error Rate (1 - Recall)</td> <td>${Number.isFinite(parseFloat(data.recall)) ? (1 - parseFloat(data.recall)).toFixed(3) : ''}</td> </tr>
-                                    <tr> <td>Support</td> <td>${data.support}</td> </tr>
+                                    <tr> <td>Support (weighted)</td> <td>${data.support}</td> </tr>
+                                    <tr> <td>Precision (macro)</td> <td>${data.macro_precision}</td> </tr>
+                                    <tr> <td>Recall (macro)</td> <td>${data.recmacro_recallall}</td> </tr>
+                                    <tr> <td>F1 Score (macro)</td> <td>${data.macro_f1score}</td> </tr>
+                                    <tr> <td>Support (macro)</td> <td>${data.macro_support}</td> </tr>
+                                    <tr> <td>Accuracy</td> <td>${data.accuracy}</td> </tr>
                                 </table>
                             </div>
                             <div class="download-buttons" style="margin-top: 12px; display: flex; gap: 12px; align-items: center;">
@@ -7286,6 +7291,8 @@ predictionForm.addEventListener('submit', async (e) => {
     //const predictFile = document.getElementById('predictFile').files[0];
     const formData = new FormData(predictionForm);
     formData.append('indicators', 'indicators')
+    const resultTimestamp = formatDateTimeForFilename() 
+    const predictionDownloadName = `predictions${resultTimestamp}.csv`
 
     try{
         const response = await fetch('/predict', {
@@ -7297,11 +7304,12 @@ predictionForm.addEventListener('submit', async (e) => {
             predictionErrorDiv.classList.add('hidden')
             predictionResults.classList.remove('hidden')
             console.log(data.filename)
+            // <a href="/download/predictions.csv" onclick="return downloadFile('predictions.csv')">
             predictionResults.innerHTML = `
                 <h2>Prediction Results</h2>
                 <p>Your results for the prediction with '<strong>${escapeHtml(data.filename || 'file')}</strong>' are ready to download.</p>
                 <div class="button-group">
-                    <a href="/download/predictions.csv" onclick="return downloadFile('predictions.csv')">
+                    <a href="/download/predictions.csv?download_name=${encodeURIComponent(predictionDownloadName)}" onclick="return downloadFile('predictions.csv', '${predictionDownloadName}')">
                         <button class="predictionresultButton export-button">Download Results CSV</button>
                     </a>
                     <button class="secondary-button" onclick="backToModel()">Back To Model</button>
