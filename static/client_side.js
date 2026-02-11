@@ -7078,7 +7078,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                             <h3 style="margin: 0; margin-bottom: 10px;">Performance</h3> 
                             <div class="model-stats-table-wrapper">
                                 <table class="stats-table model-stats-table performance-table">
-                                    <tr><th>Value</th><th>Weighted Average</th></tr>
+                                    <tr><th>Value</th><th>Average</th></tr>
                                     <tr> <td>Precision</td> <td>${data.precision}</td> </tr>
                                     <tr> <td>Recall</td> <td>${data.recall}</td> </tr>
                                     <tr> <td>F1 Score</td> <td>${data.f1score}</td> </tr>
