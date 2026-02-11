@@ -64,7 +64,6 @@ from python_scripts.models.regression_models.train_lasso import train_lasso
 from python_scripts.models.regression_models.train_elasticnet import train_elasticnet
 from python_scripts.models.regression_models.train_gb import train_gb
 from python_scripts.models.regression_models.train_knn import train_knn
-from python_scripts.models.regression_models.train_logistic import train_logistic
 from python_scripts.models.regression_models.train_mlp import train_mlp
 from python_scripts.models.regression_models.train_perceptron import train_perceptron
 from python_scripts.models.regression_models.train_rf import train_rf
