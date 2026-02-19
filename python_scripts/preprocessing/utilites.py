@@ -391,11 +391,39 @@ def plot_classification_bundle(art: dict, svctrue: bool):
     X_test = art["splits"]["X_test"]
 
     # 1) Confusion matrix
+    # cm = confusion_matrix(y_test, y_pred, labels=classes)
+    # disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=classes)
+    # disp.plot()
+    # plot_path = VIS_DIR / "confusion_matrix.png"
+    # plt.savefig(plot_path)
+    short_classes = [label[:10] for label in classes]
+    short_classes = [
+        label if len(label) <= 10 else label[:10] + "…"
+        for label in classes
+    ]
+
     cm = confusion_matrix(y_test, y_pred, labels=classes)
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=classes)
-    disp.plot()
+
+    fig, ax = plt.subplots(figsize=(12, 10))
+
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm,
+                                display_labels=short_classes)
+
+    disp.plot(ax=ax)
+
+    # Increase font sizes
+    ax.tick_params(axis='both', labelsize=30)      # tick labels
+    ax.set_xlabel("Predicted label", fontsize=30)
+    ax.set_ylabel("True label", fontsize=30)
+    ax.set_title("Confusion Matrix", fontsize=30)
+
+    plt.xticks(rotation=45, ha="right")
+    for text in disp.text_.ravel():
+        text.set_fontsize(30)
+    plt.tight_layout()
+
     plot_path = VIS_DIR / "confusion_matrix.png"
-    plt.savefig(plot_path)
+    plt.savefig(plot_path, bbox_inches="tight", dpi=300)
 
     # prepare scores
     # Binarize y for multi-class
