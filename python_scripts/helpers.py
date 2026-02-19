@@ -611,7 +611,7 @@ def run_cross_validation(
     numeric_cols = X_raw.select_dtypes(include=np.number).columns.tolist()
     categorical_cols = []
     if useTransformer == "Yes" and transformer_cols is not None:
-        categorical_cols = [c for c in transformer_cols.tolist() if c in X_raw.columns]
+        categorical_cols = [c for c in transformer_cols if c in X_raw.columns]
 
     preprocessor = make_preprocessor(numeric_cols=numeric_cols, categorical_cols=categorical_cols, cat_mode="onehot")
     steps = [("preprocess", preprocessor)]
