@@ -668,8 +668,33 @@ def prediction(df_clean, best_model, training_features, X_scaler, y_scaler, feat
 
     logger.info('Starting prediction function')
 
-    # --- 1. Align features exactly as in training ---
-    X_new = df_clean[feature_order]
+    # --- 1. Align raw features and replay train-time transformations ---
+    raw_features = getattr(best_model, "_digiterra_raw_features", None) or feature_order
+    missing_raw = sorted(set(raw_features) - set(df_clean.columns))
+    if missing_raw:
+        raise ValueError(f"Missing features in prediction file: {missing_raw}")
+
+    X_new_raw = df_clean[raw_features].copy()
+
+    preprocessor = getattr(best_model, "_digiterra_preprocessor", None)
+    transformed_feature_names = getattr(best_model, "_digiterra_feature_names", None)
+    model_feature_order = getattr(best_model, "_digiterra_model_features", None)
+
+    if preprocessor is not None:
+        X_transformed = preprocessor.transform(X_new_raw)
+        X_new = pd.DataFrame(X_transformed, index=X_new_raw.index)
+        if transformed_feature_names and len(transformed_feature_names) == X_new.shape[1]:
+            X_new.columns = transformed_feature_names
+    else:
+        X_new = X_new_raw.copy()
+
+    if model_feature_order:
+        missing_model_features = sorted(set(model_feature_order) - set(X_new.columns))
+        if missing_model_features:
+            raise ValueError(f"Prediction preprocessing mismatch. Missing transformed features: {missing_model_features}")
+        X_new = X_new[model_feature_order]
+    elif feature_order and set(feature_order).issubset(set(X_new.columns)):
+        X_new = X_new[feature_order]
 
     # --- 2. Apply X scaling IF it was used in training ---
     if X_scaler is not None:

@@ -2,10 +2,10 @@
 #
 # Handoff note: This file holds all Flask routes, upload/prediction logic, and model
 # orchestration. Sections are marked with "### Section N". Use them to jump around.
-# Global memStorage = in-memory state (models, data, scalers). Fine for desktop;
-# replace with session/DB if you go multi-user web. See HANDOFF.md for more.
+# Global in-memory state. Scoped per session to avoid cross-user leakage.
+# Replace with session/DB if you go multi-user web. See HANDOFF.md for more.
 
-from flask import Flask, request, render_template, jsonify, send_from_directory, send_file, Response, stream_with_context
+from flask import Flask, request, render_template, jsonify, send_from_directory, send_file, Response, stream_with_context, g
 import uuid
 from werkzeug.utils import secure_filename
 import os
@@ -133,6 +133,17 @@ from python_scripts.models.cluster_models.train_minibatch_kmeans import train_mi
 from python_scripts.models.cluster_models.train_optics import train_optics
 
 UPLOAD_DIR = APP_SUPPORT_DIR / "uploads"
+URL_PREFIX = "/" + os.environ.get("URL_PREFIX", "").strip().strip("/")
+if URL_PREFIX in {"/", ""}:
+    URL_PREFIX = ""
+
+
+def _with_prefix(path: str) -> str:
+    """Return an absolute URL path with configured URL_PREFIX applied."""
+    normalized_path = path if path.startswith("/") else f"/{path}"
+    if not URL_PREFIX:
+        return normalized_path
+    return f"{URL_PREFIX}{normalized_path}"
 
 app = Flask(
     __name__,
@@ -143,13 +154,68 @@ app = Flask(
 app.config['UPLOAD_FOLDER'] = str(UPLOAD_DIR)
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 USER_VIS_DIR.mkdir(parents=True, exist_ok=True)
-memStorage = {}
+SESSION_STORE = {}
+
+# Session cookie name for per-user state
+SESSION_COOKIE_NAME = "digiterra_session"
+
+
+def route_with_prefix(rule: str, **options):
+    """Register each route at both root and prefixed paths."""
+    def decorator(func):
+        endpoint = options.pop("endpoint", None)
+        app.route(rule, endpoint=endpoint, **options)(func)
+        if URL_PREFIX:
+            prefixed_rule = _with_prefix(rule)
+            prefixed_endpoint = f"{endpoint or func.__name__}_prefixed"
+            app.route(prefixed_rule, endpoint=prefixed_endpoint, **options)(func)
+        return func
+    return decorator
+
+
+def _get_session_id() -> str:
+    """Return the current session ID (from cookie or request context)."""
+    session_id = getattr(g, "session_id", None)
+    if session_id:
+        return session_id
+    cookie_session = request.cookies.get(SESSION_COOKIE_NAME)
+    return cookie_session or "default"
+
+
+def _get_session_storage(session_id: str | None = None) -> dict:
+    """Get or create session-scoped storage dict."""
+    sid = session_id or _get_session_id()
+    return SESSION_STORE.setdefault(sid, {})
+
+
+@app.before_request
+def _ensure_session_cookie() -> None:
+    """Ensure every client has a session cookie for isolated in-memory storage."""
+    existing = request.cookies.get(SESSION_COOKIE_NAME)
+    if existing:
+        g.session_id = existing
+        g.new_session_id = None
+        return
+    new_id = uuid.uuid4().hex
+    g.session_id = new_id
+    g.new_session_id = new_id
+
+
+@app.after_request
+def _set_session_cookie(response):
+    """Set a session cookie if one was created in this request."""
+    new_id = getattr(g, "new_session_id", None)
+    if new_id:
+        response.set_cookie(SESSION_COOKIE_NAME, new_id, httponly=True, samesite="Lax")
+    return response
 
 # File upload validation
 ALLOWED_EXTENSIONS = {'csv'}
 
-# File size and cell count thresholds for warnings (not restrictions)
-FILE_SIZE_WARNING_MB = 50  # Warn if file is larger than 50MB
+# File size and cell count thresholds
+FILE_SIZE_WARNING_MB = float(os.environ.get("DIGITERRA_WARN_UPLOAD_MB", "1"))
+MAX_UPLOAD_MB = float(os.environ.get("DIGITERRA_MAX_UPLOAD_MB", "0"))
+ENFORCE_UPLOAD_LIMIT = os.environ.get("DIGITERRA_ENFORCE_UPLOAD_LIMIT", "false").strip().lower() in {"1", "true", "yes", "on"}
 CELL_COUNT_WARNING_LARGE = 1_000_000  # Warn if more than 1 million cells
 CELL_COUNT_WARNING_MODERATE = 500_000  # Moderate warning if more than 500k cells
 
@@ -186,6 +252,32 @@ RANDOM_SEED_MAX = 1000
 def allowed_file(filename):
     """Check if file has an allowed extension."""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def _normalize_predict_preprocess_mode(mode: str) -> str:
+    """Map training-time preprocessing modes to prediction-safe modes."""
+    if mode in {"target", "indicatorAndTarget"}:
+        return "indicator"
+    return mode
+
+
+def _parse_class_weight(value):
+    """Normalize class_weight input from UI text field."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped == "":
+            return None
+        if stripped == "balanced":
+            return "balanced"
+        try:
+            parsed = ast.literal_eval(stripped)
+            if isinstance(parsed, dict):
+                return parsed
+        except (ValueError, SyntaxError):
+            pass
+    return value
 
 # Import progress tracker
 from python_scripts.preprocessing.progress_tracker import get_tracker, remove_tracker, set_result
@@ -281,17 +373,28 @@ def _json_safe_params(obj):
 
 
 ### Section 2: Render the main html page
-@app.route('/')
+@route_with_prefix('/')
 def index():
     """Render the main HTML page.
     
     Returns:
         HTML template: The main index.html page.
     """
-    return render_template('index.html')
+    return render_template(
+        'index.html',
+        api_root=URL_PREFIX,
+        static_root=_with_prefix('/static'),
+    )
 
 
-@app.route('/progress/<session_id>')
+if URL_PREFIX:
+    @app.route(f"{URL_PREFIX}/static/<path:filename>")
+    def prefixed_static(filename):
+        """Serve static assets at prefixed path (e.g. /digiterra/static/*)."""
+        return send_from_directory(app.static_folder, filename)
+
+
+@route_with_prefix('/progress/<session_id>')
 def progress_stream(session_id):
     """Server-Sent Events endpoint for progress updates.
     
@@ -353,7 +456,7 @@ def progress_stream(session_id):
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
 
-@app.route('/user-visualizations/<path:filename>')
+@route_with_prefix('/user-visualizations/<path:filename>')
 def user_visualizations(filename):
     """Serve user-generated visualization files.
     
@@ -366,7 +469,7 @@ def user_visualizations(filename):
     return send_from_directory(USER_VIS_DIR, filename)
 
 
-@app.route('/download/<path:filename>')
+@route_with_prefix('/download/<path:filename>')
 def download_visualization(filename):
     """Serve a file from USER_VIS_DIR for download. Path traversal is blocked."""
     file_path = (USER_VIS_DIR / filename).resolve()
@@ -381,7 +484,7 @@ def download_visualization(filename):
     download_name = secure_filename(requested_name) or filename
     return send_file(file_path, as_attachment=True, download_name=download_name)
 
-@app.route('/downloadAdditionalInfo', methods=['POST'])
+@route_with_prefix('/downloadAdditionalInfo', methods=['POST'])
 def download_additional_info():
     """Generate and download additional information Excel file.
     
@@ -422,7 +525,7 @@ def download_additional_info():
 
 ### Section 3: upload route  
     ## creates the route to handle file upload and gets the column names to send to front end
-@app.route('/upload', methods=['POST'])
+@route_with_prefix('/upload', methods=['POST'])
 def upload_file():
     """Handle file upload and return column information.
     
@@ -435,6 +538,7 @@ def upload_file():
             Returns error message on failure.
     """
     logger.info(f"Upload request received. Content-Type: {request.content_type}, Files in request: {list(request.files.keys())}")
+    store = _get_session_storage()
     
     if 'file' not in request.files:
         logger.warning("No 'file' key in request.files")
@@ -457,11 +561,22 @@ def upload_file():
         return jsonify({'error': 'Invalid filename.'}), HTTP_BAD_REQUEST
     
     if file:
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], safe_filename)
+        unique_prefix = uuid.uuid4().hex[:8]
+        stored_filename = f"{unique_prefix}_{safe_filename}"
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], stored_filename)
         file.save(filepath)
 
-        # Check file size for warning (not restriction)
+        # Check file size warning and optional hard limit for deployed environments
         file_size_mb = os.path.getsize(filepath) / BYTES_PER_MB
+        if ENFORCE_UPLOAD_LIMIT and MAX_UPLOAD_MB > 0 and file_size_mb > MAX_UPLOAD_MB:
+            try:
+                os.remove(filepath)
+            except OSError:
+                logger.warning("Failed to remove oversized uploaded file: %s", filepath)
+            return jsonify({
+                'error': f'File exceeds maximum allowed size of {MAX_UPLOAD_MB:.1f} MB.'
+            }), HTTP_BAD_REQUEST
+
         size_warning = None
         if file_size_mb > FILE_SIZE_WARNING_MB:
             size_warning = f"Large file detected ({file_size_mb:.1f} MB). Processing may take longer."
@@ -505,7 +620,7 @@ def upload_file():
         elif total_cells > CELL_COUNT_WARNING_MODERATE:
             cell_warning = f"Moderate dataset size ({len(data):,} rows × {len(data.columns)} columns = {total_cells:,} cells)."
         
-        memStorage['data'] = data   # store in memStorage instead of calling it 5 times
+        store['data'] = data   # store in session storage instead of calling it 5 times
         
         # getting the names of first and last columns to send to front end
         columns = data.columns.tolist()
@@ -546,7 +661,7 @@ def upload_file():
 
 ### Section 4: run correlation matrices route
     ## when user clicks 'get matrices' -> generate matrices in pdf and xlsx
-@app.route('/auto-detect-transformers', methods=['POST'])
+@route_with_prefix('/auto-detect-transformers', methods=['POST'])
 def auto_detect_transformers():
     """Auto-detect categorical columns from selected indicators.
     
@@ -556,7 +671,8 @@ def auto_detect_transformers():
     Returns:
         JSON: Response with list of column indices that should be transformed.
     """
-    if 'data' not in memStorage:
+    store = _get_session_storage()
+    if 'data' not in store:
         return jsonify({'error': 'No data uploaded. Please upload a file first.'}), HTTP_BAD_REQUEST
     
     data = request.json
@@ -564,7 +680,7 @@ def auto_detect_transformers():
         return jsonify({'error': 'No indicators provided'}), HTTP_BAD_REQUEST
     
     try:
-        df = memStorage['data']
+        df = store['data']
         selected_indicators = data['indicators']
         
         # Convert to list if single value
@@ -619,7 +735,7 @@ def auto_detect_transformers():
         return jsonify({'error': f'Error detecting categorical columns: {str(e)}'}), HTTP_INTERNAL_SERVER_ERROR
 
 
-@app.route('/correlationMatrices', methods=['POST'])
+@route_with_prefix('/correlationMatrices', methods=['POST'])
 def corr():
     """Generate correlation matrices for numeric columns.
     
@@ -634,10 +750,11 @@ def corr():
     if not data:
         return jsonify({'error': 'No data provided'}), HTTP_BAD_REQUEST
 
-    if 'data' not in memStorage:
+    store = _get_session_storage()
+    if 'data' not in store:
         return jsonify({'error': 'No data uploaded. Please upload a file first.'}), HTTP_BAD_REQUEST
 
-    df = memStorage['data']
+    df = store['data']
     drop_missing = data.get('dropMissing', 'none')
     impute_strategy = data.get('imputeStrategy', 'none')
     drop_zero = data.get('dropZero', 'none')
@@ -701,7 +818,7 @@ def corr():
         plt.tight_layout()
         fig.savefig(correlation_image_path, dpi=IMAGE_DPI)
         plt.close(fig)
-        correlation_images[method] = f"/user-visualizations/correlation_{method}.png"
+        correlation_images[method] = _with_prefix(f"/user-visualizations/correlation_{method}.png")
 
     pdf_path = USER_VIS_DIR / "correlation_matrices.pdf"
     pairplot_image = None
@@ -735,7 +852,7 @@ def corr():
             grid.savefig(pairplot_path, dpi=IMAGE_DPI)
             pdf_pages.savefig(grid.fig)
             plt.close("all")
-            pairplot_image = f"/user-visualizations/pairplot_{safe_x}_{safe_y}.png"
+            pairplot_image = _with_prefix(f"/user-visualizations/pairplot_{safe_x}_{safe_y}.png")
 
     xlsx_path = USER_VIS_DIR / "correlation_matrices.xlsx"
     with pd.ExcelWriter(xlsx_path, engine="openpyxl") as writer:
@@ -774,7 +891,7 @@ def corr():
     })
 
 
-@app.route('/pairplot', methods=['POST'])
+@route_with_prefix('/pairplot', methods=['POST'])
 def pairplot():
     """Generate pairplot visualization for two numeric columns.
     
@@ -788,14 +905,15 @@ def pairplot():
     if not data:
         return jsonify({'error': 'No data provided'}), HTTP_BAD_REQUEST
 
-    if 'data' not in memStorage:
+    store = _get_session_storage()
+    if 'data' not in store:
         return jsonify({'error': 'No data uploaded. Please upload a file first.'}), HTTP_BAD_REQUEST
     
     # Validate required fields
     if 'colsIgnore' not in data:
         return jsonify({'error': 'Missing required field: colsIgnore'}), HTTP_BAD_REQUEST
 
-    df = memStorage['data']
+    df = store['data']
     x_col = data.get('x')
     y_col = data.get('y')
     drop_missing = data.get('dropMissing', 'none')
@@ -834,12 +952,12 @@ def pairplot():
     grid.savefig(pairplot_path, dpi=150)
     plt.close("all")
 
-    return jsonify({'pairplot_image': f"/user-visualizations/pairplot_{safe_x}_{safe_y}.png"})
+    return jsonify({'pairplot_image': _with_prefix(f"/user-visualizations/pairplot_{safe_x}_{safe_y}.png")})
 
 
 ### Section 5: Route for preprocessing
     ## when user clicks 'Process' this sends column names selected for the predictors + indicators to display 
-@app.route('/preprocess', methods=['POST'])
+@route_with_prefix('/preprocess', methods=['POST'])
 def preprocess():
     """Preprocess data and return selected column names.
     
@@ -858,7 +976,8 @@ def preprocess():
     if 'indicators' not in data or 'predictors' not in data or 'stratify' not in data:
         return jsonify({'error': 'Missing required fields: indicators, predictors, stratify'}), HTTP_BAD_REQUEST
     
-    if 'data' not in memStorage:
+    store = _get_session_storage()
+    if 'data' not in store:
         return jsonify({'error': 'No data uploaded. Please upload a file first.'}), HTTP_BAD_REQUEST
     
     # Validate required fields
@@ -871,7 +990,7 @@ def preprocess():
         selected_indicators = data['indicators']
         selected_predictors = data['predictors']
         stratify = data['stratify']
-        df = memStorage['data']
+        df = store['data']
         # Getting the column names from the dataframe
         # Use take() to select by position, which handles duplicate column names better
         try:
@@ -907,6 +1026,12 @@ def preprocess():
                 stratify_name = str(stratify_name)
     except (KeyError, IndexError):
         stratify_name = str(df.columns[stratify]) if stratify < len(df.columns) else ''
+
+    store['last_preprocess_request'] = {
+        'indicators': selected_indicators,
+        'predictors': selected_predictors,
+        'stratify': stratify,
+    }
 
     return jsonify({
         'predictors': [str(p)[:COLUMN_NAME_DISPLAY_LENGTH] for p in predictor_names],
@@ -969,12 +1094,12 @@ def _safe_select_columns(df, column_names_or_indices):
                 return df.iloc[:, unique_indices]
             raise
 
-def _run_model_training(session_id: str, data: dict):
+def _run_model_training(session_id: str, data: dict, storage_session_id: str):
     """Run model training in a background thread.
     
     This function handles the complete model training pipeline including data
     preprocessing, model selection, training, and result storage. Progress is
-    tracked via the progress tracker and results are stored in memStorage.
+    tracked via the progress tracker and results are stored in session storage.
     
     Args:
         session_id (str): Unique session identifier for progress tracking.
@@ -994,6 +1119,7 @@ def _run_model_training(session_id: str, data: dict):
     """
     tracker = get_tracker(session_id)
     tracker.start()
+    store = _get_session_storage(storage_session_id)
     
     try:
         # Input validation
@@ -1005,7 +1131,7 @@ def _run_model_training(session_id: str, data: dict):
         if missing_fields:
             raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
         
-        if 'data' not in memStorage:
+        if 'data' not in store:
             raise ValueError("No data uploaded. Please upload a file first.")
         
         # getting all the parameters from the front end
@@ -1073,7 +1199,7 @@ def _run_model_training(session_id: str, data: dict):
         
         # Data preprocessing
         tracker.update_stage('data_preprocessing', 'running', 10, 'Loading data...')
-        df = memStorage['data']
+        df = store['data']
         
         # Select columns by position to avoid issues with duplicate column names
         # Convert indices to list if single value, ensure they're integers
@@ -1093,6 +1219,16 @@ def _run_model_training(session_id: str, data: dict):
                 indicator_names = df.columns[selected_indicators].tolist()
             except Exception as e2:
                 raise ValueError(f"Error selecting columns: {str(e2)}. This may be due to duplicate column names in your CSV file. Please ensure all column names are unique.")
+
+        # Persist inference settings so /predict can apply the same preprocessing choices.
+        store['inference_config'] = {
+            'indicator_names': list(indicator_names),
+            'predictor_names': list(predictor_names),
+            'drop_missing': drop_missing,
+            'impute_strategy': impute_strategy,
+            'drop_zero': drop_zero,
+            'useTransformer': useTransformer,
+        }
         
         tracker.update_stage('data_preprocessing', 'running', 30, 'Preparing features and targets...')
 
@@ -1124,11 +1260,11 @@ def _run_model_training(session_id: str, data: dict):
                     stratify_name = stratify_name.tolist()[0] if len(stratify_name) > 0 else stratify_name
 
         if seed:  # if user gives seed add to storage
-            memStorage['seed'] = seed
+            store['seed'] = seed
         else:  # no seed given
             # if 'seed' not in memStorage.keys(): #if seed not already saved then add random seed
             seed = random.randint(0, RANDOM_SEED_MAX)
-                #memStorage['seed'] = 'random'
+            store['seed'] = seed
             #else: 
             #    seed = memStorage['seed']   #else use prior randomly generated seed or keep generating random seed? - ask rowan need way to generate new random seed
             #if given seed then given no seed, want new random
@@ -1827,6 +1963,7 @@ def _run_model_training(session_id: str, data: dict):
                     SVMBreakTies = False
                 if hyperparameters['SVCverbose'] == 'false':
                     SVMverbose = False
+                svc_class_weight = _parse_class_weight(hyperparameters.get('SVCClassWeight'))
 
                 kernel = hyperparameters['kernel']
                 if kernel =='rbf':
@@ -1839,7 +1976,7 @@ def _run_model_training(session_id: str, data: dict):
                                 probability=SVMprobability,
                                 tol=hyperparameters['SVCtol'],
                                 cache_size=hyperparameters['SVCCacheSize'],
-                                class_weight=hyperparameters['SVCClassWeight'],
+                                class_weight=svc_class_weight,
                                 verbose=SVMverbose,
                                 max_iter=hyperparameters['SVCmaxIter'],
                                 decision_function_shape=hyperparameters['SVCdecisionFunctionShape'],
@@ -1860,7 +1997,7 @@ def _run_model_training(session_id: str, data: dict):
                             probability=SVMprobability,
                             tol=hyperparameters['SVCtol'],
                             cache_size=hyperparameters['SVCCacheSize'],
-                            class_weight=hyperparameters['SVCClassWeight'],
+                            class_weight=svc_class_weight,
                             verbose=SVMverbose,
                             max_iter=hyperparameters['SVCmaxIter'],
                             decision_function_shape=hyperparameters['SVCdecisionFunctionShape'],
@@ -1879,7 +2016,7 @@ def _run_model_training(session_id: str, data: dict):
                                 probability=SVMprobability,
                                 tol=hyperparameters['SVCtol'],
                                 cache_size=hyperparameters['SVCCacheSize'],
-                                class_weight=hyperparameters['SVCClassWeight'],
+                                class_weight=svc_class_weight,
                                 verbose=SVMverbose,
                                 max_iter=hyperparameters['SVCmaxIter'],
                                 decision_function_shape=hyperparameters['SVCdecisionFunctionShape'],
@@ -2352,20 +2489,20 @@ def _run_model_training(session_id: str, data: dict):
 
             try:
                 _y_train = df[predictor_names].to_numpy()
-                memStorage['y_train_mean'] = float(np.mean(_y_train))
-                memStorage['y_train_std'] = float(np.std(_y_train))
+                store['y_train_mean'] = float(np.mean(_y_train))
+                store['y_train_std'] = float(np.std(_y_train))
             except Exception:
-                memStorage['y_train_mean'] = None
-                memStorage['y_train_std'] = None
+                store['y_train_mean'] = None
+                store['y_train_std'] = None
 
-            memStorage['y_scaler'] = y_scaler
+            store['y_scaler'] = y_scaler
 
 
-        memStorage['model'] = storedModel #10/1 Rowan this is how the model is stored, it is returned from the train functions
-        memStorage['X_scaler'] = X_scaler
-        memStorage['feature_order'] = feature_order
+        store['model'] = storedModel #10/1 Rowan this is how the model is stored, it is returned from the train functions
+        store['X_scaler'] = X_scaler
+        store['feature_order'] = feature_order
         # Store predictor names for use in prediction (handles multi-target regression)
-        memStorage['predictor_names'] = predictor_names
+        store['predictor_names'] = predictor_names
         
         # Mark all stages complete
         tracker.complete()
@@ -2383,7 +2520,7 @@ def _run_model_training(session_id: str, data: dict):
         remove_tracker(session_id)
 
 
-@app.route('/process', methods=['POST'])
+@route_with_prefix('/process', methods=['POST'])
 def process_columns():
     """Start model training process with progress tracking.
     
@@ -2398,8 +2535,20 @@ def process_columns():
     if not request.json:
         return jsonify({'error': 'No data provided'}), HTTP_BAD_REQUEST
     
+    # Enforce expected order: user should run preprocess before modeling.
+    store = _get_session_storage()
+    last_preprocess = store.get('last_preprocess_request')
+    if not last_preprocess:
+        return jsonify({'error': 'Run Model Preprocessing before Modeling.'}), HTTP_BAD_REQUEST
+
+    req_indicators = request.json.get('indicators')
+    req_predictors = request.json.get('predictors')
+    if req_indicators != last_preprocess.get('indicators') or req_predictors != last_preprocess.get('predictors'):
+        return jsonify({'error': 'Selections changed since preprocessing. Re-run Model Preprocessing before Modeling.'}), HTTP_BAD_REQUEST
+
     # Create a session ID for progress tracking BEFORE starting training
     session_id = str(uuid.uuid4())
+    storage_session_id = _get_session_id()
     tracker = get_tracker(session_id)
     
     # getting all the parameters from the front end
@@ -2409,7 +2558,7 @@ def process_columns():
     # Training will run in background thread
     training_thread = threading.Thread(
         target=_run_model_training,
-        args=(session_id, data),
+        args=(session_id, data, storage_session_id),
         daemon=True
     )
     training_thread.start()
@@ -2418,7 +2567,7 @@ def process_columns():
     return jsonify({'session_id': session_id, 'status': 'processing'}), HTTP_ACCEPTED
     
 ### Section 7: Route for Prediction
-@app.route('/predict', methods=['POST'])
+@route_with_prefix('/predict', methods=['POST'])
 def predict():
     """Generate predictions using a trained model.
     
@@ -2428,6 +2577,8 @@ def predict():
     Returns:
         JSON: Response with prediction results on success, error message on failure.
     """
+    store = _get_session_storage()
+
     if 'predictFile' not in request.files:
         return jsonify({'error': 'No file uploaded'}), HTTP_BAD_REQUEST
 
@@ -2444,7 +2595,9 @@ def predict():
     if not safe_filename:
         return jsonify({'error': 'Invalid filename.'}), HTTP_BAD_REQUEST
 
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], safe_filename)
+    unique_prefix = uuid.uuid4().hex[:8]
+    stored_filename = f"{unique_prefix}_{safe_filename}"
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], stored_filename)
     file.save(filepath)
 
     # Read the CSV with error handling
@@ -2478,19 +2631,41 @@ def predict():
                 new_columns.append(col)
         data.columns = new_columns
 
-    # Preprocess prediction data (use df downstream)
-    df = preprocess_data(data)
+    # Ensure model context exists
+    if 'model' not in store or store['model'] is None:
+        return jsonify({'error': 'No trained model found. Train a model first.'}), HTTP_BAD_REQUEST
+
+    if 'feature_order' not in store or not store['feature_order']:
+        return jsonify({'error': 'No feature_order found. Train a model first.'}), HTTP_BAD_REQUEST
+
+    # Apply prediction-time preprocessing using training configuration
+    infer_cfg = store.get('inference_config', {})
+    indicator_names = infer_cfg.get('indicator_names')
+    drop_missing = _normalize_predict_preprocess_mode(infer_cfg.get('drop_missing', 'none'))
+    impute_strategy = infer_cfg.get('impute_strategy', 'none')
+    drop_zero = _normalize_predict_preprocess_mode(infer_cfg.get('drop_zero', 'none'))
+    if impute_strategy in {'0', '0.01'}:
+        impute_strategy = float(impute_strategy)
+
+    preprocess_indicator_cols = None
+    if indicator_names:
+        preprocess_indicator_cols = [c for c in indicator_names if c in data.columns]
+    if not preprocess_indicator_cols:
+        preprocess_indicator_cols = data.columns.tolist()
+
+    df = preprocess_data(
+        data,
+        target_cols=None,
+        indicator_cols=preprocess_indicator_cols,
+        drop_missing=drop_missing,
+        impute_strategy=impute_strategy,
+        drop_zero=drop_zero,
+    )
 
     try:
-        # Ensure a trained model exists
-        if 'model' not in memStorage or memStorage['model'] is None:
-            return jsonify({'error': 'No trained model found. Train a model first.'}), HTTP_BAD_REQUEST
-
+        store = _get_session_storage()
         # Ensure feature order exists (this is the exact set/order of training features)
-        if 'feature_order' not in memStorage or not memStorage['feature_order']:
-            return jsonify({'error': 'No feature_order found. Train a model first.'}), HTTP_BAD_REQUEST
-
-        required_features = list(memStorage['feature_order'])
+        required_features = list(store['feature_order'])
 
         # Validate required features exist in uploaded prediction file
         missing = sorted(set(required_features) - set(df.columns))
@@ -2498,10 +2673,10 @@ def predict():
             return jsonify({'error': f"Missing features in prediction file: {missing}"}), HTTP_BAD_REQUEST
 
         # y_scaler may not exist for classification/cluster models
-        y_scaler = memStorage.get('y_scaler', None)
+        y_scaler = store.get('y_scaler', None)
         
         # Get target names if available (for multi-target regression)
-        target_names = memStorage.get('predictor_names', None)
+        target_names = store.get('predictor_names', None)
         if target_names is not None:
             # Convert to list if it's a pandas Index
             if hasattr(target_names, 'tolist'):
@@ -2510,9 +2685,9 @@ def predict():
         # Run prediction on the PREPROCESSED df, using stored feature order
         prediction(
             df,
-            best_model=memStorage['model'],
+            best_model=store['model'],
             training_features=required_features,
-            X_scaler=memStorage.get('X_scaler', None),
+            X_scaler=store.get('X_scaler', None),
             y_scaler=y_scaler,
             feature_order=required_features,
             target_names=target_names
@@ -2522,7 +2697,7 @@ def predict():
         if len(safe_filename) > 30:
             filename += "..."
 
-        return jsonify({'results': '/download/predictions.csv', 'filename': filename})
+        return jsonify({'results': _with_prefix('/download/predictions.csv'), 'filename': filename})
 
     except Exception as e:
         logger.error(f"Error in predict: {e}", exc_info=True)

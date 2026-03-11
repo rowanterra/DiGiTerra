@@ -253,6 +253,15 @@ def run_classification(model, model_name,
     # y_train may have been filtered if outliers were removed
     processed_y_train_shape = y_train.shape if hasattr(y_train, 'shape') else (len(y_train),)
     processed_y_test_shape = y_test.shape if hasattr(y_test, 'shape') else (len(y_test),)
+
+    # Store fitted inference artifacts on the model so prediction can replay train-time transforms.
+    try:
+        setattr(model, "_digiterra_preprocessor", preproc)
+        setattr(model, "_digiterra_raw_features", X_train.columns.tolist())
+        setattr(model, "_digiterra_feature_names", X_train_t.columns.tolist())
+        setattr(model, "_digiterra_model_features", X_train_s.columns.tolist())
+    except Exception:
+        logger.debug("Could not attach inference artifacts to classification model", exc_info=True)
     
     # Return in the expected order: report, cm, params, shapes, model, X_scaler, quantileBin_results, feature_order, additional_metrics
     # additional_metrics is added at the end for backward compatibility
