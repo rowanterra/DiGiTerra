@@ -15,6 +15,14 @@ DiGiTerra follows a consistent workflow:
 - **Transformers** encode non-numeric columns for modeling.
 - **Stratification** balances splits or evaluation based on a selected variable.
 
+## Robustness Validation (Regression)
+- Use repeated multi-seed evaluation when you need reputation-grade evidence that results are not tied to one random split.
+- DiGiTerra includes `python_scripts/preprocessing/evaluate_regression_robustness.py` for this purpose.
+- The script repeats train/test + CV over many seeds, keeps splitting consistent within each seed, and exports:
+  - per-seed metrics for every model/feature-set combination
+  - aggregate statistics (median, mean, std, and 95% empirical interval)
+- Recommended minimum: 30 seeds for model screening, then confirm the finalist on an external validation dataset.
+
 ## File Format & Column Entry Tips
 - **CSV only:** DiGiTerra expects CSV files. If you have an Excel spreadsheet, open it and choose **File → Save As** to export a `.csv` file.
 - **Column letters:** Columns are selected using spreadsheet-style letters (A, B, C...). Ranges look like `A-D` and multiple selections can be separated with commas (for example: `A-D, F, H`).

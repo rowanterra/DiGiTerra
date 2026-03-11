@@ -27,6 +27,12 @@ spec:
               value: {{ .Values.env.DIGITERRA_HOST | quote }}
             - name: DIGITERRA_PORT
               value: {{ .Values.env.DIGITERRA_PORT | quote }}
+            - name: DIGITERRA_WARN_UPLOAD_MB
+              value: {{ .Values.env.DIGITERRA_WARN_UPLOAD_MB | quote }}
+            - name: DIGITERRA_MAX_UPLOAD_MB
+              value: {{ .Values.env.DIGITERRA_MAX_UPLOAD_MB | quote }}
+            - name: DIGITERRA_ENFORCE_UPLOAD_LIMIT
+              value: {{ .Values.env.DIGITERRA_ENFORCE_UPLOAD_LIMIT | quote }}
             {{- if .Values.persistence.enabled }}
             - name: XDG_DATA_HOME
               value: {{ .Values.persistence.mountPath | quote }}

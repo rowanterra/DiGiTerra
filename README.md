@@ -43,6 +43,28 @@ Then open `http://127.0.0.1:5000`.
 
 **Example datasets:** The `examples/` directory contains 9 CSVs: 3 classification (Iris, Wine, Breast cancer), 3 regression (Diabetes, Synthetic, Linnerud), and 3 clustering (feature-only versions). See `examples/README.md` for usage.
 
+## Regression robustness check (multi-seed)
+
+To confirm regression performance is stable (not seed-dependent), run:
+
+```bash
+python python_scripts/preprocessing/evaluate_regression_robustness.py \
+  --input /path/to/data.xlsx \
+  --sheet Literature \
+  --target TREE \
+  --features pH,Fe,Mn,Al,SO4 \
+  --keep-feature pH \
+  --stratify-col pH \
+  --seed-start 0 \
+  --seed-count 30 \
+  --output-dir docs \
+  --output-stem tree_robustness
+```
+
+This writes:
+- `docs/tree_robustness_per_seed.csv` (each seed/model/feature-set run)
+- `docs/tree_robustness_summary.csv` (median/mean/std and 95% empirical interval)
+
 ## Local development (desktop window)
 
 ```bash
