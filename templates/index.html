@@ -13,8 +13,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DiGiTerra</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <link rel="icon" type="image/png" href="/static/Terra_Axe_Logo.png">
+    <link rel="stylesheet" href="{{ static_root }}/style.css">
+    <link rel="icon" type="image/png" href="{{ static_root }}/Terra_Axe_Logo.png">
     <script>
         // DARK MODE DISABLED - Code kept for potential future use
         // Initialize dark mode immediately to prevent flash
@@ -52,7 +52,7 @@
     <a href="#main-content" class="skip-link">Skip to main content</a>
     <header class="header">
         <div class="left" id="headerLogo" style="cursor: pointer;" role="button" tabindex="0" aria-label="Return to welcome screen">
-            <img src='/static/Terra_Axe_Logo.png' class="logo" alt="DiGiTerra logo">
+            <img src='{{ static_root }}/Terra_Axe_Logo.png' class="logo" alt="DiGiTerra logo">
             <h1 class="title">DiGiTerra</h1>
         </div>
         <nav id="appTabs" class="app-tabs hidden" role="navigation" aria-label="Main navigation">
@@ -80,7 +80,7 @@
                 <span class="welcome-text">Welcome to </span>
                 <br>
                 <div style="display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: nowrap;">
-                    <img src="/static/Terra_Axe_Logo.png" class="logo logo-inline" alt="DiGiTerra logo">
+                    <img src="{{ static_root }}/Terra_Axe_Logo.png" class="logo logo-inline" alt="DiGiTerra logo">
                     <span class="welcome-text2">DiGiTerra</span>
                 </div>
             </h1>
@@ -90,9 +90,9 @@
             </div>
         </div>
         <div class="welcomesection logos">
-            <img src='/static/ORISELogo.png' class="ORISE" alt="Oak Ridge Institute for Science and Education logo">
-            <img src='/static/DOELogo.png' class="doe" alt="Department of Energy logo">
-            <img src='/static/NETLLogo.png' class="bottomlogo" alt="National Energy Technology Laboratory logo">
+            <img src='{{ static_root }}/ORISELogo.png' class="ORISE" alt="Oak Ridge Institute for Science and Education logo">
+            <img src='{{ static_root }}/DOELogo.png' class="doe" alt="Department of Energy logo">
+            <img src='{{ static_root }}/NETLLogo.png' class="bottomlogo" alt="National Energy Technology Laboratory logo">
         </div>
         <div class="welcomesection disclaimer">
             <div id="welcomeDisclaimerContent" style="padding: 12px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px; margin: 0;">
@@ -739,21 +739,21 @@
             <p class="field-note" style="margin-bottom: 16px;">Choose your modeling approach. Each mode provides different levels of control and automation.</p>
             <div class="scaling-container">
                 <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: stretch; width: 100%;">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; flex: 1; min-width: 250px; transition: all 0.2s;">
+                    <label class="modeling-mode-option" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; flex: 1; min-width: 250px; transition: all 0.2s;">
                         <input type="radio" name="modelingMode" id="automlMode" value="automl" style="margin: 0;">
                         <div>
                             <strong>AutoML</strong>
                             <p style="margin: 4px 0 0 0; font-size: 0.9em; color: #666;">Fully automated - let the system optimize everything for you</p>
                         </div>
                     </label>
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; flex: 1; min-width: 250px; transition: all 0.2s;">
+                    <label class="modeling-mode-option" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; flex: 1; min-width: 250px; transition: all 0.2s;">
                         <input type="radio" name="modelingMode" id="simpleMode" value="simple" checked style="margin: 0;">
                         <div>
                             <strong>Simple Modeling</strong>
                             <p style="margin: 4px 0 0 0; font-size: 0.9em; color: #666;">Basic model selection and configuration</p>
                         </div>
                     </label>
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; flex: 1.2; min-width: 280px; transition: all 0.2s;">
+                    <label class="modeling-mode-option" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; flex: 1.2; min-width: 280px; transition: all 0.2s;">
                         <input type="radio" name="modelingMode" id="advancedMode" value="advanced" style="margin: 0;">
                         <div>
                             <strong>Advanced Modeling</strong>
@@ -2187,9 +2187,9 @@
                     <label for="Class_polyDegree">Degree of poly kernel function (int):</label>
                     <input type="number" step=1 value=3 placeholder=3.0 id="Class_polyDegree" name="Class_polyDegree">
                 </div>
-                <div id="SVCGamma">
+                <div id="SVCGammaContainer">
                     <div><br></div>
-                    <label for="Gamma">Gamma - enter 'auto', 'scale', or a float:</label>
+                    <label for="SVCGamma">Gamma - enter 'auto', 'scale', or a float:</label>
                     <input type="text"  value='scale' placeholder='scale' id="SVCGamma" name="SVCGamma">
                 </div>
 
@@ -7445,6 +7445,10 @@
 
 
     </main>
-    <script src='/static/client_side.js'></script> 
+    <script>
+        window.API_ROOT = "{{ api_root }}";
+        window.STATIC_ROOT = "{{ static_root }}";
+    </script>
+    <script src='{{ static_root }}/client_side.js'></script> 
 </body>
 </html>

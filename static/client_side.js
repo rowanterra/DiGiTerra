@@ -33,8 +33,66 @@ const backToModelPreprocessButton = document.getElementById('backToModelPreproce
 const backToModelingFromAdvancedButton = document.getElementById('backToModelingFromAdvanced');
 const documentationSection = document.getElementById('documentation');
 let pywebviewReady = false;
+let headerResizeObserver = null;
 
 let uploadedFileName = '';
+const API_ROOT = (window.API_ROOT || '').replace(/\/+$/, '');
+
+function withApiRoot(path) {
+    if (!path) return API_ROOT || '';
+    if (/^https?:\/\//i.test(path) || path.startsWith('//')) return path;
+    if (!path.startsWith('/')) return `${API_ROOT}/${path}`;
+    return `${API_ROOT}${path}`;
+}
+
+function rewritePrefixedAssetUrls(root = document) {
+    const anchors = root.querySelectorAll('a[href^="/download/"]');
+    anchors.forEach((anchor) => {
+        const href = anchor.getAttribute('href');
+        if (href) {
+            anchor.setAttribute('href', withApiRoot(href));
+        }
+    });
+
+    const images = root.querySelectorAll('img[src^="/user-visualizations/"]');
+    images.forEach((image) => {
+        const src = image.getAttribute('src');
+        if (src) {
+            image.setAttribute('src', withApiRoot(src));
+        }
+    });
+}
+
+const nativeFetch = window.fetch.bind(window);
+window.fetch = (resource, init) => {
+    if (typeof resource === 'string') {
+        resource = withApiRoot(resource);
+    } else if (resource instanceof Request) {
+        resource = new Request(withApiRoot(resource.url), resource);
+    }
+    return nativeFetch(resource, init);
+};
+
+const NativeEventSource = window.EventSource;
+window.EventSource = function eventSourceWithPrefix(url, config) {
+    return new NativeEventSource(withApiRoot(url), config);
+};
+window.EventSource.prototype = NativeEventSource.prototype;
+
+const prefixedAssetObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+                rewritePrefixedAssetUrls(node);
+            }
+        });
+    });
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    rewritePrefixedAssetUrls(document);
+    prefixedAssetObserver.observe(document.body, { childList: true, subtree: true });
+});
 
 // ============================================================================
 // Utility Functions
@@ -73,6 +131,46 @@ const toggleElement = (element, show) => {
         }
     }
 };
+
+// Keep content offset synced with fixed header height so sections are not hidden
+function updateHeaderOffset() {
+    const header = document.querySelector('.header');
+    if (!header) return;
+    const headerHeight = Math.ceil(header.getBoundingClientRect().height);
+    document.documentElement.style.setProperty('--header-offset', `${headerHeight + 16}px`);
+}
+
+function initHeaderOffsetSync() {
+    updateHeaderOffset();
+    window.addEventListener('resize', updateHeaderOffset);
+    window.addEventListener('orientationchange', updateHeaderOffset);
+
+    const header = document.querySelector('.header');
+    if (header && 'ResizeObserver' in window) {
+        headerResizeObserver = new ResizeObserver(updateHeaderOffset);
+        headerResizeObserver.observe(header);
+    }
+}
+
+// Firefox-safe styling for modeling mode labels
+function updateModelingModeSelection() {
+    const radios = document.querySelectorAll('input[type="radio"][name="modelingMode"]');
+    radios.forEach((radio) => {
+        const label = radio.closest('.modeling-mode-option');
+        if (!label) return;
+        label.classList.toggle('is-selected', radio.checked);
+    });
+}
+
+function initModelingModeSelectionSync() {
+    updateModelingModeSelection();
+    document.addEventListener('change', (event) => {
+        const target = event.target;
+        if (target && target.matches('input[type="radio"][name="modelingMode"]')) {
+            updateModelingModeSelection();
+        }
+    });
+}
 
 // HTML escape utility to prevent XSS
 function escapeHtml(text) {
@@ -198,9 +296,15 @@ function enhanceToggleAccessibility() {
 
 // Initialize accessibility enhancements when DOM is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', enhanceToggleAccessibility);
+    document.addEventListener('DOMContentLoaded', () => {
+        enhanceToggleAccessibility();
+        initHeaderOffsetSync();
+        initModelingModeSelectionSync();
+    });
 } else {
     enhanceToggleAccessibility();
+    initHeaderOffsetSync();
+    initModelingModeSelectionSync();
 }
 
 // Modeling mode switching handler
@@ -592,7 +696,9 @@ document.addEventListener('click', (event) => {
         return;
     }
     const href = link.getAttribute('href');
-    if (!href || !href.startsWith('/download/')) {
+    const relativeDownloadPrefix = '/download/';
+    const prefixedDownloadPrefix = `${API_ROOT}/download/`;
+    if (!href || (!href.startsWith(relativeDownloadPrefix) && !href.startsWith(prefixedDownloadPrefix))) {
         return;
     }
     // Check if pywebview API is available
@@ -602,7 +708,7 @@ document.addEventListener('click', (event) => {
             pywebviewReady = true;
             const downloadUrl = new URL(href, window.location.origin);
             const requestedName = downloadUrl.searchParams.get('download_name');
-            const sourceFilename = decodeURIComponent(downloadUrl.pathname.replace('/download/', ''));
+            const sourceFilename = decodeURIComponent(downloadUrl.pathname.replace(/^.*\/download\//, ''));
             const downloadName = requestedName ? decodeURIComponent(requestedName) : sourceFilename;
             console.log('Intercepting download link, calling pywebview API:', sourceFilename, downloadName);
             window.pywebview.api.save_file(sourceFilename, downloadName)
@@ -1800,7 +1906,7 @@ function downloadAdditionalInfoTable(tableData, sheetName, timestamp) {
             return;
         }
         const downloadName = `additional_info_${sheetName.toLowerCase().replace(/\s+/g, '_')}_${timestamp}.xlsx`;
-        const href = `/download/${data.filename}?download_name=${encodeURIComponent(downloadName)}`;
+        const href = withApiRoot(`/download/${data.filename}?download_name=${encodeURIComponent(downloadName)}`);
         const link = document.createElement('a');
         link.href = href;
         link.click();
@@ -2526,7 +2632,7 @@ preprocessform.addEventListener('submit', async (e) => {
     document.getElementById("Class_kernel").addEventListener("change", function() {
         let kernel = this.value;
         let class_polykernelFields = document.getElementById("Class_polykernelFields");
-        let svcGamma = document.getElementById("SVCGamma");
+        let svcGamma = document.getElementById("SVCGammaContainer");
 
         if (kernel==='poly'){
             svcGamma.classList.remove('hidden');
@@ -4404,7 +4510,7 @@ processForm.addEventListener('submit', async (e) => {
             }
         }
         else if (kernel.value === 'rbf'){
-            const gamma = document.getElementById('Gamma');
+            const gamma = document.getElementById('SVCGamma');
             if (gamma.value === 'scale' || gamma.value === 'auto'){
                 hyperparameters['gamma'] = gamma.value;
             }
@@ -4435,7 +4541,7 @@ processForm.addEventListener('submit', async (e) => {
             hyperparameters['SVCcoef0'] = parseFloat(SVCcoef0)
             hyperparameters['SVCtol'] = parseFloat(SVCtol)
             hyperparameters['SVCCacheSize'] = parseFloat(SVCCacheSize)
-            hyperparameters['SVCClassWeight'] = SVCClassWeight
+            hyperparameters['SVCClassWeight'] = SVCClassWeight.trim() === '' ? null : SVCClassWeight.trim()
             hyperparameters['SVCmaxIter'] = parseInt(SVCmaxIter)
             hyperparameters['SVCdecisionFunctionShape'] = SVCdecisionFunctionShape
             //hyperparameters['SVMrandomState'] = SVMrandomState
@@ -6540,7 +6646,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                             } else if (filename.endsWith('_advanced') && !filename.includes('.png')) {
                                 filename = `${filename}.png`;
                             }
-                            targetGraphic.src = `/user-visualizations/${filename}?t=${Date.now()}`;
+                            targetGraphic.src = withApiRoot(`/user-visualizations/${filename}?t=${Date.now()}`);
                             return;
                         }
                         
@@ -6553,7 +6659,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                         }
                         // Default (backward compatibility) also has no suffix
                         
-                        targetGraphic.src = `/user-visualizations/target_plot_${selectedImage}${suffix}.png?t=${Date.now()}`;
+                        targetGraphic.src = withApiRoot(`/user-visualizations/target_plot_${selectedImage}${suffix}.png?t=${Date.now()}`);
                     };
                     // Add error handler for image loading
                     if (targetGraphic) {
@@ -6670,7 +6776,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                                     } else if (filename.endsWith('_advanced') && !filename.includes('.png')) {
                                         filename = `${filename}.png`;
                                     }
-                                    advancedTargetGraphic.src = `/user-visualizations/${filename}?t=${Date.now()}`;
+                                    advancedTargetGraphic.src = withApiRoot(`/user-visualizations/${filename}?t=${Date.now()}`);
                                     return;
                                 }
                                 
@@ -6679,7 +6785,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                                     suffix = '_advanced';
                                 }
                                 
-                                advancedTargetGraphic.src = `/user-visualizations/target_plot_${selectedImage}${suffix}.png?t=${Date.now()}`;
+                                advancedTargetGraphic.src = withApiRoot(`/user-visualizations/target_plot_${selectedImage}${suffix}.png?t=${Date.now()}`);
                             };
                             
                             if (advancedImageSelector) {
@@ -6880,7 +6986,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                             } else if (filename.endsWith('_advanced') && !filename.includes('.png')) {
                                 filename = `${filename}.png`;
                             }
-                            targetGraphic.src = `/user-visualizations/${filename}?t=${Date.now()}`;
+                            targetGraphic.src = withApiRoot(`/user-visualizations/${filename}?t=${Date.now()}`);
                             return;
                         }
                         
@@ -6893,7 +6999,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                         }
                         // Default (backward compatibility) also has no suffix
                         
-                        targetGraphic.src = `/user-visualizations/target_plot_1${suffix}.png?t=${Date.now()}`;
+                        targetGraphic.src = withApiRoot(`/user-visualizations/target_plot_1${suffix}.png?t=${Date.now()}`);
                     };
                     regressionVisualSelector.addEventListener("change", updateGraphic);
                     // Add error handler for image loading
@@ -6987,7 +7093,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                                     } else if (filename.endsWith('_advanced') && !filename.includes('.png')) {
                                         filename = `${filename}.png`;
                                     }
-                                    advancedTargetGraphicSingle.src = `/user-visualizations/${filename}?t=${Date.now()}`;
+                                    advancedTargetGraphicSingle.src = withApiRoot(`/user-visualizations/${filename}?t=${Date.now()}`);
                                     return;
                                 }
                                 
@@ -6996,7 +7102,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                                     suffix = '_advanced';
                                 }
                                 
-                                advancedTargetGraphicSingle.src = `/user-visualizations/target_plot_1${suffix}.png?t=${Date.now()}`;
+                                advancedTargetGraphicSingle.src = withApiRoot(`/user-visualizations/target_plot_1${suffix}.png?t=${Date.now()}`);
                             };
                             
                             advancedVisualSelectorSingle.addEventListener("change", updateAdvancedGraphicSingle);
@@ -7180,7 +7286,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                 if (classifierImageSelector && classifierGraphic) {
                     classifierImageSelector.addEventListener('change', () => {
                         const selectedImage = classifierImageSelector.value;
-                        classifierGraphic.src = `/user-visualizations/${selectedImage}.png?t=${Date.now()}`;
+                        classifierGraphic.src = withApiRoot(`/user-visualizations/${selectedImage}.png?t=${Date.now()}`);
                     });
                 }
             }
@@ -7259,7 +7365,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                 if (clusterImageSelector && clusterGraphic) {
                     clusterImageSelector.addEventListener('change', () => {
                         const selectedImage = clusterImageSelector.value
-                        clusterGraphic.src = `/user-visualizations/${selectedImage}.png?t=${Date.now()}`
+                        clusterGraphic.src = withApiRoot(`/user-visualizations/${selectedImage}.png?t=${Date.now()}`)
                     })
                 }
             }

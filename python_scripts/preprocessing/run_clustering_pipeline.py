@@ -327,6 +327,14 @@ def run_clustering(model, model_name,
     logger.debug(f"Test scores: {test_scores}")
     
     quantileBinResults = ''
+    try:
+        setattr(model, "_digiterra_preprocessor", preproc)
+        setattr(model, "_digiterra_raw_features", X_train_raw.columns.tolist())
+        setattr(model, "_digiterra_feature_names", X_train_t.columns.tolist())
+        setattr(model, "_digiterra_model_features", X_train_s.columns.tolist())
+    except Exception:
+        logger.debug("Could not attach inference artifacts to clustering model", exc_info=True)
+
     return train_scores, test_scores, model.get_params(), {
                 'X_train': X_train_s.shape,
                 'X_test': X_test_s.shape

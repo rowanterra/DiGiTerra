@@ -4,6 +4,10 @@
   box-sizing: border-box;
 }
 
+:root {
+  --header-offset: 88px;
+}
+
 html,
 body {
   width: 100%;
@@ -16,7 +20,7 @@ body {
 body {
     font-family: Arial, sans-serif;
     background-color: #f4f4f9;
-    padding-top: 88px;
+    padding-top: var(--header-offset, 88px);
 }
 
 /* Ensure body background is visible - override any dark mode if not explicitly enabled */
@@ -28,6 +32,7 @@ body:not(.dark-mode) {
 main,
 #main-content {
     background-color: #f4f4f9;
+    scroll-margin-top: var(--header-offset, 88px);
 }
 
 body:not(.dark-mode) main,
@@ -199,6 +204,16 @@ label:has(input[type="radio"][name="modelingMode"]:checked) {
 }
 
 label:has(input[type="radio"][name="modelingMode"]:checked) strong {
+  color: #357a53;
+}
+
+/* Firefox-safe fallback for modeling mode selector */
+.modeling-mode-option.is-selected {
+  border-color: #357a53 !important;
+  background-color: #f0fff4;
+}
+
+.modeling-mode-option.is-selected strong {
   color: #357a53;
 }
 /* .welcome{
