@@ -140,7 +140,7 @@ def preprocess_data(
     return df_clean
 
 
-def write_to_excel(data, indicator_names, predictor_names, stratify_name, modelName, params, units, trainOverall, testOverall, train_results, test_results, scaler, seed, shapes, quantileBin_results, cross_validation_summary=None, feature_selection_info=None, outlier_info=None):
+def write_to_excelRegression(data, indicator_names, predictor_names, stratify_name, modelName, params, units, trainOverall, testOverall, train_results, test_results, scaler, seed, shapes, quantileBin_results, cross_validation_summary=None, feature_selection_info=None, outlier_info=None):
         workbook = xlsxwriter.Workbook(str(VIS_DIR / "model_performance.xlsx"), {'nan_inf_to_errors': True})
         worksheet = workbook.add_worksheet('Preprocessing')
         worksheet.write('A1', 'Filename')
@@ -287,6 +287,10 @@ def write_to_excel(data, indicator_names, predictor_names, stratify_name, modelN
                 }
                 oi_df = pd.DataFrame(oi_data)
                 oi_df.to_excel(writer, sheet_name='Outlier Handling', index=False)
+
+
+# Backward compatibility: base name no longer assumed to mean regression
+write_to_excel = write_to_excelRegression
 
 
 def write_to_excelClassifier(data, indicator_names, predictor_names, stratify_name, scaler, seed, modelName, params, units, report, cm, additional_metrics=None):

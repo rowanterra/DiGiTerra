@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import python_scripts.plotting.plot_style  # noqa: F401 - apply soft seaborn-like style
 from matplotlib.backends.backend_pdf import PdfPages
 from werkzeug.utils import secure_filename
 
