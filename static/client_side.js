@@ -1056,6 +1056,8 @@ function showTab(tabName) {
         if (predictionDiv) {
             predictionDiv.classList.remove('hidden');
         }
+        // Reset Inference UI so user can upload a new dataset when returning to this tab
+        resetInferenceUI();
         // Hide redobutton on historic tab
         if (redobutton) {
             redobutton.classList.add('hidden');
@@ -1834,6 +1836,7 @@ corrForm.addEventListener('submit', async(e) => {
 
 });
 
+// Canonical date/time for all download filenames: YYYYMMDD_HHMMSS (e.g. 20260311_143052)
 function formatDateTimeForFilename(date = new Date()) {
     const pad = (value) => String(value).padStart(2, "0")
     const year = date.getFullYear()
@@ -1884,6 +1887,7 @@ function showCrossValidationUnavailable() {
 
 // Function to download additional information table as Excel
 function downloadAdditionalInfoTable(tableData, sheetName, timestamp) {
+    const ts = timestamp || formatDateTimeForFilename();
     // Send data to backend to generate Excel file
     fetch('/downloadAdditionalInfo', {
         method: 'POST',
@@ -1905,7 +1909,7 @@ function downloadAdditionalInfoTable(tableData, sheetName, timestamp) {
             }
             return;
         }
-        const downloadName = `additional_info_${sheetName.toLowerCase().replace(/\s+/g, '_')}_${timestamp}.xlsx`;
+        const downloadName = `additional_info_${sheetName.toLowerCase().replace(/\s+/g, '_')}_${ts}.xlsx`;
         const href = withApiRoot(`/download/${data.filename}?download_name=${encodeURIComponent(downloadName)}`);
         const link = document.createElement('a');
         link.href = href;
@@ -1990,9 +1994,22 @@ preprocessform.addEventListener('submit', async (e) => {
             manageFocus(predictorsInput);
         }
     }
-    
+    else if (stratifyColumn.trim() !== '' && (quantileBins === 'quantiles' || quantileBins === 'Bins') && predictors.trim() !== '' && outputType !== 'Cluster') {
+        const pCols = getColumnIndices(predictors.toUpperCase().replace(/\s/g, ''));
+        const stratNum = columnToIndex(stratifyColumn.trim().toUpperCase());
+        if (pCols.indexOf(stratNum) !== -1) {
+            e.preventDefault();
+            showError(stratErrorDiv, 'Do not stratify by your target column. That would leak target information into the train/test split. Choose a different column to stratify by.', false);
+            const stratifyInput = document.getElementById('specificVariableSelect');
+            if (stratifyInput) {
+                stratifyInput.setAttribute('aria-invalid', 'true');
+                manageFocus(stratifyInput);
+            }
+        }
+    }
+
     //if required variables are filled in send to route to get message displayed with column names
-    else {
+    if (!e.defaultPrevented) {
         // Clear any previous aria-invalid attributes since validation passed
         const formFields = [
             'specificVariableSelect', 'quantiles', 'bins', 'binsLabel', 
@@ -2181,75 +2198,181 @@ preprocessform.addEventListener('submit', async (e) => {
         }
     });
 
+    // Auto-detect NaN or zeros in indicator/target columns (Data Cleaning)
+    const autoDetectNanZerosBtn = document.getElementById('autoDetectNanZeros');
+    const dataCleaningMissingWrapper = document.getElementById('dataCleaningMissingWrapper');
+    const dataCleaningZerosWrapper = document.getElementById('dataCleaningZerosWrapper');
+    const dataCleaningAutodetectMessage = document.getElementById('dataCleaningAutodetectMessage');
+    const dropMissingSelect = document.getElementById('dropMissing');
+    const drop0Select = document.getElementById('drop0');
+    if (autoDetectNanZerosBtn && dataCleaningAutodetectMessage) {
+        autoDetectNanZerosBtn.addEventListener('click', async function() {
+            if (!indicatorsSelect || !indicatorsSelect.value.trim() || !predictorsSelect || !predictorsSelect.value.trim()) {
+                alert('Please enter Indicator and Target columns first (e.g., A-D and A).');
+                return;
+            }
+            const indicatorIndices = getColumnIndices(indicatorsSelect.value.toUpperCase().replace(/\s/g, ""));
+            const predictorIndices = getColumnIndices(predictorsSelect.value.toUpperCase().replace(/\s/g, ""));
+            if (indicatorIndices.length === 0 || predictorIndices.length === 0) {
+                alert('Could not parse column indices. Use format like "A-D" or "A,B,C".');
+                return;
+            }
+            try {
+                autoDetectNanZerosBtn.disabled = true;
+                autoDetectNanZerosBtn.textContent = 'Detecting...';
+                const response = await fetch(withApiRoot('/auto-detect-nan-zeros'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ indicators: indicatorIndices, predictors: predictorIndices })
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    dataCleaningAutodetectMessage.textContent = data.error || 'Autodetect failed.';
+                    if (dataCleaningMissingWrapper) dataCleaningMissingWrapper.classList.remove('autodetect-greyed');
+                    if (dataCleaningZerosWrapper) dataCleaningZerosWrapper.classList.remove('autodetect-greyed');
+                    if (dropMissingSelect) dropMissingSelect.disabled = false;
+                    if (drop0Select) drop0Select.disabled = false;
+                    return;
+                }
+                dataCleaningAutodetectMessage.textContent = data.message || '';
+                // Grey out only the option(s) not needed: missing vs zeros independently
+                if (dataCleaningMissingWrapper) {
+                    if (data.needs_missing_handling) {
+                        dataCleaningMissingWrapper.classList.remove('autodetect-greyed');
+                        if (dropMissingSelect) dropMissingSelect.disabled = false;
+                    } else {
+                        dataCleaningMissingWrapper.classList.add('autodetect-greyed');
+                        if (dropMissingSelect) { dropMissingSelect.value = 'none'; dropMissingSelect.disabled = true; }
+                        document.getElementById('imputeDiv').classList.add('hidden');
+                    }
+                }
+                if (dataCleaningZerosWrapper) {
+                    if (data.needs_zero_handling) {
+                        dataCleaningZerosWrapper.classList.remove('autodetect-greyed');
+                        if (drop0Select) drop0Select.disabled = false;
+                    } else {
+                        dataCleaningZerosWrapper.classList.add('autodetect-greyed');
+                        if (drop0Select) { drop0Select.value = 'none'; drop0Select.disabled = true; }
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                dataCleaningAutodetectMessage.textContent = 'Autodetect failed. Check console.';
+                if (dataCleaningMissingWrapper) dataCleaningMissingWrapper.classList.remove('autodetect-greyed');
+                if (dataCleaningZerosWrapper) dataCleaningZerosWrapper.classList.remove('autodetect-greyed');
+                if (dropMissingSelect) dropMissingSelect.disabled = false;
+                if (drop0Select) drop0Select.disabled = false;
+            } finally {
+                autoDetectNanZerosBtn.disabled = false;
+                autoDetectNanZerosBtn.textContent = 'Run';
+            }
+        });
+    }
+
     // Auto-detect categorical columns for transformers
+    const transformerOptionWrapper = document.getElementById('transformerOptionWrapper');
+    const transformerAutodetectMessage = document.getElementById('transformerAutodetectMessage');
+    const useTransformerSelect = document.getElementById('useTransformer');
+    const transformerYesDiv = document.getElementById('transformerYes');
+
+    function applyTransformerAutodetectResult(data, responseOk) {
+        if (transformerAutodetectMessage) transformerAutodetectMessage.textContent = data.message || data.error || '';
+        if (!responseOk || !data.transformer_indices) return;
+        if (data.transformer_indices.length === 0) {
+            transformerOptionWrapper.classList.add('autodetect-greyed');
+            if (useTransformerSelect) { useTransformerSelect.value = 'No'; useTransformerSelect.disabled = true; }
+            if (transformerYesDiv) transformerYesDiv.classList.add('hidden');
+            const transformerColumnInput = document.getElementById('transformerColumn');
+            if (transformerColumnInput) transformerColumnInput.value = '';
+        } else {
+            transformerOptionWrapper.classList.remove('autodetect-greyed');
+            if (useTransformerSelect) { useTransformerSelect.disabled = false; useTransformerSelect.value = 'Yes'; }
+            if (transformerYesDiv) transformerYesDiv.classList.remove('hidden');
+            const transformerColumnInput = document.getElementById('transformerColumn');
+            if (transformerColumnInput) {
+                const letters = data.transformer_indices.map(idx => getColumnLetter(idx));
+                const sorted = data.transformer_indices.slice().sort((a, b) => a - b);
+                const isConsecutive = sorted.every((val, i, arr) => i === 0 || val === arr[i - 1] + 1);
+                if (letters.length === 1) transformerColumnInput.value = letters[0];
+                else if (isConsecutive) transformerColumnInput.value = `${getColumnLetter(sorted[0])}-${getColumnLetter(sorted[sorted.length - 1])}`;
+                else transformerColumnInput.value = letters.join(', ');
+            }
+        }
+    }
+
+    const autoDetectTransformersTopBtn = document.getElementById('autoDetectTransformersTop');
+    if (autoDetectTransformersTopBtn) {
+        autoDetectTransformersTopBtn.addEventListener('click', async function() {
+            if (!indicatorsSelect || !indicatorsSelect.value.trim()) {
+                alert('Please enter indicator columns first (e.g., A-D).');
+                return;
+            }
+            const indicatorIndices = getColumnIndices(indicatorsSelect.value.toUpperCase().replace(/\s/g, ""));
+            if (indicatorIndices.length === 0) {
+                alert('Could not parse indicator column indices. Use format like "A-D" or "A,B,C".');
+                return;
+            }
+            try {
+                autoDetectTransformersTopBtn.disabled = true;
+                autoDetectTransformersTopBtn.textContent = 'Detecting...';
+                const response = await fetch(withApiRoot('/auto-detect-transformers'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ indicators: indicatorIndices })
+                });
+                const data = await response.json();
+                applyTransformerAutodetectResult(data, response.ok);
+                if (response.ok && data.transformer_indices && data.transformer_indices.length > 0) {
+                    if (transformerAutodetectMessage) transformerAutodetectMessage.textContent = data.message || '';
+                }
+            } catch (err) {
+                console.error(err);
+                if (transformerAutodetectMessage) transformerAutodetectMessage.textContent = 'Autodetect failed.';
+                transformerOptionWrapper.classList.remove('autodetect-greyed');
+                if (useTransformerSelect) useTransformerSelect.disabled = false;
+            } finally {
+                autoDetectTransformersTopBtn.disabled = false;
+                autoDetectTransformersTopBtn.textContent = 'Run autodetect';
+            }
+        });
+    }
+
     const autoDetectTransformersBtn = document.getElementById('autoDetectTransformers');
     if (autoDetectTransformersBtn) {
         autoDetectTransformersBtn.addEventListener('click', async function() {
-            // Get selected indicators from text input
             const indicatorsInput = document.getElementById('indicators');
             if (!indicatorsInput || !indicatorsInput.value.trim()) {
                 alert('Please enter indicator columns first (e.g., A-D).');
                 return;
             }
-
-            // Convert indicator column letters to indices
             const indicatorIndices = getColumnIndices(indicatorsInput.value.toUpperCase().replace(/\s/g, ""));
-
             if (indicatorIndices.length === 0) {
                 alert('Could not parse indicator column indices. Please use format like "A-D" or "A,B,C".');
                 return;
             }
-
             try {
                 autoDetectTransformersBtn.disabled = true;
                 autoDetectTransformersBtn.textContent = 'Detecting...';
-
-                const response = await fetch('/auto-detect-transformers', {
+                const response = await fetch(withApiRoot('/auto-detect-transformers'), {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        indicators: indicatorIndices
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ indicators: indicatorIndices })
                 });
-
                 const data = await response.json();
-
+                applyTransformerAutodetectResult(data, response.ok);
                 if (response.ok && data.transformer_indices && data.transformer_indices.length > 0) {
-                    // Convert indices to column letters (e.g., [0, 1, 2] -> "A-C")
-                    const transformerColumnInput = document.getElementById('transformerColumn');
-                    if (transformerColumnInput) {
-                        // Convert indices to column letter range
-                        const letters = data.transformer_indices.map(idx => getColumnLetter(idx));
-                        if (letters.length === 1) {
-                            transformerColumnInput.value = letters[0];
-                        } else {
-                            // Check if consecutive
-                            const sorted = data.transformer_indices.slice().sort((a, b) => a - b);
-                            const isConsecutive = sorted.every((val, i, arr) => i === 0 || val === arr[i - 1] + 1);
-                            if (isConsecutive) {
-                                transformerColumnInput.value = `${getColumnLetter(sorted[0])}-${getColumnLetter(sorted[sorted.length - 1])}`;
-                            } else {
-                                transformerColumnInput.value = letters.join(', ');
-                            }
-                        }
-                        alert(`Auto-detected ${data.transformer_indices.length} categorical column(s): ${data.message}`);
-                    }
+                    if (transformerAutodetectMessage) transformerAutodetectMessage.textContent = data.message || '';
                 } else {
                     const message = data.message || data.error || 'No categorical columns detected.';
-                    alert(message);
-                    if (data.transformer_indices && data.transformer_indices.length === 0) {
-                        // Clear the input if nothing detected
-                        const transformerColumnInput = document.getElementById('transformerColumn');
-                        if (transformerColumnInput) {
-                            transformerColumnInput.value = '';
-                        }
+                    if (data.transformer_indices && data.transformer_indices.length === 0 && transformerAutodetectMessage) {
+                        transformerAutodetectMessage.textContent = message;
                     }
                 }
             } catch (error) {
                 console.error('Error auto-detecting transformers:', error);
-                alert('Error auto-detecting categorical columns. Please check the console for details.');
+                if (transformerAutodetectMessage) transformerAutodetectMessage.textContent = 'Error detecting categorical columns.';
+                transformerOptionWrapper.classList.remove('autodetect-greyed');
+                if (useTransformerSelect) useTransformerSelect.disabled = false;
             } finally {
                 autoDetectTransformersBtn.disabled = false;
                 autoDetectTransformersBtn.textContent = 'Auto-detect';
@@ -3219,7 +3342,7 @@ function setupStartModelingButton() {
     }
 }
 
-// Function to reset to welcome screen
+// Function to reset to welcome screen (full restart when user clicks logo)
 function resetToWelcomeScreen() {
     // Show welcome screen
     const welcomeDiv = document.getElementById('welcome');
@@ -3233,8 +3356,8 @@ function resetToWelcomeScreen() {
         appTabs.classList.add('hidden');
     }
     
-    // Hide all main sections
-    const fileUpload = document.getElementById('fileUpload');
+    // Hide all main sections (use correct id: fileuploaddiv, not fileUpload)
+    const fileUploadEl = document.getElementById('fileuploaddiv');
     const documentationSection = document.getElementById('documentationSection');
     const userInputSection = document.getElementById('userInputSection');
     const predictionDiv = document.getElementById('predictionDiv');
@@ -3242,13 +3365,34 @@ function resetToWelcomeScreen() {
     const modelPreprocessingDiv = document.getElementById('modelPreprocessingDiv');
     const modelingDiv = document.getElementById('modelingDiv');
     
-    if (fileUpload) fileUpload.classList.add('hidden');
+    if (fileUploadEl) fileUploadEl.classList.add('hidden');
     if (documentationSection) documentationSection.classList.add('hidden');
     if (userInputSection) userInputSection.classList.add('hidden');
     if (predictionDiv) predictionDiv.classList.add('hidden');
     if (processingDiv) processingDiv.classList.add('hidden');
     if (modelPreprocessingDiv) modelPreprocessingDiv.classList.add('hidden');
     if (modelingDiv) modelingDiv.classList.add('hidden');
+    
+    // Restore upload section to initial state so "Start Modeling" shows the upload page again
+    const uploadHeader = document.getElementById('uploadHeader');
+    if (uploadHeader) uploadHeader.textContent = 'Upload Data from CSV';
+    const uploadCard = document.querySelector('.upload-card');
+    if (uploadCard) uploadCard.classList.remove('section-header');
+    const uploadFormEl = document.getElementById('uploadForm');
+    if (uploadFormEl) {
+        uploadFormEl.classList.remove('hidden');
+        uploadFormEl.style.display = '';
+    }
+    const columnSection = document.getElementById('columnsection');
+    if (columnSection) columnSection.classList.add('hidden');
+    const explorationOutput = document.getElementById('explorationOutput');
+    if (explorationOutput) explorationOutput.innerHTML = '';
+    const columnList = document.getElementById('columnList');
+    if (columnList) columnList.innerHTML = '<!-- Column headers will be displayed here -->';
+    const dataExploration = document.getElementById('dataExploration');
+    if (dataExploration) dataExploration.innerHTML = '';
+    // Clear client-side state so the app behaves like a fresh start
+    uploadedFileName = '';
     
     // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -3399,15 +3543,32 @@ function predictionPage(){
     showElement(predDiv);
     showTab('historic');
 }
-//upload new prediction file
-function newPredict(){
-    const predictionErrorDiv = getCachedElement('predictionErrorDiv');
-    const uploadPredictDf = getCachedElement('uploadPredictDf');
-    const predictionResults = getCachedElement('predictionResults');
+// Reset Inference tab to "ready for new upload" so user can upload a different dataset
+function resetInferenceUI() {
+    const uploadPredictDf = document.getElementById('uploadPredictDf');
+    const predictionResults = document.getElementById('predictionResults');
+    const predictionErrorDiv = document.getElementById('predictionErrorDiv');
+    const predictFileInput = document.getElementById('predictFile');
+    if (uploadPredictDf) {
+        uploadPredictDf.classList.remove('hidden');
+        uploadPredictDf.style.display = '';
+    }
+    if (predictionResults) {
+        predictionResults.classList.add('hidden');
+        predictionResults.innerHTML = '';
+    }
+    if (predictionErrorDiv) {
+        predictionErrorDiv.classList.add('hidden');
+        predictionErrorDiv.innerHTML = '';
+    }
+    if (predictFileInput) {
+        predictFileInput.value = '';
+    }
+}
 
-    showElement(uploadPredictDf);
-    showElement(predictionErrorDiv);
-    hideElement(predictionResults);
+// Upload new prediction file (e.g. after "Predict Another Dataset")
+function newPredict(){
+    resetInferenceUI();
 }
 
 // goes back to model from prediction page
@@ -3662,6 +3823,8 @@ function stopModelRun() {
             runButton.textContent = 'Run AutoML';
         } else if (currentMode === 'advanced') {
             runButton.textContent = 'Run Model with Advanced Options';
+        } else {
+            runButton.textContent = 'Run This Model';
         }
     }
     
@@ -3833,6 +3996,14 @@ processForm.addEventListener('submit', async (e) => {
     else {
         stratifyColumnNumber = ''
         stratifyBool = false
+    }
+
+    if (stratifyBool && selectedOutputType !== 'Cluster' && predictorCols.indexOf(stratifyColumnNumber) !== -1) {
+        showError(NumericResultDiv, 'Do not stratify by your target column. That would leak target information into the train/test split. Choose a different column to stratify by.', false);
+        const processButton = getCachedElement('processButton');
+        if (processButton) processButton.disabled = false;
+        if (loadingDiv) loadingDiv.classList.add('hidden');
+        return;
     }
 
     let transformerCols = []
@@ -6279,7 +6450,7 @@ processForm.addEventListener('submit', async (e) => {
     }
 });
 
-// Add event listeners for stop buttons
+// Add event listeners for stop buttons and model dropdowns (selecting a new model auto-stops current run)
 document.addEventListener('DOMContentLoaded', function() {
     const stopSimpleButton = document.getElementById('stopSimpleButton');
     const stopAdvancedButton = document.getElementById('stopAdvancedButton');
@@ -6294,6 +6465,26 @@ document.addEventListener('DOMContentLoaded', function() {
     if (stopAutomlButton) {
         stopAutomlButton.addEventListener('click', stopModelRun);
     }
+
+    // When user selects a different model, stop any running model so they can run the new one
+    const modelSelectIds = [
+        'simpleNumericModels', 'simpleClusterModels', 'simpleClassifierModels',
+        'advancedNumericModels', 'advancedClusterModels', 'advancedClassifierModels',
+        'automlNumericModels', 'automlClusterModels', 'automlClassifierModels',
+        'headerNumericModels', 'headerClusterModels', 'headerClassifierModels',
+        'headerAdvancedNumericModels', 'headerAdvancedClusterModels', 'headerAdvancedClassifierModels',
+        'headerAutomlNumericModels', 'headerAutomlClusterModels', 'headerAutomlClassifierModels'
+    ];
+    modelSelectIds.forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('change', function() {
+                if (progressEventSource) {
+                    stopModelRun();
+                }
+            });
+        }
+    });
 });
 
 // Extract result processing into a separate function
@@ -7251,7 +7442,21 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                 </select>
                 <br>
                 <br>
-                <img id="classifierGraphic" class="result-graphic" src='/user-visualizations/confusion_matrix.png?t=${new Date().getTime()}'>
+                <div id="classifierGraphicsWrapper">
+                    <div id="classifierGraphicRowTrainTest" class="result-graphic-row-train-test" style="display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;">
+                        <div class="result-graphic-box" style="flex: 1; min-width: 320px;">
+                            <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">Train</h4>
+                            <img id="classifierGraphicTrain" class="result-graphic" src="${withApiRoot('/user-visualizations/confusion_matrix_train.png')}?t=${new Date().getTime()}" alt="Confusion matrix (train)">
+                        </div>
+                        <div class="result-graphic-box" style="flex: 1; min-width: 320px;">
+                            <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">Test</h4>
+                            <img id="classifierGraphicTest" class="result-graphic" src="${withApiRoot('/user-visualizations/confusion_matrix.png')}?t=${new Date().getTime()}" alt="Confusion matrix (test)">
+                        </div>
+                    </div>
+                    <div id="classifierGraphicSingle" style="display: none;">
+                        <img id="classifierGraphic" class="result-graphic" src="${withApiRoot('/user-visualizations/roc_curve.png')}?t=${new Date().getTime()}" alt="Selected graphic">
+                    </div>
+                </div>
                 <div><br></div>
                 </div>
                 `
@@ -7280,14 +7485,29 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                     }
                 }
                 
-                // Set up classifier image selector event listener
+                // Set up classifier image selector: show train+test side-by-side when not combinable (e.g. confusion matrix)
                 const classifierImageSelector = document.getElementById('classifierImageSelector');
                 const classifierGraphic = document.getElementById('classifierGraphic');
-                if (classifierImageSelector && classifierGraphic) {
-                    classifierImageSelector.addEventListener('change', () => {
-                        const selectedImage = classifierImageSelector.value;
+                const classifierGraphicRowTrainTest = document.getElementById('classifierGraphicRowTrainTest');
+                const classifierGraphicSingle = document.getElementById('classifierGraphicSingle');
+                const classifierGraphicTrain = document.getElementById('classifierGraphicTrain');
+                const classifierGraphicTest = document.getElementById('classifierGraphicTest');
+                const classifierGraphicsWithTrainTest = ['confusion_matrix'];
+                function updateClassifierGraphicDisplay() {
+                    const selectedImage = classifierImageSelector ? classifierImageSelector.value : 'confusion_matrix';
+                    const showTrainTest = classifierGraphicsWithTrainTest.indexOf(selectedImage) !== -1;
+                    if (classifierGraphicRowTrainTest) classifierGraphicRowTrainTest.style.display = showTrainTest ? 'flex' : 'none';
+                    if (classifierGraphicSingle) classifierGraphicSingle.style.display = showTrainTest ? 'none' : 'block';
+                    if (showTrainTest && classifierGraphicTrain && classifierGraphicTest) {
+                        const t = Date.now();
+                        classifierGraphicTrain.src = withApiRoot(`/user-visualizations/confusion_matrix_train.png?t=${t}`);
+                        classifierGraphicTest.src = withApiRoot(`/user-visualizations/confusion_matrix.png?t=${t}`);
+                    } else if (classifierGraphic) {
                         classifierGraphic.src = withApiRoot(`/user-visualizations/${selectedImage}.png?t=${Date.now()}`);
-                    });
+                    }
+                }
+                if (classifierImageSelector) {
+                    classifierImageSelector.addEventListener('change', updateClassifierGraphicDisplay);
                 }
             }
 
@@ -7398,10 +7618,10 @@ predictionForm.addEventListener('submit', async (e) => {
     const formData = new FormData(predictionForm);
     formData.append('indicators', 'indicators')
     const resultTimestamp = formatDateTimeForFilename() 
-    const predictionDownloadName = `predictions${resultTimestamp}.csv`
+    const predictionDownloadName = `predictions_${resultTimestamp}.csv`
 
     try{
-        const response = await fetch('/predict', {
+        const response = await fetch(withApiRoot('/predict'), {
             method: 'POST',
             body: formData,
         });
@@ -7409,17 +7629,143 @@ predictionForm.addEventListener('submit', async (e) => {
         if (response.ok === true) {
             predictionErrorDiv.classList.add('hidden')
             predictionResults.classList.remove('hidden')
-            console.log(data.filename)
-            // <a href="/download/predictions.csv" onclick="return downloadFile('predictions.csv')">
+            const summary = data.summary || [];
+            const preview = data.predictions_preview || {};
+            const trainingViz = data.training_visualization;
+            const modelType = data.model_type || 'regression';
+
+            let summaryTableHtml = '';
+            if (summary.length > 0) {
+                const numericKeys = ['column', 'n', 'min', 'max', 'mean', 'std', '25', '50', '75', '100'];
+                const hasNumeric = summary.some(row => row.mean != null || row.min != null);
+                if (hasNumeric) {
+                    summaryTableHtml = `
+                        <table class="stats-table model-stats-table">
+                            <thead><tr>${numericKeys.map(k => `<th>${k === '25' ? '25%' : k === '50' ? '50%' : k === '75' ? '75%' : k === '100' ? '100%' : k}</th>`).join('')}</tr></thead>
+                            <tbody>
+                                ${summary.filter(r => r.mean != null || r.min != null).map(row => `
+                                    <tr>${numericKeys.map(k => `<td>${row[k] != null ? (typeof row[k] === 'number' ? Number(row[k]).toFixed(4) : escapeHtml(String(row[k]))) : ''}</td>`).join('')}</tr>
+                                `).join('')}
+                            </tbody>
+                        </table>`;
+                } else {
+                    summaryTableHtml = summary.map(row => `
+                        <div style="margin-bottom: 12px;">
+                            <strong>${escapeHtml(row.column)}</strong> (n=${row.n})
+                            ${row.value_counts && row.value_counts.length ? `
+                                <table class="stats-table model-stats-table" style="margin-top: 6px;">
+                                    <tr><th>Value</th><th>Count</th></tr>
+                                    ${row.value_counts.map(vc => `<tr><td>${escapeHtml(vc.value)}</td><td>${vc.count}</td></tr>`).join('')}
+                                </table>
+                            ` : ''}
+                        </div>
+                    `).join('');
+                }
+            } else {
+                summaryTableHtml = '<p>No prediction summary available.</p>';
+            }
+
+            let previewChartHtml = '';
+            const firstCol = summary.length ? summary[0].column : null;
+            if (firstCol && preview[firstCol] && preview[firstCol].length > 0 && typeof preview[firstCol][0] === 'number') {
+                const vals = preview[firstCol];
+                const min = Math.min(...vals);
+                const max = Math.max(...vals);
+                const bins = 10;
+                const step = (max - min) / bins || 1;
+                const counts = Array(bins).fill(0);
+                vals.forEach(v => {
+                    let i = Math.min(Math.floor((v - min) / step), bins - 1);
+                    if (i < 0) i = 0;
+                    counts[i]++;
+                });
+                const maxCount = Math.max(...counts, 1);
+                previewChartHtml = `
+                    <h4 style="margin: 0 0 8px 0;">Prediction distribution (${firstCol})</h4>
+                    <div class="prediction-histogram" style="display: flex; align-items: flex-end; gap: 2px; height: 120px; margin-top: 8px;">
+                        ${counts.map((c, i) => {
+                            const lo = (min + i * step).toFixed(2);
+                            const hi = (min + (i + 1) * step).toFixed(2);
+                            const pct = Math.round((c / maxCount) * 100);
+                            return `<div title="${lo}–${hi}: ${c}" style="flex: 1; min-width: 8px; background: #357a53; height: ${pct}%; border-radius: 2px;"></div>`;
+                        }).join('')}
+                    </div>
+                    <p style="margin-top: 6px; font-size: 0.85rem; color: #666;">Range: ${min.toFixed(4)} – ${max.toFixed(4)} (${vals.length} points)</p>
+                `;
+            }
+
+            const modelGraphicHtml = trainingViz ? `
+                <div class="inference-model-graphic" style="flex: 1; min-width: 280px; max-width: 480px;">
+                    <h3 style="margin: 0 0 8px 0;">Model used (training performance)</h3>
+                    <p style="margin: 0 0 12px 0; font-size: 0.95rem; color: #666;">Performance graphic from the model you trained.</p>
+                    <img src="${withApiRoot('/user-visualizations/' + trainingViz)}?t=${Date.now()}" alt="Training performance" class="inference-model-graphic-img">
+                </div>
+            ` : '';
+
+            const classificationNote = modelType === 'classification' ? `
+                <p class="inference-classification-note" style="margin: 0 0 12px 0; font-size: 0.9rem; color: #555; font-style: italic;">For new data we don't have true labels, so a confusion matrix can't be computed here. We show the prediction distribution above and the model's training performance (on its test set) to the right.</p>
+            ` : '';
+
+            function renderSummaryTable(rows, numericKeys) {
+                if (!rows || rows.length === 0) return '<p>No data.</p>';
+                const hasNumeric = rows.some(r => r.mean != null || r.min != null);
+                if (hasNumeric) {
+                    return `<table class="stats-table model-stats-table"><thead><tr>${numericKeys.map(k => `<th>${k === '25' ? '25%' : k === '50' ? '50%' : k === '75' ? '75%' : k === '100' ? '100%' : k}</th>`).join('')}</tr></thead><tbody>
+                        ${rows.filter(r => r.mean != null || r.min != null).map(row => `
+                            <tr>${numericKeys.map(k => `<td>${row[k] != null ? (typeof row[k] === 'number' ? Number(row[k]).toFixed(4) : escapeHtml(String(row[k]))) : ''}</td>`).join('')}</tr>
+                        `).join('')}
+                    </tbody></table>`;
+                }
+                return rows.map(row => `
+                    <div style="margin-bottom: 8px;">
+                        <strong>${escapeHtml(row.column)}</strong> (n=${row.n})
+                        ${row.value_counts && row.value_counts.length ? `
+                            <table class="stats-table model-stats-table" style="margin-top: 4px;"><tr><th>Value</th><th>Count</th></tr>
+                                ${row.value_counts.map(vc => `<tr><td>${escapeHtml(vc.value)}</td><td>${vc.count}</td></tr>`).join('')}
+                            </table>
+                        ` : ''}
+                    </div>
+                `).join('');
+            }
+            const numericKeys = ['column', 'n', 'min', 'max', 'mean', 'std', '25', '50', '75', '100'];
+            const trainingSummary = data.training_target_summary && data.training_target_summary.summary;
+            const comparisonHtml = trainingSummary && trainingSummary.length ? `
+                <div class="inference-comparison-section" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #e5e5e5;">
+                    <h3 style="margin: 0 0 12px 0;">Compare with training data</h3>
+                    <p style="margin: 0 0 16px 0; font-size: 0.95rem; color: #666;">Target distribution the model was built on vs predictions on this dataset. If they differ a lot, the new data may be from a different distribution.</p>
+                    <div style="display: flex; flex-wrap: wrap; gap: 24px;">
+                        <div style="flex: 1; min-width: 260px;">
+                            <h4 style="margin: 0 0 8px 0;">Training data (target)</h4>
+                            <div class="model-stats-table-wrapper">${renderSummaryTable(trainingSummary, numericKeys)}</div>
+                        </div>
+                        <div style="flex: 1; min-width: 260px;">
+                            <h4 style="margin: 0 0 8px 0;">Predictions (this run)</h4>
+                            <div class="model-stats-table-wrapper">${renderSummaryTable(summary, numericKeys)}</div>
+                        </div>
+                    </div>
+                </div>
+            ` : '';
+
             predictionResults.innerHTML = `
                 <h2>Prediction Results</h2>
                 <p>Your results for the prediction with '<strong>${escapeHtml(data.filename || 'file')}</strong>' are ready to download.</p>
-                <div class="button-group">
-                    <a href="/download/predictions.csv?download_name=${encodeURIComponent(predictionDownloadName)}" onclick="return downloadFile('predictions.csv', '${predictionDownloadName}')">
+                <div class="button-group" style="margin-bottom: 24px;">
+                    <a href="${withApiRoot('/download/predictions.csv')}?download_name=${encodeURIComponent(predictionDownloadName)}" onclick="return downloadFile('predictions.csv', '${predictionDownloadName}')">
                         <button class="predictionresultButton export-button">Download Results CSV</button>
                     </a>
                     <button class="secondary-button" onclick="backToModel()">Back To Model</button>
                     <button class="secondary-button" onclick="newPredict()">Predict Another Dataset</button>
+                </div>
+                <div class="inference-results-content" style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+                    <div class="inference-summary-section" style="flex: 1; min-width: 300px;">
+                        <h3 style="margin: 0 0 8px 0;">Prediction summary</h3>
+                        <p style="margin: 0 0 12px 0; font-size: 0.95rem; color: #666;">Descriptive statistics for predicted values (same style as Data Exploration).</p>
+                        ${classificationNote}
+                        <div class="model-stats-table-wrapper" style="margin-bottom: 16px;">${summaryTableHtml}</div>
+                        ${previewChartHtml ? `<div class="inference-preview-chart" style="margin-top: 16px;">${previewChartHtml}</div>` : ''}
+                        ${comparisonHtml}
+                    </div>
+                    ${modelGraphicHtml}
                 </div>
             `
             uploadPredictDf.classList.add('hidden')

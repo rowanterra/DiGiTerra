@@ -10,19 +10,21 @@ def train_linearsvc(train_data, target_variables, use_stratified_split,
                 outlier_method='none', outlier_action='remove',
                 hyperparameter_search='none', search_cv_folds=5, search_n_iter=50, **kwargs):
 
-    model = MultiOutputClassifier(LinearSVC(penalty=kwargs.get('penalty', 'l2'),
-                                           loss=kwargs.get('loss', 'squared_hinge'),
-                                           dual=kwargs.get('dual', True),
-                                           tol=kwargs.get('tol', 1e-4),
-                                           C=kwargs.get('C', 1.0),
-                                           multi_class=kwargs.get('multi_class', 'ovr'),
-                                           fit_intercept=kwargs.get('fit_intercept', True),
-                                           intercept_scaling=kwargs.get('intercept_scaling', 1.0),
-                                           class_weight=kwargs.get('class_weight', None),
-                                           verbose=kwargs.get('verbose', 0),
-                                           random_state=kwargs.get('random_state', seed),
-                                           max_iter=kwargs.get('max_iter', 1000),
-                                           ))
+    base = LinearSVC(penalty=kwargs.get('penalty', 'l2'),
+                     loss=kwargs.get('loss', 'squared_hinge'),
+                     dual=kwargs.get('dual', True),
+                     tol=kwargs.get('tol', 1e-4),
+                     C=kwargs.get('C', 1.0),
+                     multi_class=kwargs.get('multi_class', 'ovr'),
+                     fit_intercept=kwargs.get('fit_intercept', True),
+                     intercept_scaling=kwargs.get('intercept_scaling', 1.0),
+                     class_weight=kwargs.get('class_weight', None),
+                     verbose=kwargs.get('verbose', 0),
+                     random_state=kwargs.get('random_state', seed),
+                     max_iter=kwargs.get('max_iter', 1000),
+                     )
+    # MultiOutputClassifier expects 2D y; for single target use base estimator so 1D y works
+    model = base if (target_variables is not None and len(target_variables) == 1) else MultiOutputClassifier(base)
 
     return run_classification(
         model, "LinearSVC",

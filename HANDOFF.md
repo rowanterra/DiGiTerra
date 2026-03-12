@@ -22,21 +22,51 @@ gunicorn --bind 0.0.0.0:5000 --workers 1 --timeout 120 app:app
 
 **Note:** `python app.py` uses Flask's built-in development server (not suitable for production). Use gunicorn or another production WSGI server for production deployments.
 
+**Running under a URL prefix (e.g. for GKE / `.../researcher-apps/digiterra/`):**  
+To serve the app at `http://127.0.0.1:5000/digiterra/` instead of the root, set `URL_PREFIX` before starting:
+```bash
+export URL_PREFIX=digiterra
+python app.py
+```
+Then open **http://127.0.0.1:5000/digiterra/** . The Dockerfile sets `URL_PREFIX=digiterra` so container runs use the prefix by default.
+
 ---
 
 ## Repo Layout: Where Things Live
 
 | Path | What it is |
 |------|------------|
-| **`app.py`** | Main Flask app. All HTTP routes, upload handling, model training orchestration, and download endpoints live here. It’s large; use the section comments at the top of each block to navigate. |
-| **`desktop_app.py`** | Thin launcher that starts the Flask server in a background thread and opens a pywebview window. Handles “Save file” dialogs for the desktop build. |
-| **`templates/index.html`** | Single-page UI. All tabs (Upload, Data Exploration, Model Preprocessing, Modeling, Inference) are in this one file. |
-| **`static/client_side.js`** | All front-end logic: uploads, API calls, progress polling, result display, downloads. |
+| **`app.py`** | Main Flask application. Defines all HTTP routes, upload handling, and download endpoints. Route handlers call into python_scripts for heavy logic. Use the section comments in the file to navigate. See "Splitting app.py" below for structure and how to split further. |
+| **`desktop_app.py`** | Launcher that starts the Flask server in a background thread and opens a pywebview window. Handles Save file dialogs for the desktop build. |
+| **`templates/index.html`** | Single-page UI. All tabs (Upload, Data Exploration, Model Preprocessing, Modeling, Inference) are in this file. |
+| **`static/client_side.js`** | Front-end logic: uploads, API calls, progress polling, result display, downloads. |
 | **`static/style.css`** | Styles. |
-| **`python_scripts/`** | Core ML and preprocessing. `helpers.py` has shared helpers (e.g. `preprocess_data`, `prediction`). `config.py` sets `VIS_DIR` (output folder). Model trainers live under `models/` (regression, classification, clustering). Pipelines and plotting are under `preprocessing/` and `plotting/`. |
+| **`python_scripts/`** | Core ML and preprocessing. `helpers.py`: shared helpers (`preprocess_data`, `prediction`). `config.py`: `VIS_DIR` (output folder). `models/`: regression, classification, and clustering trainers. `preprocessing/` and `plotting/`: pipelines and plots. **`app_model_training.py`**: model training orchestration. **`app_exploration.py`**: data exploration (correlation matrices, pairplot, auto-detect). **`app_prediction.py`**: inference/prediction. All three are invoked by `app.py`. |
 | **`deploy/`** | Docker and Kubernetes (Helm) deployment. See `deploy/README.md` for Docker build/run and Helm install. |
 | **`examples/`** | Example datasets: 3 classification, 3 regression, 3 clustering. See `examples/README.md`. Not bundled in the app. |
 | **`docs/`** | Extra guides: build instructions, feature plans, git sync, etc. |
+
+---
+
+## Splitting app.py
+
+Splitting the main application into components is recommended. It improves navigation and review. The codebase already uses one form of this split; you can extend it in two ways.
+
+**Current structure (refactor completed)**  
+Heavy logic has been moved into three modules. **`app_model_training.py`**: `run_model_training(session_id, data, storage_session_id, get_storage)`; all trainer imports and training pipeline. **`app_exploration.py`**: `handle_auto_detect_transformers`, `handle_auto_detect_nan_zeros`, `handle_corr`, `handle_pairplot` for data exploration routes. **`app_prediction.py`**: `run_predict(store, request, ...)` for the inference route. `app.py` keeps thin route handlers that call these and pass in dependencies (e.g. `_get_session_storage`, `_with_prefix`) to avoid circular imports. `app.py` is about 730 lines; the three modules are about 1,600, 290, and 180 lines.
+
+**Ways to split further**
+
+1. **Extract more logic into modules**  
+   Move other heavy logic from `app.py` into modules under `python_scripts/` (or a `routes/` package). Keep `app.py` as the place that defines routes and calls into those modules. Pass dependencies (e.g. a `get_storage` callback) from `app.py` into the module so the module does not import `app`, avoiding circular imports.
+
+2. **Flask Blueprints**  
+   Group related routes into Blueprints (e.g. `routes/upload.py`, `routes/exploration.py`, `routes/modeling.py`) and register them in `app.py` with `app.register_blueprint(bp, url_prefix=...)`. Use the same `url_prefix` as `URL_PREFIX` so existing URLs still work.
+
+You can use both: route registration in `app.py` or in Blueprint modules, and non-route logic in `python_scripts/` or `routes/` helpers.
+
+**Further reduction (optional)**  
+`app.py` is about 730 lines after moving training, exploration, and prediction into modules. The largest remaining block is **Section 3** (`upload_file`, roughly 135 lines). Extracting it would bring `app.py` to about 600 lines. Leaving it as is is fine; the file is manageable with section comments.
 
 ---
 
@@ -129,7 +159,7 @@ helm install digiterra deploy/helm/digiterra --set image.repository=<your-regist
 
 ## Summary
 
-- **`app.py`** = HTTP API + orchestration; **`desktop_app.py`** = desktop wrapper.  
+- **`app.py`** = HTTP API and route definitions; **`python_scripts/app_model_training.py`** = model training orchestration (invoked by app.py); **`desktop_app.py`** = desktop wrapper.  
 - **`memStorage`** = in-memory, single-user, single-process; **MUST be refactored for multi-worker/multi-user web deployments**. Current gunicorn config uses 1 worker to work around this limitation.  
 - **Security:** upload validation and download path traversal are addressed; add CSRF, reverse proxy, HTTPS, and dependency pinning for production web use.  
 - **Paths:** `USER_VIS_DIR`, `DIGITERRA_OUTPUT_DIR`, and `DIGITERRA_BASE_DIR` control where things live.

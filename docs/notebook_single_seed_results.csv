@@ -1,0 +1,5 @@
+Model,Outlier_Mode,CV_R2,Test_R2,Test_RMSE,Test_MAE,Best_Params
+MLP,winsorize_1_99,0.8412702346988535,0.8393736885113398,136.25360963589506,61.65708244584996,"{'model__activation': 'relu', 'model__alpha': 0.001, 'model__hidden_layer_sizes': (64,), 'model__learning_rate_init': 0.0005}"
+Ridge,winsorize_1_99,0.8335920461080786,0.7858678664591221,157.31878920272337,67.08567499173118,{'model__alpha': 30.0}
+KNN,none,0.8101640078734651,0.7586109096772921,167.03154266425713,56.39485366600665,"{'model__n_neighbors': 7, 'model__p': 2, 'model__weights': 'distance'}"
+ExtraTrees,winsorize_1_99,0.8593953456060193,0.6225490472119,208.86705155592475,69.71228942206491,"{'model__max_depth': 10, 'model__min_samples_leaf': 2, 'model__n_estimators': 500}"

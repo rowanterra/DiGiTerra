@@ -10,10 +10,11 @@ def train_gaussian_nb(train_data, target_variables, use_stratified_split,
                       feature_selection_method='none', feature_selection_k=None,
                       outlier_method='none', outlier_action='remove',
                       hyperparameter_search='none', search_cv_folds=5, search_n_iter=50, **kwargs):
-    model = MultiOutputClassifier(GaussianNB(
+    base = GaussianNB(
         priors=kwargs.get('priors', None),
         var_smoothing=kwargs.get('var_smoothing', 1e-9)
-    ))
+    )
+    model = base if (target_variables is not None and len(target_variables) == 1) else MultiOutputClassifier(base)
 
     return run_classification(
         model, "GaussianNB",

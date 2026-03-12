@@ -564,49 +564,56 @@
                         </div>
 
                         <h3 style="margin-top: 24px; margin-bottom: 12px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 1.1em; font-weight: 600; color: #000000;">Data Cleaning</h3>
-                        <!-- Preprocessing for missing and zero values Section  -->
-                        <div class="scaling-container">
-                            <label for="dropMissing">Handle missing values?</label>
-                                <select name="dropMissing" id="dropMissing">
-                                    <option value="none">No Columns</option>
-                                    <option value="indicatorAndTarget">Indicator and Target</option>
-                                    <option value="indicator">Indicator</option>
-                                    <option value="target">Target</option>
-                                    <option value="all">All</option>
-                                </select>
+                        <p class="field-note" style="margin-bottom: 8px;">Autodetect to grey out options when not needed.</p>
+                        <div class="scaling-container" style="margin-bottom: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+                            <span>Autodetect NaNs or zeros?</span>
+                            <button type="button" id="autoDetectNanZeros" class="button-secondary" style="padding: 6px 14px; font-size: 0.9em;">Run</button>
                         </div>
-                        <br>
+                        <div id="dataCleaningAutodetectMessage" class="field-note" style="margin-bottom: 12px; min-height: 1.2em; color: #666;" aria-live="polite"></div>
+                        <div id="dataCleaningMissingWrapper" class="scaling-container">
+                            <label for="dropMissing">Handle missing values?</label>
+                            <select name="dropMissing" id="dropMissing">
+                                <option value="none">No Columns</option>
+                                <option value="indicatorAndTarget">Indicator and Target</option>
+                                <option value="indicator">Indicator</option>
+                                <option value="target">Target</option>
+                                <option value="all">All</option>
+                            </select>
+                        </div>
                         <div class="scaling-container hidden" id="imputeDiv">
                             <label for="imputeStrategy">How should missing value be replaced?</label>
                             <select name="imputeStrategy" id="imputeStrategy">
                                 <option value="none">Drop the row</option>
                                 <option value="mean">Mean</option>
                                 <option value="median">Median</option>
-                                <!-- <option value="knn">KNN</option> -->
                                 <option value="0">0</option>
                                 <option value="0.01">0.01</option>
                             </select>
                         </div>
-                        <br>
-                        <div class="scaling-container">
+                        <div id="dataCleaningZerosWrapper" class="scaling-container" style="margin-top: 8px;">
                             <label for="drop0">Remove zeros from columns?</label>
-                                <select name="drop0" id="drop0">
-                                    <option value="none">No Columns</option>
-                                    <option value="indicatorAndTarget">Inidicator and Target</option>
-                                    <option value="indicator">Indicator</option>
-                                    <option value="target">Target</option>
-                                    <option value="all">All</option>
-                                </select>
+                            <select name="drop0" id="drop0">
+                                <option value="none">No Columns</option>
+                                <option value="indicatorAndTarget">Indicator and Target</option>
+                                <option value="indicator">Indicator</option>
+                                <option value="target">Target</option>
+                                <option value="all">All</option>
+                            </select>
                         </div>
 
                         <h3 style="margin-top: 24px; margin-bottom: 12px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 1.1em; font-weight: 600; color: #000000;">Transformer</h3>
-                        <!-- Select if need to transform columns section-->
-                        <div class="scaling-container">
+                        <p class="field-note" style="margin-bottom: 8px;">Autodetect to set or grey out if all numeric.</p>
+                        <div id="transformerOptionWrapper">
+                        <div class="scaling-container" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
                             <label for="useTransformer">Are any columns non-numeric?</label>
-                                <select name="useTransformer" id="useTransformer">
-                                    <option value="No">No</option>
-                                    <option value="Yes">Yes</option>
-                                </select>
+                            <select name="useTransformer" id="useTransformer">
+                                <option value="No">No</option>
+                                <option value="Yes">Yes</option>
+                            </select>
+                            <span>Or</span>
+                            <button type="button" id="autoDetectTransformersTop" class="button-secondary" style="padding: 6px 14px; font-size: 0.9em;">Run autodetect</button>
+                        </div>
+                        <div id="transformerAutodetectMessage" class="field-note" style="margin-top: 4px; margin-bottom: 8px; min-height: 1.2em; color: #666;" aria-live="polite"></div>
                         </div>
                         <br>
                         <div id="transformerYes" class="hidden">
@@ -7349,6 +7356,7 @@
                                     <option value="remove">Remove outliers</option>
                                     <option value="cap">Cap at threshold</option>
                                 </select>
+                                <p class="field-note" style="margin-top: 6px; margin-bottom: 0; font-size: 0.9em;">Remove: drops outlier rows from <strong>training</strong> data only; test set is unchanged. Cap: clips values to bounds (train and test).</p>
                             </div>
 
                             <h3 style="margin-top: 24px; margin-bottom: 12px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 1.1em; font-weight: 600; color: #000000;">Hyperparameter Search</h3>
