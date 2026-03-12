@@ -3,7 +3,8 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     DIGITERRA_HOST=0.0.0.0 \
-    DIGITERRA_PORT=5000
+    DIGITERRA_PORT=5000 \
+    URL_PREFIX=digiterra
 
 RUN addgroup --system app && adduser --system --ingroup app app
 

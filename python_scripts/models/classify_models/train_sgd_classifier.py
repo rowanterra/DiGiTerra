@@ -10,7 +10,7 @@ def train_sgd_classifier(train_data, target_variables, use_stratified_split,
                          feature_selection_method='none', feature_selection_k=None,
                          outlier_method='none', outlier_action='remove',
                          hyperparameter_search='none', search_cv_folds=5, search_n_iter=50, **kwargs):
-    model = MultiOutputClassifier(SGDClassifier(
+    base = SGDClassifier(
         loss=kwargs.get("loss", "hinge"),
         penalty=kwargs.get("penalty", "l2"),
         alpha=kwargs.get("alpha", 0.0001),
@@ -32,7 +32,8 @@ def train_sgd_classifier(train_data, target_variables, use_stratified_split,
         class_weight=kwargs.get("class_weight", None),
         warm_start=kwargs.get("warm_start", False),
         average=kwargs.get("average", False),
-    ))
+    )
+    model = base if (target_variables is not None and len(target_variables) == 1) else MultiOutputClassifier(base)
 
     return run_classification(
         model, "SGDClassifier",

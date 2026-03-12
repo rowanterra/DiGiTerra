@@ -10,22 +10,24 @@ def train_nusvc(train_data, target_variables, use_stratified_split,
                 outlier_method='none', outlier_action='remove',
                 hyperparameter_search='none', search_cv_folds=5, search_n_iter=50, **kwargs):
 
-    model = MultiOutputClassifier(NuSVC(nu=kwargs.get('nu', 0.5),
-                                        kernel=kwargs.get('kernel', 'rbf'),
-                                        degree=kwargs.get('degree', 3),
-                                        gamma=kwargs.get('gamma', 'scale'),
-                                        coef0=kwargs.get('coef0', 0.0),
-                                        shrinking=kwargs.get('shrinking', True),
-                                        probability=kwargs.get('probability', False),
-                                        tol=kwargs.get('tol', 1e-3),
-                                        cache_size=kwargs.get('cache_size', 200),
-                                        class_weight=kwargs.get('class_weight', None),
-                                        verbose=kwargs.get('verbose', False),
-                                        max_iter=kwargs.get('max_iter', -1),
-                                        decision_function_shape=kwargs.get('decision_function_shape', 'ovr'),
-                                        break_ties=kwargs.get('break_ties', False),
-                                        random_state=kwargs.get('random_state', seed),
-                                        ))
+    base = NuSVC(nu=kwargs.get('nu', 0.5),
+                 kernel=kwargs.get('kernel', 'rbf'),
+                 degree=kwargs.get('degree', 3),
+                 gamma=kwargs.get('gamma', 'scale'),
+                 coef0=kwargs.get('coef0', 0.0),
+                 shrinking=kwargs.get('shrinking', True),
+                 probability=kwargs.get('probability', False),
+                 tol=kwargs.get('tol', 1e-3),
+                 cache_size=kwargs.get('cache_size', 200),
+                 class_weight=kwargs.get('class_weight', None),
+                 verbose=kwargs.get('verbose', False),
+                 max_iter=kwargs.get('max_iter', -1),
+                 decision_function_shape=kwargs.get('decision_function_shape', 'ovr'),
+                 break_ties=kwargs.get('break_ties', False),
+                 random_state=kwargs.get('random_state', seed),
+                 )
+    # MultiOutputClassifier expects 2D y; for single target use base estimator so 1D y works
+    model = base if (target_variables is not None and len(target_variables) == 1) else MultiOutputClassifier(base)
 
     return run_classification(
         model, "NuSVC",

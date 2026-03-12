@@ -25,12 +25,13 @@ def train_complement_nb(train_data, target_variables, use_stratified_split,
         effective_scaler = 'minmax'
         logger.info(f"ComplementNB requires non-negative values. Changing scaler from {X_scaler_type} to MinMaxScaler.")
     
-    model = MultiOutputClassifier(ComplementNB(alpha=kwargs.get('alpha', 1.0),
-                                              fit_prior=kwargs.get('fit_prior', True),
-                                              class_prior=kwargs.get('class_prior', None),
-                                              norm=kwargs.get('norm', False),
-                                              force_alpha=kwargs.get('force_alpha', True),
-                                              ))
+    base = ComplementNB(alpha=kwargs.get('alpha', 1.0),
+                        fit_prior=kwargs.get('fit_prior', True),
+                        class_prior=kwargs.get('class_prior', None),
+                        norm=kwargs.get('norm', False),
+                        force_alpha=kwargs.get('force_alpha', True),
+                        )
+    model = base if (target_variables is not None and len(target_variables) == 1) else MultiOutputClassifier(base)
 
     return run_classification(
         model, "ComplementNB",
