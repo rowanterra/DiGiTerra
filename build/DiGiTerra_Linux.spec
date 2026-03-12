@@ -1,9 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
-# PyInstaller spec file for Linux
+# PyInstaller spec file for Linux. Run from project root: pyinstaller build/DiGiTerra_Linux.spec
 
 from PyInstaller.utils.hooks import collect_submodules
-import platform
 import os
+
+# Paths relative to spec file (build/); SPECPATH is the directory containing the spec
+_SPEC_DIR = os.path.abspath(SPECPATH)
+_PROJECT_ROOT = os.path.normpath(os.path.join(_SPEC_DIR, '..'))
 
 hiddenimports = (
     collect_submodules("xlsxwriter")
@@ -13,16 +16,16 @@ hiddenimports = (
 )
 
 datas = [
-    ("templates", "templates"),
-    ("static", "static"),
-    ("python_scripts", "python_scripts"),
+    (os.path.join(_PROJECT_ROOT, "templates"), "templates"),
+    (os.path.join(_PROJECT_ROOT, "static"), "static"),
+    (os.path.join(_PROJECT_ROOT, "python_scripts"), "python_scripts"),
 ]
 
 block_cipher = None
 
 a = Analysis(
-    ["desktop_app.py"],
-    pathex=[],
+    [os.path.join(_PROJECT_ROOT, "desktop_app.py")],
+    pathex=[_PROJECT_ROOT],
     binaries=[],
     datas=datas,
     hiddenimports=hiddenimports,
@@ -53,7 +56,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon="static/Terra_Axe_Logo.png" if os.path.exists("static/Terra_Axe_Logo.png") else None,  # Linux can use PNG or create .xpm format
+    icon=os.path.join(_PROJECT_ROOT, "static", "Terra_Axe_Logo.png") if os.path.exists(os.path.join(_PROJECT_ROOT, "static", "Terra_Axe_Logo.png")) else None,  # Linux can use PNG or create .xpm format
 )
 
 coll = COLLECT(

@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
-
+import python_scripts.plotting.plot_style  # noqa: F401
 from sklearn.metrics import PrecisionRecallDisplay, precision_recall_curve, average_precision_score
 from python_scripts.config import VIS_DIR
 

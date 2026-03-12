@@ -37,6 +37,7 @@ from python_scripts.preprocessing.utilites import _scale_pairs
 from python_scripts.preprocessing.utilites import export_plots
 
 from python_scripts.config import VIS_DIR
+import python_scripts.plotting.plot_style  # noqa: F401
 
 
 def _choose_k_silhouette(X: np.ndarray, k_min=2, k_max=10, algo="kmeans"):

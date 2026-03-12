@@ -673,6 +673,41 @@ input[type="file"] {
   border: 1px solid #e5e5e5;
 }
 
+/* Inference results: smaller table font so full spread (e.g. 100% column) fits */
+.inference-results-content .stats-table th,
+.inference-results-content .stats-table td,
+.inference-results-content .model-stats-table th,
+.inference-results-content .model-stats-table td {
+  font-size: 0.75rem;
+  padding: 4px 6px;
+}
+
+/* Left column: allow scroll so inference distribution is not cut off; cap width for readability */
+.inference-summary-section {
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  max-height: min(85vh, 900px);
+}
+
+/* Training plot on inference page: smaller so overlay + distribution fit; overlay sits on left half only */
+.inference-training-plot-img {
+  max-height: 300px;
+}
+
+/* Inference visuals row: training plot and distribution share space; distribution gets room */
+.inference-visuals-row {
+  margin-bottom: 12px;
+}
+
+.inference-dist-wrap {
+  min-height: 200px;
+}
+
+.inference-dist-svg {
+  display: block;
+}
+
 /* Make delta column narrower in performance tables */
 .performance-table {
   table-layout: auto;

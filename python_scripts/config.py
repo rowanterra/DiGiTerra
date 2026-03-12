@@ -10,7 +10,7 @@ VIS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def update_vis_dir(new_path: Path):
-    """Update VIS_DIR to match the app's USER_VIS_DIR. Called at startup from app.py."""
+    """Update VIS_DIR to the given path. Called at startup from app.py."""
     global VIS_DIR
     VIS_DIR = Path(new_path)
     VIS_DIR.mkdir(parents=True, exist_ok=True)

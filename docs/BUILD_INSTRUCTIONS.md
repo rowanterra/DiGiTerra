@@ -2,6 +2,8 @@
 
 This document provides detailed instructions for building DiGiTerra desktop applications for macOS, Windows, and Linux.
 
+**Important:** All build commands must be run with the current working directory set to the project root (the directory that contains `app.py`, `requirements.txt`, and the `build/` folder). The PyInstaller spec files resolve paths relative to the project root.
+
 ## Prerequisites
 
 All platforms require:
@@ -28,17 +30,20 @@ All platforms require:
 
 ## Building for macOS
 
+All commands below assume you are in the project root.
+
 ### Quick Build
 ```bash
-chmod +x build_macos.sh
-./build_macos.sh
+chmod +x build/build_macos.sh
+./build/build_macos.sh
 ```
 
 ### Manual Build
+Run from project root:
 ```bash
 pip install -r requirements.txt
 pip install pyinstaller
-pyinstaller DiGiTerra.spec
+pyinstaller build/DiGiTerra.spec
 ```
 
 ### Icon Setup (Optional)
@@ -60,17 +65,19 @@ The build creates `dist/DiGiTerra.app` - a macOS application bundle that can be 
 
 ## Building for Windows
 
+Run all commands from the project root (directory containing `app.py` and `build/`).
+
 ### Quick Build
-Double-click `build_windows.bat` or run from Command Prompt:
+Double-click `build\build_windows.bat` or run from Command Prompt from the project root:
 ```cmd
-build_windows.bat
+build\build_windows.bat
 ```
 
 ### Manual Build
 ```cmd
 pip install -r requirements.txt
 pip install pyinstaller
-pyinstaller DiGiTerra_Windows.spec
+pyinstaller build\DiGiTerra_Windows.spec
 ```
 
 ### Icon Setup (Optional)
@@ -92,17 +99,19 @@ The build creates `dist/DiGiTerra/` folder containing:
 
 ## Building for Linux
 
+All commands below assume you are in the project root.
+
 ### Quick Build
 ```bash
-chmod +x build_linux.sh
-./build_linux.sh
+chmod +x build/build_linux.sh
+./build/build_linux.sh
 ```
 
 ### Manual Build
 ```bash
 pip3 install -r requirements.txt
 pip3 install pyinstaller
-pyinstaller DiGiTerra_Linux.spec
+pyinstaller build/DiGiTerra_Linux.spec
 ```
 
 ### Icon Setup (Optional)

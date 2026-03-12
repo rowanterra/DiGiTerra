@@ -148,6 +148,7 @@ def run_predict(
         training_visualization = store.get("training_visualization")
         if training_visualization and not (user_vis_dir / training_visualization).exists():
             training_visualization = None
+        training_visualization_version = store.get("training_visualization_version")
         model_type = store.get("model_type", "regression")
         training_target_summary = None
         try:
@@ -168,6 +169,7 @@ def run_predict(
                 "predictions_preview": predictions_preview,
                 "model_type": model_type,
                 "training_visualization": training_visualization,
+                "training_visualization_version": training_visualization_version,
                 "training_target_summary": training_target_summary,
             },
             200,

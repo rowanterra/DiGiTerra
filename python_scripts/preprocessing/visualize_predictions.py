@@ -9,7 +9,9 @@ import numpy as np
 
 import seaborn as sns
 
+from python_scripts.plotting.plot_style import apply_plot_style
 from python_scripts.config import VIS_DIR
+
 
 def visualize_predictions(model_name, 
                           y_train, y_train_pred, 
@@ -17,8 +19,8 @@ def visualize_predictions(model_name,
                           target_names, 
                           units, sigfig, pdf_pages,
                           train_results=None, test_results=None,
-                          file_suffix='', label_suffix=''):
-
+                          file_suffix='', label_suffix='', plot_run_id=None):
+    apply_plot_style()
 
     # Convert to arrays and handle index alignment for DataFrames
     if isinstance(y_train_pred, pd.DataFrame):
@@ -40,6 +42,7 @@ def visualize_predictions(model_name,
         y_test_pred_array = y_test_pred_array.reshape(-1, 1)
 
     for i, target in enumerate(target_names):
+        apply_plot_style()
         if train_results is not None and test_results is not None:
             fig, axs = plt.subplots(1, 3, figsize=(18, 5), gridspec_kw={'width_ratios': [1.3, 1.3, 1]})
         else:
@@ -74,24 +77,24 @@ def visualize_predictions(model_name,
         if len(y_test_aligned) != len(y_test_pred_array[:, i]):
             raise ValueError(f"Size mismatch: y_test has {len(y_test_aligned)} samples but y_test_pred has {len(y_test_pred_array[:, i])} samples.")
         
-        axs[0].scatter(y_train_aligned, y_train_pred_array[:, i], alpha=0.6, label='Train', color='royalblue', edgecolor='k')
-        axs[0].scatter(y_test_aligned, y_test_pred_array[:, i], alpha=0.6, label='Test', color='forestgreen', edgecolor='k')
+        axs[0].scatter(y_train_aligned, y_train_pred_array[:, i], alpha=0.65, label='Train', color='#4a7cb8', s=28, edgecolors='none')
+        axs[0].scatter(y_test_aligned, y_test_pred_array[:, i], alpha=0.65, label='Test', color='#3d8f5c', s=28, edgecolors='none')
         min_val = min(y_train_aligned.min(), y_test_aligned.min())
         max_val = max(y_train_aligned.max(), y_test_aligned.max())
-        axs[0].plot([min_val, max_val], [min_val, max_val], 'r--', lw=2)
+        axs[0].plot([min_val, max_val], [min_val, max_val], '--', color='.45', lw=1.5)
         title_base = f"{model_name} | {target}\nPredicted vs Actual"
         title_with_label = f"{title_base} {label_suffix}" if label_suffix else title_base
         axs[0].set_title(title_with_label)
         axs[0].set_xlabel(f"Actual '{unitstr}'")
         axs[0].set_ylabel(f"Predicted '{unitstr}'")
         axs[0].legend()
-        axs[0].grid(True)
+        axs[0].grid(True, alpha=0.7)
 
         # === Residuals ===
         residuals_test = y_test_aligned - y_test_pred_array[:, i]
-        sns.histplot(residuals_test, bins=15, ax=axs[1], kde=True, 
-                     color="mediumseagreen", edgecolor="black")
-        axs[1].axvline(0, color='red', linestyle='--')
+        sns.histplot(residuals_test, bins=15, ax=axs[1], kde=True,
+                     color="#3d8f5c", edgecolor="white", linewidth=0.8)
+        axs[1].axvline(0, color='.5', linestyle='--')
         residuals_title_base = f"{model_name} | {target}\nTest Residuals"
         residuals_title_with_label = f"{residuals_title_base} {label_suffix}" if label_suffix else residuals_title_base
         axs[1].set_title(residuals_title_with_label)
@@ -112,7 +115,10 @@ def visualize_predictions(model_name,
             table.scale(1.2, 1.5)
             axs[2].set_title("Summary Metrics", pad=20)
         plt.tight_layout()
-        plot_filename = f"target_plot_{i + 1}{file_suffix}.png"
+        if plot_run_id is not None:
+            plot_filename = f"target_plot_{i + 1}{file_suffix}_{plot_run_id}.png"
+        else:
+            plot_filename = f"target_plot_{i + 1}{file_suffix}.png"
         plot_path = VIS_DIR / plot_filename
         plt.savefig(plot_path)
         pdf_pages.savefig()

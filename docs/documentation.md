@@ -7,7 +7,8 @@ DiGiTerra follows a consistent workflow:
 2. **Data Exploration** builds correlation matrices, pairplots, and descriptive statistics.
 3. **Model Preprocessing** selects targets/indicators, cleaning, and transformations.
 4. **Modeling** trains the model and calculates metrics.
-5. **Downloads** provide PDF visuals and spreadsheet summaries.
+5. **Inference** applies the trained model to a new dataset; the Inference Results page shows inference summary, the training plot (Predicted vs Actual + Residuals) with inference points overlaid on the scatter panel only, and the inference distribution histogram. The left column scrolls when needed so all content is visible.
+6. **Downloads** provide PDF visuals and spreadsheet summaries.
 
 ## Core Concepts
 - **Indicators** are the input columns used to predict targets.
@@ -43,6 +44,7 @@ Upload  ->  Data Exploration  ->  Model Preprocessing  ->  Modeling  ->  Outputs
 - Data exploration (correlation, pairplot, auto-detect): `python_scripts/app_exploration.py`
 - Inference: `python_scripts/app_prediction.py`
 - Preprocessing and plotting: `python_scripts/preprocessing/*`, `python_scripts/plotting/*`
+- Plot style: `python_scripts/plotting/plot_style.py` defines the shared figure style (seaborn-like); `apply_plot_style()` is called at the start of `visualize_predictions()` and `plot_regression_bundle()` so training and export figures use the same look.
 
 ## Accessibility Features
 
