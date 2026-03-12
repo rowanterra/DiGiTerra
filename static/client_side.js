@@ -952,8 +952,15 @@ function showTab(tabName) {
             redobutton.classList.add('hidden');
         }
     } else if (tabName === 'model-preprocessing') {
-        if (userInputSection) {
-            userInputSection.classList.remove('hidden');
+        // Re-query in case refs were null at load (e.g. script ran before DOM ready)
+        const modelPreprocessSection = document.getElementById('userInputSection');
+        const uploadSection = document.getElementById('fileuploaddiv');
+        if (modelPreprocessSection) {
+            modelPreprocessSection.classList.remove('hidden');
+            modelPreprocessSection.style.display = '';
+        }
+        if (uploadSection) {
+            uploadSection.classList.add('hidden');
         }
         // Hide redobutton on model-preprocessing tab
         if (redobutton) {
@@ -1927,18 +1934,25 @@ function downloadAdditionalInfoTable(tableData, sheetName, timestamp) {
 }
 
 /// Section 3: when 'Process' Button clicked
-    // Ensures required input is there and gets the columns names of selected indicators and targets using the /preprocess route
-preprocessform.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const stratErrorDiv = document.getElementById('stratErrorDiv')
-    const stratifyColumn = document.getElementById('specificVariableSelect').value;
-    const quantileBins = document.getElementById('quantileBins').value;
-    const bins = document.getElementById('bins').value;
-    const binsLabel = document.getElementById('binsLabel').value
-    const quantiles = document.getElementById('quantiles').value;
-    const indicators = indicatorsSelect.value
-    const predictors = predictorsSelect.value
-    let outputType = document.getElementById('outputType1').value
+    // Ensures required input is there and gets the column names of selected indicators and targets using the /preprocess route.
+    // Use event delegation so the handler runs even if preprocessform ref was null at load time.
+async function handlePreprocessFormSubmit(e) {
+    if (!e.target || e.target.id !== 'preprocessform') return;
+    const stratErrorDiv = document.getElementById('stratErrorDiv');
+    const specificVariableSelect = document.getElementById('specificVariableSelect');
+    const stratifyColumn = specificVariableSelect ? specificVariableSelect.value : '';
+    const quantileBinsEl = document.getElementById('quantileBins');
+    const quantileBins = quantileBinsEl ? quantileBinsEl.value : '';
+    const binsEl = document.getElementById('bins');
+    const bins = binsEl ? binsEl.value : '';
+    const binsLabelEl = document.getElementById('binsLabel');
+    const binsLabel = binsLabelEl ? binsLabelEl.value : '';
+    const quantilesEl = document.getElementById('quantiles');
+    const quantiles = quantilesEl ? quantilesEl.value : '';
+    const indicators = indicatorsSelect ? indicatorsSelect.value : '';
+    const predictors = predictorsSelect ? predictorsSelect.value : '';
+    const outputType1El = document.getElementById('outputType1');
+    let outputType = outputType1El ? outputType1El.value : ''
 
     //Error checking for if using stratify or quantiles/bins
     if ((quantileBins =='quantiles' || quantileBins =='Bins') && stratifyColumn.trim()==""){
@@ -2008,8 +2022,9 @@ preprocessform.addEventListener('submit', async (e) => {
         }
     }
 
-    //if required variables are filled in send to route to get message displayed with column names
+    // If required variables are filled in, send to route and only switch to Modeling on success
     if (!e.defaultPrevented) {
+        e.preventDefault(); // prevent native form submit now that we're handling it
         // Clear any previous aria-invalid attributes since validation passed
         const formFields = [
             'specificVariableSelect', 'quantiles', 'bins', 'binsLabel', 
@@ -2021,27 +2036,11 @@ preprocessform.addEventListener('submit', async (e) => {
                 field.removeAttribute('aria-invalid');
             }
         });
-        
-        stratErrorDiv.innerHTML = ``
-        let columnDiv = document.getElementById('columnsection');
-        columnDiv.classList.add('hidden');
-        let fileuploaddiv = document.getElementById('fileuploaddiv');
-        fileuploaddiv.classList.add('hidden');
-        let userInputSection = document.getElementById('userInputSection');
-        userInputSection.classList.add('hidden');
-        
-        let columnSelection = document.getElementById('columnSelection');
-        columnSelection.dataset.ready = 'true';
-        columnSelection.style.display = 'block';
-        
-        // Always route to unified Modeling page (mode selection happens there)
-        showTab('modeling');
-        
-        
-        const predictorCols = getColumnIndices(predictors.toUpperCase().replace(/\s/g, ""));
-        const indicatorCols = getColumnIndices(indicators.toUpperCase().replace(/\s/g, ""));
 
-        stratifyColumnNumber = columnToIndex(stratifyColumn.toUpperCase())
+        stratErrorDiv.innerHTML = '';
+        const predictorCols = getColumnIndices((predictors || '').toUpperCase().replace(/\s/g, ''));
+        const indicatorCols = getColumnIndices((indicators || '').toUpperCase().replace(/\s/g, ''));
+        stratifyColumnNumber = columnToIndex((stratifyColumn || '').toUpperCase());
 
         const requestData = {
             filename: uploadedFileName,
@@ -2058,27 +2057,50 @@ preprocessform.addEventListener('submit', async (e) => {
                 },
                 body: JSON.stringify(requestData),
             });
-            let data = await response.json();
+            const data = await response.json();
 
-            
-            stratifyStr = ''
-            const stratifyColumn = document.getElementById('specificVariableSelect').value;
-            if (stratifyColumn !== ''){
-                stratifyStr = 'with stratification by ' + data['stratify'] + ' value'
+            if (!response.ok) {
+                if (stratErrorDiv) showError(stratErrorDiv, data.error || 'Preprocess failed. Please check your selections.', false);
+                else if (errorDiv) showError(errorDiv, data.error || 'Preprocess failed.', false);
+                return;
             }
 
-            let predictorsColNameString = data['predictors'].join(",").substring(0,10)
-            if (predictorsColNameString.length == 10){
-                predictorsColNameString += '...'
+            // Success: now switch UI to Modeling
+            const columnDiv = document.getElementById('columnsection');
+            const fileuploaddiv = document.getElementById('fileuploaddiv');
+            const userInputSection = document.getElementById('userInputSection');
+            const columnSelection = document.getElementById('columnSelection');
+            if (columnDiv) columnDiv.classList.add('hidden');
+            if (fileuploaddiv) fileuploaddiv.classList.add('hidden');
+            if (userInputSection) userInputSection.classList.add('hidden');
+            if (columnSelection) {
+                columnSelection.dataset.ready = 'true';
+                columnSelection.style.display = 'block';
+            }
+            if (typeof showTab === 'function') showTab('modeling');
+
+            stratifyStr = '';
+            if (stratifyColumn && stratifyColumn.trim() !== '' && data.stratify) {
+                stratifyStr = 'with stratification by ' + data.stratify + ' value';
             }
 
-            let IndicatorsPredictorsSection = document.getElementById('modelingHeaderActions')
-            const outputTypeLabel = outputType === 'Numeric' ? 'Regression' : outputType
+            const preds = data.predictors;
+            let predictorsColNameString = Array.isArray(preds) ? preds.join(',').substring(0, 10) : (preds || '').substring(0, 10);
+            if (predictorsColNameString.length >= 10) {
+                predictorsColNameString += '...';
+            }
 
-            // Displaying what was selected to user 
-            if (outputType=='Cluster'){
-                const noteText = `<em>Columns ${escapeHtml(indicators.toUpperCase())} are selected as indicators for ${escapeHtml(outputTypeLabel)} based modeling.</em>`;
-                // Update mode-specific notes
+            const IndicatorsPredictorsSection = document.getElementById('modelingHeaderActions');
+            const outputTypeLabel = outputType === 'Numeric' ? 'Regression' : outputType;
+
+            if (!IndicatorsPredictorsSection) {
+                if (errorDiv) showError(errorDiv, 'Modeling header section not found.');
+                return;
+            }
+
+            // Displaying what was selected to user
+            if (outputType === 'Cluster') {
+                const noteText = `<em>Columns ${escapeHtml((indicators || '').toUpperCase())} are selected as indicators for ${escapeHtml(outputTypeLabel)} based modeling.</em>`;
                 const simpleNote = document.getElementById('simpleModelingSelectionNote');
                 const advancedNote = document.getElementById('advancedModelingSelectionNote');
                 const automlNote = document.getElementById('automlModelingSelectionNote');
@@ -2091,8 +2113,7 @@ preprocessform.addEventListener('submit', async (e) => {
                 </div>`;
             }
             else {
-                const noteText = `<em>Columns ${escapeHtml(indicators.toUpperCase())} are selected as indicators to predict column(s) ${escapeHtml(predictors.toUpperCase())} (${escapeHtml(predictorsColNameString)}) by ${escapeHtml(outputTypeLabel)} based modeling.</em>`;
-                // Update mode-specific notes
+                const noteText = `<em>Columns ${escapeHtml((indicators || '').toUpperCase())} are selected as indicators to predict column(s) ${escapeHtml((predictors || '').toUpperCase())} (${escapeHtml(predictorsColNameString)}) by ${escapeHtml(outputTypeLabel)} based modeling.</em>`;
                 const simpleNote = document.getElementById('simpleModelingSelectionNote');
                 const advancedNote = document.getElementById('advancedModelingSelectionNote');
                 const automlNote = document.getElementById('automlModelingSelectionNote');
@@ -2104,18 +2125,20 @@ preprocessform.addEventListener('submit', async (e) => {
                     <button class="success-button" onclick="predictionPage()">Move Forward to Apply this Model for Inferencing on New Data</button>
                 </div>`;
             }
-            
-
-        }
-
-        catch (error) {
-            showError(errorDiv, 'An error occurred.');
+        } catch (error) {
+            console.error('Preprocess submit error:', error);
+            const msg = error && error.message ? error.message : 'An error occurred. Check the console for details.';
+            if (stratErrorDiv) showError(stratErrorDiv, msg, false);
+            else if (errorDiv) showError(errorDiv, msg, false);
         }
     }
-    
+}
 
+// Expose globally so inline onclick on the button can call it
+window.handlePreprocessFormSubmit = handlePreprocessFormSubmit;
 
-});
+// Attach using delegation (capturing phase so we run before any other handler)
+document.addEventListener('submit', handlePreprocessFormSubmit, true);
 
 /// Section 4: displaying and hidding divs based on user selection
 
@@ -3336,7 +3359,6 @@ function setupStartModelingButton() {
         startModelingButton.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            console.log('Start Modeling button clicked via event listener');
             welcomePage();
         });
     }
@@ -3434,11 +3456,49 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
         setupStartModelingButton();
         setupHeaderLogoClick();
+        setupContinueToModelPreprocessing();
     });
 } else {
     // DOM is already loaded
     setupStartModelingButton();
     setupHeaderLogoClick();
+    setupContinueToModelPreprocessing();
+}
+
+function setupContinueToModelPreprocessing() {
+    // Expose globally so inline onclick on the button can call it (works even if addEventListener fails)
+    window.goToModelPreprocessing = function() {
+        try {
+            if (typeof showTab === 'function') {
+                showTab('model-preprocessing');
+            }
+            var section = document.getElementById('userInputSection');
+            var uploadDiv = document.getElementById('fileuploaddiv');
+            if (section) {
+                section.classList.remove('hidden');
+                section.style.display = '';
+            }
+            if (uploadDiv) {
+                uploadDiv.classList.add('hidden');
+            }
+            var tabs = document.querySelectorAll('.tab-button[data-tab]');
+            tabs.forEach(function(b) {
+                b.classList.toggle('active', b.dataset.tab === 'model-preprocessing');
+            });
+            window.scrollTo(0, 0);
+        } catch (err) {
+            console.error('goToModelPreprocessing failed:', err);
+        }
+    };
+
+    var btn = document.getElementById('continueToModelPreprocessing');
+    if (btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            window.goToModelPreprocessing();
+        });
+    }
 }
 
 
@@ -7632,7 +7692,10 @@ predictionForm.addEventListener('submit', async (e) => {
             const summary = data.summary || [];
             const preview = data.predictions_preview || {};
             const trainingViz = data.training_visualization;
+            const trainingVizVersion = data.training_visualization_version || Date.now();
+            const trainingVizUrl = trainingViz ? (withApiRoot('/user-visualizations/' + trainingViz) + '?v=' + encodeURIComponent(trainingVizVersion) + '&t=' + Date.now()) : '';
             const modelType = data.model_type || 'regression';
+            const modelTypeLabel = modelType === 'classification' ? 'Classification' : modelType === 'cluster' ? 'Clustering' : 'Regression';
 
             let summaryTableHtml = '';
             if (summary.length > 0) {
@@ -7662,15 +7725,25 @@ predictionForm.addEventListener('submit', async (e) => {
                     `).join('');
                 }
             } else {
-                summaryTableHtml = '<p>No prediction summary available.</p>';
+                summaryTableHtml = '<p>No inference summary available.</p>';
             }
 
             let previewChartHtml = '';
             const firstCol = summary.length ? summary[0].column : null;
+            const trainingSummaryForAxes = data.training_target_summary && data.training_target_summary.summary;
+            const axisMin = (trainingSummaryForAxes && trainingSummaryForAxes[0] && (trainingSummaryForAxes[0].min != null || trainingSummaryForAxes[0]['25'] != null))
+                ? (Number(trainingSummaryForAxes[0].min) ?? Number(trainingSummaryForAxes[0]['25']))
+                : null;
+            const axisMax = (trainingSummaryForAxes && trainingSummaryForAxes[0] && (trainingSummaryForAxes[0].max != null || trainingSummaryForAxes[0]['100'] != null))
+                ? (Number(trainingSummaryForAxes[0].max) ?? Number(trainingSummaryForAxes[0]['100']))
+                : null;
             if (firstCol && preview[firstCol] && preview[firstCol].length > 0 && typeof preview[firstCol][0] === 'number') {
                 const vals = preview[firstCol];
                 const min = Math.min(...vals);
                 const max = Math.max(...vals);
+                const lo = (axisMin != null && axisMax != null) ? Math.min(axisMin, min) : min;
+                const hi = (axisMax != null && axisMin != null) ? Math.max(axisMax, max) : max;
+                const range = hi - lo || 1;
                 const bins = 10;
                 const step = (max - min) / bins || 1;
                 const counts = Array(bins).fill(0);
@@ -7680,30 +7753,86 @@ predictionForm.addEventListener('submit', async (e) => {
                     counts[i]++;
                 });
                 const maxCount = Math.max(...counts, 1);
+                const histPad = { left: 42, right: 16, top: 12, bottom: 36 };
+                const histW = 280;
+                const histH = 200;
+                const histPlotW = histW - histPad.left - histPad.right;
+                const histPlotH = histH - histPad.top - histPad.bottom;
+                const histBarsSvg = counts.map((c, i) => {
+                    const barH = maxCount > 0 ? (c / maxCount) * histPlotH : 0;
+                    const x = histPad.left + (i / bins) * histPlotW;
+                    const bw = Math.max(2, histPlotW / bins - 2);
+                    const y = histPad.top + histPlotH - barH;
+                    return `<rect x="${x}" y="${y}" width="${bw}" height="${barH}" fill="#7f8c9a" rx="2"/>`;
+                }).join('');
+                const histYTicks = [0, Math.round(maxCount / 2), maxCount].filter((v, i, a) => a.indexOf(v) === i);
+                const histYTickLines = histYTicks.map(t => {
+                    const y = histPad.top + histPlotH - (t / maxCount) * histPlotH;
+                    return `<line x1="${histPad.left}" y1="${y}" x2="${histPad.left - 5}" y2="${y}" stroke="#444" stroke-width="1"/>`;
+                }).join('');
+                const xTickCount = 5;
+                const xTickValues = [];
+                for (let i = 0; i < xTickCount; i++) {
+                    const v = min + (max - min) * (i / (xTickCount - 1));
+                    xTickValues.push(v);
+                }
+                const xTickLines = xTickValues.map((v) => {
+                    const t = (v - min) / (max - min || 1);
+                    const x = histPad.left + t * histPlotW;
+                    return `<line x1="${x}" y1="${histPad.top + histPlotH}" x2="${x}" y2="${histPad.top + histPlotH + 5}" stroke="#444" stroke-width="1"/>`;
+                }).join('');
+                const xTickTexts = xTickValues.map((v) => {
+                    const t = (v - min) / (max - min || 1);
+                    const x = histPad.left + t * histPlotW;
+                    const label = (v === Math.floor(v) ? v : Number(v).toFixed(1)).toString();
+                    return `<text x="${x}" y="${histH - 10}" text-anchor="middle" font-size="10" fill="#444">${label}</text>`;
+                }).join('');
+                const leftPlotHtml = trainingViz ? (() => {
+                    // Training image is composite: left = Predicted vs Actual, right = Residuals (and sometimes metrics).
+                    // Overlay only the left (scatter) panel so inference points align with the scatter plot.
+                    const toNormX = v => 12.5 + ((v - lo) / range) * (92 - 12.5);
+                    const toNormY = v => 88 - ((v - lo) / range) * (88 - 11);
+                    const overlayPoints = vals.map(v => {
+                        const cx = toNormX(v);
+                        const cy = toNormY(v);
+                        return `<circle cx="${cx}" cy="${cy}" r="0.38" fill="#5a7a9a" opacity="0.5"/>`;
+                    }).join('');
+                    return `
+                        <div style="position: relative; display: inline-block; max-width: 100%;">
+                            <img src="${trainingVizUrl}" alt="Training Predicted vs Actual" class="inference-model-graphic-img inference-training-plot-img" style="display: block; max-height: 300px; width: auto;">
+                            <svg class="inference-overlay-svg" style="position: absolute; left: 0; top: 0; width: 50%; height: 100%; pointer-events: none;" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">${overlayPoints}</svg>
+                        </div>
+                        <p style="margin: 4px 0 0 0; font-size: 0.8rem; color: #555;">Same plot as Modeling page; inference points (gray) on diagonal.</p>`;
+                })() : '';
+                const inferenceDistLabel = 'Inference distribution';
                 previewChartHtml = `
-                    <h4 style="margin: 0 0 8px 0;">Prediction distribution (${firstCol})</h4>
-                    <div class="prediction-histogram" style="display: flex; align-items: flex-end; gap: 2px; height: 120px; margin-top: 8px;">
-                        ${counts.map((c, i) => {
-                            const lo = (min + i * step).toFixed(2);
-                            const hi = (min + (i + 1) * step).toFixed(2);
-                            const pct = Math.round((c / maxCount) * 100);
-                            return `<div title="${lo}–${hi}: ${c}" style="flex: 1; min-width: 8px; background: #357a53; height: ${pct}%; border-radius: 2px;"></div>`;
-                        }).join('')}
+                    <h4 style="margin: 0 0 8px 0;">Inference visuals (${firstCol})</h4>
+                    <p style="margin: 0 0 10px 0; font-size: 0.9rem; color: #666;">Training Predicted vs Actual with inference points overlaid (left); inference distribution (right).</p>
+                    <div class="inference-visuals-row" style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;">
+                        ${trainingViz ? `<div class="inference-training-plot-wrap" style="flex: 0 1 320px; min-width: 200px;"><p style="margin: 0 0 6px 0; font-size: 0.85rem; font-weight: 600;">Training plot + inference overlay</p>${leftPlotHtml}</div>` : ''}
+                        <div class="inference-dist-wrap" style="flex: 1 1 280px; min-width: 200px;">
+                            <p style="margin: 0 0 6px 0; font-size: 0.85rem; font-weight: 600;">${inferenceDistLabel}</p>
+                            <svg width="${histW}" height="${histH}" viewBox="0 0 ${histW} ${histH}" class="inference-dist-svg" style="max-width: 100%; height: auto;">
+                                ${histBarsSvg}
+                                <line x1="${histPad.left}" y1="${histPad.top}" x2="${histPad.left}" y2="${histPad.top + histPlotH}" stroke="#333" stroke-width="1"/>
+                                <line x1="${histPad.left}" y1="${histPad.top + histPlotH}" x2="${histPad.left + histPlotW}" y2="${histPad.top + histPlotH}" stroke="#333" stroke-width="1"/>
+                                ${histYTickLines}
+                                ${histYTicks.map(t => `<text x="${histPad.left - 8}" y="${histPad.top + histPlotH - (t / maxCount) * histPlotH + 4}" text-anchor="end" font-size="10" fill="#444">${t}</text>`).join('')}
+                                ${xTickLines}${xTickTexts}
+                                <text x="${histPad.left + histPlotW/2}" y="${histH - 2}" text-anchor="middle" font-size="10" fill="#444">Predicted units</text>
+                                <text x="14" y="${histPad.top + histPlotH/2}" text-anchor="middle" font-size="10" fill="#444" transform="rotate(-90, 14, ${histPad.top + histPlotH/2})">Count</text>
+                            </svg>
+                        </div>
                     </div>
-                    <p style="margin-top: 6px; font-size: 0.85rem; color: #666;">Range: ${min.toFixed(4)} – ${max.toFixed(4)} (${vals.length} points)</p>
+                    <p style="margin-top: 8px; font-size: 0.85rem; color: #666;">Range: ${min.toFixed(4)} – ${max.toFixed(4)} (${vals.length} points)</p>
                 `;
             }
 
-            const modelGraphicHtml = trainingViz ? `
-                <div class="inference-model-graphic" style="flex: 1; min-width: 280px; max-width: 480px;">
-                    <h3 style="margin: 0 0 8px 0;">Model used (training performance)</h3>
-                    <p style="margin: 0 0 12px 0; font-size: 0.95rem; color: #666;">Performance graphic from the model you trained.</p>
-                    <img src="${withApiRoot('/user-visualizations/' + trainingViz)}?t=${Date.now()}" alt="Training performance" class="inference-model-graphic-img">
-                </div>
-            ` : '';
+            const numericKeysForPanels = ['column', 'n', 'min', 'max', 'mean', 'std', '25', '50', '75', '100'];
+            const trainingSummaryForPanel = data.training_target_summary && data.training_target_summary.summary;
 
             const classificationNote = modelType === 'classification' ? `
-                <p class="inference-classification-note" style="margin: 0 0 12px 0; font-size: 0.9rem; color: #555; font-style: italic;">For new data we don't have true labels, so a confusion matrix can't be computed here. We show the prediction distribution above and the model's training performance (on its test set) to the right.</p>
+                <p class="inference-classification-note" style="margin: 0 0 12px 0; font-size: 0.9rem; color: #555; font-style: italic;">For new data we don't have true labels, so a confusion matrix can't be computed here. We show the inference distribution above and the model's training performance (on its test set) to the right.</p>
             ` : '';
 
             function renderSummaryTable(rows, numericKeys) {
@@ -7728,44 +7857,43 @@ predictionForm.addEventListener('submit', async (e) => {
                 `).join('');
             }
             const numericKeys = ['column', 'n', 'min', 'max', 'mean', 'std', '25', '50', '75', '100'];
-            const trainingSummary = data.training_target_summary && data.training_target_summary.summary;
-            const comparisonHtml = trainingSummary && trainingSummary.length ? `
-                <div class="inference-comparison-section" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #e5e5e5;">
-                    <h3 style="margin: 0 0 12px 0;">Compare with training data</h3>
-                    <p style="margin: 0 0 16px 0; font-size: 0.95rem; color: #666;">Target distribution the model was built on vs predictions on this dataset. If they differ a lot, the new data may be from a different distribution.</p>
-                    <div style="display: flex; flex-wrap: wrap; gap: 24px;">
-                        <div style="flex: 1; min-width: 260px;">
-                            <h4 style="margin: 0 0 8px 0;">Training data (target)</h4>
-                            <div class="model-stats-table-wrapper">${renderSummaryTable(trainingSummary, numericKeys)}</div>
-                        </div>
-                        <div style="flex: 1; min-width: 260px;">
-                            <h4 style="margin: 0 0 8px 0;">Predictions (this run)</h4>
-                            <div class="model-stats-table-wrapper">${renderSummaryTable(summary, numericKeys)}</div>
-                        </div>
-                    </div>
+            const trainingSummaryTableHtml = trainingSummaryForPanel && trainingSummaryForPanel.length ? `
+                <h3 style="margin: 0 0 8px 0;">Training data (target)</h3>
+                <p style="margin: 0 0 12px 0; font-size: 0.95rem; color: #666;">Spread the model was built on.</p>
+                <div class="model-stats-table-wrapper" style="margin-bottom: 20px;">${renderSummaryTable(trainingSummaryForPanel, numericKeysForPanels)}</div>
+            ` : '';
+            const modelGraphicSectionHtml = trainingViz ? `
+                <h3 style="margin: 0 0 8px 0;">Model used (training performance)</h3>
+                <p style="margin: 0 0 12px 0; font-size: 0.95rem; color: #666;">Performance graphic from the model you trained.</p>
+                <img src="${trainingVizUrl}" alt="Training performance" class="inference-model-graphic-img">
+            ` : '';
+            const rightPanelHtml = (trainingSummaryTableHtml || modelGraphicSectionHtml) ? `
+                <div class="inference-model-graphic" style="flex: 0 0 calc(50% - 12px); min-width: 200px; overflow: auto; align-self: flex-start;">
+                    ${trainingSummaryTableHtml}
+                    ${modelGraphicSectionHtml}
                 </div>
             ` : '';
 
             predictionResults.innerHTML = `
-                <h2>Prediction Results</h2>
-                <p>Your results for the prediction with '<strong>${escapeHtml(data.filename || 'file')}</strong>' are ready to download.</p>
+                <h2>Inference Results</h2>
+                <p class="inference-model-type" style="margin: 0 0 16px 0; font-size: 0.95rem; color: #555;"><strong>Model type:</strong> ${escapeHtml(modelTypeLabel)}</p>
+                <p>Your inference results for '<strong>${escapeHtml(data.filename || 'file')}</strong>' are ready to download.</p>
                 <div class="button-group" style="margin-bottom: 24px;">
                     <a href="${withApiRoot('/download/predictions.csv')}?download_name=${encodeURIComponent(predictionDownloadName)}" onclick="return downloadFile('predictions.csv', '${predictionDownloadName}')">
                         <button class="predictionresultButton export-button">Download Results CSV</button>
                     </a>
                     <button class="secondary-button" onclick="backToModel()">Back To Model</button>
-                    <button class="secondary-button" onclick="newPredict()">Predict Another Dataset</button>
+                    <button class="secondary-button" onclick="newPredict()">Run inference on another dataset</button>
                 </div>
-                <div class="inference-results-content" style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
-                    <div class="inference-summary-section" style="flex: 1; min-width: 300px;">
-                        <h3 style="margin: 0 0 8px 0;">Prediction summary</h3>
-                        <p style="margin: 0 0 12px 0; font-size: 0.95rem; color: #666;">Descriptive statistics for predicted values (same style as Data Exploration).</p>
+                <div class="inference-results-content" style="display: flex; flex-wrap: nowrap; gap: 24px; align-items: flex-start;">
+                    <div class="inference-summary-section" style="flex: 0 0 calc(50% - 12px); min-width: 200px; overflow: auto; align-self: flex-start;">
+                        <h3 style="margin: 0 0 8px 0;">Inference summary</h3>
+                        <p style="margin: 0 0 12px 0; font-size: 0.95rem; color: #666;">Descriptive statistics for inferred (predicted) values (same style as Data Exploration).</p>
                         ${classificationNote}
                         <div class="model-stats-table-wrapper" style="margin-bottom: 16px;">${summaryTableHtml}</div>
                         ${previewChartHtml ? `<div class="inference-preview-chart" style="margin-top: 16px;">${previewChartHtml}</div>` : ''}
-                        ${comparisonHtml}
                     </div>
-                    ${modelGraphicHtml}
+                    ${rightPanelHtml}
                 </div>
             `
             uploadPredictDf.classList.add('hidden')

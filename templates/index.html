@@ -716,7 +716,7 @@
                         <p class="field-note" style="margin-bottom: 16px;">
                             Configure your modeling settings, then select "Process" below to proceed and choose between Automatic, Simple, and Advanced Modeling.
                         </p>
-                        <button class="processButton processButton--compact success-button" type="submit" id="continueToModelingButton">Process Configurations and Continue</button>
+                        <button class="processButton processButton--compact success-button" type="submit" id="continueToModelingButton" onclick="var f=document.getElementById('preprocessform');if(f&&window.handlePreprocessFormSubmit){var e={target:f,defaultPrevented:false,preventDefault:function(){e.defaultPrevented=true;}};window.handlePreprocessFormSubmit(e);}return false;">Process Configurations and Continue</button>
                         <br>
                         <p><span class="requiredAsterisk">*</span>Required field</p>
 
@@ -7457,6 +7457,18 @@
         window.API_ROOT = "{{ api_root }}";
         window.STATIC_ROOT = "{{ static_root }}";
     </script>
-    <script src='{{ static_root }}/client_side.js'></script> 
+    <script src="{{ static_root }}/client_side.js?v=4"></script>
+    <script>
+        // Fallback so "Continue to Model Preprocessing" works even if main script fails or is cached
+        window.goToModelPreprocessing = window.goToModelPreprocessing || function() {
+            var s = document.getElementById('userInputSection');
+            var u = document.getElementById('fileuploaddiv');
+            if (s) { s.classList.remove('hidden'); s.style.display = ''; }
+            if (u) { u.classList.add('hidden'); }
+            var tabs = document.querySelectorAll('.tab-button[data-tab]');
+            tabs.forEach(function(b) { b.classList.toggle('active', b.dataset.tab === 'model-preprocessing'); });
+            window.scrollTo(0, 0);
+        };
+    </script>
 </body>
 </html>

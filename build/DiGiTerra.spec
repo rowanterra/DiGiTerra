@@ -1,6 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
+# macOS build. Run from project root: pyinstaller build/DiGiTerra.spec
 
 from PyInstaller.utils.hooks import collect_submodules
+import os
+
+# Paths relative to spec file (build/); SPECPATH is the directory containing the spec
+_SPEC_DIR = os.path.abspath(SPECPATH)
+_PROJECT_ROOT = os.path.normpath(os.path.join(_SPEC_DIR, '..'))
 
 hiddenimports = (
     collect_submodules("xlsxwriter")
@@ -10,17 +16,17 @@ hiddenimports = (
 )
 
 datas = [
-    ("../templates", "templates"),
-    ("../static", "static"),
-    ("../python_scripts", "python_scripts"),
+    (os.path.join(_PROJECT_ROOT, "templates"), "templates"),
+    (os.path.join(_PROJECT_ROOT, "static"), "static"),
+    (os.path.join(_PROJECT_ROOT, "python_scripts"), "python_scripts"),
 ]
 
 block_cipher = None
 
 
 a = Analysis(
-    ["../desktop_app.py"],
-    pathex=[],
+    [os.path.join(_PROJECT_ROOT, "desktop_app.py")],
+    pathex=[_PROJECT_ROOT],
     binaries=[],
     datas=datas,
     hiddenimports=hiddenimports,
@@ -69,10 +75,11 @@ coll = COLLECT(
 #   1. Use an online converter: https://cloudconvert.com/png-to-icns
 #   2. Or use Image2icon app (macOS App Store)
 #   3. Save the .icns file to static/Terra_Axe_Logo.icns
-#   4. Then uncomment the icon line below and comment out the icon=None line
+#   4. Then set icon to the path below (optional)
+_ICNS = os.path.join(_PROJECT_ROOT, "static", "Terra_Axe_Logo.icns")
 app = BUNDLE(
     coll,
     name="DiGiTerra.app",
-    icon=None,  # Set to "static/Terra_Axe_Logo.icns" after creating the .icns file
+    icon=_ICNS if os.path.exists(_ICNS) else None,
     bundle_identifier=None,
 )

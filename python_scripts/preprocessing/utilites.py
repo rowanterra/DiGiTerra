@@ -10,6 +10,7 @@ import logging
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from python_scripts.plotting.plot_style import apply_plot_style
 
 logger = logging.getLogger(__name__)
 
@@ -348,6 +349,7 @@ def _plot_permutation_importance(model, X, y, feature_names, title="Permutation 
     return True
 
 def plot_regression_bundle(art: dict, units: str = ""):
+    apply_plot_style()
     # Pred vs Actual, Residuals hist, Residuals vs Fitted, 2D density
     import numpy as np, pandas as pd, matplotlib.pyplot as plt
     y_test = art["splits"]["y_test"]
@@ -359,10 +361,10 @@ def plot_regression_bundle(art: dict, units: str = ""):
         plt.savefig(VIS_DIR / filename)
 
     # 1) Pred vs Actual
-    plt.figure(figsize=(6,6))
-    plt.scatter(yt, yp, alpha=0.6, edgecolors="k")
+    plt.figure(figsize=(6, 6))
+    plt.scatter(yt, yp, alpha=0.65, edgecolors="none", s=28)
     lo, hi = float(min(yt.min(), yp.min())), float(max(yt.max(), yp.max()))
-    plt.plot([lo, hi], [lo, hi], linestyle="--")
+    plt.plot([lo, hi], [lo, hi], linestyle="--", color=".45", linewidth=1.5)
     plt.xlabel(f"Actual {units}".strip()); plt.ylabel(f"Predicted {units}".strip())
     plt.title(f"Predicted vs Actual: {tname}")
     plt.tight_layout()
@@ -370,25 +372,25 @@ def plot_regression_bundle(art: dict, units: str = ""):
 
     # 2) Residuals histogram
     res = yt.values - yp.values
-    plt.figure(figsize=(6,4))
-    plt.hist(res, bins=30, edgecolor="black")
-    plt.axvline(0, linestyle="--")
+    plt.figure(figsize=(6, 4))
+    plt.hist(res, bins=30, edgecolor="white", linewidth=0.8)
+    plt.axvline(0, linestyle="--", color=".5")
     plt.xlabel("Residual (y - ŷ)"); plt.ylabel("Count"); plt.title(f"Residuals: {tname}")
     plt.tight_layout()
     save_plot("regression_residuals_hist.png")
 
     # 3) Residuals vs Fitted
-    plt.figure(figsize=(6,4))
-    plt.scatter(yp, res, alpha=0.6, edgecolors="k")
-    plt.axhline(0, linestyle="--")
+    plt.figure(figsize=(6, 4))
+    plt.scatter(yp, res, alpha=0.65, edgecolors="none", s=28)
+    plt.axhline(0, linestyle="--", color=".5")
     plt.xlabel("Fitted (ŷ)"); plt.ylabel("Residual"); plt.title("Residuals vs Fitted")
     plt.tight_layout()
     save_plot("regression_residuals_vs_fitted.png")
 
     # 4) Actual vs Predicted density
-    plt.figure(figsize=(6,6))
-    plt.hist2d(yt.values, yp.values, bins=40)
-    plt.plot([lo, hi], [lo, hi], linestyle="--")
+    plt.figure(figsize=(6, 6))
+    plt.hist2d(yt.values, yp.values, bins=40, cmap="Blues")
+    plt.plot([lo, hi], [lo, hi], linestyle="--", color=".45", linewidth=1.5)
     plt.xlabel("Actual"); plt.ylabel("Predicted"); plt.title("Actual vs Predicted (density)")
     plt.tight_layout()
     save_plot("regression_density.png")

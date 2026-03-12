@@ -3,10 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Tuple, Any
 import json
-import re
+import logging
 import math
 import os
-import logging
+import re
+import shutil
+import time
 from pathlib import Path
 
 import numpy as np
@@ -33,6 +35,7 @@ from python_scripts.preprocessing.outlier_handling import apply_outlier_handling
 from python_scripts.preprocessing.hyperparameter_search import apply_hyperparameter_search, _estimate_param_combinations
 
 from python_scripts.config import VIS_DIR
+from python_scripts.plotting.plot_style import apply_plot_style
 
 def run_regression(model, model_name,
                     train_data, target_variables, use_stratified_split,
@@ -222,6 +225,7 @@ def run_regression(model, model_name,
         mode_label = 'DiGiTerra Simple Modeling' if modeling_mode == 'simple' else (
             'DiGiTerra Advanced Modeling' if modeling_mode == 'advanced' else 'DiGiTerra AutoML'
         )
+        apply_plot_style()
         visualize_predictions(
             model_name, y_train, baseline_y_tr_pred, y_test, baseline_y_te_pred, 
             target_variables, units, sigfig, baseline_pdf_pages,
@@ -532,12 +536,20 @@ def run_regression(model, model_name,
     
 
     graphics_suffix = '_advanced' if has_advanced_options else ''
-    
+    plot_run_id = int(time.time() * 1000)
+    apply_plot_style()
     # Use y_train_actual instead of y_train to match the filtered predictions after outlier removal
     visualize_predictions(
         model_name, y_train_actual, y_tr_pred, y_test, y_te_pred, target_variables, units, sigfig, pdf_pages,
-        file_suffix=graphics_suffix, label_suffix=f'({mode_label})'
+        file_suffix=graphics_suffix, label_suffix=f'({mode_label})', plot_run_id=plot_run_id
     )
+    inference_plot_filename = f"target_plot_1{graphics_suffix}_{plot_run_id}.png"
+    # Copy to standard name so Modeling page dropdown can display it
+    standard_name = f"target_plot_1{graphics_suffix}.png"
+    try:
+        shutil.copy(VIS_DIR / inference_plot_filename, VIS_DIR / standard_name)
+    except Exception as e:
+        logger.debug("Could not copy inference plot to standard name: %s", e)
 
     export_plots(
        art, pdf_pages, units=units)
@@ -704,9 +716,11 @@ def run_regression(model, model_name,
     except Exception as e:
         logger.debug("Could not write training target summary: %s", e)
 
-    return metrics_train, metrics_test, params_to_return, {
-                'X_train': processed_X_train_shape,
-                'X_test': processed_X_test_shape,
-                'y_train': processed_y_train_shape,
-                'y_test': processed_y_test_shape
-            }, model, y_scaler, X_scaler, quantileBinResults, X_train.columns.tolist(), feature_selection_info, outlier_info
+    shapes_dict = {
+        'X_train': processed_X_train_shape,
+        'X_test': processed_X_test_shape,
+        'y_train': processed_y_train_shape,
+        'y_test': processed_y_test_shape,
+        'training_visualization_filename': inference_plot_filename,
+    }
+    return metrics_train, metrics_test, params_to_return, shapes_dict, model, y_scaler, X_scaler, quantileBinResults, X_train.columns.tolist(), feature_selection_info, outlier_info

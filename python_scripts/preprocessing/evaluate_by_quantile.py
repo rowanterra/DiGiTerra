@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import python_scripts.plotting.plot_style  # noqa: F401
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 
 logger = logging.getLogger(__name__)

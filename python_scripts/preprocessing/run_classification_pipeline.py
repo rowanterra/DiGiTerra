@@ -32,6 +32,7 @@ from python_scripts.preprocessing.outlier_handling import apply_outlier_handling
 from python_scripts.preprocessing.hyperparameter_search import apply_hyperparameter_search
 
 from python_scripts.config import VIS_DIR
+import python_scripts.plotting.plot_style  # noqa: F401 - apply soft seaborn-like style
 
 
 def _normalize_classes(model):

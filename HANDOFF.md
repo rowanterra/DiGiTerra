@@ -79,16 +79,16 @@ You can use both: route registration in `app.py` or in Blueprint modules, and no
   Upload and prediction endpoints accept only `.csv`. Validation is in `allowed_file()` and we use `secure_filename()` for safe filenames.
   
 - **Outputs**  
-  Plots, PDFs, and Excel files go to `USER_VIS_DIR` (see “Paths” below). The UI fetches them via `/user-visualizations/<filename>` (for display) and `/download/<path:filename>` (for download). Path traversal is blocked on the download route.
+  Plots, PDFs, and Excel files go to the user visualizations directory (see “Paths” below). The UI fetches them via `/user-visualizations/<filename>` (for display) and `/download/<path:filename>` (for download). Path traversal is blocked on the download route.
 
 ---
 
 ## Paths and Environment
 
-- **`USER_VIS_DIR`** (visualizations, predictions, etc.):  
-  - macOS: `~/Library/Application Support/DiGiTerra/user_visualizations/`  
-  - Windows: `%APPDATA%\DiGiTerra\user_visualizations\`  
-  - Linux: `~/.local/share/DiGiTerra/user_visualizations/`  
+- **User visualizations directory** (plots, predictions, etc.): Set via `config.VIS_DIR`; at runtime the app uses `_ensure_user_vis_dir()` in `app.py`. Default paths:
+  - macOS: `~/Library/Application Support/DiGiTerra/user_visualizations/`
+  - Windows: `%APPDATA%\DiGiTerra\user_visualizations/`
+  - Linux: `~/.local/share/DiGiTerra/user_visualizations/`
 
   Override with `DIGITERRA_OUTPUT_DIR`.
 
@@ -98,12 +98,40 @@ You can use both: route registration in `app.py` or in Blueprint modules, and no
 
 ---
 
+## Inference Page and Model Visuals
+
+- The inference results view is titled **"Inference Results"**. Copy and UI labels use "inference" (e.g. "Inference summary", "Run inference on another dataset", "Your inference results for '...' are ready to download").
+- Left panel: **Inference summary** table (descriptive stats for predicted values), then **inference visuals**: the same training plot as on the Modeling page (Predicted vs Actual + Residuals in one composite image) with inference points overlaid on the diagonal. The overlay is drawn only over the **left half** of that image (the scatter panel); the right half is the Residuals panel, so the overlay does not cover it. Overlay points are small gray circles (r 0.38, opacity 0.5) so they do not obscure train/test points. Next to it is the **Inference distribution** histogram (x-axis: Predicted units, y-axis: Count). The left column has a max-height and scrolls if needed so the distribution is not cut off; the training-plot block and distribution block use flex so both get space.
+- Right panel: training target summary table and the **model used** graphic (same training plot, no overlay). That graphic is generated during training by `visualize_predictions()` and uses the shared plot style. Style is applied via `apply_plot_style()` in `python_scripts/plotting/plot_style.py`; it is called at the start of `visualize_predictions()` and `plot_regression_bundle()` in `utilites.py`. If a saved image still looks like the old style, re-run model training to regenerate it.
+- CSS: `.inference-summary-section` uses `max-height: min(85vh, 900px)` and `overflow-y: auto`. `.inference-training-plot-img` is capped at 300px height. `.inference-overlay-svg` is `width: 50%` so it sits over the scatter panel only.
+
+---
+
+## Regression Plots: Redundancy and Options
+
+Regression currently produces several plots:
+
+- **Primary (always):** `target_plot_1` / `target_plot_1_advanced` from `visualize_predictions()` — Predicted vs Actual (train/test) + Test Residuals (+ optional metrics table). This is the main composite shown on the Modeling and Inference pages.
+- **From `export_plots` → `plot_regression_bundle()`:** Predicted vs Actual (summary), Residuals histogram, Residuals vs Fitted, Actual vs Predicted density (2D), Feature (or Permutation) importance, and optionally PDPs.
+
+**Redundancy:** The summary "Predicted vs Actual" and "Residuals" in the bundle largely duplicate the composite. The bundle adds Residuals vs Fitted, 2D density, and importance/PDP.
+
+**Ways to reduce and add options:**
+
+1. **Rely on the composite only for the main view** and treat the bundle as "extra exports": generate only importance (+ optionally PDP) by default, and add a UI or config flag to include "full bundle" (all current plots) for power users.
+2. **Make the bundle configurable** in the backend: e.g. a list like `regression_plots: ['pred_vs_actual', 'residuals_hist', 'residuals_vs_fitted', 'density', 'importance', 'pdp']` so the pipeline only generates selected items.
+3. **Combine into fewer assets:** e.g. one "diagnostics" figure with 2×2 panels (Pred vs Actual, Residuals hist, Res vs Fitted, Density) so there are fewer files and less redundancy with the composite.
+
+Implementing (2) or (3) would require changes in `utilites.plot_regression_bundle()` and possibly the regression pipeline or app config.
+
+---
+
 ## Security & Hardening: What’s Done and What to Watch
 
 **Already in place:**
 
 - File type check: only `.csv` allowed; `allowed_file()` + `secure_filename()` on upload and prediction.
-- Path traversal fix on **`/download/<path:filename>`**: we resolve paths and ensure the requested file stays under `USER_VIS_DIR` (see `download_visualization` in `app.py`).
+- Path traversal fix on **`/download/<path:filename>`**: we resolve paths and ensure the requested file stays under the user visualizations directory (see `download_visualization` in `app.py`).
 - CSV read errors are caught and returned as clear HTTP responses instead of 500s.
 - Input validation on important routes (preprocess, model training, correlation matrices, pairplot, etc.).
 
@@ -162,6 +190,6 @@ helm install digiterra deploy/helm/digiterra --set image.repository=<your-regist
 - **`app.py`** = HTTP API and route definitions; **`python_scripts/app_model_training.py`** = model training orchestration (invoked by app.py); **`desktop_app.py`** = desktop wrapper.  
 - **`memStorage`** = in-memory, single-user, single-process; **MUST be refactored for multi-worker/multi-user web deployments**. Current gunicorn config uses 1 worker to work around this limitation.  
 - **Security:** upload validation and download path traversal are addressed; add CSRF, reverse proxy, HTTPS, and dependency pinning for production web use.  
-- **Paths:** `USER_VIS_DIR`, `DIGITERRA_OUTPUT_DIR`, and `DIGITERRA_BASE_DIR` control where things live.
+- **Paths:** User visualizations directory (config.VIS_DIR), `DIGITERRA_OUTPUT_DIR`, and `DIGITERRA_BASE_DIR` control where things live.
 - **Production:** Use gunicorn for production web deployments. Docker container is configured with gunicorn (1 worker due to memStorage limitation).
 

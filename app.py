@@ -32,26 +32,28 @@ elif platform.system() == "Linux":
     APP_SUPPORT_DIR = Path(xdg_data_home) / "DiGiTerra"
 else:  # macOS
     APP_SUPPORT_DIR = Path.home() / "Library" / "Application Support" / "DiGiTerra"
-USER_VIS_DIR = Path(
+# Single source of truth for user visualizations: config.VIS_DIR (set below and used everywhere)
+_user_vis_path = Path(
     os.environ.get(
         "DIGITERRA_OUTPUT_DIR",
         APP_SUPPORT_DIR / "user_visualizations",
     )
 )
-os.environ.setdefault("DIGITERRA_OUTPUT_DIR", str(USER_VIS_DIR))
+os.environ.setdefault("DIGITERRA_OUTPUT_DIR", str(_user_vis_path))
+_user_vis_path.mkdir(parents=True, exist_ok=True)
 
-# Ensure VIS_DIR in config matches USER_VIS_DIR after environment is set
-from python_scripts.config import VIS_DIR, update_vis_dir
-update_vis_dir(USER_VIS_DIR)
+from python_scripts import config
+config.update_vis_dir(_user_vis_path)
 
 from python_scripts.helpers import (
-    write_to_excel,
     preprocess_data,
     prediction,
-    write_to_excelClassifier,
-    write_to_excelCluster,
     run_cross_validation,
     unpack_classification_result,
+    write_to_excel,
+    write_to_excelClassifier,
+    write_to_excelCluster,
+    write_to_excelRegression,
 )
 from python_scripts.app_model_training import run_model_training
 from python_scripts.app_exploration import (
@@ -66,6 +68,12 @@ UPLOAD_DIR = APP_SUPPORT_DIR / "uploads"
 URL_PREFIX = "/" + os.environ.get("URL_PREFIX", "").strip().strip("/")
 if URL_PREFIX in {"/", ""}:
     URL_PREFIX = ""
+
+
+def _ensure_user_vis_dir():
+    """Ensure the user visualizations directory exists and return it (config.VIS_DIR)."""
+    config.VIS_DIR.mkdir(parents=True, exist_ok=True)
+    return config.VIS_DIR
 
 
 def _with_prefix(path: str) -> str:
@@ -83,7 +91,6 @@ app = Flask(
 ## create upload folder for the csv files the user uploads
 app.config['UPLOAD_FOLDER'] = str(UPLOAD_DIR)
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-USER_VIS_DIR.mkdir(parents=True, exist_ok=True)
 SESSION_STORE = {}
 
 # Session cookie name for per-user state
@@ -325,14 +332,20 @@ def user_visualizations(filename):
     Returns:
         Response: File download response or 404 if not found.
     """
-    return send_from_directory(USER_VIS_DIR, filename)
+    vis_dir = _ensure_user_vis_dir()
+    response = send_from_directory(vis_dir, filename)
+    if response.status_code == 200:
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+    return response
 
 
 @route_with_prefix('/download/<path:filename>')
 def download_visualization(filename):
-    """Serve a file from USER_VIS_DIR for download. Path traversal is blocked."""
-    file_path = (USER_VIS_DIR / filename).resolve()
-    base_resolved = USER_VIS_DIR.resolve()
+    """Serve a file from the user visualizations directory for download. Path traversal is blocked."""
+    vis_dir = _ensure_user_vis_dir()
+    file_path = (vis_dir / filename).resolve()
+    base_resolved = vis_dir.resolve()
     try:
         file_path.relative_to(base_resolved)
     except ValueError:
@@ -371,7 +384,7 @@ def download_additional_info():
         # Generate filename
         import uuid
         filename = f"additional_info_{uuid.uuid4().hex[:8]}.xlsx"
-        file_path = USER_VIS_DIR / filename
+        file_path = _ensure_user_vis_dir() / filename
         
         # Write to Excel
         with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
@@ -543,7 +556,7 @@ def corr():
     """Generate correlation matrices for numeric columns."""
     store = _get_session_storage()
     data = request.json or {}
-    result, status = handle_corr(store, data, USER_VIS_DIR, _with_prefix)
+    result, status = handle_corr(store, data, _ensure_user_vis_dir(), _with_prefix)
     return jsonify(result), status
 
 
@@ -552,7 +565,7 @@ def pairplot():
     """Generate pairplot visualization for two numeric columns."""
     store = _get_session_storage()
     data = request.json or {}
-    result, status = handle_pairplot(store, data, USER_VIS_DIR, _with_prefix)
+    result, status = handle_pairplot(store, data, _ensure_user_vis_dir(), _with_prefix)
     return jsonify(result), status
 
 
@@ -714,7 +727,7 @@ def predict():
         store,
         request,
         app.config['UPLOAD_FOLDER'],
-        USER_VIS_DIR,
+        _ensure_user_vis_dir(),
         _with_prefix,
         allowed_file,
         _normalize_predict_preprocess_mode,

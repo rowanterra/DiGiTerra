@@ -6,14 +6,21 @@ to avoid circular imports (app.py passes _get_session_storage).
 
 import logging
 import random
+import time
 from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from python_scripts import config as _config
 from python_scripts.preprocessing.progress_tracker import get_tracker, remove_tracker, set_result
 from python_scripts.helpers import (
     preprocess_data,
+    run_cross_validation,
     unpack_classification_result,
+    write_to_excel,
+    write_to_excelClassifier,
+    write_to_excelCluster,
+    write_to_excelRegression,
 )
 from python_scripts.models.regression_models.train_linear import train_linear
 from python_scripts.models.regression_models.train_lasso import train_lasso
@@ -1531,12 +1538,13 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
             regression_visuals = []
             
             # Check for baseline graphics (no advanced options)
-            baseline_target_plot_exists = (USER_VIS_DIR / "target_plot_1.png").exists()
-            baseline_shap_exists = (USER_VIS_DIR / "shap_summary.png").exists()
+            vis_dir = _config.VIS_DIR
+            baseline_target_plot_exists = (vis_dir / "target_plot_1.png").exists()
+            baseline_shap_exists = (vis_dir / "shap_summary.png").exists()
             
             # Check for advanced graphics (with advanced options)
-            advanced_target_plot_exists = (USER_VIS_DIR / "target_plot_1_advanced.png").exists()
-            advanced_shap_exists = (USER_VIS_DIR / "shap_summary_advanced.png").exists()
+            advanced_target_plot_exists = (vis_dir / "target_plot_1_advanced.png").exists()
+            advanced_shap_exists = (vis_dir / "shap_summary_advanced.png").exists()
             
             # Determine mode label
             mode_label = 'DiGiTerra Simple Modeling' if modeling_mode == 'simple' else (
@@ -1574,12 +1582,14 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
             
             # Add other regression candidates (these don't have baseline/advanced variants)
             for filename, label in regression_candidates:
-                if (USER_VIS_DIR / filename).exists():
+                if (vis_dir / filename).exists():
                     regression_visuals.append({'label': label, 'file': filename, 'type': 'default'})
             
             result['regression_visuals'] = regression_visuals
-            #should try catch for writing to excel so if it fails the user still sees output and message that excel file failed?
-            write_to_excel(data, indicator_names, predictor_names, stratify_name, modelName, params, units, trainOverall, testOverall, train_results, test_results, scaler, seed, shapes, quantileBin_results, cross_validation_summary=cv_summary_data, feature_selection_info=feature_selection_info, outlier_info=outlier_info)
+            try:
+                write_to_excelRegression(data, indicator_names, predictor_names, stratify_name, modelName, params, units, trainOverall, testOverall, train_results, test_results, scaler, seed, shapes, quantileBin_results, cross_validation_summary=cv_summary_data, feature_selection_info=feature_selection_info, outlier_info=outlier_info)
+            except Exception as excel_err:
+                logger.warning("Excel export failed (model results unchanged): %s", excel_err)
 
             # Guard against swapped scalers (common cause of wildly wrong predictions)
             try:
@@ -1608,13 +1618,21 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
         if modelName.endswith('_classifier'):
             store['model_type'] = 'classification'
             store['training_visualization'] = 'confusion_matrix.png'
+            store['training_visualization_version'] = str(int(time.time() * 1000))
         elif modelName in ['kmeans', 'gmm', 'agglo', 'dbscan', 'birch', 'spectral', 'affinity_propagation', 'bisecting_kmeans', 'hdbscan', 'meanshift', 'minibatch_kmeans', 'optics']:
             store['model_type'] = 'cluster'
             store['training_visualization'] = 'cluster_pca_train.png'
+            store['training_visualization_version'] = str(int(time.time() * 1000))
         else:
             store['model_type'] = 'regression'
             rv = result.get('regression_visuals') or []
-            store['training_visualization'] = 'target_plot_1_advanced.png' if any(v.get('type') == 'advanced' for v in rv) else 'target_plot_1.png'
+            inference_filename = shapes.get('training_visualization_filename') if isinstance(shapes, dict) else None
+            if inference_filename:
+                store['training_visualization'] = inference_filename
+            else:
+                use_advanced = modeling_mode == 'advanced' and any(v.get('type') == 'advanced' for v in rv)
+                store['training_visualization'] = 'target_plot_1_advanced.png' if use_advanced else 'target_plot_1.png'
+            store['training_visualization_version'] = str(int(time.time() * 1000))
 
         # Mark all stages complete
         tracker.complete()

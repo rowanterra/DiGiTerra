@@ -74,7 +74,7 @@ python desktop_app.py
 
 ## Building Desktop Applications
 
-> These steps are for maintainers building the distributable.
+> These steps are for maintainers building the distributable. Run all commands from the project root (the directory containing `app.py` and the `build/` folder).
 
 ### Prerequisites
 
