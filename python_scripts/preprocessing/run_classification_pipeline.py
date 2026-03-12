@@ -332,7 +332,6 @@ def run_classification(model, model_name,
     except Exception as e:
         logger.debug("Could not write training target summary: %s", e)
 
-    # Return: report, cm, params, shapes, model, X_scaler, quantileBin_results, feature_order, additional_metrics, feature_selection_info, outlier_info
     return report, cm, params_to_return, {
                 'X_train': processed_X_train_shape,
                 'X_test': processed_X_test_shape,
