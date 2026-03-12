@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import List, Optional, Dict, Tuple, Any, Sequence
 import re
 import math
@@ -37,6 +38,57 @@ from python_scripts.config import VIS_DIR
 # -------------------------
 # Utilities
 # -------------------------
+
+def sort_class_labels_numeric_bins(labels: Sequence[Any]) -> List[Any]:
+    """
+    Sort class labels so numeric bins appear in logical numeric order (e.g. <50, 50-150, 150-500, >500).
+    Labels that look like ranges or thresholds are ordered by their lower bound. When no number is
+    detected in a label (plain categories), those labels are sorted alphabetically and appear after
+    any numeric-style labels.
+    """
+    if labels is None or len(labels) == 0:
+        return list(labels) if labels is not None else []
+    labels = list(labels)
+    inf = float("inf")
+    neg_inf = float("-inf")
+
+    def sort_key(lab):
+        s = str(lab).strip()
+        # Plain number
+        try:
+            n = float(s.replace(",", ""))
+            return (n, n, "")
+        except ValueError:
+            pass
+        # > N or >N
+        m = re.match(r"^>\s*([-\d.eE+]+)\s*$", s)
+        if m:
+            try:
+                n = float(m.group(1))
+                return (n, inf, "")
+            except ValueError:
+                pass
+        # < N or <N
+        m = re.match(r"^<\s*([-\d.eE+]+)\s*$", s)
+        if m:
+            try:
+                n = float(m.group(1))
+                return (neg_inf, n, "")
+            except ValueError:
+                pass
+        # N-M or N - M (range)
+        m = re.match(r"^([-\d.eE+]+)\s*[-–]\s*([-\d.eE+]+)\s*$", s)
+        if m:
+            try:
+                a, b = float(m.group(1)), float(m.group(2))
+                return (a, b, "")
+            except ValueError:
+                pass
+        # No number detected: sort after numeric-style labels, then alphabetically by label
+        return (inf, inf, s)
+
+    return sorted(labels, key=sort_key)
+
 
 def choose_columns_from_df(df: pd.DataFrame,
                            target_col: Optional[str],
@@ -381,49 +433,57 @@ def plot_regression_bundle(art: dict, units: str = ""):
     except Exception as e:
         logger.debug(f"Could not generate partial dependence plots: {e}")
 
-def plot_classification_bundle(art: dict, svctrue: bool):
-    # Confusion matrix, ROC (per class + micro/macro), PR (per class + micro/macro), Calibration
+def _plot_single_confusion_matrix(y_true, y_pred, classes, plot_path: Path, title_suffix: str = ""):
+    """Draw and save one confusion matrix to plot_path."""
     import numpy as np, matplotlib.pyplot as plt
-    y_test = art["splits"]["y_test"]
-    classes = art["metrics"]["classes"]
-    y_pred = art["predictions"]["y_test_pred"]
-    model = art["model"]
-    X_test = art["splits"]["X_test"]
-
-    # 1) Confusion matrix
-    # cm = confusion_matrix(y_test, y_pred, labels=classes)
-    # disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=classes)
-    # disp.plot()
-    # plot_path = VIS_DIR / "confusion_matrix.png"
-    # plt.savefig(plot_path)
-    short_classes = [label[:10] for label in classes]
     short_classes = [
         label if len(label) <= 10 else label[:10] + "…"
         for label in classes
     ]
-
-    cm = confusion_matrix(y_test, y_pred, labels=classes)
-
+    cm = confusion_matrix(y_true, y_pred, labels=classes)
     fig, ax = plt.subplots(figsize=(12, 10))
-
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm,
-                                display_labels=short_classes)
-
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=short_classes)
     disp.plot(ax=ax)
-
-    # Increase font sizes
-    ax.tick_params(axis='both', labelsize=30)      # tick labels
+    ax.tick_params(axis='both', labelsize=30)
     ax.set_xlabel("Predicted label", fontsize=30)
     ax.set_ylabel("True label", fontsize=30)
-    ax.set_title("Confusion Matrix", fontsize=30)
-
+    ax.set_title("Confusion Matrix" + (f" ({title_suffix})" if title_suffix else ""), fontsize=30)
     plt.xticks(rotation=45, ha="right")
     for text in disp.text_.ravel():
         text.set_fontsize(30)
     plt.tight_layout()
-
-    plot_path = VIS_DIR / "confusion_matrix.png"
     plt.savefig(plot_path, bbox_inches="tight", dpi=300)
+    plt.close(fig)
+
+
+def plot_classification_bundle(art: dict, svctrue: bool):
+    # Confusion matrix (train + test), ROC, PR, Calibration
+    import numpy as np, matplotlib.pyplot as plt
+    y_test = art["splits"]["y_test"]
+    y_train = art["splits"]["y_train"]
+    X_train = art["splits"]["X_train"]
+    X_test = art["splits"]["X_test"]
+    classes = art["metrics"]["classes"]
+    y_pred = art["predictions"]["y_test_pred"]
+    model = art["model"]
+
+    # Ordinal: model may predict integers; map back to labels for display
+    int_to_label = getattr(model, "_digiterra_int_to_label", None)
+    def _to_labels(arr):
+        if int_to_label is None:
+            return np.asarray(arr).ravel()
+        flat = np.asarray(arr).ravel()
+        return np.array([int_to_label[int(x)] for x in flat])
+
+    # 1) Confusion matrix – test and train (for side-by-side display)
+    y_test_1d = np.asarray(y_test).ravel()
+    y_pred_labels = _to_labels(y_pred)
+    _plot_single_confusion_matrix(y_test_1d, y_pred_labels, classes, VIS_DIR / "confusion_matrix.png", "Test")
+
+    y_train_1d = np.asarray(y_train).ravel()
+    y_train_pred_raw = model.predict(X_train)
+    y_train_pred_labels = _to_labels(y_train_pred_raw)
+    _plot_single_confusion_matrix(y_train_1d, y_train_pred_labels, classes, VIS_DIR / "confusion_matrix_train.png", "Train")
 
     # prepare scores
     # Binarize y for multi-class

@@ -662,6 +662,17 @@ input[type="file"] {
   position: static;
 }
 
+/* Inference results: constrain "model used" graphic so classification confusion matrix isn't huge */
+.inference-model-graphic-img {
+  max-width: 100%;
+  max-height: 380px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 1px solid #e5e5e5;
+}
+
 /* Make delta column narrower in performance tables */
 .performance-table {
   table-layout: auto;
@@ -1955,6 +1966,15 @@ input[type="number"][id="sigfig"] {
   height: 25pc;
 }
 
+/* Train / Test graphics side-by-side when not combinable */
+.result-graphic-row-train-test {
+  margin-bottom: 16px;
+}
+.result-graphic-row-train-test .result-graphic-box .result-graphic {
+  max-width: 100%;
+  object-fit: contain;
+}
+
 #loading {
   margin-top: 20px;
   padding: 20px;
@@ -2663,4 +2683,17 @@ body.dark-mode .welcome-text,
 body.dark-mode .welcome-text2,
 body.dark-mode h4 {
   color: #e0e0e0;
+}
+
+/* Autodetect greyed-out state: grey only the option(s) not needed */
+#dataCleaningMissingWrapper.autodetect-greyed,
+#dataCleaningZerosWrapper.autodetect-greyed,
+#transformerOptionWrapper.autodetect-greyed {
+  opacity: 0.65;
+  pointer-events: none;
+}
+#dataCleaningMissingWrapper.autodetect-greyed select,
+#dataCleaningZerosWrapper.autodetect-greyed select,
+#transformerOptionWrapper.autodetect-greyed select {
+  cursor: not-allowed;
 }

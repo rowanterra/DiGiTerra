@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Tuple, Any
+import json
 import os
 import logging
 from pathlib import Path
@@ -21,7 +22,7 @@ from sklearn.metrics import (
 )
 
 from matplotlib.backends.backend_pdf import PdfPages
-from python_scripts.preprocessing.utilites import make_strat_labels_robust
+from python_scripts.preprocessing.utilites import make_strat_labels_robust, sort_class_labels_numeric_bins
 from python_scripts.preprocessing.utilites import make_preprocessor
 from python_scripts.preprocessing.utilites import get_feature_names
 from python_scripts.preprocessing.utilites import _scale_pairs
@@ -133,6 +134,22 @@ def run_classification(model, model_name,
         X, y, test_size=testSize, stratify=strat, random_state=seed
     )
 
+    # Ordinal encoding for pre-made bins: map labels to integers in numeric bin order
+    # so the classifier "understands" order (e.g. <50 < 50-150 < 150-500 < >500).
+    ordinal_classes = None
+    label_to_int = None
+    int_to_label = None
+    y_train_int = None
+    y_test_int = None
+    is_single_target = isinstance(y_train, pd.Series) or (hasattr(y_train, "shape") and len(y_train.shape) >= 2 and y_train.shape[1] == 1)
+    if is_single_target:
+        all_labels = list(set(str(v) for v in np.ravel(y_train)) | set(str(v) for v in np.ravel(y_test)))
+        ordinal_classes = sort_class_labels_numeric_bins(all_labels)
+        label_to_int = {c: i for i, c in enumerate(ordinal_classes)}
+        int_to_label = {i: c for c, i in label_to_int.items()}
+        y_train_int = y_train.map(label_to_int) if hasattr(y_train, "map") else pd.Series(y_train).map(label_to_int)
+        y_test_int = y_test.map(label_to_int) if hasattr(y_test, "map") else pd.Series(y_test).map(label_to_int)
+
     # RAW splits for transformer
     X_train_raw = ddf.loc[X_train.index, nump + catp + textp].copy()
     X_test_raw  = ddf.loc[X_test.index,  nump + catp + textp].copy()
@@ -150,6 +167,7 @@ def run_classification(model, model_name,
 
     # Apply outlier handling (before feature selection)
     train_indices_kept = X_train_s.index  # Track which training samples are kept
+    outlier_info = None
     if outlier_method != 'none':
         X_train_s, X_test_s, outlier_mask = apply_outlier_handling(
             X_train_s, X_test_s, y_train, outlier_method, outlier_action
@@ -157,32 +175,60 @@ def run_classification(model, model_name,
         # Update y_train if outliers were removed
         if outlier_action == 'remove':
             y_train = y_train[outlier_mask]
+            if y_train_int is not None:
+                y_train_int = y_train_int.loc[outlier_mask]
             train_indices_kept = X_train_s.index  # Update indices to match remaining samples
+        n_outliers = int((~outlier_mask).sum())
+        outlier_info = {
+            'method': outlier_method,
+            'action': outlier_action,
+            'n_outliers': n_outliers,
+            'original_samples': int(len(outlier_mask)),
+            'remaining_samples': int(outlier_mask.sum()),
+        }
 
     # Apply feature selection
+    feature_selection_info = None
+    original_feature_count = X_train_s.shape[1]
+    original_feature_names = X_train_s.columns.tolist() if isinstance(X_train_s, pd.DataFrame) else []
     if feature_selection_method != 'none' and feature_selection_k:
-        X_train_s, X_test_s, _ = apply_feature_selection(
-            X_train_s, X_test_s, y_train, feature_selection_method, feature_selection_k, 'classification'
+        X_train_s, X_test_s, feature_selector = apply_feature_selection(
+            X_train_s, X_test_s, y_train_int if y_train_int is not None else y_train, feature_selection_method, feature_selection_k, 'classification'
         )
+        if feature_selector is not None and isinstance(X_train_s, pd.DataFrame):
+            selected_features = X_train_s.columns.tolist()
+            feature_selection_info = {
+                'method': feature_selection_method,
+                'k_requested': feature_selection_k,
+                'original_count': int(original_feature_count),
+                'selected_count': len(selected_features),
+                'selected_features': selected_features,
+            }
 
-    # Apply hyperparameter search
+    # Fit using ordinal integers when we have pre-made bins so the model sees ordered classes (0,1,2,...)
+    fit_y = y_train_int if y_train_int is not None else y_train
     if hyperparameter_search != 'none':
         model = apply_hyperparameter_search(
-            model, X_train_s, y_train, hyperparameter_search,
+            model, X_train_s, fit_y, hyperparameter_search,
             param_grid=None, cv_folds=search_cv_folds, n_iter=search_n_iter, 
             problem_type='classification', model_name=model_name
         )
     else:
-        # Fit
-        model.fit(X_train_s, y_train)
+        model.fit(X_train_s, fit_y)
 
     # Evaluate
     y_pred = model.predict(X_test_s)
-    _norm = _normalize_classes(model)
-    classes = _norm if _norm is not None else model.classes_
-    # Ensure 1D targets for metrics (MultiOutputClassifier returns 2D predict for single output)
-    y_test_1d = np.asarray(y_test).ravel()
-    y_pred_1d = np.asarray(y_pred).ravel()
+    if ordinal_classes is not None and int_to_label is not None:
+        # Map integer predictions back to original bin labels for report and display
+        y_pred_1d = np.array([int_to_label[int(p)] for p in np.ravel(y_pred)])
+        classes = ordinal_classes
+        y_test_1d = np.asarray(y_test).ravel()
+    else:
+        _norm = _normalize_classes(model)
+        classes = _norm if _norm is not None else model.classes_
+        classes = sort_class_labels_numeric_bins(classes)
+        y_test_1d = np.asarray(y_test).ravel()
+        y_pred_1d = np.asarray(y_pred).ravel()
     report = classification_report(y_test_1d, y_pred_1d, output_dict=True)
     cm = confusion_matrix(y_test_1d, y_pred_1d, labels=classes)
 
@@ -260,14 +306,36 @@ def run_classification(model, model_name,
         setattr(model, "_digiterra_raw_features", X_train.columns.tolist())
         setattr(model, "_digiterra_feature_names", X_train_t.columns.tolist())
         setattr(model, "_digiterra_model_features", X_train_s.columns.tolist())
+        if int_to_label is not None:
+            setattr(model, "_digiterra_int_to_label", int_to_label)
     except Exception:
         logger.debug("Could not attach inference artifacts to classification model", exc_info=True)
-    
-    # Return in the expected order: report, cm, params, shapes, model, X_scaler, quantileBin_results, feature_order, additional_metrics
-    # additional_metrics is added at the end for backward compatibility
+
+    # Write training target summary for inference page comparison (target distribution the model was built on)
+    try:
+        y_flat = np.asarray(y_train).ravel()
+        vc = pd.Series(y_flat).value_counts()
+        col_name = 'Target'
+        if target_variables:
+            col_name = target_variables[0] if isinstance(target_variables, (list, tuple)) else str(target_variables)
+        elif hasattr(y_train, 'name') and y_train.name is not None:
+            col_name = str(y_train.name)
+        elif hasattr(y_train, 'columns') and len(y_train.columns):
+            col_name = str(y_train.columns[0])
+        training_summary = [{
+            'column': col_name,
+            'n': int(len(y_flat)),
+            'value_counts': [{'value': str(k), 'count': int(v)} for k, v in vc.items()],
+        }]
+        with open(VIS_DIR / "training_target_summary.json", "w") as f:
+            json.dump({"model_type": "classification", "summary": training_summary}, f, indent=2)
+    except Exception as e:
+        logger.debug("Could not write training target summary: %s", e)
+
+    # Return: report, cm, params, shapes, model, X_scaler, quantileBin_results, feature_order, additional_metrics, feature_selection_info, outlier_info
     return report, cm, params_to_return, {
                 'X_train': processed_X_train_shape,
                 'X_test': processed_X_test_shape,
                 'y_train': processed_y_train_shape,
                 'y_test': processed_y_test_shape
-            }, model, X_scaler, quantileBinResults, X_train.columns.tolist(), additional_metrics
+            }, model, X_scaler, quantileBinResults, X_train.columns.tolist(), additional_metrics, feature_selection_info, outlier_info

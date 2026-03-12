@@ -34,16 +34,19 @@ logger = logging.getLogger(__name__)
 def unpack_classification_result(result_tuple):
     """
     Helper function to unpack classification model results with backward compatibility.
-    Handles both old format (8 values) and new format (9 values with additional_metrics).
-    
+    Handles old format (8 or 9 values) and new format (11 values with additional_metrics, feature_selection_info, outlier_info).
+
     Returns:
-        tuple: (report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics)
+        tuple: (report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order,
+                additional_metrics, feature_selection_info, outlier_info)
     """
-    if len(result_tuple) >= 9:
-        return result_tuple[:9]
-    else:
-        # Old format - pad with None for additional_metrics
-        return result_tuple + (None,)
+    n = len(result_tuple)
+    if n >= 11:
+        return result_tuple[:11]
+    if n >= 9:
+        return result_tuple[:9] + (None,) * (11 - 9)
+    # Old format - pad with None
+    return result_tuple + (None,) * (11 - n)
 
 
 def preprocess_data(
@@ -705,17 +708,28 @@ def prediction(df_clean, best_model, training_features, X_scaler, y_scaler, feat
     # --- 3. Predict ---
     y_pred = best_model.predict(X_new_scaled)
 
-    # --- 4. Ensure 2D shape for inverse_transform ---
+    # --- 4. Map ordinal class indices back to labels (classification with pre-made bins) ---
+    int_to_label = getattr(best_model, "_digiterra_int_to_label", None)
+    if int_to_label is not None:
+        y_pred = np.asarray(y_pred)
+        flat = y_pred.ravel()
+        try:
+            mapped = np.array([int_to_label[int(i)] for i in flat])
+        except (KeyError, TypeError, ValueError):
+            mapped = flat
+        y_pred = mapped.reshape(y_pred.shape)
+
+    # --- 5. Ensure 2D shape for inverse_transform ---
     y_pred = np.asarray(y_pred)
     original_shape = y_pred.shape
     if y_pred.ndim == 1:
         y_pred = y_pred.reshape(-1, 1)
 
-    # --- 5. Inverse-transform ONLY if y_scaler exists ---
+    # --- 6. Inverse-transform ONLY if y_scaler exists ---
     if y_scaler is not None:
         y_pred = y_scaler.inverse_transform(y_pred)
 
-    # --- 6. Handle single vs multiple targets ---
+    # --- 7. Handle single vs multiple targets ---
     num_targets = y_pred.shape[1] if y_pred.ndim > 1 else 1
     
     if num_targets > 1:
@@ -734,7 +748,7 @@ def prediction(df_clean, best_model, training_features, X_scaler, y_scaler, feat
         y_pred_flat = y_pred.ravel()
         df_clean['Predicted_Target'] = y_pred_flat
 
-    # --- 7. Save ---
+    # --- 8. Save ---
     df_clean.to_csv(VIS_DIR / "predictions.csv", index=False)
 
     logger.info("Predictions complete. Saved to predictions.csv")

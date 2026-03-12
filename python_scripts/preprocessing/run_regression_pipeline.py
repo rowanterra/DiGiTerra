@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Tuple, Any
+import json
 import re
 import math
 import os
@@ -70,10 +71,20 @@ def run_regression(model, model_name,
         progress_tracker.update_stage('model_training', 'running', 10, f'Splitting data into train/test sets...')
 
     target_variable=target_variables[0]
-    # Ensure numeric target
-    # if not np.issubdtype(ddf[target_variable].dtype, np.number):
-    #     ddf[target_variable] = pd.to_numeric(ddf[target_variable], errors="raise")
-    y = y.apply(pd.to_numeric, errors="raise")
+    # Ensure numeric target; if target contains labels like ">500" or "<50", use Classification with Bins instead
+    y_numeric = y.apply(pd.to_numeric, errors="coerce")
+    has_bad = y_numeric.isna().any().any() if isinstance(y_numeric, pd.DataFrame) else y_numeric.isna().any()
+    if has_bad:
+        if isinstance(y_numeric, pd.Series):
+            sample_bad = y.loc[y_numeric.isna()].iloc[0]
+        else:
+            bad_mask = y_numeric.isna().any(axis=1)
+            sample_bad = y.loc[bad_mask].iloc[0].loc[y_numeric.loc[bad_mask].iloc[0].isna()].iloc[0]
+        raise ValueError(
+            f"Target column contains non-numeric values (e.g. '{sample_bad}'). "
+            "Regression requires a numeric target. For binned categories (e.g. '<50', '50-150', '>500') use Modeling Task Type: Classification and set Stratify to Bins with your bin boundaries."
+        )
+    y = y_numeric
 
     #Rowan 10/13
     # Strat labels
@@ -653,7 +664,46 @@ def run_regression(model, model_name,
         setattr(model, "_digiterra_model_features", X_train_s.columns.tolist())
     except Exception:
         logger.debug("Could not attach inference artifacts to regression model", exc_info=True)
-    
+
+    # Write training target summary for inference page comparison (target distribution the model was built on)
+    try:
+        training_summary = []
+        if isinstance(y_train_actual, pd.DataFrame):
+            for col in y_train_actual.columns:
+                s = y_train_actual[col].dropna()
+                q = s.quantile([0.25, 0.5, 0.75])
+                training_summary.append({
+                    'column': col,
+                    'n': int(s.count()),
+                    'min': float(s.min()) if s.count() else None,
+                    'max': float(s.max()) if s.count() else None,
+                    'mean': float(s.mean()) if s.count() else None,
+                    'std': float(s.std()) if s.count() and len(s) > 1 else None,
+                    '25': float(q.iloc[0]) if len(q) else None,
+                    '50': float(q.iloc[1]) if len(q) > 1 else None,
+                    '75': float(q.iloc[2]) if len(q) > 2 else None,
+                    '100': float(s.max()) if s.count() else None,
+                })
+        else:
+            s = pd.Series(y_train_actual).dropna()
+            q = s.quantile([0.25, 0.5, 0.75])
+            training_summary.append({
+                'column': y.columns[0] if hasattr(y, 'columns') and len(y.columns) else 'Target',
+                'n': int(s.count()),
+                'min': float(s.min()) if s.count() else None,
+                'max': float(s.max()) if s.count() else None,
+                'mean': float(s.mean()) if s.count() else None,
+                'std': float(s.std()) if s.count() and len(s) > 1 else None,
+                '25': float(q.iloc[0]) if len(q) else None,
+                '50': float(q.iloc[1]) if len(q) > 1 else None,
+                '75': float(q.iloc[2]) if len(q) > 2 else None,
+                '100': float(s.max()) if s.count() else None,
+            })
+        with open(VIS_DIR / "training_target_summary.json", "w") as f:
+            json.dump({"model_type": "regression", "summary": training_summary}, f, indent=2)
+    except Exception as e:
+        logger.debug("Could not write training target summary: %s", e)
+
     return metrics_train, metrics_test, params_to_return, {
                 'X_train': processed_X_train_shape,
                 'X_test': processed_X_test_shape,

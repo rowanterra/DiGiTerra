@@ -10,11 +10,12 @@ def train_bernoulli_nb(train_data, target_variables, use_stratified_split,
                 outlier_method='none', outlier_action='remove',
                 hyperparameter_search='none', search_cv_folds=5, search_n_iter=50, **kwargs):
 
-    model = MultiOutputClassifier(BernoulliNB(alpha=kwargs.get('alpha', 1.0),
-                                            binarize=kwargs.get('binarize', 0.0),
-                                            fit_prior=kwargs.get('fit_prior', True),
-                                            class_prior=kwargs.get('class_prior', None),
-                                            ))
+    base = BernoulliNB(alpha=kwargs.get('alpha', 1.0),
+                       binarize=kwargs.get('binarize', 0.0),
+                       fit_prior=kwargs.get('fit_prior', True),
+                       class_prior=kwargs.get('class_prior', None),
+                       )
+    model = base if (target_variables is not None and len(target_variables) == 1) else MultiOutputClassifier(base)
 
     return run_classification(
         model, "BernoulliNB",
