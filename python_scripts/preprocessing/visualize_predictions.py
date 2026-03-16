@@ -121,5 +121,35 @@ def visualize_predictions(model_name,
             plot_filename = f"target_plot_{i + 1}{file_suffix}.png"
         plot_path = VIS_DIR / plot_filename
         plt.savefig(plot_path)
-        pdf_pages.savefig()
-        plt.close()
+        pdf_pages.savefig(fig)
+        plt.close(fig)
+
+        # Save separate Predicted vs Actual only (single-panel figure)
+        fig_pa, ax_pa = plt.subplots(figsize=(6, 5))
+        ax_pa.scatter(y_train_aligned, y_train_pred_array[:, i], alpha=0.65, label='Train', color='#4a7cb8', s=28, edgecolors='none')
+        ax_pa.scatter(y_test_aligned, y_test_pred_array[:, i], alpha=0.65, label='Test', color='#3d8f5c', s=28, edgecolors='none')
+        ax_pa.plot([min_val, max_val], [min_val, max_val], '--', color='.45', lw=1.5)
+        ax_pa.set_title(title_with_label)
+        ax_pa.set_xlabel(f"Actual '{unitstr}'")
+        ax_pa.set_ylabel(f"Predicted '{unitstr}'")
+        ax_pa.legend()
+        ax_pa.grid(True, alpha=0.7)
+        plt.tight_layout()
+        pa_filename = f"target_plot_pred_actual_{i + 1}{file_suffix}.png"
+        plt.savefig(VIS_DIR / pa_filename, dpi=150, bbox_inches='tight', facecolor='white')
+        pdf_pages.savefig(fig_pa)
+        plt.close(fig_pa)
+
+        # Save separate Test Residuals only (single-panel figure)
+        fig_res, ax_res = plt.subplots(figsize=(6, 4))
+        sns.histplot(residuals_test, bins=15, ax=ax_res, kde=True,
+                     color="#3d8f5c", edgecolor="white", linewidth=0.8)
+        ax_res.axvline(0, color='.5', linestyle='--')
+        ax_res.set_title(residuals_title_with_label)
+        ax_res.set_xlabel(f"Residual '{unitstr}'")
+        ax_res.set_ylabel("Count")
+        plt.tight_layout()
+        res_filename = f"target_plot_residuals_{i + 1}{file_suffix}.png"
+        plt.savefig(VIS_DIR / res_filename, dpi=150, bbox_inches='tight', facecolor='white')
+        pdf_pages.savefig(fig_res)
+        plt.close(fig_res)

@@ -6697,11 +6697,13 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                     
                     // Use baseline visuals for Modeling page
                     const regressionVisuals = baselineVisuals.length > 0 ? baselineVisuals : allRegressionVisuals;
-                    // Remove "Baseline" from labels for Simple Modeling page
-                    const regressionVisualsClean = regressionVisuals.map(v => ({
-                        ...v,
-                        label: v.label.replace(/\s*-\s*Baseline\s*$/i, '').trim()
-                    }));
+                    // Remove "Baseline" and any combined-view options for Simple Modeling page
+                    const regressionVisualsClean = regressionVisuals
+                        .filter(v => !/combined/i.test(v.label || ''))
+                        .map(v => ({
+                            ...v,
+                            label: v.label.replace(/\s*-\s*Baseline\s*$/i, '').trim()
+                        }));
                     // Build hyperparameter table HTML using merged hyperparameters (without wrapper for Simple Modeling page)
                     const hyperparameterTableHtml = Object.keys(allHyperparameters).length > 0 ? `
                         <table class="stats-table model-stats-table">
@@ -6813,20 +6815,35 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                         <h2>Modeling Results</h2>
                         <p>Charts, tables, and downloads will appear here.</p>
                     </div>
-                    <label for="${currentMode === 'simple' ? 'regressionVisualSelector' : currentMode === 'advanced' ? 'advancedRegressionVisualSelector' : 'automlRegressionVisualSelector'}">Select Visualization to Display</label>
-                    <select id="${currentMode === 'simple' ? 'regressionVisualSelector' : currentMode === 'advanced' ? 'advancedRegressionVisualSelector' : 'automlRegressionVisualSelector'}">
-                        ${regressionVisualsClean
-                            .map((visual) => `<option value="${visual.file}">${visual.label}</option>`)
-                            .join('')}
-                    </select>
-                    <label for="${currentMode === 'simple' ? 'imageSelector' : currentMode === 'advanced' ? 'advancedImageSelector' : 'automlImageSelector'}">Select Target Graphic to Display</label>
-                    <select id="${currentMode === 'simple' ? 'imageSelector' : currentMode === 'advanced' ? 'advancedImageSelector' : 'automlImageSelector'}"></select>
-                    <br>
-                    <br>
-                    <img id="${currentMode === 'simple' ? 'targetGraphic' : currentMode === 'advanced' ? 'advancedTargetGraphic' : 'automlTargetGraphic'}" class="result-graphic" src='/user-visualizations/target_plot_1${currentMode === 'advanced' ? '_advanced' : ''}.png?t=${new Date().getTime()}' alt="Model visualization">
-                        <div><br></div>
-                        
-                        <div><br></div>
+                    <div class="result-graphic-row-train-test" style="display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;">
+                        <div class="result-graphic-box" style="flex: 1; min-width: 320px;">
+                            <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">Visualization 1</h4>
+                            <label for="${currentMode === 'simple' ? 'regressionVisualSelector' : currentMode === 'advanced' ? 'advancedRegressionVisualSelector' : 'automlRegressionVisualSelector'}">Select visualization</label>
+                            <select id="${currentMode === 'simple' ? 'regressionVisualSelector' : currentMode === 'advanced' ? 'advancedRegressionVisualSelector' : 'automlRegressionVisualSelector'}" style="max-width: 360px;">
+                                ${regressionVisualsClean
+                                    .map((visual) => `<option value="${visual.file}">${visual.label}</option>`)
+                                    .join('')}
+                            </select>
+                            <label for="${currentMode === 'simple' ? 'imageSelector' : currentMode === 'advanced' ? 'advancedImageSelector' : 'automlImageSelector'}">Select target</label>
+                            <select id="${currentMode === 'simple' ? 'imageSelector' : currentMode === 'advanced' ? 'advancedImageSelector' : 'automlImageSelector'}"></select>
+                            <br><br>
+                            <img id="${currentMode === 'simple' ? 'targetGraphic' : currentMode === 'advanced' ? 'advancedTargetGraphic' : 'automlTargetGraphic'}" class="result-graphic" src='/user-visualizations/target_plot_1${currentMode === 'advanced' ? '_advanced' : ''}.png?t=${new Date().getTime()}' alt="Model visualization 1">
+                        </div>
+                        <div class="result-graphic-box" style="flex: 1; min-width: 320px;">
+                            <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">Visualization 2</h4>
+                            <label for="${currentMode === 'simple' ? 'regressionVisualSelector2' : currentMode === 'advanced' ? 'advancedRegressionVisualSelector2' : 'automlRegressionVisualSelector2'}">Select visualization</label>
+                            <select id="${currentMode === 'simple' ? 'regressionVisualSelector2' : currentMode === 'advanced' ? 'advancedRegressionVisualSelector2' : 'automlRegressionVisualSelector2'}" style="max-width: 360px;">
+                                ${regressionVisualsClean
+                                    .map((visual) => `<option value="${visual.file}">${visual.label}</option>`)
+                                    .join('')}
+                            </select>
+                            <label for="${currentMode === 'simple' ? 'imageSelector2' : currentMode === 'advanced' ? 'advancedImageSelector2' : 'automlImageSelector2'}">Select target</label>
+                            <select id="${currentMode === 'simple' ? 'imageSelector2' : currentMode === 'advanced' ? 'advancedImageSelector2' : 'automlImageSelector2'}"></select>
+                            <br><br>
+                            <img id="${currentMode === 'simple' ? 'targetGraphic2' : currentMode === 'advanced' ? 'advancedTargetGraphic2' : 'automlTargetGraphic2'}" class="result-graphic" src='/user-visualizations/target_plot_1${currentMode === 'advanced' ? '_advanced' : ''}.png?t=${new Date().getTime()}' alt="Model visualization 2">
+                        </div>
+                    </div>
+                    <div><br></div>
                     </div>
 
 
@@ -6859,72 +6876,73 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                         }
                     }
                     
-                    //populating drop down of graphics to display for multiple targets
-                    // Use the mode-specific imageSelector already defined at function start
+                    // Populate dropdowns and wire two side-by-side visualization panels (multiple targets)
                     if (!imageSelector) {
-                        // Fallback if not set (shouldn't happen, but safety check)
                         imageSelector = document.getElementById("imageSelector") || 
                                        document.getElementById("advancedImageSelector") || 
                                        document.getElementById("automlImageSelector");
                     }
-                    // Use mode-specific IDs for target graphic and visual selector
+                    const imageSelector2 = document.getElementById(currentMode === 'simple' ? 'imageSelector2' : currentMode === 'advanced' ? 'advancedImageSelector2' : 'automlImageSelector2');
                     const targetGraphicId = currentMode === 'simple' ? 'targetGraphic' : currentMode === 'advanced' ? 'advancedTargetGraphic' : 'automlTargetGraphic';
+                    const targetGraphicId2 = currentMode === 'simple' ? 'targetGraphic2' : currentMode === 'advanced' ? 'advancedTargetGraphic2' : 'automlTargetGraphic2';
                     const visualSelectorId = currentMode === 'simple' ? 'regressionVisualSelector' : currentMode === 'advanced' ? 'advancedRegressionVisualSelector' : 'automlRegressionVisualSelector';
+                    const visualSelectorId2 = currentMode === 'simple' ? 'regressionVisualSelector2' : currentMode === 'advanced' ? 'advancedRegressionVisualSelector2' : 'automlRegressionVisualSelector2';
                     let targetGraphic = document.getElementById(targetGraphicId);
+                    let targetGraphic2 = document.getElementById(targetGraphicId2);
                     const regressionVisualSelector = document.getElementById(visualSelectorId);
+                    const regressionVisualSelector2 = document.getElementById(visualSelectorId2);
 
                     data.predictors.forEach((predictor, index) => {
-                    const option = document.createElement("option");
-                    option.value = index + 1;
-                    option.textContent = predictor.split('/').pop(); // Just show filename
-                    imageSelector.appendChild(option);
+                        const option = document.createElement("option");
+                        option.value = index + 1;
+                        option.textContent = predictor.split('/').pop();
+                        imageSelector.appendChild(option);
+                        if (imageSelector2) {
+                            const option2 = document.createElement("option");
+                            option2.value = index + 1;
+                            option2.textContent = predictor.split('/').pop();
+                            imageSelector2.appendChild(option2);
+                        }
                     });
 
-                    const updateRegressionGraphic = () => {
-                        const selectedImage = imageSelector.value;
-                        const selectedVisual = regressionVisualSelector ? regressionVisualSelector.value : 'target_plot';
-                        
-                        // Find the visual object to get its type and file name
+                    const buildRegressionGraphicUrl = (selectedVisual, selectedImage) => {
                         const visualObj = regressionVisuals.find(v => v.file === selectedVisual);
                         const visualType = visualObj ? visualObj.type : 'default';
-                        
-                        if (selectedVisual !== 'target_plot' && selectedVisual !== 'target_plot_advanced') {
-                            // For non-target_plot visuals (like shap_summary, etc.)
-                            let filename = selectedVisual;
-                            // Add .png extension if not present and not already a full filename
-                            if (!filename.includes('.png') && !filename.includes('_advanced')) {
-                                filename = filename.endsWith('_advanced') ? `${filename}.png` : `${filename}.png`;
-                            } else if (filename.endsWith('_advanced') && !filename.includes('.png')) {
-                                filename = `${filename}.png`;
-                            }
-                            targetGraphic.src = withApiRoot(`/user-visualizations/${filename}?t=${Date.now()}`);
-                            return;
+                        const perTargetBases = ['target_plot', 'target_plot_pred_actual', 'target_plot_residuals'];
+                        const base = selectedVisual.replace(/_advanced$/, '');
+                        const suffix = selectedVisual.endsWith('_advanced') ? '_advanced' : '';
+                        if (perTargetBases.includes(base)) {
+                            return withApiRoot(`/user-visualizations/${base}_${selectedImage}${suffix}.png?t=${Date.now()}`);
                         }
-                        
-                        // For target_plot visuals, construct filename with appropriate suffix
-                        let suffix = '';
-                        if (selectedVisual === 'target_plot_advanced' || (visualType === 'advanced')) {
-                            suffix = '_advanced';
-                        } else if (visualType === 'baseline') {
-                            suffix = ''; // Baseline has no suffix
+                        let filename = selectedVisual;
+                        if (!filename.includes('.png')) {
+                            filename = filename.endsWith('_advanced') ? `${filename}.png` : `${filename}.png`;
                         }
-                        // Default (backward compatibility) also has no suffix
-                        
-                        targetGraphic.src = withApiRoot(`/user-visualizations/target_plot_${selectedImage}${suffix}.png?t=${Date.now()}`);
+                        return withApiRoot(`/user-visualizations/${filename}?t=${Date.now()}`);
                     };
-                    // Add error handler for image loading
-                    if (targetGraphic) {
-                        targetGraphic.onerror = function() {
-                            console.error('Failed to load graphic:', this.src);
-                        };
-                    }
 
-                    imageSelector.addEventListener("change", updateRegressionGraphic);
-                    if (regressionVisualSelector) {
-                        regressionVisualSelector.addEventListener("change", updateRegressionGraphic);
-                    }
-                    // Set initial graphic based on first selected option
-                    updateRegressionGraphic();
+                    const updateRegressionGraphic = (panel) => {
+                        const sel = panel === 1 ? regressionVisualSelector : regressionVisualSelector2;
+                        const imgSel = panel === 1 ? imageSelector : imageSelector2;
+                        const img = panel === 1 ? targetGraphic : targetGraphic2;
+                        if (!img) return;
+                        const selectedVisual = sel ? sel.value : 'target_plot';
+                        const selectedImage = imgSel ? imgSel.value : '1';
+                        img.src = buildRegressionGraphicUrl(selectedVisual, selectedImage);
+                    };
+                    if (targetGraphic) targetGraphic.onerror = function() { console.error('Failed to load graphic:', this.src); };
+                    if (targetGraphic2) targetGraphic2.onerror = function() { console.error('Failed to load graphic:', this.src); };
+
+                    const defaultPa = regressionVisualsClean.find(v => v.label.includes('Predicted vs Actual') && !v.label.includes('combined'))?.file;
+                    const defaultRes = regressionVisualsClean.find(v => v.label.includes('Test Residuals'))?.file;
+                    if (defaultPa && regressionVisualSelector) regressionVisualSelector.value = defaultPa;
+                    if (defaultRes && regressionVisualSelector2) regressionVisualSelector2.value = defaultRes;
+                    imageSelector.addEventListener("change", () => updateRegressionGraphic(1));
+                    if (regressionVisualSelector) regressionVisualSelector.addEventListener("change", () => updateRegressionGraphic(1));
+                    if (imageSelector2) imageSelector2.addEventListener("change", () => updateRegressionGraphic(2));
+                    if (regressionVisualSelector2) regressionVisualSelector2.addEventListener("change", () => updateRegressionGraphic(2));
+                    updateRegressionGraphic(1);
+                    updateRegressionGraphic(2);
                     
                     // Note: Advanced results are now shown in the Simple mode result divs above
                     // Removed separate AdvancedNumericResultDiv population since all results use Simple mode divs
@@ -7058,11 +7076,13 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                     
                     // Filter visuals: baseline only for Modeling page, advanced for Advanced Optimization page
                     const regressionVisuals = allRegressionVisualsSingle.filter(v => v.type === 'baseline' || !v.type || v.type === 'default');
-                    // Remove "Baseline" from labels for Simple Modeling page
-                    const regressionVisualsClean = regressionVisuals.map(v => ({
-                        ...v,
-                        label: v.label.replace(/\s*-\s*Baseline\s*$/i, '').trim()
-                    }));
+                    // Remove "Baseline" and any combined-view options for Simple Modeling page
+                    const regressionVisualsClean = regressionVisuals
+                        .filter(v => !/combined/i.test(v.label || ''))
+                        .map(v => ({
+                            ...v,
+                            label: v.label.replace(/\s*-\s*Baseline\s*$/i, '').trim()
+                        }));
                     const advancedVisualsSingle = allRegressionVisualsSingle.filter(v => v.type === 'advanced');
                     // Build hyperparameter table HTML for single target using merged hyperparameters (without wrapper for Simple Modeling page)
                     const hyperparameterTableHtmlSingle = Object.keys(allHyperparameters).length > 0 ? `
@@ -7176,15 +7196,30 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                         <h2>Modeling Results</h2>
                         <p>Charts, tables, and downloads will appear here.</p>
                     </div>
-                    <label for="regressionVisualSelector">Select Visualization to Display</label>
-                    <select id="regressionVisualSelector">
-                        ${regressionVisualsClean
-                            .map((visual) => `<option value="${visual.file}">${visual.label}</option>`)
-                            .join('')}
-                    </select>
-                    <br>
-                    <br>
-                    <img id="targetGraphic" class="result-graphic" src='/user-visualizations/target_plot_1.png?t=${new Date().getTime()}'>
+                    <div class="result-graphic-row-train-test" style="display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;">
+                        <div class="result-graphic-box" style="flex: 1; min-width: 320px;">
+                            <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">Visualization 1</h4>
+                            <label for="regressionVisualSelector">Select visualization</label>
+                            <select id="regressionVisualSelector" style="max-width: 360px;">
+                                ${regressionVisualsClean
+                                    .map((visual) => `<option value="${visual.file}">${visual.label}</option>`)
+                                    .join('')}
+                            </select>
+                            <br><br>
+                            <img id="targetGraphic" class="result-graphic" src='/user-visualizations/target_plot_1.png?t=${new Date().getTime()}'>
+                        </div>
+                        <div class="result-graphic-box" style="flex: 1; min-width: 320px;">
+                            <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">Visualization 2</h4>
+                            <label for="regressionVisualSelector2">Select visualization</label>
+                            <select id="regressionVisualSelector2" style="max-width: 360px;">
+                                ${regressionVisualsClean
+                                    .map((visual) => `<option value="${visual.file}">${visual.label}</option>`)
+                                    .join('')}
+                            </select>
+                            <br><br>
+                            <img id="targetGraphic2" class="result-graphic" src='/user-visualizations/target_plot_1.png?t=${new Date().getTime()}'>
+                        </div>
+                    </div>
                     <div><br></div>
                 </div>
 
@@ -7219,46 +7254,37 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                 }
                 
                 const regressionVisualSelector = document.getElementById("regressionVisualSelector");
+                const regressionVisualSelector2 = document.getElementById("regressionVisualSelector2");
                 const targetGraphic = document.getElementById("targetGraphic");
-                if (regressionVisualSelector && targetGraphic) {
-                    const updateGraphic = () => {
-                        const selectedVisual = regressionVisualSelector.value;
-                        
-                        // Find the visual object to get its type and file name
-                        const visualObj = regressionVisuals.find(v => v.file === selectedVisual);
-                        const visualType = visualObj ? visualObj.type : 'default';
-                        
-                        if (selectedVisual !== 'target_plot' && selectedVisual !== 'target_plot_advanced') {
-                            // For non-target_plot visuals (like shap_summary, etc.)
-                            let filename = selectedVisual;
-                            // Add .png extension if not present and not already a full filename
-                            if (!filename.includes('.png') && !filename.includes('_advanced')) {
-                                filename = filename.endsWith('_advanced') ? `${filename}.png` : `${filename}.png`;
-                            } else if (filename.endsWith('_advanced') && !filename.includes('.png')) {
-                                filename = `${filename}.png`;
-                            }
-                            targetGraphic.src = withApiRoot(`/user-visualizations/${filename}?t=${Date.now()}`);
-                            return;
-                        }
-                        
-                        // For target_plot visuals, construct filename with appropriate suffix
-                        let suffix = '';
-                        if (selectedVisual === 'target_plot_advanced' || (visualType === 'advanced')) {
-                            suffix = '_advanced';
-                        } else if (visualType === 'baseline') {
-                            suffix = ''; // Baseline has no suffix
-                        }
-                        // Default (backward compatibility) also has no suffix
-                        
-                        targetGraphic.src = withApiRoot(`/user-visualizations/target_plot_1${suffix}.png?t=${Date.now()}`);
-                    };
-                    regressionVisualSelector.addEventListener("change", updateGraphic);
-                    // Add error handler for image loading
-                    targetGraphic.onerror = function() {
-                        console.error('Failed to load graphic:', this.src);
-                    };
-                    // Set initial graphic based on first selected option
-                    updateGraphic();
+                const targetGraphic2 = document.getElementById("targetGraphic2");
+                const buildSingleTargetUrl = (selectedVisual) => {
+                    const perTargetBases = ['target_plot', 'target_plot_pred_actual', 'target_plot_residuals'];
+                    const base = selectedVisual.replace(/_advanced$/, '');
+                    const suffix = selectedVisual.endsWith('_advanced') ? '_advanced' : '';
+                    if (perTargetBases.includes(base)) {
+                        return withApiRoot(`/user-visualizations/${base}_1${suffix}.png?t=${Date.now()}`);
+                    }
+                    let filename = selectedVisual;
+                    if (!filename.includes('.png')) {
+                        filename = filename.endsWith('_advanced') ? `${filename}.png` : `${filename}.png`;
+                    }
+                    return withApiRoot(`/user-visualizations/${filename}?t=${Date.now()}`);
+                };
+                const updateSingleTargetGraphic = (panel) => {
+                    const sel = panel === 1 ? regressionVisualSelector : regressionVisualSelector2;
+                    const img = panel === 1 ? targetGraphic : targetGraphic2;
+                    if (sel && img) img.src = buildSingleTargetUrl(sel.value);
+                };
+                const defaultPaSingle = regressionVisualsClean.find(v => v.label.includes('Predicted vs Actual') && !v.label.includes('combined'))?.file;
+                const defaultResSingle = regressionVisualsClean.find(v => v.label.includes('Test Residuals'))?.file;
+                if (defaultPaSingle && regressionVisualSelector) regressionVisualSelector.value = defaultPaSingle;
+                if (defaultResSingle && regressionVisualSelector2) regressionVisualSelector2.value = defaultResSingle;
+                if (regressionVisualSelector) regressionVisualSelector.addEventListener("change", () => updateSingleTargetGraphic(1));
+                if (regressionVisualSelector2) regressionVisualSelector2.addEventListener("change", () => updateSingleTargetGraphic(2));
+                if (targetGraphic) targetGraphic.onerror = function() { console.error('Failed to load graphic:', this.src); };
+                if (targetGraphic2) targetGraphic2.onerror = function() { console.error('Failed to load graphic:', this.src); };
+                updateSingleTargetGraphic(1);
+                updateSingleTargetGraphic(2);
                     
                     // Note: Advanced results are now shown in the Simple mode result divs above
                     // Removed separate AdvancedNumericResultDiv population since all results use Simple mode divs
@@ -7361,10 +7387,6 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                         }
                     }
                 }
-
-
-                }
-
 
                 // <img src='${data.ActVpredval}?t=${new Date().getTime()}' style="width: 70%; height: auto;">
                 //     <div><br></div>
@@ -7494,27 +7516,30 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                 </div>
                 <h3>Graphics</h3>
                 <p style="margin-top: 4px; margin-bottom: 12px; color: #666; font-size: 0.95rem;">Modeling graphics will be displayed here</p>
-                <label for="classifierImageSelector">Select Graphic to Display</label>
-                <select id="classifierImageSelector">
-                    <option value="confusion_matrix">Confusion Matrix</option>
-                    <option value="roc_curve">ROC Curve (micro)</option>
-                    <option value="pr_curve">Precision-Recall Curve (micro)</option>
-                </select>
-                <br>
-                <br>
-                <div id="classifierGraphicsWrapper">
-                    <div id="classifierGraphicRowTrainTest" class="result-graphic-row-train-test" style="display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;">
-                        <div class="result-graphic-box" style="flex: 1; min-width: 320px;">
-                            <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">Train</h4>
-                            <img id="classifierGraphicTrain" class="result-graphic" src="${withApiRoot('/user-visualizations/confusion_matrix_train.png')}?t=${new Date().getTime()}" alt="Confusion matrix (train)">
-                        </div>
-                        <div class="result-graphic-box" style="flex: 1; min-width: 320px;">
-                            <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">Test</h4>
-                            <img id="classifierGraphicTest" class="result-graphic" src="${withApiRoot('/user-visualizations/confusion_matrix.png')}?t=${new Date().getTime()}" alt="Confusion matrix (test)">
-                        </div>
+                <div class="result-graphic-row-train-test" style="display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;">
+                    <div class="result-graphic-box" style="flex: 1; min-width: 320px;">
+                        <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">Visualization 1</h4>
+                        <label for="classifierImageSelector">Select visualization</label>
+                        <select id="classifierImageSelector">
+                            <option value="confusion_matrix_train">Confusion Matrix (Train)</option>
+                            <option value="confusion_matrix">Confusion Matrix (Test)</option>
+                            <option value="roc_curve">ROC Curve (micro)</option>
+                            <option value="precision_recall_curve">Precision-Recall Curve (micro)</option>
+                        </select>
+                        <br><br>
+                        <img id="classifierGraphic" class="result-graphic" src="${withApiRoot('/user-visualizations/confusion_matrix_train.png')}?t=${new Date().getTime()}" alt="Classifier visualization 1">
                     </div>
-                    <div id="classifierGraphicSingle" style="display: none;">
-                        <img id="classifierGraphic" class="result-graphic" src="${withApiRoot('/user-visualizations/roc_curve.png')}?t=${new Date().getTime()}" alt="Selected graphic">
+                    <div class="result-graphic-box" style="flex: 1; min-width: 320px;">
+                        <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">Visualization 2</h4>
+                        <label for="classifierImageSelector2">Select visualization</label>
+                        <select id="classifierImageSelector2">
+                            <option value="confusion_matrix_train">Confusion Matrix (Train)</option>
+                            <option value="confusion_matrix">Confusion Matrix (Test)</option>
+                            <option value="roc_curve">ROC Curve (micro)</option>
+                            <option value="precision_recall_curve">Precision-Recall Curve (micro)</option>
+                        </select>
+                        <br><br>
+                        <img id="classifierGraphic2" class="result-graphic" src="${withApiRoot('/user-visualizations/confusion_matrix.png')}?t=${new Date().getTime()}" alt="Classifier visualization 2">
                     </div>
                 </div>
                 <div><br></div>
@@ -7545,30 +7570,20 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                     }
                 }
                 
-                // Set up classifier image selector: show train+test side-by-side when not combinable (e.g. confusion matrix)
                 const classifierImageSelector = document.getElementById('classifierImageSelector');
+                const classifierImageSelector2 = document.getElementById('classifierImageSelector2');
                 const classifierGraphic = document.getElementById('classifierGraphic');
-                const classifierGraphicRowTrainTest = document.getElementById('classifierGraphicRowTrainTest');
-                const classifierGraphicSingle = document.getElementById('classifierGraphicSingle');
-                const classifierGraphicTrain = document.getElementById('classifierGraphicTrain');
-                const classifierGraphicTest = document.getElementById('classifierGraphicTest');
-                const classifierGraphicsWithTrainTest = ['confusion_matrix'];
-                function updateClassifierGraphicDisplay() {
-                    const selectedImage = classifierImageSelector ? classifierImageSelector.value : 'confusion_matrix';
-                    const showTrainTest = classifierGraphicsWithTrainTest.indexOf(selectedImage) !== -1;
-                    if (classifierGraphicRowTrainTest) classifierGraphicRowTrainTest.style.display = showTrainTest ? 'flex' : 'none';
-                    if (classifierGraphicSingle) classifierGraphicSingle.style.display = showTrainTest ? 'none' : 'block';
-                    if (showTrainTest && classifierGraphicTrain && classifierGraphicTest) {
-                        const t = Date.now();
-                        classifierGraphicTrain.src = withApiRoot(`/user-visualizations/confusion_matrix_train.png?t=${t}`);
-                        classifierGraphicTest.src = withApiRoot(`/user-visualizations/confusion_matrix.png?t=${t}`);
-                    } else if (classifierGraphic) {
-                        classifierGraphic.src = withApiRoot(`/user-visualizations/${selectedImage}.png?t=${Date.now()}`);
-                    }
-                }
-                if (classifierImageSelector) {
-                    classifierImageSelector.addEventListener('change', updateClassifierGraphicDisplay);
-                }
+                const classifierGraphic2 = document.getElementById('classifierGraphic2');
+                const classifierGraphicUrl = (value) => withApiRoot(`/user-visualizations/${value}.png?t=${Date.now()}`);
+                const updateClassifierGraphic = (panel) => {
+                    const sel = panel === 1 ? classifierImageSelector : classifierImageSelector2;
+                    const img = panel === 1 ? classifierGraphic : classifierGraphic2;
+                    if (sel && img) img.src = classifierGraphicUrl(sel.value);
+                };
+                if (classifierImageSelector) classifierImageSelector.addEventListener('change', () => updateClassifierGraphic(1));
+                if (classifierImageSelector2) classifierImageSelector2.addEventListener('change', () => updateClassifierGraphic(2));
+                updateClassifierGraphic(1);
+                updateClassifierGraphic(2);
             }
 
             //Cluster Output
@@ -7630,24 +7645,42 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                     </div>
                     <h3>Graphics</h3>
                     <p style="margin-top: 4px; margin-bottom: 12px; color: #666; font-size: 0.95rem;">Modeling graphics will be displayed here</p>
-                    <label for="clusterImageSelector">Select Graphic to Display</label>
-                    <select id="clusterImageSelector">
-                        <option value="cluster_pca_train">PCA (Train)</option>
-                        <option value="cluster_pca_test">PCA (Test)</option>
-                    </select>
-                    <br>
-                    <br>
-                    <img id="clusterGraphic" class="result-graphic" src='/user-visualizations/cluster_pca_train.png?t=${new Date().getTime()}'>
+                    <div class="result-graphic-row-train-test" style="display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;">
+                        <div class="result-graphic-box" style="flex: 1; min-width: 320px;">
+                            <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">Visualization 1</h4>
+                            <label for="clusterImageSelector">Select visualization</label>
+                            <select id="clusterImageSelector">
+                                <option value="cluster_pca_train">PCA (Train)</option>
+                                <option value="cluster_pca_test">PCA (Test)</option>
+                            </select>
+                            <br><br>
+                            <img id="clusterGraphic" class="result-graphic" src="${withApiRoot('/user-visualizations/cluster_pca_train.png')}?t=${new Date().getTime()}">
+                        </div>
+                        <div class="result-graphic-box" style="flex: 1; min-width: 320px;">
+                            <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">Visualization 2</h4>
+                            <label for="clusterImageSelector2">Select visualization</label>
+                            <select id="clusterImageSelector2">
+                                <option value="cluster_pca_train">PCA (Train)</option>
+                                <option value="cluster_pca_test">PCA (Test)</option>
+                            </select>
+                            <br><br>
+                            <img id="clusterGraphic2" class="result-graphic" src="${withApiRoot('/user-visualizations/cluster_pca_test.png')}?t=${new Date().getTime()}">
+                        </div>
+                    </div>
                     <div><br></div>
                 </div> `
-                const clusterImageSelector = getCachedElement('clusterImageSelector')
-                const clusterGraphic = getCachedElement('clusterGraphic')
-                if (clusterImageSelector && clusterGraphic) {
-                    clusterImageSelector.addEventListener('change', () => {
-                        const selectedImage = clusterImageSelector.value
-                        clusterGraphic.src = withApiRoot(`/user-visualizations/${selectedImage}.png?t=${Date.now()}`)
-                    })
-                }
+                const clusterImageSelector = getCachedElement('clusterImageSelector');
+                const clusterImageSelector2 = getCachedElement('clusterImageSelector2');
+                const clusterGraphic = getCachedElement('clusterGraphic');
+                const clusterGraphic2 = getCachedElement('clusterGraphic2');
+                const clusterGraphicUrl = (value) => withApiRoot(`/user-visualizations/${value}.png?t=${Date.now()}`);
+                const updateClusterGraphic = (panel) => {
+                    const sel = panel === 1 ? clusterImageSelector : clusterImageSelector2;
+                    const img = panel === 1 ? clusterGraphic : clusterGraphic2;
+                    if (sel && img) img.src = clusterGraphicUrl(sel.value);
+                };
+                if (clusterImageSelector) clusterImageSelector.addEventListener('change', () => updateClusterGraphic(1));
+                if (clusterImageSelector2) clusterImageSelector2.addEventListener('change', () => updateClusterGraphic(2));
             }
             
 
@@ -7693,7 +7726,22 @@ predictionForm.addEventListener('submit', async (e) => {
             const preview = data.predictions_preview || {};
             const trainingViz = data.training_visualization;
             const trainingVizVersion = data.training_visualization_version || Date.now();
-            const trainingVizUrl = trainingViz ? (withApiRoot('/user-visualizations/' + trainingViz) + '?v=' + encodeURIComponent(trainingVizVersion) + '&t=' + Date.now()) : '';
+            let trainingVizUrl = '';
+            let trainingPerfUrl = '';
+            if (trainingViz) {
+                const base = withApiRoot('/user-visualizations/' + trainingViz);
+                const cacheQuery = '?v=' + encodeURIComponent(trainingVizVersion) + '&t=' + Date.now();
+                trainingVizUrl = base + cacheQuery;
+                let perfName = trainingViz;
+                const modelTypeForPerf = data.model_type || 'regression';
+                if (modelTypeForPerf === 'regression') {
+                    perfName = perfName
+                        .replace('target_plot_1_advanced', 'target_plot_pred_actual_1_advanced')
+                        .replace('target_plot_1', 'target_plot_pred_actual_1');
+                }
+                const perfBase = withApiRoot('/user-visualizations/' + perfName);
+                trainingPerfUrl = perfBase + cacheQuery;
+            }
             const modelType = data.model_type || 'regression';
             const modelTypeLabel = modelType === 'classification' ? 'Classification' : modelType === 'cluster' ? 'Clustering' : 'Regression';
 
@@ -7865,7 +7913,7 @@ predictionForm.addEventListener('submit', async (e) => {
             const modelGraphicSectionHtml = trainingViz ? `
                 <h3 style="margin: 0 0 8px 0;">Model used (training performance)</h3>
                 <p style="margin: 0 0 12px 0; font-size: 0.95rem; color: #666;">Performance graphic from the model you trained.</p>
-                <img src="${trainingVizUrl}" alt="Training performance" class="inference-model-graphic-img">
+                <img src="${trainingPerfUrl || trainingVizUrl}" alt="Training performance" class="inference-model-graphic-img">
             ` : '';
             const rightPanelHtml = (trainingSummaryTableHtml || modelGraphicSectionHtml) ? `
                 <div class="inference-model-graphic" style="flex: 0 0 calc(50% - 12px); min-width: 200px; overflow: auto; align-self: flex-start;">

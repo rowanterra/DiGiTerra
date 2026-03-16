@@ -95,34 +95,35 @@ def plot_permutation_importance(estimator, X, y, model_name, pdf_pages=None,
 def _plot_single_importance(result, feature_names, ax, scorer_name=None):
     """
     Helper function to plot a single permutation importance result.
-    
-    Args:
-        result: Result object from permutation_importance
-        feature_names: Names of features
-        ax: Axes to plot on
-        scorer_name: Name of scorer (for title)
+    Uses seaborn-style muted palette when available.
     """
     importances_mean = result.importances_mean
     importances_std = result.importances_std
-    
-    # Sort by importance
+
     indices = np.argsort(importances_mean)[::-1]
-    
-    # Get feature names
     if feature_names is None:
         feature_names = [f"Feature {i}" for i in range(len(importances_mean))]
     else:
         feature_names = list(feature_names)
-    
-    # Plot
-    ax.barh(range(len(importances_mean)), importances_mean[indices],
-           xerr=importances_std[indices], capsize=5)
-    ax.set_yticks(range(len(importances_mean)))
-    ax.set_yticklabels([feature_names[i] for i in indices])
-    ax.set_xlabel('Mean Importance Score', fontsize=12)
-    title = 'Permutation Importance'
+
+    names = [feature_names[i] for i in indices]
+    means = importances_mean[indices]
+    stds = importances_std[indices]
+    y_pos = np.arange(len(means))
+
+    try:
+        import seaborn as sns
+        palette = sns.color_palette("muted", len(means))
+        bars = ax.barh(y_pos, means, xerr=stds, capsize=4, color=palette, edgecolor="none")
+    except Exception:
+        bars = ax.barh(y_pos, means, xerr=stds, capsize=4, color=".65", edgecolor="none")
+
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(names, fontsize=10)
+    ax.set_xlabel("Mean importance", fontsize=11)
+    title = "Permutation Importance"
     if scorer_name:
         title += f" ({scorer_name})"
     ax.set_title(title, fontsize=12)
-    ax.grid(axis='x', alpha=0.3)
-    ax.invert_yaxis()  # Most important at top
+    ax.grid(axis="x", alpha=0.35)
+    ax.invert_yaxis()
