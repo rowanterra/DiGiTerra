@@ -1540,10 +1540,14 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
             # Check for baseline graphics (no advanced options)
             vis_dir = _config.VIS_DIR
             baseline_target_plot_exists = (vis_dir / "target_plot_1.png").exists()
+            baseline_pred_actual_exists = (vis_dir / "target_plot_pred_actual_1.png").exists()
+            baseline_residuals_exists = (vis_dir / "target_plot_residuals_1.png").exists()
             baseline_shap_exists = (vis_dir / "shap_summary.png").exists()
             
             # Check for advanced graphics (with advanced options)
             advanced_target_plot_exists = (vis_dir / "target_plot_1_advanced.png").exists()
+            advanced_pred_actual_exists = (vis_dir / "target_plot_pred_actual_1_advanced.png").exists()
+            advanced_residuals_exists = (vis_dir / "target_plot_residuals_1_advanced.png").exists()
             advanced_shap_exists = (vis_dir / "shap_summary_advanced.png").exists()
             
             # Determine mode label
@@ -1551,15 +1555,20 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
                 'DiGiTerra Advanced Modeling' if modeling_mode == 'advanced' else 'DiGiTerra AutoML'
             )
             
-            # Add baseline graphics if they exist
+            # Add separate Predicted vs Actual and Test Residuals first (defaults for the two panels)
+            if baseline_pred_actual_exists:
+                regression_visuals.append({'label': f'Predicted vs Actual (per target) - {mode_label}', 'file': 'target_plot_pred_actual', 'type': 'baseline'})
+            if advanced_pred_actual_exists:
+                regression_visuals.append({'label': f'Predicted vs Actual (per target) - {mode_label}', 'file': 'target_plot_pred_actual_advanced', 'type': 'advanced'})
+            if baseline_residuals_exists:
+                regression_visuals.append({'label': f'Test Residuals (per target) - {mode_label}', 'file': 'target_plot_residuals', 'type': 'baseline'})
+            if advanced_residuals_exists:
+                regression_visuals.append({'label': f'Test Residuals (per target) - {mode_label}', 'file': 'target_plot_residuals_advanced', 'type': 'advanced'})
+            # Combined view (optional)
             if baseline_target_plot_exists:
-                regression_visuals.append({'label': f'Predicted vs Actual + Residuals (per target) - {mode_label}', 'file': 'target_plot', 'type': 'baseline'})
-            
-            # Add advanced graphics if they exist
+                regression_visuals.append({'label': f'Predicted vs Actual + Residuals (combined, per target) - {mode_label}', 'file': 'target_plot', 'type': 'baseline'})
             if advanced_target_plot_exists:
-                regression_visuals.append({'label': f'Predicted vs Actual + Residuals (per target) - {mode_label}', 'file': 'target_plot_advanced', 'type': 'advanced'})
-            
-            # If neither exists, add default (for backward compatibility)
+                regression_visuals.append({'label': f'Predicted vs Actual + Residuals (combined, per target) - {mode_label}', 'file': 'target_plot_advanced', 'type': 'advanced'})
             if not baseline_target_plot_exists and not advanced_target_plot_exists:
                 regression_visuals.append({'label': 'Predicted vs Actual + Residuals (per target)', 'file': 'target_plot', 'type': 'default'})
             

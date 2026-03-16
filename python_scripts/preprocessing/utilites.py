@@ -327,11 +327,22 @@ def _plot_feature_importance(model, feature_names, title="Feature importance (mo
         vals = None
     if vals is None:
         return False
-    import numpy as np, matplotlib.pyplot as plt
+    import numpy as np
+    import matplotlib.pyplot as plt
+    try:
+        import seaborn as sns
+    except ImportError:
+        sns = None
     order = np.argsort(vals)[::-1][:30]  # top 30
-    plt.figure(figsize=(7, min(12, 0.35*len(order)+2)))
-    plt.barh([feature_names[i] for i in order][::-1], vals[order][::-1])
-    plt.title(title)
+    names = [feature_names[i] for i in order][::-1]
+    values = vals[order][::-1]
+    fig, ax = plt.subplots(figsize=(7, min(12, 0.35 * len(order) + 2)))
+    if sns is not None:
+        sns.barplot(x=values, y=names, ax=ax, palette="muted", orient="h")
+        ax.set_xlabel("Importance", fontsize=11)
+    else:
+        ax.barh(names, values, color=".7", edgecolor="none")
+    ax.set_title(title, fontsize=12)
     plt.tight_layout()
     return True
 
@@ -340,60 +351,104 @@ def _plot_permutation_importance(model, X, y, feature_names, title="Permutation 
         res = permutation_importance(model, X, y, n_repeats=n_repeats, random_state=random_state, n_jobs=None)
     except Exception:
         return False
-    import numpy as np, matplotlib.pyplot as plt
+    import numpy as np
+    import matplotlib.pyplot as plt
+    try:
+        import seaborn as sns
+    except ImportError:
+        sns = None
     order = res.importances_mean.argsort()[::-1][:30]
-    plt.figure(figsize=(7, min(12, 0.35*len(order)+2)))
-    plt.barh([feature_names[i] for i in order][::-1], res.importances_mean[order][::-1])
-    plt.title(title)
+    names = [feature_names[i] for i in order][::-1]
+    values = res.importances_mean[order][::-1]
+    fig, ax = plt.subplots(figsize=(7, min(12, 0.35 * len(order) + 2)))
+    if sns is not None:
+        sns.barplot(x=values, y=names, ax=ax, palette="muted", orient="h")
+        ax.set_xlabel("Mean importance", fontsize=11)
+    else:
+        ax.barh(names, values, color=".7", edgecolor="none")
+    ax.set_title(title, fontsize=12)
     plt.tight_layout()
     return True
 
 def plot_regression_bundle(art: dict, units: str = ""):
     apply_plot_style()
     # Pred vs Actual, Residuals hist, Residuals vs Fitted, 2D density
-    import numpy as np, pandas as pd, matplotlib.pyplot as plt
+    import numpy as np
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    try:
+        import seaborn as sns
+    except ImportError:
+        sns = None
     y_test = art["splits"]["y_test"]
     y_pred = art["predictions"]["y_test_pred"]
     tname = y_test.columns[0] if isinstance(y_test, pd.DataFrame) else "y"
     yt = y_test[tname] if isinstance(y_test, pd.DataFrame) else pd.Series(np.ravel(y_test), name="y")
     yp = y_pred[tname] if isinstance(y_pred, pd.DataFrame) else pd.Series(np.ravel(y_pred), name="ŷ")
     def save_plot(filename: str) -> None:
-        plt.savefig(VIS_DIR / filename)
+        plt.savefig(VIS_DIR / filename, dpi=150, bbox_inches="tight", facecolor="white")
+
+    lo, hi = float(min(yt.min(), yp.min())), float(max(yt.max(), yp.max()))
+    res = yt.values - yp.values
 
     # 1) Pred vs Actual
-    plt.figure(figsize=(6, 6))
-    plt.scatter(yt, yp, alpha=0.65, edgecolors="none", s=28)
-    lo, hi = float(min(yt.min(), yp.min())), float(max(yt.max(), yp.max()))
-    plt.plot([lo, hi], [lo, hi], linestyle="--", color=".45", linewidth=1.5)
-    plt.xlabel(f"Actual {units}".strip()); plt.ylabel(f"Predicted {units}".strip())
-    plt.title(f"Predicted vs Actual: {tname}")
+    fig, ax = plt.subplots(figsize=(6, 6))
+    if sns is not None:
+        sns.scatterplot(x=yt, y=yp, alpha=0.65, s=28, ax=ax, color=".4")
+    else:
+        ax.scatter(yt, yp, alpha=0.65, edgecolors="none", s=28)
+    ax.plot([lo, hi], [lo, hi], linestyle="--", color=".45", linewidth=1.5)
+    ax.set_xlabel(f"Actual {units}".strip())
+    ax.set_ylabel(f"Predicted {units}".strip())
+    ax.set_title(f"Predicted vs Actual: {tname}")
     plt.tight_layout()
     save_plot("regression_predicted_vs_actual.png")
+    plt.close(fig)
 
-    # 2) Residuals histogram
-    res = yt.values - yp.values
-    plt.figure(figsize=(6, 4))
-    plt.hist(res, bins=30, edgecolor="white", linewidth=0.8)
-    plt.axvline(0, linestyle="--", color=".5")
-    plt.xlabel("Residual (y - ŷ)"); plt.ylabel("Count"); plt.title(f"Residuals: {tname}")
+    # 2) Residuals histogram (seaborn histplot with KDE when available)
+    fig, ax = plt.subplots(figsize=(6, 4))
+    if sns is not None:
+        sns.histplot(res, bins=30, kde=True, ax=ax, color=".5", edgecolor="white", linewidth=0.8)
+    else:
+        ax.hist(res, bins=30, edgecolor="white", linewidth=0.8)
+    ax.axvline(0, linestyle="--", color=".5")
+    ax.set_xlabel("Residual (y - ŷ)")
+    ax.set_ylabel("Count")
+    ax.set_title(f"Residuals: {tname}")
     plt.tight_layout()
     save_plot("regression_residuals_hist.png")
+    plt.close(fig)
 
     # 3) Residuals vs Fitted
-    plt.figure(figsize=(6, 4))
-    plt.scatter(yp, res, alpha=0.65, edgecolors="none", s=28)
-    plt.axhline(0, linestyle="--", color=".5")
-    plt.xlabel("Fitted (ŷ)"); plt.ylabel("Residual"); plt.title("Residuals vs Fitted")
+    fig, ax = plt.subplots(figsize=(6, 4))
+    if sns is not None:
+        sns.scatterplot(x=yp, y=res, alpha=0.65, s=28, ax=ax, color=".4")
+    else:
+        ax.scatter(yp, res, alpha=0.65, edgecolors="none", s=28)
+    ax.axhline(0, linestyle="--", color=".5")
+    ax.set_xlabel("Fitted (ŷ)")
+    ax.set_ylabel("Residual")
+    ax.set_title("Residuals vs Fitted")
     plt.tight_layout()
     save_plot("regression_residuals_vs_fitted.png")
+    plt.close(fig)
 
     # 4) Actual vs Predicted density
-    plt.figure(figsize=(6, 6))
-    plt.hist2d(yt.values, yp.values, bins=40, cmap="Blues")
-    plt.plot([lo, hi], [lo, hi], linestyle="--", color=".45", linewidth=1.5)
-    plt.xlabel("Actual"); plt.ylabel("Predicted"); plt.title("Actual vs Predicted (density)")
+    fig, ax = plt.subplots(figsize=(6, 6))
+    if sns is not None:
+        try:
+            sns.histplot(x=yt.values, y=yp.values, bins=40, cmap="Blues", cbar=True, ax=ax, pthresh=0.05)
+        except TypeError:
+            ax.hist2d(yt.values, yp.values, bins=40, cmap="Blues")
+    else:
+        ax.hist2d(yt.values, yp.values, bins=40, cmap="Blues")
+    ax.plot([lo, hi], [lo, hi], linestyle="--", color=".45", linewidth=1.5)
+    ax.set_xlabel("Actual")
+    ax.set_ylabel("Predicted")
+    ax.set_title("Actual vs Predicted (density)")
     plt.tight_layout()
     save_plot("regression_density.png")
+    plt.close(fig)
 
     # 5) Importance (model-based or permutation)
     model = art["model"]
@@ -593,7 +648,14 @@ def plot_classification_bundle(art: dict, svctrue: bool):
 
 def plot_clustering_bundle(art: dict):
     # Silhouette plot, PCA scatter (train/test), cluster size bar
-    import numpy as np, matplotlib.pyplot as plt
+    apply_plot_style()
+    import numpy as np
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    try:
+        import seaborn as sns
+    except ImportError:
+        sns = None
     X_train = art["splits"]["X_train"].values
     labels_train = art["clusters"]["labels_train"]
     centers = art["clusters"]["centers"]
@@ -605,19 +667,21 @@ def plot_clustering_bundle(art: dict):
     if len(np.unique(labels_train)) > 1:
         sample_sil = silhouette_samples(X_train, labels_train)
         y_lower = 10
-        plt.figure(figsize=(7,5))
+        fig, ax = plt.subplots(figsize=(7, 5))
+        palette = sns.color_palette("muted", best_k) if sns else None
         for i in range(best_k):
-            ith = sample_sil[labels_train==i]
+            ith = sample_sil[labels_train == i]
             ith.sort()
             size_i = ith.shape[0]
             y_upper = y_lower + size_i
-            import numpy as np
-            plt.fill_betweenx(np.arange(y_lower, y_upper), 0, ith, alpha=0.6)
-            plt.text(0, y_lower + 0.5*size_i, str(i))
+            color = palette[i] if palette is not None else f"C{i}"
+            ax.fill_betweenx(np.arange(y_lower, y_upper), 0, ith, alpha=0.7, color=color)
+            ax.text(-0.02, y_lower + 0.5 * size_i, str(i), fontsize=10, va="center")
             y_lower = y_upper + 10
-        plt.axvline(np.mean(sample_sil), linestyle="--")
-        plt.xlabel("Silhouette coefficient"); plt.ylabel("Samples")
-        plt.title("Silhouette plot (train)")
+        ax.axvline(np.mean(sample_sil), linestyle="--", color=".4")
+        ax.set_xlabel("Silhouette coefficient")
+        ax.set_ylabel("Samples")
+        ax.set_title("Silhouette plot (train)")
         plt.tight_layout()
 
     # 2) PCA scatter
@@ -625,34 +689,51 @@ def plot_clustering_bundle(art: dict):
     if X_train.shape[1] >= 2:
         pca = PCA(n_components=2, random_state=42).fit(X_train)
         Z = pca.transform(X_train)
-        plt.figure(figsize=(6.5,5.5))
-        plt.scatter(Z[:,0], Z[:,1], c=labels_train, s=25, edgecolor="k", alpha=0.8)
+        fig, ax = plt.subplots(figsize=(6.5, 5.5))
+        if sns is not None:
+            sns.scatterplot(x=Z[:, 0], y=Z[:, 1], hue=labels_train, palette="muted", s=35, alpha=0.85, ax=ax, legend="brief")
+        else:
+            ax.scatter(Z[:, 0], Z[:, 1], c=labels_train, s=25, edgecolor="k", alpha=0.8, cmap="tab10")
         Cz = pca.transform(centers) if centers is not None else None
         if Cz is not None:
-            plt.scatter(Cz[:,0], Cz[:,1], s=120, marker="X", label="centers")
-            plt.legend()
-        plt.title(f"Clusters (PCA 2D): k={best_k} (train)"); plt.xlabel("PC1"); plt.ylabel("PC2")
+            ax.scatter(Cz[:, 0], Cz[:, 1], s=120, marker="X", c="black", label="centers", zorder=5)
+            ax.legend()
+        ax.set_title(f"Clusters (PCA 2D): k={best_k} (train)")
+        ax.set_xlabel("PC1")
+        ax.set_ylabel("PC2")
         plt.tight_layout()
-        plot_path = VIS_DIR / "cluster_pca_train.png"
-        plt.savefig(plot_path)
+        plt.savefig(VIS_DIR / "cluster_pca_train.png", dpi=150, bbox_inches="tight", facecolor="white")
+        plt.close(fig)
 
         if X_test is not None and labels_test is not None and len(X_test):
             Zt = pca.transform(X_test)
-            plt.figure(figsize=(6.5,5.5))
-            plt.scatter(Zt[:,0], Zt[:,1], c=labels_test, s=25, edgecolor="k", alpha=0.8)
+            fig, ax = plt.subplots(figsize=(6.5, 5.5))
+            if sns is not None:
+                sns.scatterplot(x=Zt[:, 0], y=Zt[:, 1], hue=labels_test, palette="muted", s=35, alpha=0.85, ax=ax, legend="brief")
+            else:
+                ax.scatter(Zt[:, 0], Zt[:, 1], c=labels_test, s=25, edgecolor="k", alpha=0.8, cmap="tab10")
             if Cz is not None:
-                plt.scatter(Cz[:,0], Cz[:,1], s=120, marker="X", label="centers")
-                plt.legend()
-            plt.title(f"Clusters (PCA 2D): k={best_k} (test)"); plt.xlabel("PC1"); plt.ylabel("PC2")
+                ax.scatter(Cz[:, 0], Cz[:, 1], s=120, marker="X", c="black", label="centers", zorder=5)
+                ax.legend()
+            ax.set_title(f"Clusters (PCA 2D): k={best_k} (test)")
+            ax.set_xlabel("PC1")
+            ax.set_ylabel("PC2")
             plt.tight_layout()
-            plot_path = VIS_DIR / "cluster_pca_test.png"
-            plt.savefig(plot_path)
+            plt.savefig(VIS_DIR / "cluster_pca_test.png", dpi=150, bbox_inches="tight", facecolor="white")
+            plt.close(fig)
 
-    # 3) Cluster sizes
-    import pandas as pd
-    plt.figure(figsize=(6,4))
-    pd.Series(labels_train).value_counts().sort_index().plot(kind="bar")
-    plt.title("Cluster sizes (train)"); plt.xlabel("cluster"); plt.ylabel("count")
+    # 3) Cluster sizes (seaborn barplot for cleaner look)
+    counts = pd.Series(labels_train).value_counts().sort_index()
+    fig, ax = plt.subplots(figsize=(6, 4))
+    if sns is not None:
+        sns.barplot(x=counts.index.astype(str), y=counts.values, ax=ax, palette="muted")
+        ax.set_xlabel("Cluster")
+        ax.set_ylabel("Count")
+    else:
+        counts.plot(kind="bar", ax=ax, color=".7", edgecolor="none")
+        ax.set_xlabel("cluster")
+        ax.set_ylabel("count")
+    ax.set_title("Cluster sizes (train)")
     plt.tight_layout()
 
 def export_plots(art: dict, pdf_pages, units: str = "", svctrue=False) -> Optional[str]:
