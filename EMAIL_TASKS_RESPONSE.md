@@ -1,4 +1,4 @@
-# DiGiTerra URL Prefix Work Summary
+# DiGiTerra March Requested Edits Summary
 
 ## Why this work was needed
 The app needed to run under a URL prefix so it works at `127.0.0.1:5000/digiterra/` instead of only at the root path.
@@ -94,7 +94,7 @@ python app.py
 Open:
 - `http://127.0.0.1:5000/digiterra/`
 
-Suggested smoke test:
+Suggested test:
 1. Upload CSV
 2. Run correlation matrices
 3. Change pairplot X and Y and confirm image updates
