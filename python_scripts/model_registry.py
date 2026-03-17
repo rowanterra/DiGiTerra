@@ -190,7 +190,7 @@ CLUSTER_MODELS: frozenset = frozenset(
 )
 
 
-def _hidden_layer_sizes_tuple(h: dict) -> str:
+def _hidden_layer_sizes_tuple(h: Dict[str, Any]) -> str:
     s = '(' + str(h.get('hidden_layer_sizes1', '')) + ',' + str(h.get('hidden_layer_sizes2', ''))
     if h.get('hidden_layer_sizes3'):
         s += ',' + str(h.get('hidden_layer_sizes3', '')) + ')'
@@ -201,10 +201,10 @@ def _hidden_layer_sizes_tuple(h: dict) -> str:
 
 def get_model_kwargs(
     modelName: str,
-    hyperparameters: dict,
+    hyperparameters: Dict[str, Any],
     nonreq: bool,
     seed: Optional[int],
-) -> dict:
+) -> Dict[str, Any]:
     """Return model-specific kwargs (no feature_selection_method/outlier_method/progress_tracker/modeling_mode)."""
     h, n = hyperparameters, nonreq
 

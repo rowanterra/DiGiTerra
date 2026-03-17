@@ -1,0 +1,12 @@
+{
+  "name": "digiterra",
+  "version": "0.1.0",
+  "description": "DiGiTerra ML app frontend",
+  "private": true,
+  "scripts": {
+    "lint": "eslint static/client_side.js --max-warnings 999"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0"
+  }
+}

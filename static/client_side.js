@@ -1838,7 +1838,7 @@ corrForm.addEventListener('submit', async(e) => {
         }
     }
     catch (error) {
-        showError(errorDiv, error.message || 'An error occurred.');
+        showError(errorDiv, error.message || 'Request failed. See console for details.');
     }
 
 });
@@ -2128,7 +2128,7 @@ async function handlePreprocessFormSubmit(e) {
             }
         } catch (error) {
             console.error('Preprocess submit error:', error);
-            const msg = error && error.message ? error.message : 'An error occurred. Check the console for details.';
+            const msg = error && error.message ? error.message : 'Request failed. See console for details.';
             if (stratErrorDiv) showError(stratErrorDiv, msg, false);
             else if (errorDiv) showError(errorDiv, msg, false);
         }
@@ -6436,7 +6436,7 @@ processForm.addEventListener('submit', async (e) => {
         if (response.ok) {
             processModelResult(data, unitStr, predictorCols, hyperparameters);
         } else {
-            showError(errorDiv, `Error: ${data.error || 'Unknown error'}`);
+            showError(errorDiv, data.error ? `Error: ${data.error}` : 'Request failed. See console for details.');
         }
     } catch (error) {
         console.error('Error:', error);
@@ -6446,7 +6446,7 @@ processForm.addEventListener('submit', async (e) => {
             progressEventSource.close();
             progressEventSource = null;
         }
-        showError(errorDiv, 'An error occurred.');
+        showError(errorDiv, 'Something went wrong. See console for details.');
         
         // Determine which loading div and button to use based on current mode
         const simpleMode = document.getElementById('simpleMode');
@@ -7704,7 +7704,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
     } catch (error) {
         console.error('Error processing result:', error);
         const errorDiv = getCachedElement('errorDiv');
-        showError(errorDiv, 'An error occurred processing the result.');
+        showError(errorDiv, 'Result processing failed. See console for details.');
     }
 }
 
