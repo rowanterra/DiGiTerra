@@ -279,6 +279,7 @@ def run_regression(model, model_name,
     if outlier_method != 'none':
         if progress_tracker:
             progress_tracker.update_stage('outlier_handling', 'running', 0, f'Detecting outliers using {outlier_method}...')
+        train_index_before = X_train_s.index  # capture so we can report which rows were removed
         # For outlier detection, we don't need y_train, but pass None to be safe
         # (y_train is not used in apply_outlier_handling for detection)
         X_train_s, X_test_s, outlier_mask = apply_outlier_handling(
@@ -305,6 +306,8 @@ def run_regression(model, model_name,
             'original_samples': int(original_sample_count),
             'remaining_samples': int(remaining_sample_count)
         }
+        if outlier_action == 'remove' and n_outliers > 0:
+            outlier_info['removed_row_indices'] = train_index_before[~outlier_mask].tolist()
         if progress_tracker:
             progress_tracker.update_stage('outlier_handling', 'completed', 100, 
                                         f'Outlier handling complete ({n_outliers} outliers {"removed" if outlier_action == "remove" else "capped"})')

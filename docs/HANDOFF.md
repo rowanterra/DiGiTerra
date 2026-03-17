@@ -111,7 +111,7 @@ You can use both: route registration in `app.py` or in Blueprint modules, and no
 
 Regression currently produces several plots:
 
-- **Primary (always):** `target_plot_1` / `target_plot_1_advanced` from `visualize_predictions()` — Predicted vs Actual (train/test) + Test Residuals (+ optional metrics table). This is the main composite shown on the Modeling and Inference pages.
+- **Primary (always):** `target_plot_1` / `target_plot_1_advanced` from `visualize_predictions()`: Predicted vs Actual (train/test) + Test Residuals (+ optional metrics table). This is the main composite shown on the Modeling and Inference pages.
 - **From `export_plots` → `plot_regression_bundle()`:** Predicted vs Actual (summary), Residuals histogram, Residuals vs Fitted, Actual vs Predicted density (2D), Feature (or Permutation) importance, and optionally PDPs.
 
 **Redundancy:** The summary "Predicted vs Actual" and "Residuals" in the bundle largely duplicate the composite. The bundle adds Residuals vs Fitted, 2D density, and importance/PDP.

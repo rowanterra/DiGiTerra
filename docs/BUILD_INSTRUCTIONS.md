@@ -1,6 +1,6 @@
 # Cross-Platform Build Instructions
 
-This document provides detailed instructions for building DiGiTerra desktop applications for macOS, Windows, and Linux.
+Instructions for building DiGiTerra desktop apps on macOS, Windows, and Linux.
 
 **Important:** All build commands must be run with the current working directory set to the project root (the directory that contains `app.py`, `requirements.txt`, and the `build/` folder). The PyInstaller spec files resolve paths relative to the project root.
 
@@ -9,7 +9,7 @@ This document provides detailed instructions for building DiGiTerra desktop appl
 All platforms require:
 - Python 3.11 or higher
 - pip (Python package manager)
-- All dependencies from `requirements.txt`
+- All dependencies from `requirements.txt` (see `docs/DEPENDENCIES.md` for constraints and verification)
 
 ### Platform-Specific Requirements
 

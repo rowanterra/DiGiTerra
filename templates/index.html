@@ -302,7 +302,7 @@
             <div class="doc-header">
                 <h3>Advanced Options</h3>
             </div>
-            <p class="doc-intro-text">When using the <strong>Advanced Modeling</strong> approach, DiGiTerra provides several advanced features. <strong>Note:</strong> These features can significantly increase processing time, especially with large datasets.</p>
+            <p class="doc-intro-text">Advanced mode adds cross-validation, feature selection, outlier handling, SHAP/explainability, and more. These options can increase run time on large datasets.</p>
             
             <div class="doc-advanced-features">
                 <div class="doc-feature-card">
@@ -471,35 +471,34 @@
 
                         <div class="exploration-card">
                             <h2>Optional Exploration Preprocessing</h2>
-                            <!-- Preprocessing for missing and zero values Section  -->
+                            <p class="field-note" style="margin-bottom: 10px;">Optionally clean blanks (missing values) or zeros before running correlation or pairplots.</p>
                             <div class="scaling-container">
-                                <label for="exploreDropMissing">Remove or replace missing values from columns?</label>
-                                    <select name="exploreDropMissing" id="exploreDropMissing">
-                                        <option value="none">No Columns</option>
-                                        <option value="indicator">Selected Columns</option>
-                                        <option value="all">All</option>
-                                    </select>
+                                <label for="exploreDropMissing">Handle missing values (blanks) in:</label>
+                                <select name="exploreDropMissing" id="exploreDropMissing">
+                                    <option value="none">Don't apply</option>
+                                    <option value="indicator">Selected columns only</option>
+                                    <option value="all">All columns</option>
+                                </select>
                             </div>
                             <br>
                             <div class="scaling-container hidden" id="exploreImputeDiv">
-                                <label for="exploreImputeStrategy">How should missing value be replaced?</label>
+                                <label for="exploreImputeStrategy">How to handle blanks?</label>
                                 <select name="exploreImputeStrategy" id="exploreImputeStrategy">
-                                    <option value="none">Drop the row</option>
-                                    <option value="mean">Mean</option>
-                                    <option value="median">Median</option>
-                                    <!-- <option value="knn">KNN</option> -->
-                                    <option value="0">0</option>
-                                    <option value="0.01">0.01</option>
+                                    <option value="none">Remove rows with blanks</option>
+                                    <option value="mean">Fill with column mean</option>
+                                    <option value="median">Fill with column median</option>
+                                    <option value="0">Fill with 0</option>
+                                    <option value="0.01">Fill with 0.01</option>
                                 </select>
                             </div>
                             <br>
                             <div class="scaling-container">
-                                <label for="exploreDrop0">Remove zeros from columns?</label>
-                                    <select name="exploreDrop0" id="exploreDrop0">
-                                        <option value="none">No Columns</option>
-                                        <option value="indicator">Selected Columns</option>
-                                        <option value="all">All</option>
-                                    </select>
+                                <label for="exploreDrop0">Treat zeros as invalid (remove rows) in:</label>
+                                <select name="exploreDrop0" id="exploreDrop0">
+                                    <option value="none">Don't apply</option>
+                                    <option value="indicator">Selected columns only</option>
+                                    <option value="all">All columns</option>
+                                </select>
                             </div>
                         </div>
 
@@ -564,40 +563,40 @@
                         </div>
 
                         <h3 style="margin-top: 24px; margin-bottom: 12px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 1.1em; font-weight: 600; color: #000000;">Data Cleaning</h3>
-                        <p class="field-note" style="margin-bottom: 8px;">Autodetect to grey out options when not needed.</p>
-                        <div class="scaling-container" style="margin-bottom: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
-                            <span>Autodetect NaNs or zeros?</span>
-                            <button type="button" id="autoDetectNanZeros" class="button-secondary" style="padding: 6px 14px; font-size: 0.9em;">Run</button>
+                        <p class="field-note" style="margin-bottom: 10px;">Your data may contain <strong>blanks (missing values)</strong> or <strong>zeros</strong>. Run the check below first; then choose which columns to clean and how.</p>
+                        <div class="scaling-container" style="margin-bottom: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+                            <span>Check selected columns for blanks or zeros:</span>
+                            <button type="button" id="autoDetectNanZeros" class="button-secondary" style="padding: 6px 14px; font-size: 0.9em;">Check</button>
                         </div>
                         <div id="dataCleaningAutodetectMessage" class="field-note" style="margin-bottom: 12px; min-height: 1.2em; color: #666;" aria-live="polite"></div>
                         <div id="dataCleaningMissingWrapper" class="scaling-container">
-                            <label for="dropMissing">Handle missing values?</label>
+                            <label for="dropMissing">Where to handle missing values (blanks)?</label>
                             <select name="dropMissing" id="dropMissing">
-                                <option value="none">No Columns</option>
-                                <option value="indicatorAndTarget">Indicator and Target</option>
-                                <option value="indicator">Indicator</option>
-                                <option value="target">Target</option>
-                                <option value="all">All</option>
+                                <option value="none">Don't apply</option>
+                                <option value="indicatorAndTarget">Indicator and target columns</option>
+                                <option value="indicator">Indicator columns only</option>
+                                <option value="target">Target columns only</option>
+                                <option value="all">All columns</option>
                             </select>
                         </div>
                         <div class="scaling-container hidden" id="imputeDiv">
-                            <label for="imputeStrategy">How should missing value be replaced?</label>
+                            <label for="imputeStrategy">How to handle blanks?</label>
                             <select name="imputeStrategy" id="imputeStrategy">
-                                <option value="none">Drop the row</option>
-                                <option value="mean">Mean</option>
-                                <option value="median">Median</option>
-                                <option value="0">0</option>
-                                <option value="0.01">0.01</option>
+                                <option value="none">Remove rows with blanks</option>
+                                <option value="mean">Fill with column mean</option>
+                                <option value="median">Fill with column median</option>
+                                <option value="0">Fill with 0</option>
+                                <option value="0.01">Fill with 0.01</option>
                             </select>
                         </div>
                         <div id="dataCleaningZerosWrapper" class="scaling-container" style="margin-top: 8px;">
-                            <label for="drop0">Remove zeros from columns?</label>
+                            <label for="drop0">Where to treat zeros as invalid (remove those rows)?</label>
                             <select name="drop0" id="drop0">
-                                <option value="none">No Columns</option>
-                                <option value="indicatorAndTarget">Indicator and Target</option>
-                                <option value="indicator">Indicator</option>
-                                <option value="target">Target</option>
-                                <option value="all">All</option>
+                                <option value="none">Don't apply</option>
+                                <option value="indicatorAndTarget">Indicator and target columns</option>
+                                <option value="indicator">Indicator columns only</option>
+                                <option value="target">Target columns only</option>
+                                <option value="all">All columns</option>
                             </select>
                         </div>
 
@@ -764,7 +763,7 @@
                         <input type="radio" name="modelingMode" id="advancedMode" value="advanced" style="margin: 0;">
                         <div>
                             <strong>Advanced Modeling</strong>
-                            <p style="margin: 4px 0 0 0; font-size: 0.9em; color: #666;">Full control of model selection, hyperparameters, and advanced features</p>
+                            <p style="margin: 4px 0 0 0; font-size: 0.9em; color: #666;">Choose model and tune hyperparameters</p>
                         </div>
                     </label>
                 </div>
@@ -1220,7 +1219,7 @@
                 <div class="nonreqHyperparams">
                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="nonreqRidgeSlider" aria-label="Toggle to show or hide non-essential Ridge hyperparameters">
                                             <span class="slider" aria-hidden="true"></span>
@@ -1285,7 +1284,7 @@
                 <div class="nonreqHyperparams">
                     <div><br></div>
                     <div class="toggle-container">
-                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                        <span class="optional-param-label">More options</span>
                         <label class="switch">
                             <input type="checkbox" id="nonreqLassoSlider">
                             <span class="slider"></span>
@@ -1348,7 +1347,7 @@
 
                 <div class="nonreqHyperparams">
                     <div class="toggle-container">
-                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                        <span class="optional-param-label">More options</span>
                         <label class="switch">
                             <input type="checkbox" id="nonreqLogisticSlider">
                             <span class="slider"></span>
@@ -1468,7 +1467,7 @@
                 <div class="nonreqHyperparams">
                     <div><br></div>
                     <div class="toggle-container">
-                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                        <span class="optional-param-label">More options</span>
                         <label class="switch">
                             <input type="checkbox" id="nonreqSVMSlider">
                             <span class="slider"></span>
@@ -1535,7 +1534,7 @@
                 <div class="nonreqHyperparams">
                     <div><br></div>
                     <div class="toggle-container">
-                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                        <span class="optional-param-label">More options</span>
                         <label class="switch">
                             <input type="checkbox" id="nonreqRFSlider">
                             <span class="slider"></span>
@@ -1607,7 +1606,7 @@
                 <div class="nonreqHyperparams">
                     <div><br></div>
                     <div class="toggle-container">
-                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                        <span class="optional-param-label">More options</span>
                         <label class="switch">
                             <input type="checkbox" id="nonreqPerceptronSlider">
                             <span class="slider"></span>
@@ -1698,7 +1697,7 @@
                 <div class="nonreqHyperparams">
                     <div><br></div>
                     <div class="toggle-container">
-                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                        <span class="optional-param-label">More options</span>
                         <label class="switch">
                             <input type="checkbox" id="nonreqMLPSlider">
                             <span class="slider"></span>
@@ -1791,7 +1790,7 @@
                 <div class="nonreqHyperparams">
                     <div><br></div>
                     <div class="toggle-container">
-                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                        <span class="optional-param-label">More options</span>
                         <label class="switch">
                             <input type="checkbox" id="nonreqKNearestSlider">
                             <span class="slider"></span>
@@ -1845,7 +1844,7 @@
                 <div class="nonreqHyperparams">
                     <div><br></div>
                     <div class="toggle-container">
-                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                        <span class="optional-param-label">More options</span>
                         <label class="switch">
                             <input type="checkbox" id="nonreqGBSlider">
                             <span class="slider"></span>
@@ -1916,7 +1915,7 @@
                 <h3>Logistic Classifier Model Settings</h3>
                 <div class="nonreqHyperparams">
                     <div class="toggle-container">
-                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                        <span class="optional-param-label">More options</span>
                         <label class="switch">
                             <input type="checkbox" id="nonreqLogisticClassifierSlider">
                             <span class="slider"></span>
@@ -2022,7 +2021,7 @@
                 <div><br></div>
                 <div class="nonreqHyperparams">
                     <div class="toggle-container">
-                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                        <span class="optional-param-label">More options</span>
                         <label class="switch">
                             <input type="checkbox" id="nonreqMLPClassifierSlider">
                             <span class="slider"></span>
@@ -2113,7 +2112,7 @@
 
                 <div class="nonreqHyperparams">
                     <div class="toggle-container">
-                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                        <span class="optional-param-label">More options</span>
                         <label class="switch">
                             <input type="checkbox" id="nonreqRFClassifierSlider">
                             <span class="slider"></span>
@@ -2203,7 +2202,7 @@
                 <div class="nonreqHyperparams">
                     <div><br></div>
                     <div class="toggle-container">
-                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                        <span class="optional-param-label">More options</span>
                         <label class="switch">
                             <input type="checkbox" id="nonreqSVCClassifierSlider">
                             <span class="slider"></span>
@@ -2271,7 +2270,7 @@
                 <div class="nonreqHyperparams">
                     <div><br></div>
                     <div class="toggle-container">
-                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                        <span class="optional-param-label">More options</span>
                         <label class="switch">
                             <input type="checkbox" id="nonreqAgglomerativeSlider">
                             <span class="slider"></span>
@@ -2326,7 +2325,7 @@
                 <div class="nonreqHyperparams">
                     <div><br></div>
                     <div class="toggle-container">
-                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                        <span class="optional-param-label">More options</span>
                         <label class="switch">
                             <input type="checkbox" id="nonreqGaussianSlider">
                             <span class="slider"></span>
@@ -2395,7 +2394,7 @@
                 <div class="nonreqHyperparams">
                     <div><br></div>
                     <div class="toggle-container">
-                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                        <span class="optional-param-label">More options</span>
                         <label class="switch">
                             <input type="checkbox" id="nonreqKmeansSlider">
                             <span class="slider"></span>
@@ -2497,14 +2496,13 @@
                 <form id="advancedOptimizationForm">
                     <div class="modelSection">
                         <!-- Descriptive text about column selection -->
-                        <div style="margin-bottom: 16px; padding: 12px; background-color: #f8f9fa; border-radius: 6px; border-left: 3px solid #357a53;">
+                        <div style="margin-bottom: 12px; padding: 10px 12px; background-color: #f8f9fa; border-radius: 6px; border-left: 3px solid #357a53;">
                             <span id="advancedModelingSelectionNote" class="modeling-selection-note" style="font-style: italic; color: #2c3e50;"></span>
                         </div>
                         
-                        <!-- Model Selection -->
-                        <div class="preprocess-card" style="margin-bottom: 20px;">
-                            <h3 style="margin-top: 0; margin-bottom: 12px;">Select Model</h3>
-                            <p class="field-note" style="margin-bottom: 16px;">Choose the model algorithm for your selected output type.</p>
+                        <div class="preprocess-card" style="margin-bottom: 16px;">
+                            <h3 style="margin-top: 0; margin-bottom: 8px;">Select Model</h3>
+                            <p class="field-note" style="margin-bottom: 12px;">Choose the algorithm for your selected output type.</p>
                             
                             <div id="advancedNumericModels" class="hidden">
                                 <label for="advancedNModels" style="display: block; margin-bottom: 8px; font-weight: 600;">Regression Model:</label>
@@ -2609,12 +2607,10 @@
                         </div>
                         
                         <div class="model-card">
-                            <h2 style="margin-top: 0; margin-bottom: 20px;">Advanced Model Configuration</h2>
+                            <h2 style="margin-top: 0; margin-bottom: 16px;">Hyperparameters</h2>
+                            <p class="field-note" style="margin-bottom: 16px;">Key settings for the selected model. Use &quot;More options&quot; to show optional parameters.</p>
                             
-                            <!-- Model Hyperparameters Section -->
                             <div style="margin-bottom: 30px;">
-                                <h3 style="margin-top: 0; margin-bottom: 12px; font-size: 1.2em; font-weight: 600;">Model Hyperparameters</h3>
-                                <p class="field-note" style="margin-bottom: 16px;">Configure all model hyperparameters. Essential hyperparameters appear first, followed by non-essential options. These sections will appear based on the model selected above.</p>
                                 
                                 <!-- Note: Hyperparameter fields are duplicated from the old advancedOptimization container -->
                                 <!-- They are also present there for backward compatibility, but these are the active ones -->
@@ -2629,7 +2625,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqRidgeSlider">
                                             <span class="slider"></span>
@@ -2688,7 +2684,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqLassoSlider">
                                             <span class="slider"></span>
@@ -2741,7 +2737,7 @@
                             <div id="advancedLogisticFields" class="hidden">
                                 <div class="nonreqHyperparams">
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqLogisticSlider">
                                             <span class="slider"></span>
@@ -2841,7 +2837,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqSVMSlider">
                                             <span class="slider"></span>
@@ -2903,7 +2899,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqRFSlider">
                                             <span class="slider"></span>
@@ -2958,7 +2954,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqPerceptronSlider">
                                             <span class="slider"></span>
@@ -3025,7 +3021,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqMLPSlider">
                                             <span class="slider"></span>
@@ -3110,7 +3106,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqKNearestSlider">
                                             <span class="slider"></span>
@@ -3161,7 +3157,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqGBSlider">
                                             <span class="slider"></span>
@@ -3228,7 +3224,7 @@
                                 <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Logistic regression for classification. Uses a sigmoid function to predict class probabilities.</p>
                                 <div class="nonreqHyperparams">
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqLogisticClassifierSlider">
                                             <span class="slider"></span>
@@ -3306,7 +3302,7 @@
                                 <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Neural network classifier. Configure hidden layers and learning parameters for classification tasks.</p>
                                 <div class="nonreqHyperparams">
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqMLPClassifierSlider">
                                             <span class="slider"></span>
@@ -3390,7 +3386,7 @@
                                 <input type="number" step=1 value=100 placeholder="100" min=1 id="advancedClass_RFn_estmators" name="advancedClass_RFn_estmators">
                                 <div class="nonreqHyperparams">
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqRFClassifierSlider">
                                             <span class="slider"></span>
@@ -3446,7 +3442,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqSVCClassifierSlider">
                                             <span class="slider"></span>
@@ -3504,7 +3500,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqAgglomerativeSlider">
                                             <span class="slider"></span>
@@ -3550,7 +3546,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqGaussianSlider">
                                             <span class="slider"></span>
@@ -3612,7 +3608,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqKmeansSlider">
                                             <span class="slider"></span>
@@ -4171,7 +4167,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqRidgeSlider">
                                             <span class="slider"></span>
@@ -4230,7 +4226,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqLassoSlider">
                                             <span class="slider"></span>
@@ -4283,7 +4279,7 @@
                             <div id="advancedLogisticFields" class="hidden">
                                 <div class="nonreqHyperparams">
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqLogisticSlider">
                                             <span class="slider"></span>
@@ -4383,7 +4379,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqSVMSlider">
                                             <span class="slider"></span>
@@ -4445,7 +4441,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqRFSlider">
                                             <span class="slider"></span>
@@ -4500,7 +4496,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqPerceptronSlider">
                                             <span class="slider"></span>
@@ -4567,7 +4563,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqMLPSlider">
                                             <span class="slider"></span>
@@ -4652,7 +4648,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqKNearestSlider">
                                             <span class="slider"></span>
@@ -4703,7 +4699,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqGBSlider">
                                             <span class="slider"></span>
@@ -4770,7 +4766,7 @@
                                 <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Logistic regression for classification. Uses a sigmoid function to predict class probabilities.</p>
                                 <div class="nonreqHyperparams">
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqLogisticClassifierSlider">
                                             <span class="slider"></span>
@@ -4848,7 +4844,7 @@
                                 <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Neural network classifier. Configure hidden layers and learning parameters for classification tasks.</p>
                                 <div class="nonreqHyperparams">
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqMLPClassifierSlider">
                                             <span class="slider"></span>
@@ -4932,7 +4928,7 @@
                                 <input type="number" step=1 value=100 placeholder="100" min=1 id="advancedClass_RFn_estmators" name="advancedClass_RFn_estmators">
                                 <div class="nonreqHyperparams">
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqRFClassifierSlider">
                                             <span class="slider"></span>
@@ -4988,7 +4984,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqSVCClassifierSlider">
                                             <span class="slider"></span>
@@ -5046,7 +5042,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqAgglomerativeSlider">
                                             <span class="slider"></span>
@@ -5092,7 +5088,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="nonreqGaussianSlider">
                                             <span class="slider"></span>
@@ -5154,7 +5150,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqKmeansSlider">
                                             <span class="slider"></span>
@@ -5205,7 +5201,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqAdaBoostSlider">
                                             <span class="slider"></span>
@@ -5231,7 +5227,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqBaggingSlider">
                                             <span class="slider"></span>
@@ -5356,7 +5352,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqSGDSlider">
                                             <span class="slider"></span>
@@ -5444,7 +5440,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqHistGBSlider">
                                             <span class="slider"></span>
@@ -5514,7 +5510,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqHuberSlider">
                                             <span class="slider"></span>
@@ -5554,7 +5550,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqQuantileSlider">
                                             <span class="slider"></span>
@@ -5591,7 +5587,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqLinearSVRSlider">
                                             <span class="slider"></span>
@@ -5651,7 +5647,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqNuSVRSlider">
                                             <span class="slider"></span>
@@ -5703,7 +5699,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqPassiveAggressiveSlider">
                                             <span class="slider"></span>
@@ -5776,7 +5772,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqRANSACSlider">
                                             <span class="slider"></span>
@@ -5859,7 +5855,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqRadiusNeighborsSlider">
                                             <span class="slider"></span>
@@ -6113,7 +6109,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqElasticNetCVSlider">
                                             <span class="slider"></span>
@@ -6232,7 +6228,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqAdaBoostClassifierSlider">
                                             <span class="slider"></span>
@@ -6253,7 +6249,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqBaggingClassifierSlider">
                                             <span class="slider"></span>
@@ -6364,7 +6360,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqGradientBoostingClassifierSlider">
                                             <span class="slider"></span>
@@ -6443,7 +6439,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqHistGradientBoostingClassifierSlider">
                                             <span class="slider"></span>
@@ -6508,7 +6504,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqKNeighborsClassifierSlider">
                                             <span class="slider"></span>
@@ -6594,7 +6590,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqLinearSVCSlider">
                                             <span class="slider"></span>
@@ -6669,7 +6665,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqNuSVCSlider">
                                             <span class="slider"></span>
@@ -6733,7 +6729,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqPassiveAggressiveClassifierSlider">
                                             <span class="slider"></span>
@@ -6828,7 +6824,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqRidgeClassifierSlider">
                                             <span class="slider"></span>
@@ -7048,7 +7044,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqBisectingKmeansSlider">
                                             <span class="slider"></span>
@@ -7103,7 +7099,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqHDBSCANSlider">
                                             <span class="slider"></span>
@@ -7212,7 +7208,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqMinibatchKmeansSlider">
                                             <span class="slider"></span>
@@ -7264,7 +7260,7 @@
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
-                                        <span><h3>Edit Non-Essential Hyperparameters?</h3></span>
+                                        <span class="optional-param-label">More options</span>
                                         <label class="switch">
                                             <input type="checkbox" id="advancedNonreqOPTICSSlider">
                                             <span class="slider"></span>
@@ -7457,7 +7453,8 @@
         window.API_ROOT = "{{ api_root }}";
         window.STATIC_ROOT = "{{ static_root }}";
     </script>
-    <script src="{{ static_root }}/client_side.js?v=4"></script>
+    <script src="{{ static_root }}/js/core.js?v=5"></script>
+    <script src="{{ static_root }}/js/app.js?v=5"></script>
     <script>
         // Fallback so "Continue to Model Preprocessing" works even if main script fails or is cached
         window.goToModelPreprocessing = window.goToModelPreprocessing || function() {

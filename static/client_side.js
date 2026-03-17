@@ -1,7 +1,7 @@
 /**
- * DiGiTerra front-end logic. Handoff note: All API calls, uploads, progress polling,
- * and result rendering live here. UI structure is in templates/index.html.
- * See HANDOFF.md for repo overview.
+ * DiGiTerra front-end logic (legacy single-file bundle).
+ * Canonical source is static/js/core.js + static/js/app.js; the app loads those.
+ * UI structure in templates/index.html. See HANDOFF.md and CONTRIBUTING.md.
  */
 const uploadForm = document.getElementById('uploadForm');
 const corrForm = document.getElementById('corrForm');
@@ -1072,15 +1072,6 @@ function showTab(tabName) {
     }
 
     setActiveTab(tabName);
-    
-    // DARK MODE DISABLED - Code kept for potential future use
-    // Ensure dark mode is properly applied after tab switch
-    // Use setTimeout to ensure DOM updates are complete
-    /*
-    setTimeout(() => {
-        ensureDarkModeApplied();
-    }, 0);
-    */
 }
 
 function updateOutputTypeDisplay(outputType) {
@@ -8110,207 +8101,8 @@ if (advancedOptimizationForm) {
     });
 }
 
-// ============================================================================
-// DARK MODE DISABLED - Code kept for potential future use
-// ============================================================================
-// Dark Mode Toggle
-// ============================================================================
-
-// Initialize dark mode immediately (before DOMContentLoaded) to prevent flash
-// Only enable if explicitly set to 'true' (default is off)
-/*
-(function() {
-    const darkModeSetting = localStorage.getItem('darkMode');
-    // Default to light mode - only enable dark mode if explicitly set to 'true'
-    if (darkModeSetting === 'true') {
-        document.documentElement.classList.add('dark-mode');
-        document.body.classList.add('dark-mode');
-    } else {
-        // Ensure dark mode is off by default (light mode)
-        document.documentElement.classList.remove('dark-mode');
-        document.body.classList.remove('dark-mode');
-        // Explicitly set to light mode if not already set
-        if (darkModeSetting === null) {
-            localStorage.setItem('darkMode', 'false');
-        }
-    }
-})();
-*/
-// Always ensure light mode (remove any dark mode classes)
+// Force light mode (dark mode disabled)
 (function() {
     document.documentElement.classList.remove('dark-mode');
     document.body.classList.remove('dark-mode');
 })();
-
-// Initialize dark mode UI elements after DOM loads
-/*
-function initDarkMode() {
-    // Sync with localStorage to ensure consistency
-    const darkModeSetting = localStorage.getItem('darkMode');
-    const shouldBeDark = darkModeSetting === 'true';
-    
-    // Apply dark mode state
-    if (shouldBeDark) {
-        document.documentElement.classList.add('dark-mode');
-        document.body.classList.add('dark-mode');
-    } else {
-        document.documentElement.classList.remove('dark-mode');
-        document.body.classList.remove('dark-mode');
-    }
-    
-    // Update icon
-    const darkModeIcon = document.getElementById('darkModeIcon');
-    if (darkModeIcon) {
-        darkModeIcon.textContent = shouldBeDark ? 'Light' : 'Dark';
-    }
-}
-*/
-
-// Toggle dark mode
-/*
-function toggleDarkMode() {
-    // Preserve the current active tab before toggling
-    const activeTabButton = document.querySelector('.tab-button.active[data-tab]');
-    const currentActiveTab = activeTabButton ? activeTabButton.dataset.tab : null;
-    
-    // Also check if welcome page is visible (no tab selected yet)
-    const welcomeDiv = document.getElementById('welcome');
-    const isWelcomeVisible = welcomeDiv && !welcomeDiv.classList.contains('hidden');
-    
-    // Get references to all main content sections to ensure they remain visible
-    const mainContent = document.getElementById('main-content');
-    const fileUpload = document.getElementById('fileuploaddiv');
-    const userInputSection = document.getElementById('userInputSection');
-    const predictionDiv = document.getElementById('predictionDiv');
-    const documentationSection = document.getElementById('documentation');
-    
-    // Ensure all currently visible content sections maintain their visibility
-    // This prevents the body background from covering content during the toggle
-    if (mainContent && !mainContent.classList.contains('hidden')) {
-        mainContent.style.display = '';
-        mainContent.style.visibility = 'visible';
-    }
-    if (welcomeDiv && !welcomeDiv.classList.contains('hidden')) {
-        welcomeDiv.style.display = '';
-        welcomeDiv.style.visibility = 'visible';
-    }
-    if (fileUpload && !fileUpload.classList.contains('hidden')) {
-        fileUpload.style.display = '';
-        fileUpload.style.visibility = 'visible';
-    }
-    if (userInputSection && !userInputSection.classList.contains('hidden')) {
-        userInputSection.style.display = '';
-        userInputSection.style.visibility = 'visible';
-    }
-    if (predictionDiv && !predictionDiv.classList.contains('hidden')) {
-        predictionDiv.style.display = '';
-        predictionDiv.style.visibility = 'visible';
-    }
-    if (documentationSection && !documentationSection.classList.contains('hidden')) {
-        documentationSection.style.display = '';
-        documentationSection.style.visibility = 'visible';
-    }
-    
-    // Prevent any visual glitches by ensuring we're not in the middle of other operations
-    const darkModeIcon = document.getElementById('darkModeIcon');
-    const isDarkMode = document.body.classList.contains('dark-mode');
-    const html = document.documentElement;
-    const body = document.body;
-    
-    // Toggle the classes synchronously
-    if (isDarkMode) {
-        html.classList.remove('dark-mode');
-        body.classList.remove('dark-mode');
-        localStorage.setItem('darkMode', 'false');
-        if (darkModeIcon) {
-            darkModeIcon.textContent = 'Dark';
-        }
-    } else {
-        html.classList.add('dark-mode');
-        body.classList.add('dark-mode');
-        localStorage.setItem('darkMode', 'true');
-        if (darkModeIcon) {
-            darkModeIcon.textContent = 'Light';
-        }
-    }
-    
-    // Force a reflow to apply styles immediately
-    void body.offsetHeight;
-    
-    // Restore the visible content section after toggling
-    // Use requestAnimationFrame to ensure DOM is ready but without visible delay
-    requestAnimationFrame(() => {
-        if (isWelcomeVisible) {
-            // If welcome was visible, ensure it stays visible
-            if (welcomeDiv) {
-                welcomeDiv.classList.remove('hidden');
-                welcomeDiv.style.display = '';
-                welcomeDiv.style.visibility = 'visible';
-            }
-            // Hide app tabs if welcome is showing
-            if (appTabs) {
-                appTabs.classList.add('hidden');
-            }
-        } else if (currentActiveTab) {
-            // Re-show the active tab's content by calling showTab
-            // This ensures all the proper sections are shown/hidden correctly
-            showTab(currentActiveTab);
-        } else {
-            // Fallback: If no tab is active, try to determine what should be visible
-            // by checking which main section is not hidden
-            if (mainContent) {
-                // Ensure main-content is visible
-                mainContent.style.display = '';
-                mainContent.style.visibility = 'visible';
-                mainContent.classList.remove('hidden');
-            }
-        }
-        
-        // Force another reflow to ensure all styles are applied
-        void body.offsetHeight;
-    });
-}
-*/
-
-// Ensure dark mode is properly applied to all elements
-/*
-function ensureDarkModeApplied() {
-    const isDarkMode = localStorage.getItem('darkMode') === 'true';
-    const html = document.documentElement;
-    const body = document.body;
-    
-    if (isDarkMode) {
-        // Ensure html and body have dark-mode class
-        html.classList.add('dark-mode');
-        body.classList.add('dark-mode');
-    } else {
-        // Ensure dark mode is removed
-        html.classList.remove('dark-mode');
-        body.classList.remove('dark-mode');
-    }
-    
-    // Force a reflow to ensure styles are applied to all elements
-    // Use a single reflow to avoid visual glitches
-    void body.offsetHeight;
-}
-*/
-
-// Set up dark mode toggle event listener
-/*
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        initDarkMode();
-        const darkModeToggle = document.getElementById('darkModeToggle');
-        if (darkModeToggle) {
-            darkModeToggle.addEventListener('click', toggleDarkMode);
-        }
-    });
-} else {
-    // DOM already loaded
-    initDarkMode();
-    const darkModeToggle = document.getElementById('darkModeToggle');
-    if (darkModeToggle) {
-        darkModeToggle.addEventListener('click', toggleDarkMode);
-    }
-}
-*/

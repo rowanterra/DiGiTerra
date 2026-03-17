@@ -15,7 +15,7 @@ For both **regression** and **classification**, the order is:
 5. **Fit** final model on processed training data
 6. **Evaluate** on test set
 
-No test-set information is used for outlier detection, feature selection, or hyperparameter search — **no data leakage**.
+No test-set information is used for outlier detection, feature selection, or hyperparameter search. No data leakage.
 
 ---
 
@@ -29,12 +29,12 @@ No test-set information is used for outlier detection, feature selection, or hyp
 
 ### How it’s reported
 
-- **Regression**: `outlier_info` is built in `run_regression_pipeline.py` and returned to the app; the response includes `outlier_info` with `method`, `action`, `n_outliers`, `original_samples`, `remaining_samples`. The frontend shows an “Outlier Handling” table (when Advanced/AutoML and `data.outlier_info` is present) with Method, Action, Outliers Detected, Original Samples, Remaining Samples.
-- **Classification**: Previously **not** reported: the classification pipeline did not build or return `outlier_info`, so the “Outlier Handling” dropdown/table never appeared for classifiers. This has been fixed so classification now also returns `outlier_info` and the same table is shown when applicable.
+- **Regression**: `outlier_info` is built in `run_regression_pipeline.py` (method, action, n_outliers, original_samples, remaining_samples, and when action is "remove", removed_row_indices). The frontend shows an Outlier Handling table when Advanced/AutoML and `data.outlier_info` is present. The Excel export includes an Outlier Handling sheet and an Outlier Samples Removed sheet listing removed training row indices.
+- **Classification**: Same as regression. The pipeline builds and returns `outlier_info`; the same UI table and Excel sheets (Outlier Handling, Outlier Samples Removed) are written when applicable.
 
 ### Is “Remove” clear?
 
-- **Yes, it removes rows while running** — but only from the **training** set. Metrics and model are based on (outlier-removed) train and (full) test. The UI could be clarified with a short note, e.g. “Remove: drop outlier rows from **training** data only; test set is unchanged.”
+- Rows are removed from the training set only. Metrics and model use outlier-removed train and full test. The UI can add a short note: “Remove: drop outlier rows from **training** data only; test set is unchanged.”
 
 ---
 
@@ -49,7 +49,7 @@ No test-set information is used for outlier detection, feature selection, or hyp
 ### How it’s reported
 
 - **Regression**: `feature_selection_info` (method, k_requested, original_count, selected_count, selected_features) is returned and shown in the “Feature Selection” table in the UI.
-- **Classification**: Same as outlier — previously not returned; now the classification pipeline builds and returns `feature_selection_info` so the “Feature Selection” table appears when feature selection was used.
+- **Classification**: The classification pipeline builds and returns `feature_selection_info`; the “Feature Selection” table appears when feature selection was used.
 
 ### Inappropriate / unclear behavior
 
@@ -62,7 +62,7 @@ No test-set information is used for outlier detection, feature selection, or hyp
 ### What it does
 
 - **Grid search** or **Randomized search** over a fixed param grid; CV is run on the **processed** training data (after outlier and feature selection). Best params are then used to fit on the full processed training set.
-- No test data is used in the search — **appropriate**.
+- No test data is used in the search.
 
 ### How it’s reported
 
@@ -92,18 +92,16 @@ No test-set information is used for outlier detection, feature selection, or hyp
 
 | Option              | Train only? | Test used? | Reported (regression) | Reported (classification) | Notes |
 |---------------------|------------|------------|------------------------|----------------------------|-------|
-| Outlier remove      | Yes (rows removed) | No row removal | Yes (`outlier_info`) | Yes (after fix) | Clear once user knows “training only”. |
-| Outlier cap         | Bounds from train | Test capped with same bounds | Yes | Yes (after fix) | Appropriate. |
-| Feature selection   | Fit on train | Transform only | Yes (`feature_selection_info`) | Yes (after fix) | SelectFromModel ignores K. |
+| Outlier remove      | Yes (rows removed) | No row removal | Yes (UI + Excel with removed indices) | Yes | Training only. |
+| Outlier cap         | Bounds from train | Test capped with same bounds | Yes | Yes | Same bounds for test. |
+| Feature selection   | Fit on train | Transform only | Yes (`feature_selection_info`) | Yes | SelectFromModel ignores K. |
 | Hyperparameter search | CV on train | No | Via `model_params` | Via `model_params` | No separate search summary table. |
 | Cross-validation    | Yes        | No         | Yes (file + summary) | Yes (file + summary) | As implemented. |
 
 ---
 
-## 8. Files touched for classification reporting fix
+## 8. Outlier and feature selection reporting (regression and classification)
 
-- `python_scripts/preprocessing/run_classification_pipeline.py`: Build and return `outlier_info` and `feature_selection_info`.
-- `python_scripts/helpers.py`: `unpack_classification_result()` extended to return 11 items (including `feature_selection_info`, `outlier_info`).
-- `app.py`: All `unpack_classification_result()` call sites unpack the two new values; classification `result` dict includes `'feature_selection_info'` and `'outlier_info'`.
-
-Frontend already supports these keys for the classifier (dropdown + Feature Selection / Outlier Handling tables); no JS changes required once the backend sends the data.
+- **Pipelines**: `run_regression_pipeline.py` and `run_classification_pipeline.py` build `outlier_info` (method, action, n_outliers, original_samples, remaining_samples, and when action is "remove", removed_row_indices). Both build `feature_selection_info` when feature selection is used.
+- **Excel**: `write_to_excelRegression` and `write_to_excelClassifier` in `python_scripts/helpers.py` accept `outlier_info`. When present, they write an "Outlier Handling" sheet and, when removed_row_indices exists, an "Outlier Samples Removed" sheet.
+- **App**: Classification and regression result dicts include `feature_selection_info` and `outlier_info`. The frontend shows the Outlier Handling and Feature Selection tables when these keys are present.

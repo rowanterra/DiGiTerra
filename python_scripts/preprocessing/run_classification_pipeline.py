@@ -170,6 +170,7 @@ def run_classification(model, model_name,
     train_indices_kept = X_train_s.index  # Track which training samples are kept
     outlier_info = None
     if outlier_method != 'none':
+        train_index_before = X_train_s.index  # capture so we can report which rows were removed
         X_train_s, X_test_s, outlier_mask = apply_outlier_handling(
             X_train_s, X_test_s, y_train, outlier_method, outlier_action
         )
@@ -187,6 +188,8 @@ def run_classification(model, model_name,
             'original_samples': int(len(outlier_mask)),
             'remaining_samples': int(outlier_mask.sum()),
         }
+        if outlier_action == 'remove' and n_outliers > 0:
+            outlier_info['removed_row_indices'] = train_index_before[~outlier_mask].tolist()
 
     # Apply feature selection
     feature_selection_info = None

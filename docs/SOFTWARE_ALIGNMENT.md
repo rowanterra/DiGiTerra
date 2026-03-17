@@ -6,7 +6,7 @@ Practical next steps to make the project more in line with typical software engi
 
 ## 1. Testing
 
-**Current:** One manual flow test (`test_flow.py`: upload → correlation → preprocess). No pytest, no unit tests, no coverage.
+**Current:** One manual flow test (`tests/integration/test_flow.py`: upload, correlation, preprocess). No pytest, no unit tests, no coverage.
 
 **Align:**
 
@@ -16,7 +16,7 @@ Practical next steps to make the project more in line with typical software engi
   - `python_scripts/model_registry.py`: `get_model_kwargs` for a few models (e.g. Ridge, kmeans) and that `MODEL_REGISTRY` has expected keys.
   - `python_scripts/config.py`: path resolution (e.g. `VIS_DIR`, `APP_SUPPORT_DIR`) under a temporary or env override.
 - **Integration tests** (Flask test client):
-  - Expand `test_flow.py` or mirror it under `tests/`: upload → preprocess → run one regression and one classification model (small data), assert response shape and no 500.
+  - Expand `tests/integration/test_flow.py` or add more under `tests/`: upload → preprocess → run one regression and one classification model (small data), assert response shape and no 500.
 - **Optional:** `pytest.ini` or `pyproject.toml` with `[tool.pytest.ini_options]` and a `tests/` layout (e.g. `tests/unit/`, `tests/integration/`).
 
 **Result:** Changes can be validated automatically; refactors are safer.
@@ -25,7 +25,7 @@ Practical next steps to make the project more in line with typical software engi
 
 ## 2. Dependencies
 
-**Current:** `requirements.txt` with no version pins (“No version pins” in HANDOFF).
+**Current:** `requirements.txt` with no version pins (“No version pins” in docs/HANDOFF.md).
 
 **Align:**
 
@@ -49,8 +49,8 @@ Practical next steps to make the project more in line with typical software engi
 
 - **GitHub Actions** (if the repo is on GitHub):
   - On push/PR: install deps, run pytest, optionally a linter (e.g. ruff or flake8).
-  - Optional: run `test_flow.py` (or the expanded integration test) with a small example CSV.
-- **Minimal workflow:** one job that `pip install -r requirements.txt` and `pytest tests/` (or `python test_flow.py` until tests are under `tests/`).
+  - Optional: run `pytest tests/integration/` (or the expanded integration test) with a small example CSV.
+- **Minimal workflow:** one job that `pip install -r requirements.txt` and `pytest tests/` (or `pytest tests/`).
 
 **Result:** Every push/PR is checked automatically; regressions are caught early.
 
@@ -112,7 +112,7 @@ Practical next steps to make the project more in line with typical software engi
 
 ## 8. Production and security (already partly documented)
 
-**From HANDOFF / existing practice:**
+**From docs/HANDOFF.md / existing practice:**
 
 - Use **gunicorn** with **1 worker** (in-memory state).
 - **CSRF:** Enable CSRF protection for forms if the app uses session-based auth or state-changing GETs.
@@ -125,11 +125,11 @@ Practical next steps to make the project more in line with typical software engi
 
 ## 9. Documentation for contributors
 
-**Current:** HANDOFF.md, ARCHITECTURE_RECOMMENDATIONS.md, README, and various docs.
+**Current:** docs/HANDOFF.md, docs/ARCHITECTURE_RECOMMENDATIONS.md, README, and various docs.
 
 **Align:**
 
-- **README.md:** Keep a clear “Quick start” (install, run web, run desktop), link to HANDOFF and ARCHITECTURE_RECOMMENDATIONS for contributors.
+- **README.md:** Keep a clear “Quick start” (install, run web, run desktop), link to docs/HANDOFF.md and docs/ARCHITECTURE_RECOMMENDATIONS.md for contributors.
 - **CONTRIBUTING.md (optional):** How to run tests, how to add a model (registry + kwargs), where routes and frontend live. Keeps onboarding consistent.
 
 **Result:** New contributors know how to run, test, and extend the app.
@@ -138,7 +138,7 @@ Practical next steps to make the project more in line with typical software engi
 
 ## Suggested order
 
-1. **Quick wins:** Pin dependency versions, add a minimal pytest suite (a few unit tests + keep/run `test_flow.py`), add one GitHub Actions workflow that runs tests.
+1. **Quick wins:** Pin dependency versions, add a minimal pytest suite (a few unit tests + keep/run `tests/integration/test_flow.py`), add one GitHub Actions workflow that runs tests.
 2. **Structure:** Blueprints and/or split JS/HTML as in ARCHITECTURE_RECOMMENDATIONS.
 3. **Robustness:** Centralize validation and error response shape; improve logging config.
 4. **Polish:** Type hints + mypy in CI; CONTRIBUTING.md and a short production checklist.

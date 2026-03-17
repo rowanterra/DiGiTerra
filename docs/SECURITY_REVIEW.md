@@ -127,7 +127,7 @@ Before deploying as a multi-user web service:
 ## References
 
 - **Security Fixes:** See `ISSUES_FOUND.md` for historical security fixes
-- **Developer Notes:** See `HANDOFF.md` for integration guidance
+- **Developer Notes:** See `docs/HANDOFF.md` for integration guidance
 - **Current Status:** See `DEBUG_REPORT.md` for verification results
 
 ---
