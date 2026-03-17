@@ -3632,7 +3632,7 @@ function backToModel(){
 }
 
 // Helper function to copy hyperparameter values from Simple to Advanced
-function copyHyperparametersToAdvanced(selectedModel, outputType) {
+function copyHyperparametersToAdvanced(selectedModel, _outputType) {
     // Wait a bit more for hyperparameter fields to be visible after model change
     setTimeout(() => {
         // Define mappings: simpleFieldId -> advancedFieldId
