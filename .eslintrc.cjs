@@ -4,7 +4,7 @@ module.exports = {
   env: { browser: true, es2022: true },
   parserOptions: { ecmaVersion: 2022, sourceType: 'script' },
   rules: {
-    'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+    'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     'no-console': 'off',
     'no-alert': 'off',
   },

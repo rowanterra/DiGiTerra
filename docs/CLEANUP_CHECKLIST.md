@@ -38,7 +38,7 @@
 - Either complete the migration (remove or replace `client_side.js` and update all references) or clearly document “legacy vs canonical” and keep lint covering both until migration is done.  
 - Ensure `package.json` scripts (lint, and any future build/test) match the real entrypoints.
 
-### 4. Shrink large UI assets (medium effort)
+### 4. Shrink large UI assets
 
 - `static/client_side.js`, `static/js/app.js`, and `templates/index.html` are very large, which hurts maintainability.  
 - Consider splitting by feature or route (e.g. upload, exploration, preprocessing, modeling, inference), introducing a small build step if needed, and/or moving inline scripts out of `index.html` into modules.  

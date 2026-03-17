@@ -3,26 +3,26 @@
  * Canonical source is static/js/core.js + static/js/app.js; the app loads those.
  * UI structure in templates/index.html. See HANDOFF.md and CONTRIBUTING.md.
  */
-const uploadForm = document.getElementById('uploadForm');
-const corrForm = document.getElementById('corrForm');
-const preprocessform = document.getElementById('preprocessform');
-const file = document.getElementById('file');
+const _uploadForm = document.getElementById('uploadForm');
+const _corrForm = document.getElementById('corrForm');
+const _preprocessform = document.getElementById('preprocessform');
+const _file = document.getElementById('file');
 const columnSelection = document.getElementById('columnSelection');
-const indicatorsSelect = document.getElementById('indicators');
+const _indicatorsSelect = document.getElementById('indicators');
 const predictorsSelect = document.getElementById('predictors');
-const processForm = document.getElementById('processForm');
-const advancedOptimizationForm = document.getElementById('advancedOptimizationForm');
+const _processForm = document.getElementById('processForm');
+const _advancedOptimizationForm = document.getElementById('advancedOptimizationForm');
 const errorDiv = document.getElementById('errorDiv');
 const NumericResultDiv = document.getElementById('NumericResultDiv');
 const ClusterResultDiv = document.getElementById('ClusterResultDiv');
 const ClassifierResultDiv = document.getElementById('ClassifierResultDiv');
 const fileUpload = document.getElementById('fileuploaddiv');
-const runMatrices = document.getElementById('runMatrices');
+const _runMatrices = document.getElementById('runMatrices');
 const predictionDiv = document.getElementById('predictionDiv');
-const predictionForm = document.getElementById('uploadPredictDf');
+const _predictionForm = document.getElementById('uploadPredictDf');
 const predictionResultsDiv = document.getElementById('predictionResults');
-const loading = document.getElementById('loading');
-const processButton = document.getElementById('processButton');
+const _loading = document.getElementById('loading');
+const _processButton = document.getElementById('processButton');
 const appTabs = document.getElementById('appTabs');
 const tabButtons = document.querySelectorAll('.tab-button');
 const userInputSection = document.getElementById('userInputSection');
@@ -32,7 +32,7 @@ const backToExplorationButton = document.getElementById('backToExploration');
 const backToModelPreprocessButton = document.getElementById('backToModelPreprocess');
 const backToModelingFromAdvancedButton = document.getElementById('backToModelingFromAdvanced');
 const documentationSection = document.getElementById('documentation');
-let pywebviewReady = false;
+let _pywebviewReady = false;
 let headerResizeObserver = null;
 
 let uploadedFileName = '';
@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Utility Functions
 // ============================================================================
 
-const formatDelta = (trainValue, validationValue, unit = '') => {
+const _formatDelta = (trainValue, validationValue, unit = '') => {
     const trainNum = parseFloat(trainValue);
     const validationNum = parseFloat(validationValue);
     if (!Number.isFinite(trainNum) || !Number.isFinite(validationNum)) {
@@ -109,8 +109,8 @@ const formatDelta = (trainValue, validationValue, unit = '') => {
 };
 
 // DOM utility functions
-const $ = (selector) => document.querySelector(selector);
-const $$ = (selector) => document.querySelectorAll(selector);
+const _queryOne = (selector) => document.querySelector(selector);
+const _queryAll = (selector) => document.querySelectorAll(selector);
 const $id = (id) => document.getElementById(id);
 
 // Element visibility utilities
@@ -122,7 +122,7 @@ const hideElement = (element) => {
     if (element) element.classList.add('hidden');
 };
 
-const toggleElement = (element, show) => {
+const _toggleElement = (element, show) => {
     if (element) {
         if (show) {
             showElement(element);
@@ -445,15 +445,15 @@ function setupHeaderModelSelectorSync() {
     // Simple mode - Numeric (using new mode-specific IDs)
     // Note: No sync needed since header dropdowns are hidden
     // The change events will be handled by existing model selection listeners
-    const simpleNModels = document.getElementById('simpleNModels');
+    const _simpleNModels = document.getElementById('simpleNModels');
     // No recursive event dispatch needed - existing listeners handle model changes
     
     // Simple mode - Cluster
-    const simpleClModels = document.getElementById('simpleClModels');
+    const _simpleClModels = document.getElementById('simpleClModels');
     // No recursive event dispatch needed - existing listeners handle model changes
     
     // Simple mode - Classifier
-    const simpleClassModels = document.getElementById('simpleClassModels');
+    const _simpleClassModels = document.getElementById('simpleClassModels');
     // No recursive event dispatch needed - existing listeners handle model changes
     
     // Advanced mode - Numeric
@@ -604,7 +604,7 @@ if (document.readyState === 'loading') {
     }
 }
 
-const clearError = (element) => {
+const _clearError = (element) => {
     if (element) {
         element.innerHTML = '';
         hideElement(element);
@@ -1767,7 +1767,7 @@ corrForm.addEventListener('submit', async(e) => {
                         
                         // Store current reference
                         const currentImg = pairplotImageEl;
-                        const oldSrc = currentImg.src;
+                        const _oldSrc = currentImg.src;
                         
                         // Clear the src completely and wait a frame
                         currentImg.src = '';
@@ -1874,6 +1874,7 @@ function downloadFile(filename, downloadName = filename) {
     return true;
 }
 
+/* eslint-disable-next-line no-unused-vars */
 function showCrossValidationUnavailable() {
     const errorDiv = getCachedElement('errorDiv');
     if (errorDiv) {
@@ -1884,6 +1885,7 @@ function showCrossValidationUnavailable() {
 }
 
 // Function to download additional information table as Excel
+/* eslint-disable-next-line no-unused-vars */
 function downloadAdditionalInfoTable(tableData, sheetName, timestamp) {
     const ts = timestamp || formatDateTimeForFilename();
     // Send data to backend to generate Excel file
@@ -3494,6 +3496,8 @@ function setupContinueToModelPreprocessing() {
 }
 
 
+/* Called from HTML (onclick) */
+/* eslint-disable-next-line no-unused-vars */
 function moveToModelPreprocess(){
     showTab('model-preprocessing')
 }
@@ -3503,19 +3507,25 @@ function moveToModelPreprocess(){
 // }
 
     //closes the popup for glossary
+/* Called from HTML (onclick) */
+/* eslint-disable-next-line no-unused-vars */
 function closePopup() {
     document.getElementById("popup").style.display = "none";
 }
     // opens the 'are you sure you want to restart' popup when user clicks use new dataset
+/* eslint-disable-next-line no-unused-vars */
 function openResetPopup(){
     document.getElementById("resetPopup").style.display = "flex";
 }
     // closes the 'are you sure you want to restart' popup
+/* Called from HTML (onclick) */
+/* eslint-disable-next-line no-unused-vars */
 function closeResetPopup(){
     document.getElementById("resetPopup").style.display = "none";
 }
 
     /// handles 'Change Columns or Output Type' Button - goes back to user input page 
+/* eslint-disable-next-line no-unused-vars */
 function differentColumns(){
     NumericResultDiv.classList.add("hidden")
     ClusterResultDiv.classList.add('hidden')
@@ -3574,6 +3584,8 @@ function differentColumns(){
 
 }
     // when user clicks 'restart' 
+/* Called from HTML (onclick) */
+/* eslint-disable-next-line no-unused-vars */
 function fileUploadPage(){
     location.reload();
 }
@@ -3589,6 +3601,7 @@ function fileUploadPage(){
 // }
 
 //go to prediction page
+/* eslint-disable-next-line no-unused-vars */
 function predictionPage(){
     if (columnSelection) columnSelection.style.display = 'none';
     const predDiv = getCachedElement('predictionDiv');
@@ -3619,11 +3632,14 @@ function resetInferenceUI() {
 }
 
 // Upload new prediction file (e.g. after "Predict Another Dataset")
+/* eslint-disable-next-line no-unused-vars */
 function newPredict(){
     resetInferenceUI();
 }
 
 // goes back to model from prediction page
+/* Called from HTML (onclick) */
+/* eslint-disable-next-line no-unused-vars */
 function backToModel(){
     if (columnSelection) columnSelection.style.display = 'block';
     hideElement(predictionDiv);
@@ -3742,6 +3758,7 @@ function copyHyperparametersToAdvanced(selectedModel, _outputType) {
 }
 
 // Navigate to Advanced Modeling page with the currently selected model
+/* eslint-disable-next-line no-unused-vars */
 function navigateToAdvancedWithModel(){
     // Get output type
     const outputType = getCachedElement('outputType1');
@@ -3920,7 +3937,7 @@ processForm.addEventListener('submit', async (e) => {
     const indicators = indicatorsSelect.value
     const predictors = predictorsSelect.value
     const outputType = getCachedElement('outputType1')
-    const models = getCachedElement('models');
+    const _models = getCachedElement('models');
     const scaler = getCachedElement('scaler');
     const seedValue = getCachedElement('seedValue')?.value || '';
     const testSize = getCachedElement('testSize')?.value || '';
@@ -4438,7 +4455,7 @@ processForm.addEventListener('submit', async (e) => {
         const activation = document.getElementById('activation');
         const solver = document.getElementById('MLPSolver');
         
-        hyperparameters['hidden_layer_sizes1'] = hidden_layer_sizes1.value
+        hyperparameters['hidden_layer_sizes1'] = hidden_layer_size1.value
         hyperparameters['hidden_layer_sizes2'] = hidden_layer_sizes2.value
         hyperparameters['hidden_layer_sizes3'] = hidden_layer_sizes3.value
         hyperparameters['activation'] = activation.value
@@ -5942,11 +5959,11 @@ processForm.addEventListener('submit', async (e) => {
 
     
     //getting the units if user selected
-    let unitMessageStr = ''
+    let _unitMessageStr = ''
     let unitStr = ''
     if (units) {
         let newUnits = units.replace("u*", "\u00B5")
-        unitMessageStr = `with ${newUnits} units`
+        _unitMessageStr = `with ${newUnits} units`
         unitStr = `${newUnits}`
     }
 
@@ -6271,11 +6288,11 @@ processForm.addEventListener('submit', async (e) => {
         const stages = progress.stages || {};
         const overallProgress = progress.overall_progress || 0;
         const elapsedTime = progress.elapsed_time || 0;
-        const estimatedTimeRemaining = progress.estimated_time_remaining || 0;
+        const _estimatedTimeRemaining = progress.estimated_time_remaining || 0;
         
         // Check if this is AutoML mode for enhanced display
-        const simpleMode = document.getElementById('simpleMode');
-        const advancedMode = document.getElementById('advancedMode');
+        const _simpleMode = document.getElementById('simpleMode');
+        const _advancedMode = document.getElementById('advancedMode');
         const automlMode = document.getElementById('automlMode');
         const isAutoML = automlMode?.checked;
         
@@ -6618,15 +6635,15 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
         const performanceDownloadName = `${modePrefix}model_performance_${resultTimestamp}.xlsx`
         const visualizationsDownloadName = `${modePrefix}model_visualizations_${resultTimestamp}.pdf`
         const crossValidationDownloadName = `${modePrefix}cross_validation_${resultTimestamp}.xlsx`
-        let detailsStr = ''
+        let _detailsStr = ''
         if (Object.keys(allHyperparameters).length!==0){
-            detailsStr = 'and hyperparameters: <br>'
-            detailsStr += '<table class="hyperparameterstable" border="1">';
-            detailsStr += '<tr><th>Hyperparameter</th><th>Value</th></tr>';
-            detailsStr += Object.entries(allHyperparameters)
+            _detailsStr = 'and hyperparameters: <br>'
+            _detailsStr += '<table class="hyperparameterstable" border="1">';
+            _detailsStr += '<tr><th>Hyperparameter</th><th>Value</th></tr>';
+            _detailsStr += Object.entries(allHyperparameters)
                 .map(([key, value]) => `<tr><td>${key}</td><td>${value !== null && value !== undefined ? value : 'N/A'}</td></tr>`)
                 .join("");
-            detailsStr += '</table><br>';
+            _detailsStr += '</table><br>';
         }
         
         
@@ -6655,7 +6672,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
         // Check if advanced options were used - look for advanced visuals or advanced option data
         const allRegressionVisualsCheck = data.regression_visuals || [];
         const hasAdvancedVisuals = allRegressionVisualsCheck.some(v => v.type === 'advanced');
-        const hasAdvancedOptions = data.feature_selection_info || data.outlier_info || hasAdvancedVisuals;
+        const _hasAdvancedOptions = data.feature_selection_info || data.outlier_info || hasAdvancedVisuals;
         
         if (selectedOutputType === 'Numeric'){
                 // Ensure results container is visible
@@ -6899,7 +6916,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
 
                     const buildRegressionGraphicUrl = (selectedVisual, selectedImage) => {
                         const visualObj = regressionVisuals.find(v => v.file === selectedVisual);
-                        const visualType = visualObj ? visualObj.type : 'default';
+                        const _visualType = visualObj ? visualObj.type : 'default';
                         const perTargetBases = ['target_plot', 'target_plot_pred_actual', 'target_plot_residuals'];
                         const base = selectedVisual.replace(/_advanced$/, '');
                         const suffix = selectedVisual.endsWith('_advanced') ? '_advanced' : '';
@@ -6938,7 +6955,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                     
                     // Note: Advanced results are now shown in the Simple mode result divs above
                     // Removed separate AdvancedNumericResultDiv population since all results use Simple mode divs
-                    if (false && hasAdvancedOptions && AdvancedNumericResultDiv && advancedVisuals.length > 0) {
+                    if (false && _hasAdvancedOptions && AdvancedNumericResultDiv && advancedVisuals.length > 0) {
                         // This code is disabled - all results now show in Simple mode divs
                         AdvancedNumericResultDiv.innerHTML = `
                     <div class="resultValues">
@@ -7280,7 +7297,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                     
                     // Note: Advanced results are now shown in the Simple mode result divs above
                     // Removed separate AdvancedNumericResultDiv population since all results use Simple mode divs
-                    if (false && hasAdvancedOptions && AdvancedNumericResultDiv && advancedVisualsSingle.length > 0) {
+                    if (false && _hasAdvancedOptions && AdvancedNumericResultDiv && advancedVisualsSingle.length > 0) {
                         // This code is disabled - all results now show in Simple mode divs
                         AdvancedNumericResultDiv.innerHTML = `
                 <div class="resultValues">
@@ -7440,7 +7457,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                     </div>` : '<p>No outlier handling data available</p>';
                 
                 // Check if advanced options were used
-                const hasAdvancedOptions = data.feature_selection_info || data.outlier_info;
+                const _hasAdvancedOptionsClassifier = data.feature_selection_info || data.outlier_info;
                 
                 ClassifierResultDiv.innerHTML = ` 
                 <div class="resultValues">
@@ -7919,7 +7936,7 @@ predictionForm.addEventListener('submit', async (e) => {
                     </div>
                 `).join('');
             }
-            const numericKeys = ['column', 'n', 'min', 'max', 'mean', 'std', '25', '50', '75', '100'];
+            const _numericKeys = ['column', 'n', 'min', 'max', 'mean', 'std', '25', '50', '75', '100'];
             const trainingSummaryTableHtml = trainingSummaryForPanel && trainingSummaryForPanel.length ? `
                 <h3 style="margin: 0 0 8px 0;">Training data (target)</h3>
                 <p style="margin: 0 0 12px 0; font-size: 0.95rem; color: #666;">Spread the model was built on.</p>

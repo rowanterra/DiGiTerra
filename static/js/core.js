@@ -3,26 +3,26 @@
  * and result rendering live here. UI structure is in templates/index.html.
  * See HANDOFF.md for repo overview.
  */
-const uploadForm = document.getElementById('uploadForm');
-const corrForm = document.getElementById('corrForm');
-const preprocessform = document.getElementById('preprocessform');
-const file = document.getElementById('file');
+const _uploadForm = document.getElementById('uploadForm');
+const _corrForm = document.getElementById('corrForm');
+const _preprocessform = document.getElementById('preprocessform');
+const _file = document.getElementById('file');
 const columnSelection = document.getElementById('columnSelection');
-const indicatorsSelect = document.getElementById('indicators');
+const _indicatorsSelect = document.getElementById('indicators');
 const predictorsSelect = document.getElementById('predictors');
-const processForm = document.getElementById('processForm');
-const advancedOptimizationForm = document.getElementById('advancedOptimizationForm');
-const errorDiv = document.getElementById('errorDiv');
-const NumericResultDiv = document.getElementById('NumericResultDiv');
-const ClusterResultDiv = document.getElementById('ClusterResultDiv');
-const ClassifierResultDiv = document.getElementById('ClassifierResultDiv');
+const _processForm = document.getElementById('processForm');
+const _advancedOptimizationForm = document.getElementById('advancedOptimizationForm');
+const _errorDiv = document.getElementById('errorDiv');
+const _NumericResultDiv = document.getElementById('NumericResultDiv');
+const _ClusterResultDiv = document.getElementById('ClusterResultDiv');
+const _ClassifierResultDiv = document.getElementById('ClassifierResultDiv');
 const fileUpload = document.getElementById('fileuploaddiv');
-const runMatrices = document.getElementById('runMatrices');
+const _runMatrices = document.getElementById('runMatrices');
 const predictionDiv = document.getElementById('predictionDiv');
-const predictionForm = document.getElementById('uploadPredictDf');
-const predictionResultsDiv = document.getElementById('predictionResults');
-const loading = document.getElementById('loading');
-const processButton = document.getElementById('processButton');
+const _predictionForm = document.getElementById('uploadPredictDf');
+const _predictionResultsDiv = document.getElementById('predictionResults');
+const _loading = document.getElementById('loading');
+const _processButton = document.getElementById('processButton');
 const appTabs = document.getElementById('appTabs');
 const tabButtons = document.querySelectorAll('.tab-button');
 const userInputSection = document.getElementById('userInputSection');
@@ -32,6 +32,7 @@ const backToExplorationButton = document.getElementById('backToExploration');
 const backToModelPreprocessButton = document.getElementById('backToModelPreprocess');
 const backToModelingFromAdvancedButton = document.getElementById('backToModelingFromAdvanced');
 const documentationSection = document.getElementById('documentation');
+/* eslint-disable-next-line no-unused-vars */
 let pywebviewReady = false;
 let headerResizeObserver = null;
 
@@ -98,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Utility Functions
 // ============================================================================
 
-const formatDelta = (trainValue, validationValue, unit = '') => {
+const _formatDelta = (trainValue, validationValue, unit = '') => {
     const trainNum = parseFloat(trainValue);
     const validationNum = parseFloat(validationValue);
     if (!Number.isFinite(trainNum) || !Number.isFinite(validationNum)) {
@@ -109,8 +110,8 @@ const formatDelta = (trainValue, validationValue, unit = '') => {
 };
 
 // DOM utility functions
-const $ = (selector) => document.querySelector(selector);
-const $$ = (selector) => document.querySelectorAll(selector);
+const _queryOne = (selector) => document.querySelector(selector);
+const _queryAll = (selector) => document.querySelectorAll(selector);
 const $id = (id) => document.getElementById(id);
 
 // Element visibility utilities
@@ -122,7 +123,7 @@ const hideElement = (element) => {
     if (element) element.classList.add('hidden');
 };
 
-const toggleElement = (element, show) => {
+const _toggleElement = (element, show) => {
     if (element) {
         if (show) {
             showElement(element);
@@ -180,7 +181,7 @@ function escapeHtml(text) {
 }
 
 // Error display utility
-const showError = (element, message, useErrorClass = true) => {
+const _showError = (element, message, useErrorClass = true) => {
     if (element) {
         showElement(element);
         const className = useErrorClass ? 'error-message' : '';
@@ -209,7 +210,7 @@ function announceToScreenReader(message, priority = 'polite') {
 }
 
 // Focus management utility
-function manageFocus(element) {
+function _manageFocus(element) {
     if (element) {
         element.focus();
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -445,15 +446,15 @@ function setupHeaderModelSelectorSync() {
     // Simple mode - Numeric (using new mode-specific IDs)
     // Note: No sync needed since header dropdowns are hidden
     // The change events will be handled by existing model selection listeners
-    const simpleNModels = document.getElementById('simpleNModels');
+    const _simpleNModels = document.getElementById('simpleNModels');
     // No recursive event dispatch needed - existing listeners handle model changes
     
     // Simple mode - Cluster
-    const simpleClModels = document.getElementById('simpleClModels');
+    const _simpleClModels = document.getElementById('simpleClModels');
     // No recursive event dispatch needed - existing listeners handle model changes
     
     // Simple mode - Classifier
-    const simpleClassModels = document.getElementById('simpleClassModels');
+    const _simpleClassModels = document.getElementById('simpleClassModels');
     // No recursive event dispatch needed - existing listeners handle model changes
     
     // Advanced mode - Numeric
@@ -604,7 +605,7 @@ if (document.readyState === 'loading') {
     }
 }
 
-const clearError = (element) => {
+const _clearError = (element) => {
     if (element) {
         element.innerHTML = '';
         hideElement(element);
@@ -757,7 +758,8 @@ if (backToModelingFromAdvancedButton) {
     });
 }
 
-// helpers for getting the column index / letter 
+// helpers for getting the column index / letter (reserved for future use)
+/* eslint-disable-next-line no-unused-vars */
 function getColumnLetter(index) {
         let column = "";
         while (index >= 0) {
@@ -766,6 +768,7 @@ function getColumnLetter(index) {
         }
         return column;
     }
+/* eslint-disable-next-line no-unused-vars */
 function getColumnIndices(input) {
     const columns = [];
     input.split(',').forEach(part => {
@@ -1427,4 +1430,86 @@ if (tabButtons && tabButtons.length > 0) {
     });
 }
 
-/// Section 1: Uploading CSV File
+// Shared helpers used by upload, modeling, inference (no bundler)
+function formatDateTimeForFilename(date = new Date()) {
+    const pad = (value) => String(value).padStart(2, '0');
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1);
+    const day = pad(date.getDate());
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+    const seconds = pad(date.getSeconds());
+    return `${year}${month}${day}_${hours}${minutes}${seconds}`;
+}
+
+function downloadFile(filename, downloadName = filename) {
+    try {
+        if (window.pywebview?.api?.save_file) {
+            pywebviewReady = true;
+            window.pywebview.api.save_file(filename, downloadName)
+                .then((success) => { if (success) {} else {} })
+                .catch((error) => { console.error('Error saving file via pywebview API:', error); });
+            return false;
+        }
+    } catch (error) {
+        console.error('Error accessing pywebview API:', error);
+    }
+    return true;
+}
+
+/* eslint-disable-next-line no-unused-vars */
+function showCrossValidationUnavailable() {
+    const errDiv = getCachedElement('errorDiv');
+    if (errDiv) {
+        showError(errDiv, 'Cross-validation results are unavailable because cross-validation was not run.');
+        errDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    return false;
+}
+
+/* eslint-disable-next-line no-unused-vars */
+function downloadAdditionalInfoTable(tableData, sheetName, timestamp) {
+    const ts = timestamp || formatDateTimeForFilename();
+    fetch(withApiRoot('/downloadAdditionalInfo'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table_data: tableData, sheet_name: sheetName }),
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                const errDiv = getCachedElement('errorDiv');
+                if (errDiv) { showError(errDiv, 'Error generating download: ' + data.error); }
+                return;
+            }
+            const downloadName = `additional_info_${sheetName.toLowerCase().replace(/\s+/g, '_')}_${ts}.xlsx`;
+            const href = withApiRoot(`/download/${data.filename}?download_name=${encodeURIComponent(downloadName)}`);
+            const link = document.createElement('a');
+            link.href = href;
+            link.click();
+            downloadFile(data.filename, downloadName);
+        })
+        .catch(error => {
+            console.error('Error downloading additional information:', error);
+            const errDiv = getCachedElement('errorDiv');
+            if (errDiv) { showError(errDiv, 'Error downloading file. Please try again.'); }
+        });
+}
+
+// Expose refs and helpers for app.js and feature modules (no bundler)
+window.uploadForm = document.getElementById('uploadForm');
+window.corrForm = document.getElementById('corrForm');
+window.preprocessform = document.getElementById('preprocessform');
+window.indicatorsSelect = document.getElementById('indicators');
+window.processForm = document.getElementById('processForm');
+window.advancedOptimizationForm = document.getElementById('advancedOptimizationForm');
+window.errorDiv = document.getElementById('errorDiv');
+window.NumericResultDiv = document.getElementById('NumericResultDiv');
+window.ClusterResultDiv = document.getElementById('ClusterResultDiv');
+window.ClassifierResultDiv = document.getElementById('ClassifierResultDiv');
+window.runMatrices = document.getElementById('runMatrices');
+window.predictionForm = document.getElementById('uploadPredictDf');
+window.predictionResultsDiv = document.getElementById('predictionResults');
+window.processButton = document.getElementById('processButton');
+window.showError = _showError;
+window.manageFocus = _manageFocus;
