@@ -1,8 +1,8 @@
 """Data exploration: auto-detect, correlation matrices, pairplot."""
 from flask import Blueprint, jsonify, request
 
-from app_helpers import ensure_user_vis_dir, with_prefix
-from app_state import get_session_storage
+from core.helpers import ensure_user_vis_dir, with_prefix
+from core.state import get_session_storage
 from python_scripts.app_exploration import (
     handle_auto_detect_nan_zeros,
     handle_auto_detect_transformers,

@@ -16,7 +16,7 @@ Run the container:
 docker run --rm -p 5000:5000 digiterra:local
 ```
 
-The app is available at `http://localhost:5000`.
+The app is available at `http://localhost:5000`. The image sets `URL_PREFIX=digiterra`, so the app also responds at `http://localhost:5000/digiterra/` (both root and prefixed routes work for health checks and reverse proxies).
 
 ## Kubernetes (Helm)
 
@@ -80,4 +80,4 @@ See `deploy/helm/digiterra/values.yaml`. Key fields:
 - **HTTPS:** Put the app behind HTTPS and a reverse proxy (e.g. nginx, Ingress with TLS).
 - **Secrets:** No secrets in the repo; use env vars or a secret manager for any credentials.
 - **Logging:** Set `LOG_LEVEL=INFO` (or `DEBUG` for troubleshooting). Logs go to stderr and, when writable, to `LOG_DIR` (see `python_scripts/config.py`).
-- **Env overrides:** Optional: `DIGITERRA_BASE_DIR`, `DIGITERRA_APP_SUPPORT_DIR`, `DIGITERRA_OUTPUT_DIR`, `URL_PREFIX` for paths and URL prefix.
+- **Env overrides:** Optional: `DIGITERRA_BASE_DIR`, `DIGITERRA_APP_SUPPORT_DIR`, `DIGITERRA_OUTPUT_DIR`, `URL_PREFIX` for paths and URL prefix. When `URL_PREFIX` is set, both `/` and `/<prefix>/` routes are served (no 404 on root).

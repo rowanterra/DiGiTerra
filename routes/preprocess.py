@@ -5,8 +5,8 @@ import numpy as np
 import pandas as pd
 from flask import Blueprint, jsonify, request
 
-from app_constants import COLUMN_NAME_DISPLAY_LENGTH, HTTP_BAD_REQUEST
-from app_state import get_session_storage
+from core.constants import COLUMN_NAME_DISPLAY_LENGTH, HTTP_BAD_REQUEST
+from core.state import get_session_storage
 
 bp = Blueprint("preprocess", __name__)
 logger = logging.getLogger(__name__)
