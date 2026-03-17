@@ -11,7 +11,10 @@ from .assets import bp as assets_bp
 
 
 def register_blueprints(app):
-    """Register all blueprints. When URL_PREFIX is set, routes are mounted under that prefix."""
-    url_prefix = config.URL_PREFIX or None
-    for bp in [main_bp, upload_bp, exploration_bp, preprocess_bp, modeling_bp, prediction_bp, assets_bp]:
-        app.register_blueprint(bp, url_prefix=url_prefix)
+    """Register all blueprints. When URL_PREFIX is set, register at both root and prefix so unprefixed and prefixed routes both work."""
+    prefix = config.URL_PREFIX or None
+    blueprints = [main_bp, upload_bp, exploration_bp, preprocess_bp, modeling_bp, prediction_bp, assets_bp]
+    for bp in blueprints:
+        app.register_blueprint(bp, url_prefix=None)
+        if prefix:
+            app.register_blueprint(bp, url_prefix=prefix, name=f"{bp.name}_prefixed")
