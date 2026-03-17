@@ -174,8 +174,20 @@ def plot_inference_pred_vs_actual(
     ax.scatter(y_test_actual, y_test_pred, alpha=0.65, label='Test', color='#3d8f5c', s=28, edgecolors='none')
     if len(inference_pred) > 0:
         ax.scatter(inference_pred, inference_pred, alpha=0.7, label='Inference (predicted only; no actuals)', color='#c71585', s=32, edgecolors='white', linewidths=0.5, zorder=5)
-    lo = min(y_train_actual.min(), y_train_pred.min(), y_test_actual.min(), y_test_pred.min(), inference_pred.min() if len(inference_pred) > 0 else y_train_actual.min())
-    hi = max(y_train_actual.max(), y_train_pred.max(), y_test_actual.max(), y_test_pred.max(), inference_pred.max() if len(inference_pred) > 0 else y_train_actual.max())
+    lo = min(
+        y_train_actual.min(),
+        y_train_pred.min(),
+        y_test_actual.min(),
+        y_test_pred.min(),
+        inference_pred.min() if len(inference_pred) > 0 else y_train_actual.min(),
+    )
+    hi = max(
+        y_train_actual.max(),
+        y_train_pred.max(),
+        y_test_actual.max(),
+        y_test_pred.max(),
+        inference_pred.max() if len(inference_pred) > 0 else y_train_actual.max(),
+    )
     ax.plot([lo, hi], [lo, hi], '--', color='.45', lw=1.5)
     ax.set_xlabel(f"Actual '{unitstr}'")
     ax.set_ylabel(f"Predicted '{unitstr}'")
