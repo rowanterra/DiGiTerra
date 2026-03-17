@@ -1,7 +1,44 @@
+// === init.js ===
 /**
- * DiGiTerra front-end logic (legacy single-file bundle).
- * Canonical source is static/js/core.js + static/js/app.js; the app loads those.
- * UI structure in templates/index.html. See HANDOFF.md and CONTRIBUTING.md.
+ * DiGiTerra init: theme and fallback helpers. Load early (e.g. in head) for theme; sets goToModelPreprocessing for body.
+ */
+(function() {
+    'use strict';
+    // Light mode (dark mode disabled) - prevent flash
+    if (document.documentElement) {
+        document.documentElement.classList.remove('dark-mode');
+    }
+    if (document.body) {
+        document.body.classList.remove('dark-mode');
+    }
+})();
+
+// Fallback so "Continue to Model Preprocessing" works even if main script fails or is cached
+window.goToModelPreprocessing = window.goToModelPreprocessing || function() {
+    var s = document.getElementById('userInputSection');
+    var u = document.getElementById('fileuploaddiv');
+    if (s) {
+        s.classList.remove('hidden');
+        s.style.display = '';
+    }
+    if (u) {
+        u.classList.add('hidden');
+    }
+    var tabs = document.querySelectorAll('.tab-button[data-tab]');
+    if (tabs && tabs.forEach) {
+        tabs.forEach(function(b) {
+            b.classList.toggle('active', b.dataset.tab === 'model-preprocessing');
+        });
+    }
+    window.scrollTo(0, 0);
+};
+
+
+// === core.js ===
+/**
+ * DiGiTerra front-end logic. Handoff note: All API calls, uploads, progress polling,
+ * and result rendering live here. UI structure is in templates/index.html.
+ * See HANDOFF.md for repo overview.
  */
 const _uploadForm = document.getElementById('uploadForm');
 const _corrForm = document.getElementById('corrForm');
@@ -12,15 +49,15 @@ const _indicatorsSelect = document.getElementById('indicators');
 const predictorsSelect = document.getElementById('predictors');
 const _processForm = document.getElementById('processForm');
 const _advancedOptimizationForm = document.getElementById('advancedOptimizationForm');
-const errorDiv = document.getElementById('errorDiv');
-const NumericResultDiv = document.getElementById('NumericResultDiv');
-const ClusterResultDiv = document.getElementById('ClusterResultDiv');
-const ClassifierResultDiv = document.getElementById('ClassifierResultDiv');
+const _errorDiv = document.getElementById('errorDiv');
+const _NumericResultDiv = document.getElementById('NumericResultDiv');
+const _ClusterResultDiv = document.getElementById('ClusterResultDiv');
+const _ClassifierResultDiv = document.getElementById('ClassifierResultDiv');
 const fileUpload = document.getElementById('fileuploaddiv');
 const _runMatrices = document.getElementById('runMatrices');
 const predictionDiv = document.getElementById('predictionDiv');
 const _predictionForm = document.getElementById('uploadPredictDf');
-const predictionResultsDiv = document.getElementById('predictionResults');
+const _predictionResultsDiv = document.getElementById('predictionResults');
 const _loading = document.getElementById('loading');
 const _processButton = document.getElementById('processButton');
 const appTabs = document.getElementById('appTabs');
@@ -32,7 +69,8 @@ const backToExplorationButton = document.getElementById('backToExploration');
 const backToModelPreprocessButton = document.getElementById('backToModelPreprocess');
 const backToModelingFromAdvancedButton = document.getElementById('backToModelingFromAdvanced');
 const documentationSection = document.getElementById('documentation');
-let _pywebviewReady = false;
+/* eslint-disable-next-line no-unused-vars */
+let pywebviewReady = false;
 let headerResizeObserver = null;
 
 let uploadedFileName = '';
@@ -180,7 +218,7 @@ function escapeHtml(text) {
 }
 
 // Error display utility
-const showError = (element, message, useErrorClass = true) => {
+const _showError = (element, message, useErrorClass = true) => {
     if (element) {
         showElement(element);
         const className = useErrorClass ? 'error-message' : '';
@@ -209,7 +247,7 @@ function announceToScreenReader(message, priority = 'polite') {
 }
 
 // Focus management utility
-function manageFocus(element) {
+function _manageFocus(element) {
     if (element) {
         element.focus();
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -757,7 +795,8 @@ if (backToModelingFromAdvancedButton) {
     });
 }
 
-// helpers for getting the column index / letter 
+// helpers for getting the column index / letter (reserved for future use)
+/* eslint-disable-next-line no-unused-vars */
 function getColumnLetter(index) {
         let column = "";
         while (index >= 0) {
@@ -766,6 +805,7 @@ function getColumnLetter(index) {
         }
         return column;
     }
+/* eslint-disable-next-line no-unused-vars */
 function getColumnIndices(input) {
     const columns = [];
     input.split(',').forEach(part => {
@@ -1427,7 +1467,95 @@ if (tabButtons && tabButtons.length > 0) {
     });
 }
 
-/// Section 1: Uploading CSV File
+// Shared helpers used by upload, modeling, inference (no bundler)
+function formatDateTimeForFilename(date = new Date()) {
+    const pad = (value) => String(value).padStart(2, '0');
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1);
+    const day = pad(date.getDate());
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+    const seconds = pad(date.getSeconds());
+    return `${year}${month}${day}_${hours}${minutes}${seconds}`;
+}
+
+function downloadFile(filename, downloadName = filename) {
+    try {
+        if (window.pywebview?.api?.save_file) {
+            pywebviewReady = true;
+            window.pywebview.api.save_file(filename, downloadName)
+                .then((success) => { if (success) {} else {} })
+                .catch((error) => { console.error('Error saving file via pywebview API:', error); });
+            return false;
+        }
+    } catch (error) {
+        console.error('Error accessing pywebview API:', error);
+    }
+    return true;
+}
+
+/* eslint-disable-next-line no-unused-vars */
+function showCrossValidationUnavailable() {
+    const errDiv = getCachedElement('errorDiv');
+    if (errDiv) {
+        showError(errDiv, 'Cross-validation results are unavailable because cross-validation was not run.');
+        errDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    return false;
+}
+
+/* eslint-disable-next-line no-unused-vars */
+function downloadAdditionalInfoTable(tableData, sheetName, timestamp) {
+    const ts = timestamp || formatDateTimeForFilename();
+    fetch(withApiRoot('/downloadAdditionalInfo'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table_data: tableData, sheet_name: sheetName }),
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                const errDiv = getCachedElement('errorDiv');
+                if (errDiv) { showError(errDiv, 'Error generating download: ' + data.error); }
+                return;
+            }
+            const downloadName = `additional_info_${sheetName.toLowerCase().replace(/\s+/g, '_')}_${ts}.xlsx`;
+            const href = withApiRoot(`/download/${data.filename}?download_name=${encodeURIComponent(downloadName)}`);
+            const link = document.createElement('a');
+            link.href = href;
+            link.click();
+            downloadFile(data.filename, downloadName);
+        })
+        .catch(error => {
+            console.error('Error downloading additional information:', error);
+            const errDiv = getCachedElement('errorDiv');
+            if (errDiv) { showError(errDiv, 'Error downloading file. Please try again.'); }
+        });
+}
+
+// Expose refs and helpers for app.js and feature modules (no bundler)
+window.uploadForm = document.getElementById('uploadForm');
+window.corrForm = document.getElementById('corrForm');
+window.preprocessform = document.getElementById('preprocessform');
+window.indicatorsSelect = document.getElementById('indicators');
+window.processForm = document.getElementById('processForm');
+window.advancedOptimizationForm = document.getElementById('advancedOptimizationForm');
+window.errorDiv = document.getElementById('errorDiv');
+window.NumericResultDiv = document.getElementById('NumericResultDiv');
+window.ClusterResultDiv = document.getElementById('ClusterResultDiv');
+window.ClassifierResultDiv = document.getElementById('ClassifierResultDiv');
+window.runMatrices = document.getElementById('runMatrices');
+window.predictionForm = document.getElementById('uploadPredictDf');
+window.predictionResultsDiv = document.getElementById('predictionResults');
+window.processButton = document.getElementById('processButton');
+window.showError = _showError;
+window.manageFocus = _manageFocus;
+
+
+// === upload.js ===
+/**
+ * Upload and Data Exploration (correlation matrices, pairplot). Depends on core.js (refs, helpers).
+ */
 uploadForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const formData = new FormData(uploadForm);
@@ -1834,101 +1962,12 @@ corrForm.addEventListener('submit', async(e) => {
 
 });
 
-// Canonical date/time for all download filenames: YYYYMMDD_HHMMSS (e.g. 20260311_143052)
-function formatDateTimeForFilename(date = new Date()) {
-    const pad = (value) => String(value).padStart(2, "0")
-    const year = date.getFullYear()
-    const month = pad(date.getMonth() + 1)
-    const day = pad(date.getDate())
-    const hours = pad(date.getHours())
-    const minutes = pad(date.getMinutes())
-    const seconds = pad(date.getSeconds())
-    return `${year}${month}${day}_${hours}${minutes}${seconds}`
-}
 
-function downloadFile(filename, downloadName = filename) {
-    // Check if we're in a desktop app with pywebview API
-    try {
-        if (window.pywebview?.api?.save_file) {
-            pywebviewReady = true;
-            console.log('Calling pywebview save_file API:', filename, downloadName);
-            window.pywebview.api.save_file(filename, downloadName)
-                .then((success) => {
-                    if (success) {
-                        console.log('File saved successfully via pywebview API');
-                    } else {
-                        console.warn('File save was cancelled or failed');
-                    }
-                })
-                .catch((error) => {
-                    console.error('Error saving file via pywebview API:', error);
-                    // Fallback to regular download if API fails
-                    console.log('Falling back to regular download');
-                });
-            return false; // Prevent default link behavior
-        }
-    } catch (error) {
-        console.error('Error accessing pywebview API:', error);
-    }
-    // If not in desktop app, allow normal download
-    return true;
-}
 
-/* eslint-disable-next-line no-unused-vars */
-function showCrossValidationUnavailable() {
-    const errorDiv = getCachedElement('errorDiv');
-    if (errorDiv) {
-        showError(errorDiv, 'Cross-validation results are unavailable because cross-validation was not run.');
-        errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-    return false;
-}
-
-// Function to download additional information table as Excel
-/* eslint-disable-next-line no-unused-vars */
-function downloadAdditionalInfoTable(tableData, sheetName, timestamp) {
-    const ts = timestamp || formatDateTimeForFilename();
-    // Send data to backend to generate Excel file
-    fetch('/downloadAdditionalInfo', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            table_data: tableData,
-            sheet_name: sheetName,
-        }),
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            const errorDiv = getCachedElement('errorDiv');
-            if (errorDiv) {
-                showError(errorDiv, 'Error generating download: ' + data.error);
-                errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-            return;
-        }
-        const downloadName = `additional_info_${sheetName.toLowerCase().replace(/\s+/g, '_')}_${ts}.xlsx`;
-        const href = withApiRoot(`/download/${data.filename}?download_name=${encodeURIComponent(downloadName)}`);
-        const link = document.createElement('a');
-        link.href = href;
-        link.click();
-        downloadFile(data.filename, downloadName);
-    })
-    .catch(error => {
-        console.error('Error downloading additional information:', error);
-        const errorDiv = getCachedElement('errorDiv');
-        if (errorDiv) {
-            showError(errorDiv, 'Error downloading file. Please try again.');
-            errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-    });
-}
-
-/// Section 3: when 'Process' Button clicked
-    // Ensures required input is there and gets the column names of selected indicators and targets using the /preprocess route.
-    // Use event delegation so the handler runs even if preprocessform ref was null at load time.
+// === preprocess.js ===
+/**
+ * Preprocess tab: handlePreprocessFormSubmit, preprocess-form and exploration UI. Depends on core.js.
+ */
 async function handlePreprocessFormSubmit(e) {
     if (!e.target || e.target.id !== 'preprocessform') return;
     const stratErrorDiv = document.getElementById('stratErrorDiv');
@@ -3323,592 +3362,12 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
         });
     }
 
-    //hides welcome page when user clicks 'start modeling'
-function welcomePage(){
-    console.log('welcomePage function called');
-    try {
-        let welcomeDiv = document.getElementById("welcome")
-        if (welcomeDiv) {
-            welcomeDiv.classList.add("hidden")
-        }
-
-        // Show the app tabs toolbar
-        if (appTabs) {
-            appTabs.classList.remove('hidden');
-        }
-
-        // Use showTab to properly show the upload section
-        showTab('upload')
-    } catch (error) {
-        console.error('Error in welcomePage:', error);
-    }
-}
-
-// Also add event listener as backup in case inline onclick doesn't work
-function setupStartModelingButton() {
-    const startModelingButton = document.getElementById('startModelingButton');
-    if (startModelingButton) {
-        // Remove existing onclick to avoid double-firing, use addEventListener instead
-        startModelingButton.onclick = null;
-        startModelingButton.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            welcomePage();
-        });
-    }
-}
-
-// Function to reset to welcome screen (full restart when user clicks logo)
-function resetToWelcomeScreen() {
-    // Show welcome screen
-    const welcomeDiv = document.getElementById('welcome');
-    if (welcomeDiv) {
-        welcomeDiv.classList.remove('hidden');
-    }
-    
-    // Hide app tabs
-    const appTabs = document.getElementById('appTabs');
-    if (appTabs) {
-        appTabs.classList.add('hidden');
-    }
-    
-    // Hide all main sections (use correct id: fileuploaddiv, not fileUpload)
-    const fileUploadEl = document.getElementById('fileuploaddiv');
-    const documentationSection = document.getElementById('documentationSection');
-    const userInputSection = document.getElementById('userInputSection');
-    const predictionDiv = document.getElementById('predictionDiv');
-    const processingDiv = document.getElementById('processingDiv');
-    const modelPreprocessingDiv = document.getElementById('modelPreprocessingDiv');
-    const modelingDiv = document.getElementById('modelingDiv');
-    
-    if (fileUploadEl) fileUploadEl.classList.add('hidden');
-    if (documentationSection) documentationSection.classList.add('hidden');
-    if (userInputSection) userInputSection.classList.add('hidden');
-    if (predictionDiv) predictionDiv.classList.add('hidden');
-    if (processingDiv) processingDiv.classList.add('hidden');
-    if (modelPreprocessingDiv) modelPreprocessingDiv.classList.add('hidden');
-    if (modelingDiv) modelingDiv.classList.add('hidden');
-    
-    // Restore upload section to initial state so "Start Modeling" shows the upload page again
-    const uploadHeader = document.getElementById('uploadHeader');
-    if (uploadHeader) uploadHeader.textContent = 'Upload Data from CSV';
-    const uploadCard = document.querySelector('.upload-card');
-    if (uploadCard) uploadCard.classList.remove('section-header');
-    const uploadFormEl = document.getElementById('uploadForm');
-    if (uploadFormEl) {
-        uploadFormEl.classList.remove('hidden');
-        uploadFormEl.style.display = '';
-    }
-    const columnSection = document.getElementById('columnsection');
-    if (columnSection) columnSection.classList.add('hidden');
-    const explorationOutput = document.getElementById('explorationOutput');
-    if (explorationOutput) explorationOutput.innerHTML = '';
-    const columnList = document.getElementById('columnList');
-    if (columnList) columnList.innerHTML = '<!-- Column headers will be displayed here -->';
-    const dataExploration = document.getElementById('dataExploration');
-    if (dataExploration) dataExploration.innerHTML = '';
-    // Clear client-side state so the app behaves like a fresh start
-    uploadedFileName = '';
-    
-    // Scroll to top
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-// Set up header logo click handler
-function setupHeaderLogoClick() {
-    const headerLogo = document.getElementById('headerLogo');
-    if (headerLogo) {
-        headerLogo.addEventListener('click', function() {
-            if (confirm('Are you sure you want to return to the welcome screen? This will reset your current session.')) {
-                resetToWelcomeScreen();
-            }
-        });
-        
-        // Also handle keyboard navigation (Enter/Space)
-        headerLogo.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                if (confirm('Are you sure you want to return to the welcome screen? This will reset your current session.')) {
-                    resetToWelcomeScreen();
-                }
-            }
-        });
-        
-        // Add hover effect
-        headerLogo.style.transition = 'opacity 0.2s';
-        headerLogo.addEventListener('mouseenter', function() {
-            this.style.opacity = '0.8';
-        });
-        headerLogo.addEventListener('mouseleave', function() {
-            this.style.opacity = '1';
-        });
-    }
-}
-
-// Set up button when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-        setupStartModelingButton();
-        setupHeaderLogoClick();
-        setupContinueToModelPreprocessing();
-    });
-} else {
-    // DOM is already loaded
-    setupStartModelingButton();
-    setupHeaderLogoClick();
-    setupContinueToModelPreprocessing();
-}
-
-function setupContinueToModelPreprocessing() {
-    // Expose globally so inline onclick on the button can call it (works even if addEventListener fails)
-    window.goToModelPreprocessing = function() {
-        try {
-            if (typeof showTab === 'function') {
-                showTab('model-preprocessing');
-            }
-            var section = document.getElementById('userInputSection');
-            var uploadDiv = document.getElementById('fileuploaddiv');
-            if (section) {
-                section.classList.remove('hidden');
-                section.style.display = '';
-            }
-            if (uploadDiv) {
-                uploadDiv.classList.add('hidden');
-            }
-            var tabs = document.querySelectorAll('.tab-button[data-tab]');
-            tabs.forEach(function(b) {
-                b.classList.toggle('active', b.dataset.tab === 'model-preprocessing');
-            });
-            window.scrollTo(0, 0);
-        } catch (err) {
-            console.error('goToModelPreprocessing failed:', err);
-        }
-    };
-
-    var btn = document.getElementById('continueToModelPreprocessing');
-    if (btn) {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            window.goToModelPreprocessing();
-        });
-    }
-}
 
 
-/* Called from HTML (onclick) */
-/* eslint-disable-next-line no-unused-vars */
-function moveToModelPreprocess(){
-    showTab('model-preprocessing')
-}
-    // // opens popup
-// function openPopup() {
-//     document.getElementById("popup").style.display = "flex";
-// }
-
-    //closes the popup for glossary
-/* Called from HTML (onclick) */
-/* eslint-disable-next-line no-unused-vars */
-function closePopup() {
-    document.getElementById("popup").style.display = "none";
-}
-    // opens the 'are you sure you want to restart' popup when user clicks use new dataset
-/* eslint-disable-next-line no-unused-vars */
-function openResetPopup(){
-    document.getElementById("resetPopup").style.display = "flex";
-}
-    // closes the 'are you sure you want to restart' popup
-/* Called from HTML (onclick) */
-/* eslint-disable-next-line no-unused-vars */
-function closeResetPopup(){
-    document.getElementById("resetPopup").style.display = "none";
-}
-
-    /// handles 'Change Columns or Output Type' Button - goes back to user input page 
-/* eslint-disable-next-line no-unused-vars */
-function differentColumns(){
-    NumericResultDiv.classList.add("hidden")
-    ClusterResultDiv.classList.add('hidden')
-    ClassifierResultDiv.classList.add('hidden')
-    errorDiv.classList.add("hidden")
-    
-
-    let columnDiv = document.getElementById('columnsection');
-    columnDiv.classList.add('hidden');
-    let fileuploaddiv = document.getElementById('fileuploaddiv');
-    fileuploaddiv.classList.add('hidden');
-    let userInputSection = document.getElementById('userInputSection');
-    userInputSection.classList.remove('hidden');
-    
-    let columnSelection = document.getElementById('columnSelection');
-    columnSelection.dataset.ready = 'false';
-    columnSelection.style.display = 'none';
-    showTab('model-preprocessing');
-
-    //hide hyperparameters
-    let lassoFields = document.getElementById("lassoFields");
-    let logisticFields = document.getElementById("logisticFields");
-    let polynomialFields = document.getElementById("polynomialFields");
-    let elasticNetFields = document.getElementById("elasticNetFields");
-    let SVMFields = document.getElementById("SVMFields");
-    let RFFields = document.getElementById("RFFields");
-    let PerceptronFields = document.getElementById("PerceptronFields");
-    let MLPFields = document.getElementById("MLPFields");
-    let KNearestFields = document.getElementById("K-NearestFields");
-    let GradientBoostingFields = document.getElementById("GradientBoostingFields");
-    let Logistic_classifierFields = document.getElementById('Logistic_classifierFields');
-    let MLP_classifierFields = document.getElementById('MLP_classifierFields');
-    let RF_classifierFields = document.getElementById('RF_classifierFields');
-    let SVC_classifierFields = document.getElementById('SVC_classifierFields');
-    let ridgeFields = document.getElementById("ridgeFields");
-        
-
-
-    ridgeFields.classList.add("hidden");
-    lassoFields.classList.add("hidden");
-    logisticFields.classList.add("hidden");
-    polynomialFields.classList.add("hidden");
-    elasticNetFields.classList.add("hidden");
-    SVMFields.classList.add("hidden");
-    RFFields.classList.add("hidden");
-    PerceptronFields.classList.add("hidden");
-    MLPFields.classList.add("hidden");
-    KNearestFields.classList.add("hidden");
-    GradientBoostingFields.classList.add("hidden");
-    Logistic_classifierFields.classList.add("hidden");
-    MLP_classifierFields.classList.add("hidden");
-    RF_classifierFields.classList.add("hidden");
-    SVC_classifierFields.classList.add("hidden");
-
-
-
-}
-    // when user clicks 'restart' 
-/* Called from HTML (onclick) */
-/* eslint-disable-next-line no-unused-vars */
-function fileUploadPage(){
-    location.reload();
-}
-
-// function runModelAgain(){
-//     fileUpload.classList.add('hidden');
-//     NumericResultDiv.classList.add('hidden');
-//     ClassifierResultDiv.classList.add('hidden');
-//     ClusterResultDiv.classList.add('hidden');
-//     columnSelection.style.display = 'block';
-//     errorDiv.classList.add('hidden');
-
-// }
-
-//go to prediction page
-/* eslint-disable-next-line no-unused-vars */
-function predictionPage(){
-    if (columnSelection) columnSelection.style.display = 'none';
-    const predDiv = getCachedElement('predictionDiv');
-    showElement(predDiv);
-    showTab('historic');
-}
-// Reset Inference tab to "ready for new upload" so user can upload a different dataset
-function resetInferenceUI() {
-    const uploadPredictDf = document.getElementById('uploadPredictDf');
-    const predictionResults = document.getElementById('predictionResults');
-    const predictionErrorDiv = document.getElementById('predictionErrorDiv');
-    const predictFileInput = document.getElementById('predictFile');
-    if (uploadPredictDf) {
-        uploadPredictDf.classList.remove('hidden');
-        uploadPredictDf.style.display = '';
-    }
-    if (predictionResults) {
-        predictionResults.classList.add('hidden');
-        predictionResults.innerHTML = '';
-    }
-    if (predictionErrorDiv) {
-        predictionErrorDiv.classList.add('hidden');
-        predictionErrorDiv.innerHTML = '';
-    }
-    if (predictFileInput) {
-        predictFileInput.value = '';
-    }
-}
-
-// Upload new prediction file (e.g. after "Predict Another Dataset")
-/* eslint-disable-next-line no-unused-vars */
-function newPredict(){
-    resetInferenceUI();
-}
-
-// goes back to model from prediction page
-/* Called from HTML (onclick) */
-/* eslint-disable-next-line no-unused-vars */
-function backToModel(){
-    if (columnSelection) columnSelection.style.display = 'block';
-    hideElement(predictionDiv);
-    hideElement(predictionResultsDiv);
-    showTab('modeling');
-}
-
-// Helper function to copy hyperparameter values from Simple to Advanced
-function copyHyperparametersToAdvanced(selectedModel, _outputType) {
-    // Wait a bit more for hyperparameter fields to be visible after model change
-    setTimeout(() => {
-        // Define mappings: simpleFieldId -> advancedFieldId
-        // Note: Non-essential hyperparameters share the same IDs between Simple and Advanced
-        // Only essential ones and sliders need mapping
-        const fieldMappings = {};
-        
-        // Common patterns for different models
-        if (selectedModel === 'Ridge') {
-            fieldMappings['RidgeAlpha'] = 'advancedRidgeAlpha';
-            fieldMappings['nonreqRidgeSlider'] = 'advancedNonreqRidgeSlider';
-        } else if (selectedModel === 'Lasso') {
-            fieldMappings['LassoAlpha'] = 'advancedLassoAlpha';
-            fieldMappings['nonreqLassoSlider'] = 'advancedNonreqLassoSlider';
-        } else if (selectedModel === 'SVM') {
-            fieldMappings['C'] = 'advancedC';
-            fieldMappings['kernel'] = 'advancedKernel';
-            fieldMappings['nonreqSVMSlider'] = 'advancedNonreqSVMSlider';
-            fieldMappings['svmGamma'] = 'advancedSvmGamma';
-            fieldMappings['degree'] = 'advancedDegree';
-        } else if (selectedModel === 'RF') {
-            fieldMappings['RFn_estimators'] = 'advancedRFn_estimators';
-            fieldMappings['nonreqRFSlider'] = 'advancedNonreqRFSlider';
-        } else if (selectedModel === 'MLP') {
-            fieldMappings['hidden_layer_sizes1'] = 'advancedHidden_layer_sizes1';
-            fieldMappings['hidden_layer_sizes2'] = 'advancedHidden_layer_sizes2';
-            fieldMappings['hidden_layer_sizes3'] = 'advancedHidden_layer_sizes3';
-            fieldMappings['activation'] = 'advancedActivation';
-            fieldMappings['nonreqMLPSlider'] = 'advancedNonreqMLPSlider';
-        } else if (selectedModel === 'K-Nearest') {
-            fieldMappings['KNearest'] = 'advancedKNearest';
-            fieldMappings['nonreqKNearestSlider'] = 'advancedNonreqKNearestSlider';
-        } else if (selectedModel === 'gradient_boosting') {
-            fieldMappings['GBn_estimators'] = 'advancedGBn_estimators';
-            fieldMappings['nonreqGBSlider'] = 'advancedNonreqGBSlider';
-        } else if (selectedModel === 'Logistic_classifier') {
-            fieldMappings['nonreqLogisticClassifierSlider'] = 'advancedNonreqLogisticClassifierSlider';
-        } else if (selectedModel === 'MLP_classifier') {
-            fieldMappings['Class_hidden_layer_sizes1'] = 'advancedClass_hidden_layer_sizes1';
-            fieldMappings['Class_hidden_layer_sizes2'] = 'advancedClass_hidden_layer_sizes2';
-            fieldMappings['Class_hidden_layer_sizes3'] = 'advancedClass_hidden_layer_sizes3';
-            fieldMappings['Class_activation'] = 'advancedClass_activation';
-            fieldMappings['nonreqMLPClassifierSlider'] = 'advancedNonreqMLPClassifierSlider';
-        } else if (selectedModel === 'RF_classifier') {
-            fieldMappings['Class_RFn_estimators'] = 'advancedClass_RFn_estmators'; // Note: typo in HTML
-            fieldMappings['nonreqRFClassifierSlider'] = 'advancedNonreqRFClassifierSlider';
-        } else if (selectedModel === 'SVC_classifier') {
-            fieldMappings['Class_C'] = 'advancedClass_C';
-            fieldMappings['Class_kernel'] = 'advancedClass_kernel';
-            fieldMappings['nonreqSVCClassifierSlider'] = 'advancedNonreqSVCClassifierSlider';
-        }
-        
-        // Copy all mapped fields (essential hyperparameters and sliders)
-        for (const [simpleId, advancedId] of Object.entries(fieldMappings)) {
-            const simpleField = document.getElementById(simpleId);
-            const advancedField = document.getElementById(advancedId);
-            
-            if (simpleField && advancedField) {
-                if (simpleField.type === 'checkbox') {
-                    // Copy checkbox state
-                    advancedField.checked = simpleField.checked;
-                    // Trigger change event if it's a slider that shows/hides fields
-                    if (simpleId.includes('Slider')) {
-                        advancedField.dispatchEvent(new Event('change'));
-                    }
-                } else if (simpleField.tagName === 'SELECT') {
-                    // Copy select value
-                    advancedField.value = simpleField.value;
-                } else if (simpleField.type === 'number' || simpleField.type === 'text') {
-                    // Copy input value
-                    advancedField.value = simpleField.value;
-                }
-            }
-        }
-        
-        // Copy non-essential hyperparameters (they share the same IDs between Simple and Advanced)
-        // List of common non-essential field IDs that are shared
-        const sharedFieldIds = [
-            'RidgeFitIntersept', 'RidgeNormalize', 'RidgeCopyX', 'RidgePositive', 'RidgeMaxIter', 'RidgeTol', 'RidgeSolver',
-            'LassoFitIntersept', 'LassoPrecompute', 'LassoCopyX', 'LassoWarmStart', 'LassoSelection', 'LassoMaxIter', 'LassoTol',
-            'SVMcoef0', 'SVMCacheSize', 'SVMClassWeight', 'SVMdecisionFunctionShape', 'SVMprobability', 'SVMBreakTies', 'SVMverbose', 'SVMtol',
-            'RFoobScore', 'RFCriterion', 'RFmin_weight_fraction_leaf', 'RFMinImpurityDecrease', 'RFMax_depth', 'RFMin_samples_split', 'RFMin_samples_leaf',
-            'MLPAlpha', 'MLPBatchSize', 'MLPValidationFraction', 'MLPLearningRate', 'MLPLearningRateInit',
-            'metric', 'KNearestMetricParams',
-            'GBCriterion', 'GBMax_depth', 'GBMinWeightFractionLeaf', 'GBMinImpurityDecrease', 'GBAlpha',
-            'Class_LogisticDual', 'Class_LogisticFitIntercept', 'Class_LogisticSolver', 'Class_LogisticMultiClass', 'Class_LogisticWarmStart', 'Class_CLogistic', 'Class_Logistic_penalty', 'Class_LogisticTol', 'Class_Logisticintercept_scaling', 'Class_LogisticClassWeight',
-            'Class_MLPAlpha', 'Class_MLPBatchSize', 'Class_MLPValidationFraction', 'Class_MLPLearningRate', 'Class_MLPLearningRateInit',
-            'Class_RFoobScore', 'Class_RFCriterion', 'Class_RFmin_weight_fraction_leaf', 'Class_RFMinImpurityDecrease', 'Class_RFMax_depth', 'Class_RFMin_samples_split', 'Class_RFMin_samples_leaf',
-            'Class_SVMcoef0', 'Class_SVMCacheSize', 'Class_SVMClassWeight', 'Class_SVMdecisionFunctionShape', 'Class_SVMprobability', 'Class_SVMBreakTies', 'Class_SVMverbose', 'Class_SVMtol', 'Class_SVMdegree'
-        ];
-        
-        sharedFieldIds.forEach(fieldId => {
-            const simpleField = document.getElementById(fieldId);
-            const advancedField = document.getElementById(fieldId);
-            
-            if (simpleField && advancedField) {
-                if (simpleField.type === 'checkbox') {
-                    advancedField.checked = simpleField.checked;
-                } else if (simpleField.tagName === 'SELECT') {
-                    advancedField.value = simpleField.value;
-                } else if (simpleField.type === 'number' || simpleField.type === 'text') {
-                    advancedField.value = simpleField.value;
-                }
-            }
-        });
-    }, 300); // Wait a bit longer for fields to be visible
-}
-
-// Navigate to Advanced Modeling page with the currently selected model
-/* eslint-disable-next-line no-unused-vars */
-function navigateToAdvancedWithModel(){
-    // Get output type
-    const outputType = getCachedElement('outputType1');
-    if (!outputType || !outputType.value) {
-        const errorDiv = getCachedElement('errorDiv');
-        if (errorDiv) {
-            showError(errorDiv, 'Please select a model first before navigating to Advanced Modeling.');
-            errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-        return;
-    }
-    
-    // Get the selected model from Simple Modeling page
-    let selectedModel = '';
-    let advancedModelSelector = null;
-    
-    if (outputType.value === 'Numeric') {
-        const modelSelect = document.getElementById('nModels');
-        if (modelSelect && modelSelect.value) {
-            selectedModel = modelSelect.value;
-            advancedModelSelector = 'advancedNModels';
-        }
-    } else if (outputType.value === 'Classifier') {
-        const modelSelect = document.getElementById('classModels');
-        if (modelSelect && modelSelect.value) {
-            selectedModel = modelSelect.value;
-            advancedModelSelector = 'advancedClassModels';
-        }
-    } else if (outputType.value === 'Cluster') {
-        const modelSelect = document.getElementById('clModels');
-        if (modelSelect && modelSelect.value) {
-            selectedModel = modelSelect.value;
-            advancedModelSelector = 'advancedClModels';
-        }
-    }
-    
-    if (!selectedModel) {
-        const errorDiv = getCachedElement('errorDiv');
-        if (errorDiv) {
-            showError(errorDiv, 'Please select a model first before navigating to Advanced Modeling.');
-            errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-        return;
-    }
-    
-    // Navigate to unified Modeling page and switch to Advanced mode
-    showTab('modeling');
-    
-    // Switch to Advanced mode and set the model after a short delay
-    setTimeout(() => {
-        // Switch to Advanced mode
-        const advancedModeRadio = document.getElementById('advancedMode');
-        if (advancedModeRadio) {
-            advancedModeRadio.checked = true;
-            switchModelingMode('advanced');
-        }
-        
-        // Update output type display to show correct model selectors
-        updateOutputTypeDisplay(outputType.value);
-        
-        // Set the selected model
-        if (advancedModelSelector) {
-            const advancedSelect = document.getElementById(advancedModelSelector);
-            if (advancedSelect) {
-                // Map model names if needed (some models might have different names)
-                let modelValue = selectedModel;
-                
-                // Handle model name mappings if any
-                if (selectedModel === 'TerraFORMER' && outputType.value === 'Numeric') {
-                    // TerraFORMER might not be available on Advanced page, use Linear as fallback
-                    modelValue = 'Linear';
-                }
-                
-                // Check if the option exists
-                const optionExists = Array.from(advancedSelect.options).some(opt => opt.value === modelValue);
-                if (optionExists) {
-                    advancedSelect.value = modelValue;
-                    // Trigger change event to show hyperparameters
-                    advancedSelect.dispatchEvent(new Event('change'));
-                    
-                    // Copy hyperparameters from Simple to Advanced
-                    copyHyperparametersToAdvanced(selectedModel, outputType.value);
-                } else {
-                    // If exact match doesn't exist, try to find a similar one or use first available
-                    console.log(`Model ${modelValue} not found in Advanced page, using first available option`);
-                }
-            }
-        }
-    }, 100);
-}
-
-// Global variables for progress tracking
-let progressEventSource = null;
-let sessionId = null;
-let processResultData = null;
-
-// Function to stop current model run
-function stopModelRun() {
-    // Close EventSource connection
-    if (progressEventSource) {
-        progressEventSource.close();
-        progressEventSource = null;
-    }
-    
-    // Determine current mode
-    const simpleMode = document.getElementById('simpleMode');
-    const advancedMode = document.getElementById('advancedMode');
-    const automlMode = document.getElementById('automlMode');
-    const currentMode = simpleMode?.checked ? 'simple' : (advancedMode?.checked ? 'advanced' : (automlMode?.checked ? 'automl' : 'simple'));
-    
-    // Hide stop button and show appropriate loading message
-    let stopButton, runButton, loadingDiv;
-    if (currentMode === 'automl') {
-        stopButton = document.getElementById('stopAutomlButton');
-        runButton = document.getElementById('automlSubmitButton');
-        loadingDiv = document.getElementById('automlLoading');
-    } else if (currentMode === 'advanced') {
-        stopButton = document.getElementById('stopAdvancedButton');
-        runButton = document.getElementById('advancedOptimizationSubmitButton');
-        loadingDiv = document.getElementById('advancedLoading');
-    } else {
-        stopButton = document.getElementById('stopSimpleButton');
-        runButton = getCachedElement('processButton');
-        loadingDiv = getCachedElement('loading');
-    }
-    
-    if (stopButton) stopButton.style.display = 'none';
-    if (runButton) {
-        runButton.disabled = false;
-        if (currentMode === 'automl') {
-            runButton.textContent = 'Run AutoML';
-        } else if (currentMode === 'advanced') {
-            runButton.textContent = 'Run Model with Advanced Options';
-        } else {
-            runButton.textContent = 'Run This Model';
-        }
-    }
-    
-    if (loadingDiv) {
-        loadingDiv.innerHTML = `
-            <p style="color: #d32f2f; font-weight: 600; margin-bottom: 8px;">Model Run Stopped</p>
-            <p style="color: #666;">The model training has been cancelled. You can start a new model run.</p>
-        `;
-    }
-}
-
-// Handle column selection and processing
-
-/// Section 6: running the model
-    //after user selects model and hyperparameters
+// === modeling.js ===
+/**
+ * Modeling tab: run model, process results, hyperparameters. Depends on core.js, formatDateTimeForFilename, downloadFile, etc.
+ */
 processForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -6672,7 +6131,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
         // Check if advanced options were used - look for advanced visuals or advanced option data
         const allRegressionVisualsCheck = data.regression_visuals || [];
         const hasAdvancedVisuals = allRegressionVisualsCheck.some(v => v.type === 'advanced');
-        const _hasAdvancedOptions = data.feature_selection_info || data.outlier_info || hasAdvancedVisuals;
+        const hasAdvancedOptions = data.feature_selection_info || data.outlier_info || hasAdvancedVisuals;
         
         if (selectedOutputType === 'Numeric'){
                 // Ensure results container is visible
@@ -6955,7 +6414,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                     
                     // Note: Advanced results are now shown in the Simple mode result divs above
                     // Removed separate AdvancedNumericResultDiv population since all results use Simple mode divs
-                    if (false && _hasAdvancedOptions && AdvancedNumericResultDiv && advancedVisuals.length > 0) {
+                    if (false && hasAdvancedOptions && AdvancedNumericResultDiv && advancedVisuals.length > 0) {
                         // This code is disabled - all results now show in Simple mode divs
                         AdvancedNumericResultDiv.innerHTML = `
                     <div class="resultValues">
@@ -7297,7 +6756,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                     
                     // Note: Advanced results are now shown in the Simple mode result divs above
                     // Removed separate AdvancedNumericResultDiv population since all results use Simple mode divs
-                    if (false && _hasAdvancedOptions && AdvancedNumericResultDiv && advancedVisualsSingle.length > 0) {
+                    if (false && hasAdvancedOptions && AdvancedNumericResultDiv && advancedVisualsSingle.length > 0) {
                         // This code is disabled - all results now show in Simple mode divs
                         AdvancedNumericResultDiv.innerHTML = `
                 <div class="resultValues">
@@ -7457,7 +6916,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                     </div>` : '<p>No outlier handling data available</p>';
                 
                 // Check if advanced options were used
-                const _hasAdvancedOptionsClassifier = data.feature_selection_info || data.outlier_info;
+                const _hasAdvancedOptions = data.feature_selection_info || data.outlier_info;
                 
                 ClassifierResultDiv.innerHTML = ` 
                 <div class="resultValues">
@@ -7717,7 +7176,11 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
 }
 
 
-///Section 7: prediction
+
+// === inference.js ===
+/**
+ * Inference tab: prediction form, AutoML/advanced forms. Depends on core.js.
+ */
 predictionForm.addEventListener('submit', async (e) => {
     e.preventDefault()
     let predictionErrorDiv = document.getElementById('predictionErrorDiv')
@@ -8117,6 +7580,601 @@ if (advancedOptimizationForm) {
         }, 1000);
     });
 }
+
+
+// === app.js ===
+/**
+ * App shell: welcome, nav, popups, goToModelPreprocessing fallback. Depends on core.js and feature modules (upload, preprocess, modeling, inference).
+ */
+function welcomePage(){
+    console.log('welcomePage function called');
+    try {
+        let welcomeDiv = document.getElementById("welcome")
+        if (welcomeDiv) {
+            welcomeDiv.classList.add("hidden")
+        }
+
+        // Show the app tabs toolbar
+        if (appTabs) {
+            appTabs.classList.remove('hidden');
+        }
+
+        // Use showTab to properly show the upload section
+        showTab('upload')
+    } catch (error) {
+        console.error('Error in welcomePage:', error);
+    }
+}
+
+// Also add event listener as backup in case inline onclick doesn't work
+function setupStartModelingButton() {
+    const startModelingButton = document.getElementById('startModelingButton');
+    if (startModelingButton) {
+        // Remove existing onclick to avoid double-firing, use addEventListener instead
+        startModelingButton.onclick = null;
+        startModelingButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            welcomePage();
+        });
+    }
+}
+
+// Function to reset to welcome screen (full restart when user clicks logo)
+function resetToWelcomeScreen() {
+    // Show welcome screen
+    const welcomeDiv = document.getElementById('welcome');
+    if (welcomeDiv) {
+        welcomeDiv.classList.remove('hidden');
+    }
+    
+    // Hide app tabs
+    const appTabs = document.getElementById('appTabs');
+    if (appTabs) {
+        appTabs.classList.add('hidden');
+    }
+    
+    // Hide all main sections (use correct id: fileuploaddiv, not fileUpload)
+    const fileUploadEl = document.getElementById('fileuploaddiv');
+    const documentationSection = document.getElementById('documentationSection');
+    const userInputSection = document.getElementById('userInputSection');
+    const predictionDiv = document.getElementById('predictionDiv');
+    const processingDiv = document.getElementById('processingDiv');
+    const modelPreprocessingDiv = document.getElementById('modelPreprocessingDiv');
+    const modelingDiv = document.getElementById('modelingDiv');
+    
+    if (fileUploadEl) fileUploadEl.classList.add('hidden');
+    if (documentationSection) documentationSection.classList.add('hidden');
+    if (userInputSection) userInputSection.classList.add('hidden');
+    if (predictionDiv) predictionDiv.classList.add('hidden');
+    if (processingDiv) processingDiv.classList.add('hidden');
+    if (modelPreprocessingDiv) modelPreprocessingDiv.classList.add('hidden');
+    if (modelingDiv) modelingDiv.classList.add('hidden');
+    
+    // Restore upload section to initial state so "Start Modeling" shows the upload page again
+    const uploadHeader = document.getElementById('uploadHeader');
+    if (uploadHeader) uploadHeader.textContent = 'Upload Data from CSV';
+    const uploadCard = document.querySelector('.upload-card');
+    if (uploadCard) uploadCard.classList.remove('section-header');
+    const uploadFormEl = document.getElementById('uploadForm');
+    if (uploadFormEl) {
+        uploadFormEl.classList.remove('hidden');
+        uploadFormEl.style.display = '';
+    }
+    const columnSection = document.getElementById('columnsection');
+    if (columnSection) columnSection.classList.add('hidden');
+    const explorationOutput = document.getElementById('explorationOutput');
+    if (explorationOutput) explorationOutput.innerHTML = '';
+    const columnList = document.getElementById('columnList');
+    if (columnList) columnList.innerHTML = '<!-- Column headers will be displayed here -->';
+    const dataExploration = document.getElementById('dataExploration');
+    if (dataExploration) dataExploration.innerHTML = '';
+    // Clear client-side state so the app behaves like a fresh start
+    uploadedFileName = '';
+    
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Set up header logo click handler
+function setupHeaderLogoClick() {
+    const headerLogo = document.getElementById('headerLogo');
+    if (headerLogo) {
+        headerLogo.addEventListener('click', function() {
+            if (confirm('Are you sure you want to return to the welcome screen? This will reset your current session.')) {
+                resetToWelcomeScreen();
+            }
+        });
+        
+        // Also handle keyboard navigation (Enter/Space)
+        headerLogo.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                if (confirm('Are you sure you want to return to the welcome screen? This will reset your current session.')) {
+                    resetToWelcomeScreen();
+                }
+            }
+        });
+        
+        // Add hover effect
+        headerLogo.style.transition = 'opacity 0.2s';
+        headerLogo.addEventListener('mouseenter', function() {
+            this.style.opacity = '0.8';
+        });
+        headerLogo.addEventListener('mouseleave', function() {
+            this.style.opacity = '1';
+        });
+    }
+}
+
+// Set up button when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        setupStartModelingButton();
+        setupHeaderLogoClick();
+        setupContinueToModelPreprocessing();
+    });
+} else {
+    // DOM is already loaded
+    setupStartModelingButton();
+    setupHeaderLogoClick();
+    setupContinueToModelPreprocessing();
+}
+
+function setupContinueToModelPreprocessing() {
+    // Expose globally so inline onclick on the button can call it (works even if addEventListener fails)
+    window.goToModelPreprocessing = function() {
+        try {
+            if (typeof showTab === 'function') {
+                showTab('model-preprocessing');
+            }
+            var section = document.getElementById('userInputSection');
+            var uploadDiv = document.getElementById('fileuploaddiv');
+            if (section) {
+                section.classList.remove('hidden');
+                section.style.display = '';
+            }
+            if (uploadDiv) {
+                uploadDiv.classList.add('hidden');
+            }
+            var tabs = document.querySelectorAll('.tab-button[data-tab]');
+            tabs.forEach(function(b) {
+                b.classList.toggle('active', b.dataset.tab === 'model-preprocessing');
+            });
+            window.scrollTo(0, 0);
+        } catch (err) {
+            console.error('goToModelPreprocessing failed:', err);
+        }
+    };
+
+    var btn = document.getElementById('continueToModelPreprocessing');
+    if (btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            window.goToModelPreprocessing();
+        });
+    }
+}
+
+
+/* Called from HTML (onclick) */
+/* eslint-disable-next-line no-unused-vars */
+function moveToModelPreprocess(){
+    showTab('model-preprocessing')
+}
+    // // opens popup
+// function openPopup() {
+//     document.getElementById("popup").style.display = "flex";
+// }
+
+    //closes the popup for glossary
+/* Called from HTML (onclick) */
+/* eslint-disable-next-line no-unused-vars */
+function closePopup() {
+    document.getElementById("popup").style.display = "none";
+}
+    // opens the 'are you sure you want to restart' popup when user clicks use new dataset
+/* Called from HTML (onclick) */
+/* eslint-disable-next-line no-unused-vars */
+function openResetPopup(){
+    document.getElementById("resetPopup").style.display = "flex";
+}
+    // closes the 'are you sure you want to restart' popup
+/* Called from HTML (onclick) */
+/* eslint-disable-next-line no-unused-vars */
+function closeResetPopup(){
+    document.getElementById("resetPopup").style.display = "none";
+}
+
+    /// handles 'Change Columns or Output Type' Button - goes back to user input page 
+/* eslint-disable-next-line no-unused-vars */
+function differentColumns(){
+    NumericResultDiv.classList.add("hidden")
+    ClusterResultDiv.classList.add('hidden')
+    ClassifierResultDiv.classList.add('hidden')
+    errorDiv.classList.add("hidden")
+    
+
+    let columnDiv = document.getElementById('columnsection');
+    columnDiv.classList.add('hidden');
+    let fileuploaddiv = document.getElementById('fileuploaddiv');
+    fileuploaddiv.classList.add('hidden');
+    let userInputSection = document.getElementById('userInputSection');
+    userInputSection.classList.remove('hidden');
+    
+    let columnSelection = document.getElementById('columnSelection');
+    columnSelection.dataset.ready = 'false';
+    columnSelection.style.display = 'none';
+    showTab('model-preprocessing');
+
+    //hide hyperparameters
+    let lassoFields = document.getElementById("lassoFields");
+    let logisticFields = document.getElementById("logisticFields");
+    let polynomialFields = document.getElementById("polynomialFields");
+    let elasticNetFields = document.getElementById("elasticNetFields");
+    let SVMFields = document.getElementById("SVMFields");
+    let RFFields = document.getElementById("RFFields");
+    let PerceptronFields = document.getElementById("PerceptronFields");
+    let MLPFields = document.getElementById("MLPFields");
+    let KNearestFields = document.getElementById("K-NearestFields");
+    let GradientBoostingFields = document.getElementById("GradientBoostingFields");
+    let Logistic_classifierFields = document.getElementById('Logistic_classifierFields');
+    let MLP_classifierFields = document.getElementById('MLP_classifierFields');
+    let RF_classifierFields = document.getElementById('RF_classifierFields');
+    let SVC_classifierFields = document.getElementById('SVC_classifierFields');
+    let ridgeFields = document.getElementById("ridgeFields");
+        
+
+
+    ridgeFields.classList.add("hidden");
+    lassoFields.classList.add("hidden");
+    logisticFields.classList.add("hidden");
+    polynomialFields.classList.add("hidden");
+    elasticNetFields.classList.add("hidden");
+    SVMFields.classList.add("hidden");
+    RFFields.classList.add("hidden");
+    PerceptronFields.classList.add("hidden");
+    MLPFields.classList.add("hidden");
+    KNearestFields.classList.add("hidden");
+    GradientBoostingFields.classList.add("hidden");
+    Logistic_classifierFields.classList.add("hidden");
+    MLP_classifierFields.classList.add("hidden");
+    RF_classifierFields.classList.add("hidden");
+    SVC_classifierFields.classList.add("hidden");
+
+
+
+}
+    // when user clicks 'restart' 
+/* Called from HTML (onclick) */
+/* eslint-disable-next-line no-unused-vars */
+function fileUploadPage(){
+    location.reload();
+}
+
+// function runModelAgain(){
+//     fileUpload.classList.add('hidden');
+//     NumericResultDiv.classList.add('hidden');
+//     ClassifierResultDiv.classList.add('hidden');
+//     ClusterResultDiv.classList.add('hidden');
+//     columnSelection.style.display = 'block';
+//     errorDiv.classList.add('hidden');
+
+// }
+
+//go to prediction page
+/* eslint-disable-next-line no-unused-vars */
+function predictionPage(){
+    if (columnSelection) columnSelection.style.display = 'none';
+    const predDiv = getCachedElement('predictionDiv');
+    showElement(predDiv);
+    showTab('historic');
+}
+// Reset Inference tab to "ready for new upload" so user can upload a different dataset
+function resetInferenceUI() {
+    const uploadPredictDf = document.getElementById('uploadPredictDf');
+    const predictionResults = document.getElementById('predictionResults');
+    const predictionErrorDiv = document.getElementById('predictionErrorDiv');
+    const predictFileInput = document.getElementById('predictFile');
+    if (uploadPredictDf) {
+        uploadPredictDf.classList.remove('hidden');
+        uploadPredictDf.style.display = '';
+    }
+    if (predictionResults) {
+        predictionResults.classList.add('hidden');
+        predictionResults.innerHTML = '';
+    }
+    if (predictionErrorDiv) {
+        predictionErrorDiv.classList.add('hidden');
+        predictionErrorDiv.innerHTML = '';
+    }
+    if (predictFileInput) {
+        predictFileInput.value = '';
+    }
+}
+
+// Upload new prediction file (e.g. after "Predict Another Dataset")
+/* eslint-disable-next-line no-unused-vars */
+function newPredict(){
+    resetInferenceUI();
+}
+
+// goes back to model from prediction page
+/* Called from HTML (onclick) */
+/* eslint-disable-next-line no-unused-vars */
+function backToModel(){
+    if (columnSelection) columnSelection.style.display = 'block';
+    hideElement(predictionDiv);
+    hideElement(predictionResultsDiv);
+    showTab('modeling');
+}
+
+// Helper function to copy hyperparameter values from Simple to Advanced
+function copyHyperparametersToAdvanced(selectedModel, _outputType) {
+    // Wait a bit more for hyperparameter fields to be visible after model change
+    setTimeout(() => {
+        // Define mappings: simpleFieldId -> advancedFieldId
+        // Note: Non-essential hyperparameters share the same IDs between Simple and Advanced
+        // Only essential ones and sliders need mapping
+        const fieldMappings = {};
+        
+        // Common patterns for different models
+        if (selectedModel === 'Ridge') {
+            fieldMappings['RidgeAlpha'] = 'advancedRidgeAlpha';
+            fieldMappings['nonreqRidgeSlider'] = 'advancedNonreqRidgeSlider';
+        } else if (selectedModel === 'Lasso') {
+            fieldMappings['LassoAlpha'] = 'advancedLassoAlpha';
+            fieldMappings['nonreqLassoSlider'] = 'advancedNonreqLassoSlider';
+        } else if (selectedModel === 'SVM') {
+            fieldMappings['C'] = 'advancedC';
+            fieldMappings['kernel'] = 'advancedKernel';
+            fieldMappings['nonreqSVMSlider'] = 'advancedNonreqSVMSlider';
+            fieldMappings['svmGamma'] = 'advancedSvmGamma';
+            fieldMappings['degree'] = 'advancedDegree';
+        } else if (selectedModel === 'RF') {
+            fieldMappings['RFn_estimators'] = 'advancedRFn_estimators';
+            fieldMappings['nonreqRFSlider'] = 'advancedNonreqRFSlider';
+        } else if (selectedModel === 'MLP') {
+            fieldMappings['hidden_layer_sizes1'] = 'advancedHidden_layer_sizes1';
+            fieldMappings['hidden_layer_sizes2'] = 'advancedHidden_layer_sizes2';
+            fieldMappings['hidden_layer_sizes3'] = 'advancedHidden_layer_sizes3';
+            fieldMappings['activation'] = 'advancedActivation';
+            fieldMappings['nonreqMLPSlider'] = 'advancedNonreqMLPSlider';
+        } else if (selectedModel === 'K-Nearest') {
+            fieldMappings['KNearest'] = 'advancedKNearest';
+            fieldMappings['nonreqKNearestSlider'] = 'advancedNonreqKNearestSlider';
+        } else if (selectedModel === 'gradient_boosting') {
+            fieldMappings['GBn_estimators'] = 'advancedGBn_estimators';
+            fieldMappings['nonreqGBSlider'] = 'advancedNonreqGBSlider';
+        } else if (selectedModel === 'Logistic_classifier') {
+            fieldMappings['nonreqLogisticClassifierSlider'] = 'advancedNonreqLogisticClassifierSlider';
+        } else if (selectedModel === 'MLP_classifier') {
+            fieldMappings['Class_hidden_layer_sizes1'] = 'advancedClass_hidden_layer_sizes1';
+            fieldMappings['Class_hidden_layer_sizes2'] = 'advancedClass_hidden_layer_sizes2';
+            fieldMappings['Class_hidden_layer_sizes3'] = 'advancedClass_hidden_layer_sizes3';
+            fieldMappings['Class_activation'] = 'advancedClass_activation';
+            fieldMappings['nonreqMLPClassifierSlider'] = 'advancedNonreqMLPClassifierSlider';
+        } else if (selectedModel === 'RF_classifier') {
+            fieldMappings['Class_RFn_estimators'] = 'advancedClass_RFn_estmators'; // Note: typo in HTML
+            fieldMappings['nonreqRFClassifierSlider'] = 'advancedNonreqRFClassifierSlider';
+        } else if (selectedModel === 'SVC_classifier') {
+            fieldMappings['Class_C'] = 'advancedClass_C';
+            fieldMappings['Class_kernel'] = 'advancedClass_kernel';
+            fieldMappings['nonreqSVCClassifierSlider'] = 'advancedNonreqSVCClassifierSlider';
+        }
+        
+        // Copy all mapped fields (essential hyperparameters and sliders)
+        for (const [simpleId, advancedId] of Object.entries(fieldMappings)) {
+            const simpleField = document.getElementById(simpleId);
+            const advancedField = document.getElementById(advancedId);
+            
+            if (simpleField && advancedField) {
+                if (simpleField.type === 'checkbox') {
+                    // Copy checkbox state
+                    advancedField.checked = simpleField.checked;
+                    // Trigger change event if it's a slider that shows/hides fields
+                    if (simpleId.includes('Slider')) {
+                        advancedField.dispatchEvent(new Event('change'));
+                    }
+                } else if (simpleField.tagName === 'SELECT') {
+                    // Copy select value
+                    advancedField.value = simpleField.value;
+                } else if (simpleField.type === 'number' || simpleField.type === 'text') {
+                    // Copy input value
+                    advancedField.value = simpleField.value;
+                }
+            }
+        }
+        
+        // Copy non-essential hyperparameters (they share the same IDs between Simple and Advanced)
+        // List of common non-essential field IDs that are shared
+        const sharedFieldIds = [
+            'RidgeFitIntersept', 'RidgeNormalize', 'RidgeCopyX', 'RidgePositive', 'RidgeMaxIter', 'RidgeTol', 'RidgeSolver',
+            'LassoFitIntersept', 'LassoPrecompute', 'LassoCopyX', 'LassoWarmStart', 'LassoSelection', 'LassoMaxIter', 'LassoTol',
+            'SVMcoef0', 'SVMCacheSize', 'SVMClassWeight', 'SVMdecisionFunctionShape', 'SVMprobability', 'SVMBreakTies', 'SVMverbose', 'SVMtol',
+            'RFoobScore', 'RFCriterion', 'RFmin_weight_fraction_leaf', 'RFMinImpurityDecrease', 'RFMax_depth', 'RFMin_samples_split', 'RFMin_samples_leaf',
+            'MLPAlpha', 'MLPBatchSize', 'MLPValidationFraction', 'MLPLearningRate', 'MLPLearningRateInit',
+            'metric', 'KNearestMetricParams',
+            'GBCriterion', 'GBMax_depth', 'GBMinWeightFractionLeaf', 'GBMinImpurityDecrease', 'GBAlpha',
+            'Class_LogisticDual', 'Class_LogisticFitIntercept', 'Class_LogisticSolver', 'Class_LogisticMultiClass', 'Class_LogisticWarmStart', 'Class_CLogistic', 'Class_Logistic_penalty', 'Class_LogisticTol', 'Class_Logisticintercept_scaling', 'Class_LogisticClassWeight',
+            'Class_MLPAlpha', 'Class_MLPBatchSize', 'Class_MLPValidationFraction', 'Class_MLPLearningRate', 'Class_MLPLearningRateInit',
+            'Class_RFoobScore', 'Class_RFCriterion', 'Class_RFmin_weight_fraction_leaf', 'Class_RFMinImpurityDecrease', 'Class_RFMax_depth', 'Class_RFMin_samples_split', 'Class_RFMin_samples_leaf',
+            'Class_SVMcoef0', 'Class_SVMCacheSize', 'Class_SVMClassWeight', 'Class_SVMdecisionFunctionShape', 'Class_SVMprobability', 'Class_SVMBreakTies', 'Class_SVMverbose', 'Class_SVMtol', 'Class_SVMdegree'
+        ];
+        
+        sharedFieldIds.forEach(fieldId => {
+            const simpleField = document.getElementById(fieldId);
+            const advancedField = document.getElementById(fieldId);
+            
+            if (simpleField && advancedField) {
+                if (simpleField.type === 'checkbox') {
+                    advancedField.checked = simpleField.checked;
+                } else if (simpleField.tagName === 'SELECT') {
+                    advancedField.value = simpleField.value;
+                } else if (simpleField.type === 'number' || simpleField.type === 'text') {
+                    advancedField.value = simpleField.value;
+                }
+            }
+        });
+    }, 300); // Wait a bit longer for fields to be visible
+}
+
+// Navigate to Advanced Modeling page with the currently selected model
+/* eslint-disable-next-line no-unused-vars */
+function navigateToAdvancedWithModel(){
+    // Get output type
+    const outputType = getCachedElement('outputType1');
+    if (!outputType || !outputType.value) {
+        const errorDiv = getCachedElement('errorDiv');
+        if (errorDiv) {
+            showError(errorDiv, 'Please select a model first before navigating to Advanced Modeling.');
+            errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+    }
+    
+    // Get the selected model from Simple Modeling page
+    let selectedModel = '';
+    let advancedModelSelector = null;
+    
+    if (outputType.value === 'Numeric') {
+        const modelSelect = document.getElementById('nModels');
+        if (modelSelect && modelSelect.value) {
+            selectedModel = modelSelect.value;
+            advancedModelSelector = 'advancedNModels';
+        }
+    } else if (outputType.value === 'Classifier') {
+        const modelSelect = document.getElementById('classModels');
+        if (modelSelect && modelSelect.value) {
+            selectedModel = modelSelect.value;
+            advancedModelSelector = 'advancedClassModels';
+        }
+    } else if (outputType.value === 'Cluster') {
+        const modelSelect = document.getElementById('clModels');
+        if (modelSelect && modelSelect.value) {
+            selectedModel = modelSelect.value;
+            advancedModelSelector = 'advancedClModels';
+        }
+    }
+    
+    if (!selectedModel) {
+        const errorDiv = getCachedElement('errorDiv');
+        if (errorDiv) {
+            showError(errorDiv, 'Please select a model first before navigating to Advanced Modeling.');
+            errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+    }
+    
+    // Navigate to unified Modeling page and switch to Advanced mode
+    showTab('modeling');
+    
+    // Switch to Advanced mode and set the model after a short delay
+    setTimeout(() => {
+        // Switch to Advanced mode
+        const advancedModeRadio = document.getElementById('advancedMode');
+        if (advancedModeRadio) {
+            advancedModeRadio.checked = true;
+            switchModelingMode('advanced');
+        }
+        
+        // Update output type display to show correct model selectors
+        updateOutputTypeDisplay(outputType.value);
+        
+        // Set the selected model
+        if (advancedModelSelector) {
+            const advancedSelect = document.getElementById(advancedModelSelector);
+            if (advancedSelect) {
+                // Map model names if needed (some models might have different names)
+                let modelValue = selectedModel;
+                
+                // Handle model name mappings if any
+                if (selectedModel === 'TerraFORMER' && outputType.value === 'Numeric') {
+                    // TerraFORMER might not be available on Advanced page, use Linear as fallback
+                    modelValue = 'Linear';
+                }
+                
+                // Check if the option exists
+                const optionExists = Array.from(advancedSelect.options).some(opt => opt.value === modelValue);
+                if (optionExists) {
+                    advancedSelect.value = modelValue;
+                    // Trigger change event to show hyperparameters
+                    advancedSelect.dispatchEvent(new Event('change'));
+                    
+                    // Copy hyperparameters from Simple to Advanced
+                    copyHyperparametersToAdvanced(selectedModel, outputType.value);
+                } else {
+                    // If exact match doesn't exist, try to find a similar one or use first available
+                    console.log(`Model ${modelValue} not found in Advanced page, using first available option`);
+                }
+            }
+        }
+    }, 100);
+}
+
+// Global variables for progress tracking (set/read by modeling.js)
+let progressEventSource = null;
+/* eslint-disable-next-line no-unused-vars */
+let sessionId = null;
+/* eslint-disable-next-line no-unused-vars */
+let processResultData = null;
+
+// Function to stop current model run (called from modeling.js stop buttons)
+/* eslint-disable-next-line no-unused-vars */
+function stopModelRun() {
+    // Close EventSource connection
+    if (progressEventSource) {
+        progressEventSource.close();
+        progressEventSource = null;
+    }
+    
+    // Determine current mode
+    const simpleMode = document.getElementById('simpleMode');
+    const advancedMode = document.getElementById('advancedMode');
+    const automlMode = document.getElementById('automlMode');
+    const currentMode = simpleMode?.checked ? 'simple' : (advancedMode?.checked ? 'advanced' : (automlMode?.checked ? 'automl' : 'simple'));
+    
+    // Hide stop button and show appropriate loading message
+    let stopButton, runButton, loadingDiv;
+    if (currentMode === 'automl') {
+        stopButton = document.getElementById('stopAutomlButton');
+        runButton = document.getElementById('automlSubmitButton');
+        loadingDiv = document.getElementById('automlLoading');
+    } else if (currentMode === 'advanced') {
+        stopButton = document.getElementById('stopAdvancedButton');
+        runButton = document.getElementById('advancedOptimizationSubmitButton');
+        loadingDiv = document.getElementById('advancedLoading');
+    } else {
+        stopButton = document.getElementById('stopSimpleButton');
+        runButton = getCachedElement('processButton');
+        loadingDiv = getCachedElement('loading');
+    }
+    
+    if (stopButton) stopButton.style.display = 'none';
+    if (runButton) {
+        runButton.disabled = false;
+        if (currentMode === 'automl') {
+            runButton.textContent = 'Run AutoML';
+        } else if (currentMode === 'advanced') {
+            runButton.textContent = 'Run Model with Advanced Options';
+        } else {
+            runButton.textContent = 'Run This Model';
+        }
+    }
+    
+    if (loadingDiv) {
+        loadingDiv.innerHTML = `
+            <p style="color: #d32f2f; font-weight: 600; margin-bottom: 8px;">Model Run Stopped</p>
+            <p style="color: #666;">The model training has been cancelled. You can start a new model run.</p>
+        `;
+    }
+}
+
+// Handle column selection and processing
+
+/// Section 6: running the model
+    //after user selects model and hyperparameters
 
 // Force light mode (dark mode disabled)
 (function() {

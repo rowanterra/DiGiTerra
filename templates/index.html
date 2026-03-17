@@ -15,38 +15,10 @@
     <title>DiGiTerra</title>
     <link rel="stylesheet" href="{{ static_root }}/style.css">
     <link rel="icon" type="image/png" href="{{ static_root }}/Terra_Axe_Logo.png">
-    <script>
-        // DARK MODE DISABLED - Code kept for potential future use
-        // Initialize dark mode immediately to prevent flash
-        // Default to light mode - only enable dark mode if explicitly set to 'true'
-        /*
-        (function() {
-            const darkModeSetting = localStorage.getItem('darkMode');
-            // Only enable dark mode if explicitly set to 'true', not if null/undefined/'false'
-            if (darkModeSetting === 'true') {
-                document.documentElement.classList.add('dark-mode');
-                document.body.classList.add('dark-mode');
-            } else {
-                // Ensure dark mode is off by default (light mode)
-                document.documentElement.classList.remove('dark-mode');
-                document.body.classList.remove('dark-mode');
-                // Explicitly set to light mode if not already set
-                if (darkModeSetting === null) {
-                    localStorage.setItem('darkMode', 'false');
-                }
-            }
-        })();
-        */
-        // Always ensure light mode (remove any dark mode classes)
-        (function() {
-            if (document.documentElement) {
-                document.documentElement.classList.remove('dark-mode');
-            }
-            if (document.body) {
-                document.body.classList.remove('dark-mode');
-            }
-        })();
-    </script>
+    {% if use_js_bundle %}
+    {% else %}
+    <script src="{{ static_root }}/js/init.js?v=5"></script>
+    {% endif %}
 </head>
 <body>
     <a href="#main-content" class="skip-link">Skip to main content</a>
@@ -7453,19 +7425,15 @@
         window.API_ROOT = "{{ api_root }}";
         window.STATIC_ROOT = "{{ static_root }}";
     </script>
+    {% if use_js_bundle %}
+    <script src="{{ static_root }}/js/app.bundle.js?v=5"></script>
+    {% else %}
     <script src="{{ static_root }}/js/core.js?v=5"></script>
+    <script src="{{ static_root }}/js/upload.js?v=5"></script>
+    <script src="{{ static_root }}/js/preprocess.js?v=5"></script>
+    <script src="{{ static_root }}/js/modeling.js?v=5"></script>
+    <script src="{{ static_root }}/js/inference.js?v=5"></script>
     <script src="{{ static_root }}/js/app.js?v=5"></script>
-    <script>
-        // Fallback so "Continue to Model Preprocessing" works even if main script fails or is cached
-        window.goToModelPreprocessing = window.goToModelPreprocessing || function() {
-            var s = document.getElementById('userInputSection');
-            var u = document.getElementById('fileuploaddiv');
-            if (s) { s.classList.remove('hidden'); s.style.display = ''; }
-            if (u) { u.classList.add('hidden'); }
-            var tabs = document.querySelectorAll('.tab-button[data-tab]');
-            tabs.forEach(function(b) { b.classList.toggle('active', b.dataset.tab === 'model-preprocessing'); });
-            window.scrollTo(0, 0);
-        };
-    </script>
+    {% endif %}
 </body>
 </html>
