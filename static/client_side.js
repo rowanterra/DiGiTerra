@@ -2046,7 +2046,8 @@ async function handlePreprocessFormSubmit(e) {
             filename: uploadedFileName,
             indicators: indicatorCols,
             predictors: predictorCols,
-            stratify: stratifyColumnNumber
+            stratify: stratifyColumnNumber,
+            outputType: outputType || ''
         };
 
         try {
@@ -7521,25 +7522,29 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                         <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">Visualization 1</h4>
                         <label for="classifierImageSelector">Select visualization</label>
                         <select id="classifierImageSelector">
-                            <option value="confusion_matrix_train">Confusion Matrix (Train)</option>
                             <option value="confusion_matrix">Confusion Matrix (Test)</option>
                             <option value="roc_curve">ROC Curve (micro)</option>
-                            <option value="precision_recall_curve">Precision-Recall Curve (micro)</option>
+                            <option value="roc_curve_per_class">ROC Curve (per class)</option>
+                            <option value="precision_recall_curve">Precision-Recall Curve</option>
+                            <option value="calibration_curve">Calibration Curve</option>
+                            <option value="shap_summary">SHAP Feature Importance</option>
                         </select>
                         <br><br>
-                        <img id="classifierGraphic" class="result-graphic" src="${withApiRoot('/user-visualizations/confusion_matrix_train.png')}?t=${new Date().getTime()}" alt="Classifier visualization 1">
+                        <img id="classifierGraphic" class="result-graphic" src="${withApiRoot('/user-visualizations/confusion_matrix.png')}?t=${new Date().getTime()}" alt="Classifier visualization 1">
                     </div>
                     <div class="result-graphic-box" style="flex: 1; min-width: 320px;">
                         <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">Visualization 2</h4>
                         <label for="classifierImageSelector2">Select visualization</label>
                         <select id="classifierImageSelector2">
-                            <option value="confusion_matrix_train">Confusion Matrix (Train)</option>
-                            <option value="confusion_matrix">Confusion Matrix (Test)</option>
                             <option value="roc_curve">ROC Curve (micro)</option>
-                            <option value="precision_recall_curve">Precision-Recall Curve (micro)</option>
+                            <option value="roc_curve_per_class">ROC Curve (per class)</option>
+                            <option value="confusion_matrix">Confusion Matrix (Test)</option>
+                            <option value="precision_recall_curve">Precision-Recall Curve</option>
+                            <option value="calibration_curve">Calibration Curve</option>
+                            <option value="shap_summary">SHAP Feature Importance</option>
                         </select>
                         <br><br>
-                        <img id="classifierGraphic2" class="result-graphic" src="${withApiRoot('/user-visualizations/confusion_matrix.png')}?t=${new Date().getTime()}" alt="Classifier visualization 2">
+                        <img id="classifierGraphic2" class="result-graphic" src="${withApiRoot('/user-visualizations/roc_curve.png')}?t=${new Date().getTime()}" alt="Classifier visualization 2">
                     </div>
                 </div>
                 <div><br></div>
@@ -7652,6 +7657,8 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                             <select id="clusterImageSelector">
                                 <option value="cluster_pca_train">PCA (Train)</option>
                                 <option value="cluster_pca_test">PCA (Test)</option>
+                                <option value="cluster_silhouette">Silhouette (Train)</option>
+                                <option value="cluster_sizes">Cluster sizes (Train)</option>
                             </select>
                             <br><br>
                             <img id="clusterGraphic" class="result-graphic" src="${withApiRoot('/user-visualizations/cluster_pca_train.png')}?t=${new Date().getTime()}">
@@ -7662,6 +7669,8 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                             <select id="clusterImageSelector2">
                                 <option value="cluster_pca_train">PCA (Train)</option>
                                 <option value="cluster_pca_test">PCA (Test)</option>
+                                <option value="cluster_silhouette">Silhouette (Train)</option>
+                                <option value="cluster_sizes">Cluster sizes (Train)</option>
                             </select>
                             <br><br>
                             <img id="clusterGraphic2" class="result-graphic" src="${withApiRoot('/user-visualizations/cluster_pca_test.png')}?t=${new Date().getTime()}">
@@ -7726,21 +7735,28 @@ predictionForm.addEventListener('submit', async (e) => {
             const preview = data.predictions_preview || {};
             const trainingViz = data.training_visualization;
             const trainingVizVersion = data.training_visualization_version || Date.now();
+            const inferenceViz = data.inference_visualization;
+            const inferenceVizVersion = data.inference_visualization_version || Date.now();
             let trainingVizUrl = '';
             let trainingPerfUrl = '';
+            let trainingPlotWithOverlayUrl = ''; // for regression: pred-vs-actual only (no composite) so overlay aligns
+            let inferenceVizUrl = ''; // server-regenerated plot with train + test + inference points (no overlay)
             if (trainingViz) {
                 const base = withApiRoot('/user-visualizations/' + trainingViz);
                 const cacheQuery = '?v=' + encodeURIComponent(trainingVizVersion) + '&t=' + Date.now();
                 trainingVizUrl = base + cacheQuery;
-                let perfName = trainingViz;
+                let predActualName = trainingViz;
                 const modelTypeForPerf = data.model_type || 'regression';
                 if (modelTypeForPerf === 'regression') {
-                    perfName = perfName
+                    predActualName = predActualName
                         .replace('target_plot_1_advanced', 'target_plot_pred_actual_1_advanced')
                         .replace('target_plot_1', 'target_plot_pred_actual_1');
+                    trainingPlotWithOverlayUrl = withApiRoot('/user-visualizations/' + predActualName) + cacheQuery;
                 }
-                const perfBase = withApiRoot('/user-visualizations/' + perfName);
-                trainingPerfUrl = perfBase + cacheQuery;
+                trainingPerfUrl = withApiRoot('/user-visualizations/' + predActualName) + cacheQuery;
+            }
+            if (inferenceViz) {
+                inferenceVizUrl = withApiRoot('/user-visualizations/' + inferenceViz) + '?v=' + encodeURIComponent(inferenceVizVersion) + '&t=' + Date.now();
             }
             const modelType = data.model_type || 'regression';
             const modelTypeLabel = modelType === 'classification' ? 'Classification' : modelType === 'cluster' ? 'Clustering' : 'Regression';
@@ -7835,11 +7851,18 @@ predictionForm.addEventListener('submit', async (e) => {
                     const label = (v === Math.floor(v) ? v : Number(v).toFixed(1)).toString();
                     return `<text x="${x}" y="${histH - 10}" text-anchor="middle" font-size="10" fill="#444">${label}</text>`;
                 }).join('');
-                const leftPlotHtml = trainingViz ? (() => {
-                    // Training image is composite: left = Predicted vs Actual, right = Residuals (and sometimes metrics).
-                    // Overlay only the left (scatter) panel so inference points align with the scatter plot.
-                    const toNormX = v => 12.5 + ((v - lo) / range) * (92 - 12.5);
-                    const toNormY = v => 88 - ((v - lo) / range) * (88 - 11);
+                const leftPlotHtml = (trainingViz || inferenceVizUrl) ? (() => {
+                    // Prefer server-regenerated plot (train + test + inference) when present; else training image + overlay.
+                    if (inferenceVizUrl) {
+                        return `
+                        <div style="position: relative; display: inline-block; max-width: 100%;">
+                            <img src="${inferenceVizUrl}" alt="Predicted vs Actual (train, test, inference)" class="inference-model-graphic-img inference-training-plot-img" style="display: block; max-height: 300px; width: auto;">
+                        </div>
+                        <p style="margin: 4px 0 0 0; font-size: 0.8rem; color: #555;">Pink points = inference (predicted values only; we have no actuals for new data). Distribution to the right.</p>`;
+                    }
+                    const imgUrl = trainingPlotWithOverlayUrl || trainingVizUrl;
+                    const toNormX = v => 10 + ((v - lo) / range) * 80;
+                    const toNormY = v => 85 - ((v - lo) / range) * 75;
                     const overlayPoints = vals.map(v => {
                         const cx = toNormX(v);
                         const cy = toNormY(v);
@@ -7847,8 +7870,8 @@ predictionForm.addEventListener('submit', async (e) => {
                     }).join('');
                     return `
                         <div style="position: relative; display: inline-block; max-width: 100%;">
-                            <img src="${trainingVizUrl}" alt="Training Predicted vs Actual" class="inference-model-graphic-img inference-training-plot-img" style="display: block; max-height: 300px; width: auto;">
-                            <svg class="inference-overlay-svg" style="position: absolute; left: 0; top: 0; width: 50%; height: 100%; pointer-events: none;" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">${overlayPoints}</svg>
+                            <img src="${imgUrl}" alt="Training Predicted vs Actual" class="inference-model-graphic-img inference-training-plot-img" style="display: block; max-height: 300px; width: auto;">
+                            <svg class="inference-overlay-svg" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none;" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">${overlayPoints}</svg>
                         </div>
                         <p style="margin: 4px 0 0 0; font-size: 0.8rem; color: #555;">Same plot as Modeling page; inference points (gray) on diagonal.</p>`;
                 })() : '';
@@ -7857,7 +7880,7 @@ predictionForm.addEventListener('submit', async (e) => {
                     <h4 style="margin: 0 0 8px 0;">Inference visuals (${firstCol})</h4>
                     <p style="margin: 0 0 10px 0; font-size: 0.9rem; color: #666;">Training Predicted vs Actual with inference points overlaid (left); inference distribution (right).</p>
                     <div class="inference-visuals-row" style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;">
-                        ${trainingViz ? `<div class="inference-training-plot-wrap" style="flex: 0 1 320px; min-width: 200px;"><p style="margin: 0 0 6px 0; font-size: 0.85rem; font-weight: 600;">Training plot + inference overlay</p>${leftPlotHtml}</div>` : ''}
+                        ${(trainingViz || inferenceVizUrl) ? `<div class="inference-training-plot-wrap" style="flex: 0 1 320px; min-width: 200px;"><p style="margin: 0 0 6px 0; font-size: 0.85rem; font-weight: 600;">${inferenceVizUrl ? 'Predicted vs Actual (training + inference)' : 'Training plot + inference overlay'}</p>${leftPlotHtml}</div>` : ''}
                         <div class="inference-dist-wrap" style="flex: 1 1 280px; min-width: 200px;">
                             <p style="margin: 0 0 6px 0; font-size: 0.85rem; font-weight: 600;">${inferenceDistLabel}</p>
                             <svg width="${histW}" height="${histH}" viewBox="0 0 ${histW} ${histH}" class="inference-dist-svg" style="max-width: 100%; height: auto;">
@@ -7875,12 +7898,13 @@ predictionForm.addEventListener('submit', async (e) => {
                     <p style="margin-top: 8px; font-size: 0.85rem; color: #666;">Range: ${min.toFixed(4)} – ${max.toFixed(4)} (${vals.length} points)</p>
                 `;
             }
+            // Classification: predicted class counts are already in the summary table; no duplicate "Inference distribution" block
 
             const numericKeysForPanels = ['column', 'n', 'min', 'max', 'mean', 'std', '25', '50', '75', '100'];
             const trainingSummaryForPanel = data.training_target_summary && data.training_target_summary.summary;
 
             const classificationNote = modelType === 'classification' ? `
-                <p class="inference-classification-note" style="margin: 0 0 12px 0; font-size: 0.9rem; color: #555; font-style: italic;">For new data we don't have true labels, so a confusion matrix can't be computed here. We show the inference distribution above and the model's training performance (on its test set) to the right.</p>
+                <p class="inference-classification-note" style="margin: 0 0 12px 0; font-size: 0.9rem; color: #555; font-style: italic;">No true labels for new data, so we only show predicted class counts below and the model's test-set performance (confusion matrix) on the right.</p>
             ` : '';
 
             function renderSummaryTable(rows, numericKeys) {
@@ -7913,7 +7937,7 @@ predictionForm.addEventListener('submit', async (e) => {
             const modelGraphicSectionHtml = trainingViz ? `
                 <h3 style="margin: 0 0 8px 0;">Model used (training performance)</h3>
                 <p style="margin: 0 0 12px 0; font-size: 0.95rem; color: #666;">Performance graphic from the model you trained.</p>
-                <img src="${trainingPerfUrl || trainingVizUrl}" alt="Training performance" class="inference-model-graphic-img">
+                <img src="${trainingPerfUrl || trainingVizUrl}" alt="Training performance" class="inference-model-graphic-img" style="display: block; max-height: 400px; width: auto; object-fit: contain;">
             ` : '';
             const rightPanelHtml = (trainingSummaryTableHtml || modelGraphicSectionHtml) ? `
                 <div class="inference-model-graphic" style="flex: 0 0 calc(50% - 12px); min-width: 200px; overflow: auto; align-self: flex-start;">

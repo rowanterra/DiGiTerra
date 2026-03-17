@@ -24,7 +24,7 @@ from sklearn.model_selection import (
 )
 from sklearn.pipeline import Pipeline
 
-from python_scripts.preprocessing.utilites import make_preprocessor, _get_scaler
+from python_scripts.preprocessing.utilities import make_preprocessor, _get_scaler
 
 from python_scripts.config import VIS_DIR
 
@@ -671,21 +671,33 @@ def run_cross_validation(
     return file_path, summary_df
 
 
+def _model_for_inference_attrs(model):
+    """Return the model that has _digiterra_* attributes (wrapper or best_estimator_)."""
+    if hasattr(model, "best_estimator_"):
+        inner = model.best_estimator_
+        if getattr(inner, "_digiterra_raw_features", None) is not None or getattr(inner, "_digiterra_preprocessor", None) is not None:
+            return inner
+    return model
+
+
 def prediction(df_clean, best_model, training_features, X_scaler, y_scaler, feature_order, target_names=None):
 
     logger.info('Starting prediction function')
 
+    # Use the object that actually has inference attributes (e.g. best_estimator_ when model is GridSearchCV)
+    model_for_attrs = _model_for_inference_attrs(best_model)
+
     # --- 1. Align raw features and replay train-time transformations ---
-    raw_features = getattr(best_model, "_digiterra_raw_features", None) or feature_order
+    raw_features = getattr(model_for_attrs, "_digiterra_raw_features", None) or feature_order
     missing_raw = sorted(set(raw_features) - set(df_clean.columns))
     if missing_raw:
         raise ValueError(f"Missing features in prediction file: {missing_raw}")
 
     X_new_raw = df_clean[raw_features].copy()
 
-    preprocessor = getattr(best_model, "_digiterra_preprocessor", None)
-    transformed_feature_names = getattr(best_model, "_digiterra_feature_names", None)
-    model_feature_order = getattr(best_model, "_digiterra_model_features", None)
+    preprocessor = getattr(model_for_attrs, "_digiterra_preprocessor", None)
+    transformed_feature_names = getattr(model_for_attrs, "_digiterra_feature_names", None)
+    model_feature_order = getattr(model_for_attrs, "_digiterra_model_features", None)
 
     if preprocessor is not None:
         X_transformed = preprocessor.transform(X_new_raw)
@@ -713,7 +725,7 @@ def prediction(df_clean, best_model, training_features, X_scaler, y_scaler, feat
     y_pred = best_model.predict(X_new_scaled)
 
     # --- 4. Map ordinal class indices back to labels (classification with pre-made bins) ---
-    int_to_label = getattr(best_model, "_digiterra_int_to_label", None)
+    int_to_label = getattr(model_for_attrs, "_digiterra_int_to_label", None)
     if int_to_label is not None:
         y_pred = np.asarray(y_pred)
         flat = y_pred.ravel()
@@ -729,8 +741,8 @@ def prediction(df_clean, best_model, training_features, X_scaler, y_scaler, feat
     if y_pred.ndim == 1:
         y_pred = y_pred.reshape(-1, 1)
 
-    # --- 6. Inverse-transform ONLY if y_scaler exists ---
-    if y_scaler is not None:
+    # --- 6. Inverse-transform ONLY if y_scaler exists and predictions are numeric (regression) ---
+    if y_scaler is not None and (np.issubdtype(y_pred.dtype, np.floating) or np.issubdtype(y_pred.dtype, np.integer)):
         y_pred = y_scaler.inverse_transform(y_pred)
 
     # --- 7. Handle single vs multiple targets ---

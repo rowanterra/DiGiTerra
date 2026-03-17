@@ -114,6 +114,8 @@ def run_predict(
         pred_path = user_vis_dir / "predictions.csv"
         summary = []
         predictions_preview = {}
+        pred_df = None
+        pred_cols = []
         if pred_path.exists():
             try:
                 pred_df = pd.read_csv(pred_path)
@@ -158,6 +160,28 @@ def run_predict(
                     training_target_summary = json.load(f)
         except Exception as e:
             logger.debug("Could not read training target summary: %s", e)
+        inference_visualization = None
+        inference_visualization_version = None
+        if model_type == "regression" and pred_df is not None and pred_cols and (user_vis_dir / "training_plot_data.json").exists():
+            try:
+                with open(user_vis_dir / "training_plot_data.json") as f:
+                    plot_data = json.load(f)
+                first_col = pred_cols[0]
+                inference_pred = pred_df[first_col].dropna().values.ravel()
+                if len(inference_pred) > 0:
+                    from python_scripts.plotting.visualize_predictions import plot_inference_pred_vs_actual
+                    out_path = user_vis_dir / "inference_pred_vs_actual_1.png"
+                    plot_inference_pred_vs_actual(
+                        plot_data["y_train_actual"], plot_data["y_train_pred"],
+                        plot_data["y_test_actual"], plot_data["y_test_pred"],
+                        inference_pred,
+                        plot_data["target_name"], plot_data.get("units", ""),
+                        plot_data.get("model_name", "Model"), out_path,
+                    )
+                    inference_visualization = "inference_pred_vs_actual_1.png"
+                    inference_visualization_version = str(int(__import__("time").time() * 1000))
+            except Exception as e:
+                logger.debug("Could not regenerate inference plot: %s", e)
         filename = safe_filename_str[:31]
         if len(safe_filename_str) > 30:
             filename += "..."
@@ -171,9 +195,12 @@ def run_predict(
                 "training_visualization": training_visualization,
                 "training_visualization_version": training_visualization_version,
                 "training_target_summary": training_target_summary,
+                "inference_visualization": inference_visualization,
+                "inference_visualization_version": inference_visualization_version,
             },
             200,
         )
     except Exception as e:
         logger.error("Error in predict: %s", e, exc_info=True)
-        return ({"error": "An error occurred during prediction."}, 500)
+        err_msg = str(e) if e else "An error occurred during prediction."
+        return ({"error": err_msg}, 500)

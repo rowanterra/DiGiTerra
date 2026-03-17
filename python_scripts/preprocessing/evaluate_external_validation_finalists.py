@@ -271,7 +271,7 @@ def main() -> None:
     parser.add_argument("--cv-folds", type=int, default=5, help="Cross-validation folds on training data.")
     parser.add_argument("--seed-start", type=int, default=0, help="Starting seed (inclusive).")
     parser.add_argument("--seed-count", type=int, default=30, help="How many consecutive seeds to run.")
-    parser.add_argument("--output-dir", default="docs", help="Output directory for CSVs.")
+    parser.add_argument("--output-dir", default="output", help="Output directory for CSVs.")
     parser.add_argument("--output-stem", default="tree_external_backvalidation_finalists_seed0_29", help="CSV stem.")
     args = parser.parse_args()
 

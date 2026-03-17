@@ -12,28 +12,14 @@ import time
 import traceback
 from pathlib import Path
 import shutil
-import platform
 
 import webview
 
+from python_scripts import config
 from app import create_app
 
-# Platform-specific paths
-if platform.system() == "Windows":
-    # Windows: Use AppData directories
-    LOG_DIR = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming")) / "DiGiTerra" / "Logs"
-    APP_SUPPORT_DIR = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming")) / "DiGiTerra"
-elif platform.system() == "Linux":
-    # Linux: Use XDG directories
-    xdg_data_home = os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share")
-    xdg_cache_home = os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")
-    APP_SUPPORT_DIR = Path(xdg_data_home) / "DiGiTerra"
-    LOG_DIR = Path(xdg_cache_home) / "DiGiTerra" / "logs"
-else:
-    # macOS: Use Library directories
-    LOG_DIR = Path.home() / "Library" / "Logs" / "DiGiTerra"
-    APP_SUPPORT_DIR = Path.home() / "Library" / "Application Support" / "DiGiTerra"
-
+APP_SUPPORT_DIR = config.APP_SUPPORT_DIR
+LOG_DIR = config.LOG_DIR
 LOG_FILE = LOG_DIR / "digiterra.log"
 
 

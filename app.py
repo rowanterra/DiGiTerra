@@ -12,38 +12,49 @@ import os
 import ast
 import json
 import threading
-import platform
 import logging
 from pathlib import Path
 import pandas as pd
 import random
 import numpy as np
 
-# Configure logging
-logger = logging.getLogger(__name__)
+from python_scripts import config
 
-BASE_DIR = Path(os.environ.get("DIGITERRA_BASE_DIR", Path(__file__).resolve().parent))
+BASE_DIR = config.BASE_DIR
+APP_SUPPORT_DIR = config.APP_SUPPORT_DIR
+UPLOAD_DIR = config.UPLOAD_DIR
+LOG_DIR = config.LOG_DIR
+URL_PREFIX = config.URL_PREFIX
 
-# Platform-specific paths (fix for cross-platform compatibility)
-if platform.system() == "Windows":
-    APP_SUPPORT_DIR = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming")) / "DiGiTerra"
-elif platform.system() == "Linux":
-    xdg_data_home = os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share")
-    APP_SUPPORT_DIR = Path(xdg_data_home) / "DiGiTerra"
-else:  # macOS
-    APP_SUPPORT_DIR = Path.home() / "Library" / "Application Support" / "DiGiTerra"
 # Single source of truth for user visualizations: config.VIS_DIR (set below and used everywhere)
-_user_vis_path = Path(
-    os.environ.get(
-        "DIGITERRA_OUTPUT_DIR",
-        APP_SUPPORT_DIR / "user_visualizations",
-    )
-)
+_user_vis_path = Path(os.environ.get("DIGITERRA_OUTPUT_DIR", str(APP_SUPPORT_DIR / "user_visualizations")))
 os.environ.setdefault("DIGITERRA_OUTPUT_DIR", str(_user_vis_path))
 _user_vis_path.mkdir(parents=True, exist_ok=True)
-
-from python_scripts import config
 config.update_vis_dir(_user_vis_path)
+
+
+def _configure_logging():
+    """Configure logging at app startup: level, format, optional file under LOG_DIR."""
+    level_name = os.environ.get("LOG_LEVEL", "INFO").upper()
+    level = getattr(logging, level_name, logging.INFO)
+    fmt = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    logging.basicConfig(level=level, format=fmt, datefmt="%Y-%m-%d %H:%M:%S", force=True)
+    root = logging.getLogger()
+    # Optional file handler so production logs are persisted
+    try:
+        LOG_DIR.mkdir(parents=True, exist_ok=True)
+        from datetime import datetime
+        log_file = LOG_DIR / f"digiterra_{datetime.now().strftime('%Y-%m-%d')}.log"
+        fh = logging.FileHandler(log_file, encoding="utf-8")
+        fh.setLevel(level)
+        fh.setFormatter(logging.Formatter(fmt, datefmt="%Y-%m-%d %H:%M:%S"))
+        root.addHandler(fh)
+    except OSError:
+        pass  # e.g. read-only filesystem or no permission
+    return logging.getLogger(__name__)
+
+
+logger = _configure_logging()
 
 from python_scripts.helpers import (
     preprocess_data,
@@ -63,12 +74,6 @@ from python_scripts.app_exploration import (
     handle_pairplot,
 )
 from python_scripts.app_prediction import run_predict
-
-UPLOAD_DIR = APP_SUPPORT_DIR / "uploads"
-URL_PREFIX = "/" + os.environ.get("URL_PREFIX", "").strip().strip("/")
-if URL_PREFIX in {"/", ""}:
-    URL_PREFIX = ""
-
 
 def _ensure_user_vis_dir():
     """Ensure the user visualizations directory exists and return it (config.VIS_DIR)."""
@@ -641,14 +646,16 @@ def preprocess():
     except (KeyError, IndexError):
         stratify_name = str(df.columns[stratify]) if stratify < len(df.columns) else ''
 
-    # Warn if stratifying by target (leaks target into split)
-    strat_idx = stratify if isinstance(stratify, (int, np.integer)) else None
-    if strat_idx is not None and selected_predictors is not None:
-        pred_list = selected_predictors if isinstance(selected_predictors, (list, tuple)) else [selected_predictors]
-        if strat_idx in pred_list:
-            return jsonify({
-                'error': 'Do not stratify by your target column. That would leak target information into the train/test split. Choose a different column to stratify by.'
-            }), HTTP_BAD_REQUEST
+    # Warn if stratifying by target (leaks target into split). Skip for Cluster (no supervised target).
+    output_type = (data.get('outputType') or '').strip()
+    if output_type != 'Cluster':
+        strat_idx = stratify if isinstance(stratify, (int, np.integer)) else None
+        if strat_idx is not None and selected_predictors is not None:
+            pred_list = selected_predictors if isinstance(selected_predictors, (list, tuple)) else [selected_predictors]
+            if strat_idx in pred_list:
+                return jsonify({
+                    'error': 'Do not stratify by your target column. That would leak target information into the train/test split. Choose a different column to stratify by.'
+                }), HTTP_BAD_REQUEST
 
     store['last_preprocess_request'] = {
         'indicators': selected_indicators,

@@ -79,6 +79,9 @@ logs/
 user_visualizations/
 uploads/
 
+# Script/notebook output (e.g. evaluate_regression_robustness.py, evaluate_external_validation_finalists.py)
+output/
+
 # Generated files in static directory (user-generated artifacts)
 # These files are created at runtime and should not be committed
 static/userVisualizations/

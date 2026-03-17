@@ -1,5 +1,0 @@
-Model,Outlier_Mode,External_R2,External_RMSE,External_MAE,Best_Params
-KNN,none,0.8815744696360773,54.521058026725754,30.59635833958238,"{'model__n_neighbors': 7, 'model__p': 1, 'model__weights': 'distance'}"
-MLP,winsorize_1_99,0.8327037613318844,64.80144560344547,33.49901251849411,"{'model__activation': 'relu', 'model__alpha': 1e-05, 'model__hidden_layer_sizes': (128, 64), 'model__learning_rate_init': 0.0005}"
-ExtraTrees,winsorize_1_99,0.7400530336268659,80.77630491964985,40.902792546199244,"{'model__max_depth': 10, 'model__min_samples_leaf': 2, 'model__n_estimators': 500}"
-Ridge,winsorize_1_99,0.6440657334169804,94.5206079150213,54.04621165289899,{'model__alpha': 30.0}

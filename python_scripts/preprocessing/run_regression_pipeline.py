@@ -21,14 +21,14 @@ logger = logging.getLogger(__name__)
 from sklearn.model_selection import train_test_split
 
 from matplotlib.backends.backend_pdf import PdfPages
-from python_scripts.preprocessing.visualize_predictions import visualize_predictions
+from python_scripts.plotting.visualize_predictions import visualize_predictions
 from python_scripts.plotting.plot_shap_summary_graphic import plot_shap_summary
-from python_scripts.preprocessing.utilites import make_strat_labels_robust
-from python_scripts.preprocessing.utilites import make_preprocessor
-from python_scripts.preprocessing.utilites import get_feature_names
-from python_scripts.preprocessing.utilites import _scale_pairs
-from python_scripts.preprocessing.utilites import regression_report
-from python_scripts.preprocessing.utilites import export_plots
+from python_scripts.preprocessing.utilities import make_strat_labels_robust
+from python_scripts.preprocessing.utilities import make_preprocessor
+from python_scripts.preprocessing.utilities import get_feature_names
+from python_scripts.preprocessing.utilities import _scale_pairs
+from python_scripts.preprocessing.utilities import regression_report
+from python_scripts.preprocessing.utilities import export_plots
 from python_scripts.preprocessing.evaluate_by_quantile import evaluate_by_quantile
 from python_scripts.preprocessing.feature_selection import apply_feature_selection
 from python_scripts.preprocessing.outlier_handling import apply_outlier_handling
@@ -550,6 +550,41 @@ def run_regression(model, model_name,
         shutil.copy(VIS_DIR / inference_plot_filename, VIS_DIR / standard_name)
     except Exception as e:
         logger.debug("Could not copy inference plot to standard name: %s", e)
+
+    # Save first-target train/test actual+pred for inference page regeneration (downsample if large)
+    try:
+        tname = target_variables[0] if isinstance(target_variables, (list, tuple)) else target_variables
+        if isinstance(y_train_actual, pd.DataFrame):
+            y_ta = y_train_actual[tname].values.ravel()
+            y_tp = y_tr_pred[tname].values.ravel()
+        else:
+            y_ta = np.asarray(y_train_actual).ravel()
+            y_tp = np.asarray(y_tr_pred).ravel()
+        if isinstance(y_test, pd.DataFrame):
+            y_va = y_test[tname].values.ravel()
+            y_vp = y_te_pred[tname].values.ravel()
+        else:
+            y_va = np.asarray(y_test).ravel()
+            y_vp = np.asarray(y_te_pred).ravel()
+        max_pts = 500
+        def _downsample(a, n):
+            if len(a) <= n:
+                return a.tolist()
+            idx = np.linspace(0, len(a) - 1, n, dtype=int)
+            return np.asarray(a)[idx].tolist()
+        plot_data = {
+            "model_name": f"{model_name} ({mode_label})",
+            "target_name": str(tname),
+            "units": units or "",
+            "y_train_actual": _downsample(y_ta, max_pts),
+            "y_train_pred": _downsample(y_tp, max_pts),
+            "y_test_actual": _downsample(y_va, max_pts),
+            "y_test_pred": _downsample(y_vp, max_pts),
+        }
+        with open(VIS_DIR / "training_plot_data.json", "w") as f:
+            json.dump(plot_data, f, indent=0)
+    except Exception as e:
+        logger.debug("Could not write training_plot_data.json for inference: %s", e)
 
     export_plots(
        art, pdf_pages, units=units)

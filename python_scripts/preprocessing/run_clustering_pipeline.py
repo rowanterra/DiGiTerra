@@ -29,12 +29,11 @@ from sklearn.mixture import GaussianMixture
 
 
 from matplotlib.backends.backend_pdf import PdfPages
-from python_scripts.preprocessing.visualize_predictions import visualize_predictions
 from python_scripts.plotting.plot_shap_summary_graphic import plot_shap_summary
-from python_scripts.preprocessing.utilites import make_preprocessor
-from python_scripts.preprocessing.utilites import get_feature_names
-from python_scripts.preprocessing.utilites import _scale_pairs
-from python_scripts.preprocessing.utilites import export_plots
+from python_scripts.preprocessing.utilities import make_preprocessor
+from python_scripts.preprocessing.utilities import get_feature_names
+from python_scripts.preprocessing.utilities import _scale_pairs
+from python_scripts.preprocessing.utilities import export_plots
 
 from python_scripts.config import VIS_DIR
 import python_scripts.plotting.plot_style  # noqa: F401
