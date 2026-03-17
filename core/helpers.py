@@ -20,7 +20,7 @@ def with_prefix(path: str) -> str:
 
 def allowed_file(filename: str) -> bool:
     """Check if file has an allowed extension."""
-    from app_constants import ALLOWED_EXTENSIONS
+    from core.constants import ALLOWED_EXTENSIONS
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 

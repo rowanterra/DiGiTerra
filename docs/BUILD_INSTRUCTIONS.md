@@ -1,8 +1,19 @@
 # Cross-Platform Build Instructions
 
-Instructions for building DiGiTerra desktop apps on macOS, Windows, and Linux.
+Instructions for building DiGiTerra **desktop apps** on macOS, Windows, and Linux, and how that relates to **web deployment** (Docker, gunicorn).
 
 **Important:** All build commands must be run with the current working directory set to the project root (the directory that contains `app.py`, `requirements.txt`, and the `build/` folder). The PyInstaller spec files resolve paths relative to the project root.
+
+## Desktop vs web
+
+| Use case | How to run | Docs |
+|----------|------------|------|
+| **Desktop app** (macOS/Windows/Linux) | Build with PyInstaller → distribute `.app` or `DiGiTerra/` folder | This file (sections below) |
+| **Web app – development** | `python app.py` → http://127.0.0.1:5000 | README.md, docs/HANDOFF.md |
+| **Web app – production** | **gunicorn** with 1 worker (required; app uses in-memory state) | docs/HANDOFF.md |
+| **Web app – container** | Docker / Kubernetes (Helm) use gunicorn inside the image | **deploy/README.md** |
+
+When running behind a URL prefix (e.g. `URL_PREFIX=digiterra` in Docker), the app serves both at `/` and at `/digiterra/` so health checks and reverse-proxy mounts work. See deploy/README.md and docs/HANDOFF.md for env vars and gunicorn usage.
 
 ## Prerequisites
 

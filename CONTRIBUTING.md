@@ -18,7 +18,7 @@ Set `MPLBACKEND=Agg` if you hit display/backend issues. Integration tests under 
 ## Where things live
 
 - **App entry:** `app.py` (creates Flask app, session cookie, registers blueprints).
-- **Routes:** `routes/` package: `main.py` (index, progress SSE), `upload.py`, `exploration.py`, `preprocess.py`, `modeling.py`, `prediction.py`, `assets.py`. Shared state in `app_state.py`, helpers in `app_helpers.py`, constants in `app_constants.py`.
+- **Routes:** `routes/` package: `main.py` (index, progress SSE), `upload.py`, `exploration.py`, `preprocess.py`, `modeling.py`, `prediction.py`, `assets.py`. Shared state, helpers, and constants live in the `core/` package (`core.state`, `core.helpers`, `core.constants`).
 - **Frontend:** `static/js/core.js` (API prefix, DOM refs, utilities, tab/nav), `static/js/app.js` (upload, exploration, preprocess, modeling, inference). Legacy single file: `static/client_side.js`. UI structure: `templates/index.html`.
 - **Config and paths:** `python_scripts/config.py` (BASE_DIR, APP_SUPPORT_DIR, UPLOAD_DIR, LOG_DIR, VIS_DIR, URL_PREFIX).
 - **Models and training:** `python_scripts/app_model_training.py` (orchestration), **`python_scripts/model_registry.py`** (single place for model lookup and constructor kwargs; see “Adding a new model” below).

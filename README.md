@@ -1,12 +1,26 @@
 # DiGiTerra
 
-This project ships a Flask-based UI and a desktop wrapper so users can run the
-app without opening Terminal or a browser tab. DiGiTerra supports **macOS, Windows, and Linux**.
+Flask-based UI plus a desktop wrapper. **macOS, Windows, Linux.**
 
-**Quick start (developers):** Clone the repo, then from the project root run  
-`pip install -r requirements.txt -r requirements-dev.txt`, then `pytest tests/` to run tests and `python app.py` to start the app (open `http://127.0.0.1:5000`). See **`CONTRIBUTING.md`** for where to add models and how to open a PR.
+## What to run (after you clone)
 
-**Developers / handoff:** See **`docs/HANDOFF.md`** for repo layout, security notes, and tips for integrating into a website.
+From the **project root** (the folder that has `app.py` and `requirements.txt`):
+
+```bash
+pip install -r requirements.txt
+```
+
+Then run **one** of these (they pull everything from `core/`, `routes/`, `python_scripts/`):
+
+| Goal | Command |
+|------|---------|
+| **Web app** (browser) | `python app.py` → open http://127.0.0.1:5000 |
+| **Desktop app** (window) | `python desktop_app.py` |
+
+Tests: `pip install -r requirements-dev.txt` then `pytest tests/`.  
+Production web server: `gunicorn app:app` (see `deploy/README.md` and `docs/HANDOFF.md`).
+
+**Root is kept minimal:** only these two entry scripts plus standard config (`requirements.txt`, `README.md`, etc.). All app logic lives in `core/`, `routes/`, `python_scripts/`, `scripts/`, and `docs/`.
 
 ## End-user install (no Terminal)
 

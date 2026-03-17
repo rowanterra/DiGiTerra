@@ -4,8 +4,8 @@ import uuid
 
 from flask import Blueprint, jsonify, request
 
-from app_constants import HTTP_ACCEPTED, HTTP_BAD_REQUEST
-from app_state import get_session_id, get_session_storage
+from core.constants import HTTP_ACCEPTED, HTTP_BAD_REQUEST
+from core.state import get_session_id, get_session_storage
 from python_scripts.app_model_training import run_model_training
 from python_scripts.preprocessing.progress_tracker import get_tracker
 

@@ -36,8 +36,10 @@ Then open **http://127.0.0.1:5000/digiterra/** . The Dockerfile sets `URL_PREFIX
 
 | Path | What it is |
 |------|------------|
-| **`app.py`** | Main Flask application. Defines all HTTP routes, upload handling, and download endpoints. Route handlers call into python_scripts for heavy logic. Use the section comments in the file to navigate. See "Splitting app.py" below for structure and how to split further. |
-| **`desktop_app.py`** | Launcher that starts the Flask server in a background thread and opens a pywebview window. Handles Save file dialogs for the desktop build. |
+| **`app.py`** | Web entry point (one-liner). Imports and exposes the Flask app from `core/flask_app.py`. Run: `python app.py` or `gunicorn app:app`. |
+| **`desktop_app.py`** | Desktop entry point (one-liner). Calls `core/desktop.py` to start Flask in a thread and open the pywebview window. Run: `python desktop_app.py`. |
+| **`core/`** | All app logic that root entry points use: `flask_app.py` (Flask app, create_app, run_app), `desktop.py` (desktop launcher + DesktopApi), plus `constants.py`, `helpers.py`, `state.py` for routes. |
+| **`scripts/`** | Standalone dev/maintainer scripts (e.g. `check_requirements.py`). Not imported by the app. App and pipeline code live in `python_scripts/` and `routes/`. |
 | **`templates/index.html`** | Single-page UI. All tabs (Upload, Data Exploration, Model Preprocessing, Modeling, Inference) are in this file. |
 | **`static/client_side.js`** | Front-end logic: uploads, API calls, progress polling, result display, downloads. |
 | **`static/style.css`** | Styles. |
@@ -61,7 +63,7 @@ Heavy logic has been moved into three modules. **`app_model_training.py`**: `run
    Move other heavy logic from `app.py` into modules under `python_scripts/` (or a `routes/` package). Keep `app.py` as the place that defines routes and calls into those modules. Pass dependencies (e.g. a `get_storage` callback) from `app.py` into the module so the module does not import `app`, avoiding circular imports.
 
 2. **Flask Blueprints**  
-   Group related routes into Blueprints (e.g. `routes/upload.py`, `routes/exploration.py`, `routes/modeling.py`) and register them in `app.py` with `app.register_blueprint(bp, url_prefix=...)`. Use the same `url_prefix` as `URL_PREFIX` so existing URLs still work.
+   Group related routes into Blueprints (e.g. `routes/upload.py`, `routes/exploration.py`, `routes/modeling.py`) and register them in `routes/__init__.py` via `register_blueprints(app)`. When `URL_PREFIX` is set, blueprints are registered both at root and under the prefix so both `/` and e.g. `/digiterra/` work (health checks and mounts keep working).
 
 You can use both: route registration in `app.py` or in Blueprint modules, and non-route logic in `python_scripts/` or `routes/` helpers.
 
