@@ -65,6 +65,9 @@ env/
 # Jupyter
 .ipynb_checkpoints/
 
+# Node (frontend tooling)
+node_modules/
+
 # IDE
 .vscode/
 .idea/
