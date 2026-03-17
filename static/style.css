@@ -1515,7 +1515,12 @@ button:hover {
     align-items: center; /* Aligns the text and toggle vertically */
     gap: 5px; /* Adds space between the label and toggle */
   }
-  
+
+.optional-param-label {
+    font-weight: 600;
+    font-size: 0.95em;
+}
+
 /* Toggle switch styles */
 .switch {
   position: relative;

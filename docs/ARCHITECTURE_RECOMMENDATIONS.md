@@ -64,7 +64,7 @@ Use **dedicated folders** so “where does X live?” has a clear answer.
 - **Use it for:** Standalone Python (or shell) scripts that are run directly (e.g. `python scripts/export_example_data.py`), not imported by the app. Keep `app.py`, `desktop_app.py`, and `build/*.sh` where they are; move or add one-off utilities into `scripts/`.
 - **Result:** App code stays in `app.py`, `python_scripts/`, etc.; “run a quick script” means `scripts/` and nothing else.
 
-### Model types folder (already in place — keep it explicit)
+### Model types folder (already in place; keep it explicit)
 
 **Goal:** One folder per **model type** (problem type), so adding a new model or a new problem type has a clear location.
 
@@ -96,7 +96,7 @@ DiGiTerra/
     │   ├── regression_models/
     │   ├── classify_models/
     │   └── cluster_models/
-    ├── plotting/                     # Or visualizations/ — all plot/bundle code
+    ├── plotting/                     # Or visualizations/; all plot/bundle code
     │   ├── plot_style.py
     │   ├── plot_*.py
     │   └── (bundles: regression, classification, clustering)
@@ -231,9 +231,9 @@ Have `app.py` and `desktop_app.py` **import** these (and set `VIS_DIR` once at s
 
 ## What to Leave As-Is (For Now)
 
-- **Pipelines** (`run_regression`, `run_classification`, `run_clustering`) – Already clear boundaries; keep them.
-- **Individual `train_*.py` files** – They’re thin and consistent. A registry or factory can wrap them; no need to delete them until you adopt #5.
-- **Single-page app behavior** – No need to switch to a heavy frontend framework; modular JS and HTML partials already make the SPA more straightforward.
-- **In-memory session state** – Fine for single-user/desktop; HANDOFF already notes moving to session/DB only when going multi-user.
+- **Pipelines** (`run_regression`, `run_classification`, `run_clustering`): Already clear boundaries; keep them.
+- **Individual `train_*.py` files**: They’re thin and consistent. A registry or factory can wrap them; no need to delete them until you adopt #5.
+- **Single-page app behavior**: No need to switch to a heavy frontend framework; modular JS and HTML partials already make the SPA more straightforward.
+- **In-memory session state**: Fine for single-user/desktop; HANDOFF already notes moving to session/DB only when going multi-user.
 
 These recommendations aim to make the codebase more straightforward to work in without a full rewrite: fewer giant files, one place to add models, and clearer boundaries between upload, exploration, modeling, and inference.

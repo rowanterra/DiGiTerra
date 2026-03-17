@@ -13,14 +13,15 @@ pip install -r requirements.txt -r requirements-dev.txt
 pytest tests/ -v --tb=short
 ```
 
-Set `MPLBACKEND=Agg` if you hit display/backend issues. Integration tests under `tests/integration/` use the Flask test client and may require `examples/iris.csv` (skipped if missing).
+Set `MPLBACKEND=Agg` if you hit display/backend issues. Integration tests under `tests/integration/` use the Flask test client and may require `examples/iris.csv` (skipped if missing). See `docs/DEPENDENCIES.md` for dependency constraints and verification.
 
 ## Where things live
 
-- **Routes and app entry:** `app.py` (Flask app, upload/preprocess/model/predict routes).
-- **Frontend:** `static/client_side.js`, `templates/index.html`.
+- **App entry:** `app.py` (creates Flask app, session cookie, registers blueprints).
+- **Routes:** `routes/` package: `main.py` (index, progress SSE), `upload.py`, `exploration.py`, `preprocess.py`, `modeling.py`, `prediction.py`, `assets.py`. Shared state in `app_state.py`, helpers in `app_helpers.py`, constants in `app_constants.py`.
+- **Frontend:** `static/js/core.js` (API prefix, DOM refs, utilities, tab/nav), `static/js/app.js` (upload, exploration, preprocess, modeling, inference). Legacy single file: `static/client_side.js`. UI structure: `templates/index.html`.
 - **Config and paths:** `python_scripts/config.py` (BASE_DIR, APP_SUPPORT_DIR, UPLOAD_DIR, LOG_DIR, VIS_DIR, URL_PREFIX).
-- **Models and training:** `python_scripts/app_model_training.py` (orchestration), **`python_scripts/model_registry.py`** (single place for model lookup and constructor kwargs — see “Adding a new model” below).
+- **Models and training:** `python_scripts/app_model_training.py` (orchestration), **`python_scripts/model_registry.py`** (single place for model lookup and constructor kwargs; see “Adding a new model” below).
 - **Plotting:** `python_scripts/plotting/` (bundles, visualize_predictions).
 - **Scripts:** `scripts/` for standalone runnable scripts; see `scripts/README.md`.
 

@@ -332,8 +332,10 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
             if problem_type == 'cluster':
                 base_c = dict(train_data=df, X=df[indicator_names], units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, test_size=testSize, k_min=2, k_max=8)
                 result = train_fn(**base_c, **kwargs)
-            else:
+            elif problem_type == 'regression':
                 result = train_fn(modelName, **base, **kwargs)
+            else:
+                result = train_fn(**base, **kwargs)
             if problem_type == 'classification':
                 report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics, feature_selection_info, outlier_info = unpack_classification_result(result)
             elif problem_type == 'cluster':
@@ -449,8 +451,8 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
             }
 
             #write to excel for classifier with all comprehensive metrics
-            write_to_excelClassifier(data, indicator_names, predictor_names, stratify_name, scaler, seed, modelName, params, units, report, cm, 
-                                   additional_metrics=additional_metrics)
+write_to_excelClassifier(data, indicator_names, predictor_names, stratify_name, scaler, seed, modelName, params, units, report, cm,
+                                   additional_metrics=additional_metrics, outlier_info=outlier_info)
 
     ## Cluster results
         elif modelName in CLUSTER_MODELS:

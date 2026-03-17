@@ -73,6 +73,11 @@ def run_predict(
         return ({"error": "No trained model found. Train a model first."}, 400)
     if "feature_order" not in store or not store["feature_order"]:
         return ({"error": "No feature_order found. Train a model first."}, 400)
+    # Cluster models: only some support assigning new points to clusters (e.g. KMeans, GMM). Spectral, DBSCAN, OPTICS, etc. do not.
+    if store.get("model_type") == "cluster":
+        m = store["model"]
+        if not (hasattr(m, "predict") and callable(getattr(m, "predict", None))):
+            return ({"error": "Inference on new data is not supported for this cluster model (e.g. Spectral, DBSCAN, OPTICS). Use a model that supports prediction (e.g. KMeans, GMM) to assign new points to clusters."}, 400)
     infer_cfg = store.get("inference_config", {})
     indicator_names = infer_cfg.get("indicator_names")
     drop_missing = normalize_preprocess_mode_fn(infer_cfg.get("drop_missing", "none"))

@@ -3,6 +3,9 @@
 This project ships a Flask-based UI and a desktop wrapper so users can run the
 app without opening Terminal or a browser tab. DiGiTerra supports **macOS, Windows, and Linux**.
 
+**Quick start (developers):** Clone the repo, then from the project root run  
+`pip install -r requirements.txt -r requirements-dev.txt`, then `pytest tests/` to run tests and `python app.py` to start the app (open `http://127.0.0.1:5000`). See **`CONTRIBUTING.md`** for where to add models and how to open a PR.
+
 **Developers / handoff:** See **`HANDOFF.md`** for repo layout, security notes, and tips for integrating into a website.
 
 ## End-user install (no Terminal)
@@ -39,7 +42,7 @@ pip install -r requirements.txt
 python app.py
 ```
 
-Then open `http://127.0.0.1:5000`.
+Then open `http://127.0.0.1:5000`. For version constraints and install verification, see `docs/DEPENDENCIES.md`.
 
 **Example datasets:** The `examples/` directory contains 9 CSVs: 3 classification (Iris, Wine, Breast cancer), 3 regression (Diabetes, Synthetic, Linnerud), and 3 clustering (feature-only versions). See `examples/README.md` for usage.
 
@@ -191,4 +194,4 @@ Docker build/run and Helm install instructions.
 
 ## Accessibility
 
-DiGiTerra is designed with accessibility in mind and includes comprehensive support for assistive technologies. The application implements ARIA attributes throughout the interface, provides full keyboard navigation support, and includes screen reader announcements for dynamic content updates. Form fields include accessible labels and help text, and all interactive elements have visible focus indicators. A skip link allows keyboard users to bypass navigation and jump directly to main content. For detailed information about accessibility features, see the Accessibility section in `docs/documentation.md`.
+DiGiTerra supports assistive technologies: ARIA attributes, keyboard navigation, screen reader announcements, and accessible form labels. A skip link is provided for keyboard users. See the Accessibility section in `docs/documentation.md` for details.
