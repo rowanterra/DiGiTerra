@@ -1,5 +1,6 @@
 """Main page and progress SSE."""
 import json
+import os
 import time
 
 from flask import Blueprint, Response, render_template, stream_with_context
@@ -20,10 +21,12 @@ bp = Blueprint("main", __name__)
 @bp.route("/")
 def index():
     """Render the main HTML page."""
+    use_js_bundle = os.environ.get("DIGITERRA_USE_JS_BUNDLE", "").strip().lower() in ("1", "true", "yes")
     return render_template(
         "index.html",
         api_root=config.URL_PREFIX,
         static_root=with_prefix("/static"),
+        use_js_bundle=use_js_bundle,
     )
 
 
