@@ -451,8 +451,8 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
             }
 
             #write to excel for classifier with all comprehensive metrics
-write_to_excelClassifier(data, indicator_names, predictor_names, stratify_name, scaler, seed, modelName, params, units, report, cm,
-                                   additional_metrics=additional_metrics, outlier_info=outlier_info)
+            write_to_excelClassifier(data, indicator_names, predictor_names, stratify_name, scaler, seed, modelName, params, units, report, cm,
+                                       additional_metrics=additional_metrics, outlier_info=outlier_info)
 
     ## Cluster results
         elif modelName in CLUSTER_MODELS:
