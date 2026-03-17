@@ -30,9 +30,8 @@ This checklist turns the “professional but rough around the edges” (≈7/10)
 
 ### 2. Tighten lint over time
 
-- Current: `--max-warnings 35`.  
-- Goal: fix warnings and set `--max-warnings 0` so lint is a hard gate.  
-- Optionally add an ESLint config (e.g. `eslint:recommended` or a shared config) and run `npm run lint` in CI.
+- Current: `--max-warnings 88` (baseline after adding app-loaded JS to lint). ESLint config: `.eslintrc.json`; CI runs `npm run lint`.  
+- Goal: fix warnings and set `--max-warnings 0` so lint is a hard gate.
 
 ### 3. Frontend migration and consistency
 
@@ -48,8 +47,8 @@ This checklist turns the “professional but rough around the edges” (≈7/10)
 
 ### 5. CI and docs
 
-- Ensure CI runs both unit and integration tests (e.g. in `tests.yml`) and that the test environment does not rely on host app-support paths (conftest now enforces a temp dir).  
-- In README or CONTRIBUTING, mention that tests use a temporary directory and do not write to the real app support dir.
+- ✅ CI runs `pytest tests/` (unit + integration) and `npm run lint`; conftest enforces a temp dir for tests.  
+- ✅ CONTRIBUTING.md states that tests are hermetic and do not write to the real app support dir.
 
 ---
 

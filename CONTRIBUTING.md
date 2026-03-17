@@ -13,7 +13,7 @@ pip install -r requirements.txt -r requirements-dev.txt
 pytest tests/ -v --tb=short
 ```
 
-Set `MPLBACKEND=Agg` if you hit display/backend issues. Integration tests under `tests/integration/` use the Flask test client and may require `examples/iris.csv` (skipped if missing). See `docs/DEPENDENCIES.md` for dependency constraints and verification.
+Set `MPLBACKEND=Agg` if you hit display/backend issues. Integration tests under `tests/integration/` use the Flask test client and may require `examples/iris.csv` (skipped if missing). **Tests are hermetic:** they use a temporary directory for uploads and app-support data (set in `tests/conftest.py`) and do not write to your real app support dir (e.g. `~/Library/Application Support/DiGiTerra`). See `docs/DEPENDENCIES.md` for dependency constraints and verification.
 
 ## Where things live
 

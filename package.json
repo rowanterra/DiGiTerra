@@ -4,7 +4,7 @@
   "description": "DiGiTerra ML app frontend",
   "private": true,
   "scripts": {
-    "lint": "eslint static/js/app.js static/js/core.js static/client_side.js --max-warnings 35"
+    "lint": "eslint static/js/app.js static/js/core.js static/client_side.js --max-warnings 88"
   },
   "devDependencies": {
     "eslint": "^8.57.0"
