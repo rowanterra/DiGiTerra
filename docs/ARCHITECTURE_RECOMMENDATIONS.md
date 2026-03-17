@@ -31,7 +31,7 @@ This document summarizes the current architecture and recommends changes to make
    All tabs and panels in a single 7k-line template. Editing one flow (e.g. Modeling) means scrolling through unrelated markup.
 
 4. **All routes in one file**  
-   `app.py` does a lot. HANDOFF.md already suggests Blueprints; splitting by domain (upload, exploration, modeling, inference, assets) would make routes easier to find and test.
+   `app.py` does a lot. HANDOFF already suggests Blueprints; splitting by domain (upload, exploration, modeling, inference, assets) would make routes easier to find and test.
 
 5. **Duplicate path/platform logic**  
    `app.py` and `desktop_app.py` both define or use `APP_SUPPORT_DIR`, `LOG_DIR`, etc. Config lives in more than one place.

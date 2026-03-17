@@ -1,7 +1,7 @@
 """
 Shared helpers for preprocessing, prediction, and Excel export. VIS_DIR (from config)
 is where we write predictions.csv and similar. Handoff: see python_scripts/config.py
-and HANDOFF.md for paths.
+and docs/HANDOFF.md for paths.
 """
 import os
 import logging

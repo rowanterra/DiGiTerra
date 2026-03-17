@@ -1,5 +1,5 @@
 # DiGiTerra Flask app. Routes are split into blueprints under routes/.
-# See HANDOFF.md for repo overview. Session state in app_state.py.
+# See docs/HANDOFF.md for repo overview. Session state in app_state.py.
 
 import os
 import uuid

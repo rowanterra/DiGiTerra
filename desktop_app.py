@@ -1,7 +1,7 @@
 """
 DiGiTerra desktop launcher. Starts the Flask app in a background thread and opens
 a pywebview window. Handoff note: Save-file dialogs go through the js_api (DesktopApi);
-the front end calls into that when running in the desktop build. See HANDOFF.md.
+the front end calls into that when running in the desktop build. See docs/HANDOFF.md.
 """
 import logging
 import os

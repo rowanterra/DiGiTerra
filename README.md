@@ -6,7 +6,7 @@ app without opening Terminal or a browser tab. DiGiTerra supports **macOS, Windo
 **Quick start (developers):** Clone the repo, then from the project root run  
 `pip install -r requirements.txt -r requirements-dev.txt`, then `pytest tests/` to run tests and `python app.py` to start the app (open `http://127.0.0.1:5000`). See **`CONTRIBUTING.md`** for where to add models and how to open a PR.
 
-**Developers / handoff:** See **`HANDOFF.md`** for repo layout, security notes, and tips for integrating into a website.
+**Developers / handoff:** See **`docs/HANDOFF.md`** for repo layout, security notes, and tips for integrating into a website.
 
 ## End-user install (no Terminal)
 
