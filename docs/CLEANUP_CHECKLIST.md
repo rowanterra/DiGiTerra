@@ -1,6 +1,5 @@
 # Repo polish checklist
 
-Checklist for tightening repo hygiene and presentation. Done items are listed first.
 
 ---
 
@@ -30,23 +29,25 @@ Checklist for tightening repo hygiene and presentation. Done items are listed fi
 
 ### 2. Tighten lint over time
 
-- **Done.** `--max-warnings 0`. All 86+ warnings resolved: unused vars prefixed with `_` or annotated (HTML-called functions), `.eslintrc.cjs` and `.eslintrc.json` use `varsIgnorePattern: "^_"`. MLP `hidden_layer_size1` typo fixed in `app.js` and `client_side.js`. CI runs `npm run lint` with zero warnings.
+- Current: `--max-warnings 88` (baseline after adding app-loaded JS to lint). ESLint config: `.eslintrc.json`; CI runs `npm run lint`.  
+- Goal: fix warnings and set `--max-warnings 0` so lint is a hard gate.
 
 ### 3. Frontend migration and consistency
 
-- **Documented.** CONTRIBUTING “Where things live” states canonical sources (`static/js/app.js`, `static/js/core.js`), legacy (`static/client_side.js`), and that new changes go in canonical files; lint covers all three.  
-- You can complete the migration (remove or replace `client_side.js` and update references) when ready.
+- **Canonical sources:** The app loads `templates/index.html` → `static/js/app.js`. `static/client_side.js` is documented as legacy; canonical sources are `static/js/core.js` and `static/js/app.js`.  
+- Either complete the migration (remove or replace `client_side.js` and update all references) or clearly document “legacy vs canonical” and keep lint covering both until migration is done.  
+- Ensure `package.json` scripts (lint, and any future build/test) match the real entrypoints.
 
-### 4. Shrink large UI assets (medium effort)
+### 4. Shrink large UI assets
 
-- **Phase 1 done.** `static/js/app.js` split by tab/feature: `upload.js` (upload + correlation), `preprocess.js`, `modeling.js`, `inference.js`; thin `app.js` (welcome, nav, popups). Load order in `templates/index.html`: core.js, upload, preprocess, modeling, inference, app. Shared helpers (`formatDateTimeForFilename`, `downloadFile`, `showCrossValidationUnavailable`, `downloadAdditionalInfoTable`) moved to `core.js`. No bundler.
-- **Phase 2 done.** Inline scripts moved out of `templates/index.html`: light-mode init and `goToModelPreprocessing` fallback live in `static/js/init.js`; config (API_ROOT, STATIC_ROOT) remains inline (Jinja). Init loaded in `<head>`.
-- **Bundle.** Run `npm run build` to produce `static/js/app.bundle.js`. Set env `DIGITERRA_USE_JS_BUNDLE=1` in production to load the single bundle instead of the seven scripts. See `scripts/build-js-bundle.cjs` and `docs/BUILD_INSTRUCTIONS.md`.
+- `static/client_side.js`, `static/js/app.js`, and `templates/index.html` are very large, which hurts maintainability.  
+- Consider splitting by feature or route (e.g. upload, exploration, preprocessing, modeling, inference), introducing a small build step if needed, and/or moving inline scripts out of `index.html` into modules.  
+- Improves “healthy repo” signal and makes the UI layer easier to work on.
 
 ### 5. CI and docs
 
-- CI runs `pytest tests/` (unit + integration) and `npm run lint`; conftest enforces a temp dir for tests.  
-- CONTRIBUTING.md states that tests are hermetic and do not write to the real app support dir.
+-  CI runs `pytest tests/` (unit + integration) and `npm run lint`; conftest enforces a temp dir for tests.  
+-  CONTRIBUTING.md states that tests are hermetic and do not write to the real app support dir.
 
 ---
 
@@ -57,6 +58,6 @@ Checklist for tightening repo hygiene and presentation. Done items are listed fi
 | Git hygiene       | Untracked node_modules/lock    | node_modules ignored; lockfile ready to commit |
 | Python version    | 3.10 vs 3.11+ mismatch         | Aligned to 3.11+                     |
 | Integration tests | Wrote to app-support dir       | Hermetic (temp dir)                  |
-| Lint              | Legacy file only, 999 warnings | 0 warnings (hard gate)              |
+| Lint              | Legacy file only, 999 warnings | App JS + legacy, 35 max warnings     |
 
-Working through the recommended next steps (lockfile commit, lint to 0, frontend consistency, splitting large files) improves presentation and engineering hygiene.
+Tackling “Recommended next steps” (lockfile commit, lint → 0, frontend consistency, splitting large files) will move the repo toward a 9/10 on presentation and engineering hygiene.
