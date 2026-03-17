@@ -14,7 +14,7 @@ Then run **one** of these (they pull everything from `core/`, `routes/`, `python
 
 | Goal | Command |
 |------|---------|
-| **Web app** (browser) | `python app.py` → open http://127.0.0.1:5000 |
+| **Web app** (browser) | `python app.py`, then open http://127.0.0.1:5000 |
 | **Desktop app** (window) | `python desktop_app.py` |
 
 Tests: `pip install -r requirements-dev.txt` then `pytest tests/`.  
@@ -46,7 +46,7 @@ Provide a prebuilt `DiGiTerra` folder. End users can:
 3. Make the executable: `chmod +x DiGiTerra/DiGiTerra`
 4. Double-click `DiGiTerra` or run from terminal: `./DiGiTerra/DiGiTerra`
 
-**Note:** No Python, pip, or Terminal steps are required for end users when you distribute
+No Python, pip, or Terminal steps are required for end users when you distribute
 a prebuilt application. The compiled application contains all Python dependencies inside it.
 
 ## Local development (browser)
@@ -119,7 +119,7 @@ The resulting `DiGiTerra.app` will be in the `dist/` directory. Distribute that
 `.app` (or wrap it in a `.dmg`) so users can double-click the app without
 launching Terminal or installing dependencies.
 
-**Note:** macOS requires `.icns` format for app icons. See `build/DiGiTerra.spec` for instructions on creating the icon file.
+macOS requires `.icns` format for app icons. See `build/DiGiTerra.spec` for instructions on creating the icon file.
 
 ### Windows
 
@@ -135,7 +135,7 @@ pyinstaller build\DiGiTerra_Windows.spec
 
 The resulting `DiGiTerra` folder (containing `DiGiTerra.exe` and dependencies) will be in the `dist/` directory. Distribute the entire folder to users.
 
-**Note:** Windows uses `.ico` format for icons. The spec file references `static/Terra_Axe_Logo.ico`.
+Windows uses `.ico` format for icons. The spec file references `static/Terra_Axe_Logo.ico`.
 
 ### Linux
 
@@ -152,7 +152,7 @@ pyinstaller build/DiGiTerra_Linux.spec
 
 The resulting `DiGiTerra` folder (containing the `DiGiTerra` executable and dependencies) will be in the `dist/` directory. Distribute the entire folder to users.
 
-**Note:** Make sure the executable has execute permissions: `chmod +x dist/DiGiTerra/DiGiTerra`
+Give the executable run permission: `chmod +x dist/DiGiTerra/DiGiTerra`
 
 ## Dependency audit (maintainers)
 
