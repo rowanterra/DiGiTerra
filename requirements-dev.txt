@@ -1,0 +1,3 @@
+# DiGiTerra dev/test dependencies. Install with: pip install -r requirements.txt -r requirements-dev.txt
+-r requirements.txt
+pytest>=7.0,<9

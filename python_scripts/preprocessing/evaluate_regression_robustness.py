@@ -283,7 +283,7 @@ def main() -> None:
     parser.add_argument("--seed-count", type=int, default=30, help="How many consecutive seeds to run.")
     parser.add_argument(
         "--output-dir",
-        default="docs",
+        default="output",
         help="Directory where output CSV files will be written.",
     )
     parser.add_argument(

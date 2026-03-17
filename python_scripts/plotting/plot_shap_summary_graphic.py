@@ -161,8 +161,9 @@ def plot_shap_summary(model, X_train, feature_names, model_name, pdf_pages, file
         plt.close(fig)  # Close figure before raising error
         raise ValueError(f"SHAP plot file is empty at {plot_path}")
     
-    # Save to PDF
-    pdf_pages.savefig(bbox_inches='tight', facecolor='white')
+    # Save to PDF if provided
+    if pdf_pages is not None:
+        pdf_pages.savefig(bbox_inches='tight', facecolor='white')
     
     # Bug 1 Fix: Close the specific figure we created
     plt.close(fig)

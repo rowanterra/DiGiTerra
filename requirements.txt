@@ -1,16 +1,16 @@
-# DiGiTerra dependencies. No version pins. (see HANDOFF.md).
-flask
-gunicorn
-requests
-matplotlib
-numpy
-openpyxl
-pandas
-scikit-learn
-scipy
-scikit-optimize
-seaborn
-shap
-werkzeug
-xlsxwriter
-pywebview
+# DiGiTerra runtime dependencies. Pinned for reproducible installs (see HANDOFF.md).
+flask>=3.0,<4
+gunicorn>=21,<24
+requests>=2.28,<3
+matplotlib>=3.7,<4
+numpy>=1.24,<3
+openpyxl>=3.1,<4
+pandas>=2.0,<3
+scikit-learn>=1.3,<2
+scipy>=1.10,<2
+scikit-optimize>=0.9,<0.11
+seaborn>=0.12,<1
+shap>=0.43,<0.46
+werkzeug>=3.0,<4
+xlsxwriter>=3.1,<4
+pywebview>=4.0,<6
