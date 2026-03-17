@@ -57,13 +57,13 @@ python python_scripts/preprocessing/evaluate_regression_robustness.py \
   --stratify-col pH \
   --seed-start 0 \
   --seed-count 30 \
-  --output-dir docs \
+  --output-dir output \
   --output-stem tree_robustness
 ```
 
 This writes:
-- `docs/tree_robustness_per_seed.csv` (each seed/model/feature-set run)
-- `docs/tree_robustness_summary.csv` (median/mean/std and 95% empirical interval)
+- `output/tree_robustness_per_seed.csv` (each seed/model/feature-set run)
+- `output/tree_robustness_summary.csv` (median/mean/std and 95% empirical interval)
 
 ## Local development (desktop window)
 

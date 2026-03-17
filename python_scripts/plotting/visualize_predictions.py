@@ -1,0 +1,199 @@
+import os
+from pathlib import Path
+
+import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+# import scipy.stats as stats
+import numpy as np
+
+import seaborn as sns
+
+from python_scripts.plotting.plot_style import apply_plot_style
+from python_scripts.config import VIS_DIR
+
+
+def visualize_predictions(model_name, 
+                          y_train, y_train_pred, 
+                          y_test, y_test_pred, 
+                          target_names, 
+                          units, sigfig, pdf_pages,
+                          train_results=None, test_results=None,
+                          file_suffix='', label_suffix='', plot_run_id=None):
+    apply_plot_style()
+
+    # Convert to arrays and handle index alignment for DataFrames
+    if isinstance(y_train_pred, pd.DataFrame):
+        y_train_pred_array = y_train_pred.values
+        train_pred_index = y_train_pred.index
+    else:
+        y_train_pred_array = np.array(y_train_pred)
+        train_pred_index = None
+    
+    if isinstance(y_test_pred, pd.DataFrame):
+        y_test_pred_array = y_test_pred.values
+        test_pred_index = y_test_pred.index
+    else:
+        y_test_pred_array = np.array(y_test_pred)
+        test_pred_index = None
+
+    if y_train_pred_array.ndim == 1:
+        y_train_pred_array = y_train_pred_array.reshape(-1, 1)
+        y_test_pred_array = y_test_pred_array.reshape(-1, 1)
+
+    for i, target in enumerate(target_names):
+        apply_plot_style()
+        if train_results is not None and test_results is not None:
+            fig, axs = plt.subplots(1, 3, figsize=(18, 5), gridspec_kw={'width_ratios': [1.3, 1.3, 1]})
+        else:
+            fig, axs = plt.subplots(1, 2, figsize=(13, 5))
+
+        if not units:
+            unitstr = 'units'
+        else:
+            unitstr = units
+
+        # === Scatter Plot ===
+        # Align y_train with y_train_pred indices if they're DataFrames
+        if isinstance(y_train, pd.DataFrame) and train_pred_index is not None:
+            y_train_aligned = y_train.loc[train_pred_index, target]
+        elif isinstance(y_train, pd.DataFrame):
+            y_train_aligned = y_train[target]
+        else:
+            y_train_aligned = y_train if y_train.ndim == 1 else y_train[:, i]
+        
+        # Align y_test with y_test_pred indices if they're DataFrames
+        if isinstance(y_test, pd.DataFrame) and test_pred_index is not None:
+            y_test_aligned = y_test.loc[test_pred_index, target]
+        elif isinstance(y_test, pd.DataFrame):
+            y_test_aligned = y_test[target]
+        else:
+            y_test_aligned = y_test if y_test.ndim == 1 else y_test[:, i]
+        
+        # Ensure arrays have the same length
+        if len(y_train_aligned) != len(y_train_pred_array[:, i]):
+            raise ValueError(f"Size mismatch: y_train has {len(y_train_aligned)} samples but y_train_pred has {len(y_train_pred_array[:, i])} samples. "
+                           f"This may be due to outlier removal. Ensure y_train matches the filtered predictions.")
+        if len(y_test_aligned) != len(y_test_pred_array[:, i]):
+            raise ValueError(f"Size mismatch: y_test has {len(y_test_aligned)} samples but y_test_pred has {len(y_test_pred_array[:, i])} samples.")
+        
+        axs[0].scatter(y_train_aligned, y_train_pred_array[:, i], alpha=0.65, label='Train', color='#4a7cb8', s=28, edgecolors='none')
+        axs[0].scatter(y_test_aligned, y_test_pred_array[:, i], alpha=0.65, label='Test', color='#3d8f5c', s=28, edgecolors='none')
+        min_val = min(y_train_aligned.min(), y_test_aligned.min())
+        max_val = max(y_train_aligned.max(), y_test_aligned.max())
+        axs[0].plot([min_val, max_val], [min_val, max_val], '--', color='.45', lw=1.5)
+        title_base = f"{model_name} | {target}\nPredicted vs Actual"
+        title_with_label = f"{title_base} {label_suffix}" if label_suffix else title_base
+        axs[0].set_title(title_with_label)
+        axs[0].set_xlabel(f"Actual '{unitstr}'")
+        axs[0].set_ylabel(f"Predicted '{unitstr}'")
+        axs[0].legend()
+        axs[0].grid(True, alpha=0.7)
+
+        # === Residuals ===
+        residuals_test = y_test_aligned - y_test_pred_array[:, i]
+        sns.histplot(residuals_test, bins=15, ax=axs[1], kde=True,
+                     color="#3d8f5c", edgecolor="white", linewidth=0.8)
+        axs[1].axvline(0, color='.5', linestyle='--')
+        residuals_title_base = f"{model_name} | {target}\nTest Residuals"
+        residuals_title_with_label = f"{residuals_title_base} {label_suffix}" if label_suffix else residuals_title_base
+        axs[1].set_title(residuals_title_with_label)
+        axs[1].set_xlabel(f"Residual '{unitstr}'")
+        axs[1].set_ylabel("Count")
+        # === Metrics Table (only if present) ===
+        if train_results is not None and test_results is not None:
+            axs[2].axis('off')
+            metrics_df = pd.DataFrame({
+                'Metric': ['R²', 'MSE', 'RMSE', 'MAE'],
+                'Train': train_results.iloc[i][1:].round(sigfig).values,
+                'Test': test_results.iloc[i][1:].round(sigfig).values
+            })
+            table = axs[2].table(cellText=metrics_df.values,
+                                 colLabels=metrics_df.columns,
+                                 loc='center',
+                                 cellLoc='center')
+            table.scale(1.2, 1.5)
+            axs[2].set_title("Summary Metrics", pad=20)
+        plt.tight_layout()
+        if plot_run_id is not None:
+            plot_filename = f"target_plot_{i + 1}{file_suffix}_{plot_run_id}.png"
+        else:
+            plot_filename = f"target_plot_{i + 1}{file_suffix}.png"
+        plot_path = VIS_DIR / plot_filename
+        plt.savefig(plot_path)
+        pdf_pages.savefig(fig)
+        plt.close(fig)
+
+        # Save separate Predicted vs Actual only (single-panel figure)
+        fig_pa, ax_pa = plt.subplots(figsize=(6, 5))
+        ax_pa.scatter(y_train_aligned, y_train_pred_array[:, i], alpha=0.65, label='Train', color='#4a7cb8', s=28, edgecolors='none')
+        ax_pa.scatter(y_test_aligned, y_test_pred_array[:, i], alpha=0.65, label='Test', color='#3d8f5c', s=28, edgecolors='none')
+        ax_pa.plot([min_val, max_val], [min_val, max_val], '--', color='.45', lw=1.5)
+        ax_pa.set_title(title_with_label)
+        ax_pa.set_xlabel(f"Actual '{unitstr}'")
+        ax_pa.set_ylabel(f"Predicted '{unitstr}'")
+        ax_pa.legend()
+        ax_pa.grid(True, alpha=0.7)
+        plt.tight_layout()
+        pa_filename = f"target_plot_pred_actual_{i + 1}{file_suffix}.png"
+        plt.savefig(VIS_DIR / pa_filename, dpi=150, bbox_inches='tight', facecolor='white')
+        pdf_pages.savefig(fig_pa)
+        plt.close(fig_pa)
+
+        # Save separate Test Residuals only (single-panel figure)
+        fig_res, ax_res = plt.subplots(figsize=(6, 4))
+        sns.histplot(residuals_test, bins=15, ax=ax_res, kde=True,
+                     color="#3d8f5c", edgecolor="white", linewidth=0.8)
+        ax_res.axvline(0, color='.5', linestyle='--')
+        ax_res.set_title(residuals_title_with_label)
+        ax_res.set_xlabel(f"Residual '{unitstr}'")
+        ax_res.set_ylabel("Count")
+        plt.tight_layout()
+        res_filename = f"target_plot_residuals_{i + 1}{file_suffix}.png"
+        plt.savefig(VIS_DIR / res_filename, dpi=150, bbox_inches='tight', facecolor='white')
+        pdf_pages.savefig(fig_res)
+        plt.close(fig_res)
+
+
+def plot_inference_pred_vs_actual(
+    y_train_actual, y_train_pred, y_test_actual, y_test_pred,
+    inference_pred, target_name, units, model_name, out_path,
+):
+    """Draw Predicted vs Actual with train, test, and inference.
+    Inference has no actuals, so we plot (pred, pred) on the diagonal with a clear label.
+    """
+    apply_plot_style()
+    y_train_actual = np.asarray(y_train_actual).ravel()
+    y_train_pred = np.asarray(y_train_pred).ravel()
+    y_test_actual = np.asarray(y_test_actual).ravel()
+    y_test_pred = np.asarray(y_test_pred).ravel()
+    inference_pred = np.asarray(inference_pred).ravel()
+    unitstr = units if units else 'units'
+    fig, ax = plt.subplots(figsize=(6, 5))
+    ax.scatter(y_train_actual, y_train_pred, alpha=0.65, label='Train', color='#4a7cb8', s=28, edgecolors='none')
+    ax.scatter(y_test_actual, y_test_pred, alpha=0.65, label='Test', color='#3d8f5c', s=28, edgecolors='none')
+    if len(inference_pred) > 0:
+        ax.scatter(inference_pred, inference_pred, alpha=0.7, label='Inference (predicted only; no actuals)', color='#c71585', s=32, edgecolors='white', linewidths=0.5, zorder=5)
+    lo = min(
+        y_train_actual.min(),
+        y_train_pred.min(),
+        y_test_actual.min(),
+        y_test_pred.min(),
+        inference_pred.min() if len(inference_pred) > 0 else y_train_actual.min(),
+    )
+    hi = max(
+        y_train_actual.max(),
+        y_train_pred.max(),
+        y_test_actual.max(),
+        y_test_pred.max(),
+        inference_pred.max() if len(inference_pred) > 0 else y_train_actual.max(),
+    )
+    ax.plot([lo, hi], [lo, hi], '--', color='.45', lw=1.5)
+    ax.set_xlabel(f"Actual '{unitstr}'")
+    ax.set_ylabel(f"Predicted '{unitstr}'")
+    ax.set_title(f"{model_name} | {target_name}\nPredicted vs Actual (training + inference)")
+    ax.legend()
+    ax.grid(True, alpha=0.7)
+    plt.tight_layout()
+    fig.savefig(out_path, dpi=150, bbox_inches='tight', facecolor='white')
+    plt.close(fig)

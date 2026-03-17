@@ -73,3 +73,11 @@ See `deploy/helm/digiterra/values.yaml`. Key fields:
 - `persistence.enabled`, `persistence.size`, `persistence.storageClassName`: PVC settings.
 - `ingress.enabled`, `ingress.className`, `ingress.hosts`, `ingress.tls`: Ingress configuration.
 - `resources`: CPU/memory requests and limits for the deployment.
+
+## Production checklist
+
+- **Workers:** Run gunicorn with **1 worker** when using in-memory session state (no shared store).
+- **HTTPS:** Put the app behind HTTPS and a reverse proxy (e.g. nginx, Ingress with TLS).
+- **Secrets:** No secrets in the repo; use env vars or a secret manager for any credentials.
+- **Logging:** Set `LOG_LEVEL=INFO` (or `DEBUG` for troubleshooting). Logs go to stderr and, when writable, to `LOG_DIR` (see `python_scripts/config.py`).
+- **Env overrides:** Optional: `DIGITERRA_BASE_DIR`, `DIGITERRA_APP_SUPPORT_DIR`, `DIGITERRA_OUTPUT_DIR`, `URL_PREFIX` for paths and URL prefix.

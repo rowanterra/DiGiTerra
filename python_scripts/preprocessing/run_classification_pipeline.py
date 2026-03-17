@@ -22,11 +22,11 @@ from sklearn.metrics import (
 )
 
 from matplotlib.backends.backend_pdf import PdfPages
-from python_scripts.preprocessing.utilites import make_strat_labels_robust, sort_class_labels_numeric_bins
-from python_scripts.preprocessing.utilites import make_preprocessor
-from python_scripts.preprocessing.utilites import get_feature_names
-from python_scripts.preprocessing.utilites import _scale_pairs
-from python_scripts.preprocessing.utilites import export_plots
+from python_scripts.preprocessing.utilities import make_strat_labels_robust, sort_class_labels_numeric_bins
+from python_scripts.preprocessing.utilities import make_preprocessor
+from python_scripts.preprocessing.utilities import get_feature_names
+from python_scripts.preprocessing.utilities import _scale_pairs
+from python_scripts.preprocessing.utilities import export_plots
 from python_scripts.preprocessing.feature_selection import apply_feature_selection
 from python_scripts.preprocessing.outlier_handling import apply_outlier_handling
 from python_scripts.preprocessing.hyperparameter_search import apply_hyperparameter_search
