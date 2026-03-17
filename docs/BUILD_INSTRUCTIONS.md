@@ -2,7 +2,27 @@
 
 Instructions for building DiGiTerra **desktop apps** on macOS, Windows, and Linux, and how that relates to **web deployment** (Docker, gunicorn).
 
-**Important:** All build commands must be run with the current working directory set to the project root (the directory that contains `app.py`, `requirements.txt`, and the `build/` folder). The PyInstaller spec files resolve paths relative to the project root.
+All build commands must be run with the current working directory set to the project root (the directory that contains `app.py`, `requirements.txt`, and the `build/` folder). The PyInstaller spec files resolve paths relative to the project root.
+
+## Desktop vs web
+
+| Use case | How to run | Docs |
+|----------|------------|------|
+| **Desktop app** (macOS/Windows/Linux) | Build with PyInstaller, then distribute `.app` or `DiGiTerra/` folder | This file (sections below) |
+| **Web app (development)** | `python app.py` at http://127.0.0.1:5000 | README.md, docs/HANDOFF.md |
+| **Web app (production)** | gunicorn with 1 worker (required; app uses in-memory state) | docs/HANDOFF.md |
+| **Web app (container)** | Docker / Kubernetes (Helm) use gunicorn inside the image | deploy/README.md |
+
+When running behind a URL prefix (e.g. `URL_PREFIX=digiterra` in Docker), the app serves both at `/` and at `/digiterra/` so health checks and reverse-proxy mounts work. See deploy/README.md and docs/HANDOFF.md for env vars and gunicorn usage.
+
+### Frontend JS bundle (production)
+
+The UI is split into `static/js/init.js`, `core.js`, `upload.js`, `preprocess.js`, `modeling.js`, `inference.js`, and `app.js`. For production you can serve a single bundle to reduce requests:
+
+1. From the project root: `npm run build` (produces `static/js/app.bundle.js`).
+2. Set env `DIGITERRA_USE_JS_BUNDLE=1` when running the app (e.g. in gunicorn or Docker). The template will then load `app.bundle.js` instead of the seven scripts.
+
+Without the env var, the app loads the seven scripts (for development). Commit `app.bundle.js` after building if you want deployments to use it without running `npm run build` in CI.
 
 ## Desktop vs web
 
@@ -174,7 +194,7 @@ The build creates `dist/DiGiTerra/` folder containing:
 
 **Windows:**
 - Windows Defender may flag the executable - this is a false positive
-- Users may need to click "More info" → "Run anyway" on first launch
+- Users may need to click "More info" then "Run anyway" on first launch
 - Consider code signing for production releases
 
 **Linux:**

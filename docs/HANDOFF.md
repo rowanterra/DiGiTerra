@@ -18,9 +18,9 @@ pip install -r requirements.txt
 gunicorn --bind 0.0.0.0:5000 --workers 1 --timeout 120 app:app
 ```
 
-**IMPORTANT:** Use `--workers 1` (not 4+) because the app uses a global `memStorage` dictionary. Multiple workers have separate memory, causing "No data uploaded" errors. See "Production Deployment Notes" below for details.
+Use `--workers 1` (not 4+) because the app uses a global `memStorage` dictionary. Multiple workers have separate memory, causing "No data uploaded" errors. See "Production Deployment Notes" below for details.
 
-**Note:** `python app.py` uses Flask's built-in development server (not suitable for production). Use gunicorn or another production WSGI server for production deployments.
+`python app.py` uses Flask's built-in development server (not suitable for production). Use gunicorn or another production WSGI server for production deployments.
 
 **Running under a URL prefix (e.g. for GKE / `.../researcher-apps/digiterra/`):**  
 To serve the app at `http://127.0.0.1:5000/digiterra/` instead of the root, set `URL_PREFIX` before starting:
@@ -114,7 +114,7 @@ You can use both: route registration in `app.py` or in Blueprint modules, and no
 Regression currently produces several plots:
 
 - **Primary (always):** `target_plot_1` / `target_plot_1_advanced` from `visualize_predictions()`: Predicted vs Actual (train/test) + Test Residuals (+ optional metrics table). This is the main composite shown on the Modeling and Inference pages.
-- **From `export_plots` → `plot_regression_bundle()`:** Predicted vs Actual (summary), Residuals histogram, Residuals vs Fitted, Actual vs Predicted density (2D), Feature (or Permutation) importance, and optionally PDPs.
+- **From `export_plots` to `plot_regression_bundle()`:** Predicted vs Actual (summary), Residuals histogram, Residuals vs Fitted, Actual vs Predicted density (2D), Feature (or Permutation) importance, and optionally PDPs.
 
 **Redundancy:** The summary "Predicted vs Actual" and "Residuals" in the bundle largely duplicate the composite. The bundle adds Residuals vs Fitted, 2D density, and importance/PDP.
 
