@@ -1,22 +1,21 @@
 # Repo polish checklist
 
-This checklist turns the “professional but rough around the edges” (≈7/10) assessment into a more polished, production-grade presentation (≈9/10). Items already done are marked ✅.
 
 ---
 
 ## Done in this pass
 
-- **✅ Git hygiene**  
+- ** Git hygiene**  
   `node_modules/` is in `.gitignore`. Commit `package-lock.json` for reproducible frontend installs:  
   `git add package-lock.json && git commit -m "chore: track package-lock.json for reproducible npm installs"`
 
-- **✅ Python version alignment**  
+- ** Python version alignment**  
   `pyproject.toml` now requires `>=3.11` to match `docs/DEPENDENCIES.md`.
 
-- **✅ Hermetic integration tests**  
+- **Hermetic integration tests**  
   `tests/conftest.py` sets `DIGITERRA_APP_SUPPORT_DIR` and `DIGITERRA_OUTPUT_DIR` to a temp dir before any app/config import, so upload tests no longer touch `~/Library/Application Support/DiGiTerra` (or equivalent).
 
-- **✅ Lint scope and cap**  
+- ** Lint scope and cap**  
   `package.json` lint script now runs ESLint on the files the app actually loads (`static/js/app.js`, `static/js/core.js`) plus legacy `static/client_side.js`, with `--max-warnings 35` so the current 35 warnings don’t block CI but new ones do.
 
 ---
@@ -47,8 +46,8 @@ This checklist turns the “professional but rough around the edges” (≈7/10)
 
 ### 5. CI and docs
 
-- ✅ CI runs `pytest tests/` (unit + integration) and `npm run lint`; conftest enforces a temp dir for tests.  
-- ✅ CONTRIBUTING.md states that tests are hermetic and do not write to the real app support dir.
+-  CI runs `pytest tests/` (unit + integration) and `npm run lint`; conftest enforces a temp dir for tests.  
+-  CONTRIBUTING.md states that tests are hermetic and do not write to the real app support dir.
 
 ---
 
