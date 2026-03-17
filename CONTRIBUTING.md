@@ -19,7 +19,7 @@ Set `MPLBACKEND=Agg` if you hit display/backend issues. Integration tests under 
 
 - **App entry:** `app.py` (creates Flask app, session cookie, registers blueprints).
 - **Routes:** `routes/` package: `main.py` (index, progress SSE), `upload.py`, `exploration.py`, `preprocess.py`, `modeling.py`, `prediction.py`, `assets.py`. Shared state, helpers, and constants live in the `core/` package (`core.state`, `core.helpers`, `core.constants`).
-- **Frontend:** `static/js/core.js` (API prefix, DOM refs, utilities, tab/nav), `static/js/app.js` (upload, exploration, preprocess, modeling, inference). Legacy single file: `static/client_side.js`. UI structure: `templates/index.html`.
+- **Frontend:** The app loads `templates/index.html`, which includes `static/js/app.js` (and relies on `static/js/core.js`). These are the **canonical** sources. `static/client_side.js` is **legacy** (single-file predecessor); it is still linted but not loaded by the default app. New UI changes should go in `static/js/app.js` and `static/js/core.js`. Lint covers all three so both canonical and legacy stay consistent until migration is complete.
 - **Config and paths:** `python_scripts/config.py` (BASE_DIR, APP_SUPPORT_DIR, UPLOAD_DIR, LOG_DIR, VIS_DIR, URL_PREFIX).
 - **Models and training:** `python_scripts/app_model_training.py` (orchestration), **`python_scripts/model_registry.py`** (single place for model lookup and constructor kwargs; see “Adding a new model” below).
 - **Plotting:** `python_scripts/plotting/` (bundles, visualize_predictions).
