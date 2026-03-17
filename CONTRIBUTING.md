@@ -1,5 +1,9 @@
 # Contributing to DiGiTerra
 
+## Branching and pull requests
+
+Work on a feature branch (e.g. `git checkout -b feature/your-feature`). When ready, push the branch and open a **pull request** against `main` (or `master`). CI will run tests; fix any failures before merging.
+
 ## Running tests
 
 From the project root:
@@ -16,7 +20,7 @@ Set `MPLBACKEND=Agg` if you hit display/backend issues. Integration tests under 
 - **Routes and app entry:** `app.py` (Flask app, upload/preprocess/model/predict routes).
 - **Frontend:** `static/client_side.js`, `templates/index.html`.
 - **Config and paths:** `python_scripts/config.py` (BASE_DIR, APP_SUPPORT_DIR, UPLOAD_DIR, LOG_DIR, VIS_DIR, URL_PREFIX).
-- **Models and training:** `python_scripts/app_model_training.py` (orchestration), `python_scripts/model_registry.py` (model lookup and kwargs).
+- **Models and training:** `python_scripts/app_model_training.py` (orchestration), **`python_scripts/model_registry.py`** (single place for model lookup and constructor kwargs — see “Adding a new model” below).
 - **Plotting:** `python_scripts/plotting/` (bundles, visualize_predictions).
 - **Scripts:** `scripts/` for standalone runnable scripts; see `scripts/README.md`.
 
@@ -32,5 +36,7 @@ Set `MPLBACKEND=Agg` if you hit display/backend issues. Integration tests under 
 
 - The repo uses pytest for tests; see `pyproject.toml` for pytest options.
 - CI runs on push/PR to `main` or `master` (`.github/workflows/tests.yml`): installs deps and runs `pytest tests/`.
+
+- **API:** JSON success/error shape is described in `docs/API_RESPONSES.md`.
 
 For more on architecture and alignment with standard practice, see `docs/ARCHITECTURE_RECOMMENDATIONS.md` and `docs/SOFTWARE_ALIGNMENT.md`.
