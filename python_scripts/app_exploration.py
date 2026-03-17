@@ -90,14 +90,14 @@ def handle_auto_detect_nan_zeros(store: dict, data: dict):
         numeric_cols = cols_df.select_dtypes(include=[np.number])
         needs_zero_handling = (numeric_cols == 0).any().any() if not numeric_cols.empty else False
         if not needs_missing_handling and not needs_zero_handling:
-            message = "No missing values or zeros detected in indicator/target columns. You can leave cleaning as \"No Columns\"."
+            message = "No blanks or zeros found in your selected columns. You can leave both options as \"Don't apply\"."
         else:
             parts = []
             if needs_missing_handling:
-                parts.append("missing values")
+                parts.append("blanks (missing values)")
             if needs_zero_handling:
                 parts.append("zeros")
-            message = f"Detected {' and '.join(parts)} in indicator/target columns. Please choose how to handle them below."
+            message = f"Found {' and '.join(parts)} in your selected columns. Choose where to handle them and how."
         return (
             {
                 "needs_missing_handling": bool(needs_missing_handling),

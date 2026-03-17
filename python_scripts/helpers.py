@@ -1,7 +1,7 @@
 """
 Shared helpers for preprocessing, prediction, and Excel export. VIS_DIR (from config)
 is where we write predictions.csv and similar. Handoff: see python_scripts/config.py
-and HANDOFF.md for paths.
+and docs/HANDOFF.md for paths.
 """
 import os
 import logging
@@ -287,19 +287,26 @@ def write_to_excelRegression(data, indicator_names, predictor_names, stratify_na
                 }
                 oi_df = pd.DataFrame(oi_data)
                 oi_df.to_excel(writer, sheet_name='Outlier Handling', index=False)
+                # If any training rows were removed as outliers, list their indices on a separate sheet
+                removed = outlier_info.get('removed_row_indices')
+                if removed and isinstance(removed, list) and len(removed) > 0:
+                    removed_df = pd.DataFrame({'Removed sample index': removed})
+                    removed_df.to_excel(writer, sheet_name='Outlier Samples Removed', index=False)
 
 
 # Backward compatibility: base name no longer assumed to mean regression
 write_to_excel = write_to_excelRegression
 
 
-def write_to_excelClassifier(data, indicator_names, predictor_names, stratify_name, scaler, seed, modelName, params, units, report, cm, additional_metrics=None):
+def write_to_excelClassifier(data, indicator_names, predictor_names, stratify_name, scaler, seed, modelName, params, units, report, cm, additional_metrics=None, outlier_info=None):
     """
     Write classification results to Excel with comprehensive metrics.
     
     Args:
         additional_metrics: Dictionary with additional metrics like ROC AUC, Average Precision, etc.
                           from calculate_classification_metrics()
+        outlier_info: Optional dict with method, action, n_outliers, original_samples, remaining_samples,
+                      and optionally removed_row_indices (list of training row indices removed as outliers).
     """
     workbook = xlsxwriter.Workbook(str(VIS_DIR / "model_performance.xlsx"), {'nan_inf_to_errors': True})
     worksheet = workbook.add_worksheet('Preprocessing')
@@ -476,6 +483,25 @@ def write_to_excelClassifier(data, indicator_names, predictor_names, stratify_na
                 if ap_data:
                     ap_df = pd.DataFrame(ap_data)
                     ap_df.to_excel(writer, sheet_name='Per-Class Average Precision', index=False)
+
+        # Outlier Handling sheet (same as regression)
+        if outlier_info:
+            oi_data = {
+                'Property': ['Method', 'Action', 'Outliers Detected', 'Original Samples', 'Remaining Samples'],
+                'Value': [
+                    outlier_info.get('method', 'N/A'),
+                    outlier_info.get('action', 'N/A'),
+                    outlier_info.get('n_outliers', 0),
+                    outlier_info.get('original_samples', 'N/A'),
+                    outlier_info.get('remaining_samples', 'N/A')
+                ]
+            }
+            oi_df = pd.DataFrame(oi_data)
+            oi_df.to_excel(writer, sheet_name='Outlier Handling', index=False)
+            removed = outlier_info.get('removed_row_indices')
+            if removed and isinstance(removed, list) and len(removed) > 0:
+                removed_df = pd.DataFrame({'Removed sample index': removed})
+                removed_df.to_excel(writer, sheet_name='Outlier Samples Removed', index=False)
 
     
 def write_to_excelCluster(data, indicator_names, stratify_name, scaler, seed, modelName, params, units, train_silhouette, train_calinski_harabasz, train_davies_bouldin, test_silhouette, test_calinski_harabasz, test_davies_bouldin, best_k, centers, silhouette_grid):

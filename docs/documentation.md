@@ -48,7 +48,7 @@ Upload  ->  Data Exploration  ->  Model Preprocessing  ->  Modeling  ->  Outputs
 
 ## Accessibility Features
 
-DiGiTerra includes comprehensive accessibility features to ensure the application is usable by individuals with disabilities and those using assistive technologies.
+DiGiTerra supports assistive technologies and follows accessibility practices.
 
 ### ARIA Attributes and Semantic HTML
 
@@ -72,7 +72,7 @@ Full keyboard navigation support is provided throughout the application:
 
 ### Screen Reader Support
 
-Screen reader users receive comprehensive information about the application state:
+Screen reader users receive clear information about the application state:
 
 - **Screen reader announcements**: Dynamic content changes, error messages, and status updates are automatically announced using live regions
 - **Descriptive labels**: All form controls, buttons, and interactive elements have accessible names that clearly describe their purpose
