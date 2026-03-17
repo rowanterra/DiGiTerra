@@ -24,6 +24,17 @@ The UI is split into `static/js/init.js`, `core.js`, `upload.js`, `preprocess.js
 
 Without the env var, the app loads the seven scripts (for development). Commit `app.bundle.js` after building if you want deployments to use it without running `npm run build` in CI.
 
+## Desktop vs web
+
+| Use case | How to run | Docs |
+|----------|------------|------|
+| **Desktop app** (macOS/Windows/Linux) | Build with PyInstaller → distribute `.app` or `DiGiTerra/` folder | This file (sections below) |
+| **Web app – development** | `python app.py` → http://127.0.0.1:5000 | README.md, docs/HANDOFF.md |
+| **Web app – production** | **gunicorn** with 1 worker (required; app uses in-memory state) | docs/HANDOFF.md |
+| **Web app – container** | Docker / Kubernetes (Helm) use gunicorn inside the image | **deploy/README.md** |
+
+When running behind a URL prefix (e.g. `URL_PREFIX=digiterra` in Docker), the app serves both at `/` and at `/digiterra/` so health checks and reverse-proxy mounts work. See deploy/README.md and docs/HANDOFF.md for env vars and gunicorn usage.
+
 ## Prerequisites
 
 All platforms require:
