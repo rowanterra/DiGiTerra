@@ -14,7 +14,7 @@ predictionForm.addEventListener('submit', async (e) => {
     const predictionDownloadName = `predictions_${resultTimestamp}.csv`
 
     try{
-        const response = await fetch(withApiRoot('/predict'), {
+        const response = await fetch('/predict', {
             method: 'POST',
             body: formData,
         });

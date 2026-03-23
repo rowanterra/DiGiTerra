@@ -636,6 +636,19 @@ const getCachedElement = (() => {
     };
 })();
 
+/**
+ * Unified Advanced tab uses #advancedLoading; legacy #advancedOptimization panel uses #advancedOptimizationLegacyLoading.
+ */
+function getAdvancedLoadingDiv() {
+    const legacyPanel = document.getElementById('advancedOptimization');
+    if (legacyPanel && !legacyPanel.classList.contains('hidden')) {
+        return document.getElementById('advancedOptimizationLegacyLoading')
+            || document.getElementById('advancedLoading');
+    }
+    return document.getElementById('advancedLoading');
+}
+window.getAdvancedLoadingDiv = getAdvancedLoadingDiv;
+
 // Safely check for pywebview API with error handling
 function safeCheckPywebviewAPI() {
     try {
@@ -1208,6 +1221,10 @@ function updateOutputTypeDisplay(outputType) {
         if (clusterTargetMessage) clusterTargetMessage.classList.add('hidden');
         if (predictorsSelect) predictorsSelect.disabled = false;
     }
+
+    if (typeof window.updateDataCleaningScopeForOutputType === 'function') {
+        window.updateDataCleaningScopeForOutputType(outputType);
+    }
 }
 
 function updateAutomlSettingsDisplay() {
@@ -1470,7 +1487,7 @@ function showCrossValidationUnavailable() {
 /* eslint-disable-next-line no-unused-vars */
 function downloadAdditionalInfoTable(tableData, sheetName, timestamp) {
     const ts = timestamp || formatDateTimeForFilename();
-    fetch(withApiRoot('/downloadAdditionalInfo'), {
+    fetch('/downloadAdditionalInfo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ table_data: tableData, sheet_name: sheetName }),

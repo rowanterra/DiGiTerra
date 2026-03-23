@@ -76,6 +76,8 @@ def plot_confusion_matrix(y_true, y_pred, model_name, pdf_pages=None,
         # Save to PDF if provided
         if pdf_pages is not None:
             pdf_pages.savefig(disp.figure_, bbox_inches='tight', facecolor='white')
+        if ax is None:
+            plt.close(disp.figure_)
     
     return disp
 
@@ -146,5 +148,7 @@ def plot_confusion_matrix_from_estimator(estimator, X, y, model_name, pdf_pages=
         # Save to PDF if provided
         if pdf_pages is not None:
             pdf_pages.savefig(disp.figure_, bbox_inches='tight', facecolor='white')
+        if ax is None:
+            plt.close(disp.figure_)
     
     return disp

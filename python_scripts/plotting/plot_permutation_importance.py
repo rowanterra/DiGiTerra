@@ -88,6 +88,7 @@ def plot_permutation_importance(estimator, X, y, model_name, pdf_pages=None,
     # Save to PDF if provided
     if pdf_pages is not None:
         pdf_pages.savefig(fig, bbox_inches='tight', facecolor='white')
+    plt.close(fig)
     
     return result
 

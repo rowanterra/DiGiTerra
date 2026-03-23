@@ -70,14 +70,16 @@ def handle_auto_detect_nan_zeros(store: dict, data: dict):
     """Return (response_dict, status_code). On error, response_dict has 'error' key."""
     if "data" not in store:
         return ({"error": "No data uploaded. Please upload a file first."}, 400)
-    if not data or "indicators" not in data or "predictors" not in data:
-        return ({"error": "Indicators and predictors are required"}, 400)
+    if not data or "indicators" not in data:
+        return ({"error": "Indicators are required"}, 400)
     try:
         df = store["data"]
         inds = data["indicators"]
-        preds = data["predictors"]
+        preds = data.get("predictors", [])
         if isinstance(inds, (int, np.integer)):
             inds = [inds]
+        if preds is None:
+            preds = []
         if isinstance(preds, (int, np.integer)):
             preds = [preds]
         indices = list(dict.fromkeys(list(inds) + list(preds)))
@@ -127,6 +129,7 @@ def handle_corr(
     drop_missing = data.get("dropMissing", "none")
     impute_strategy = data.get("imputeStrategy", "none")
     drop_zero = data.get("dropZero", "none")
+    zero_handle = data.get("zeroHandle", "drop")
     if "colsIgnore" not in data:
         return ({"error": "Missing required field: colsIgnore"}, 400)
     if data["colsIgnore"] == "all":
@@ -143,6 +146,8 @@ def handle_corr(
         return ({"error": "No numeric columns available for correlation matrices."}, 400)
     if impute_strategy in {"0", "0.01"}:
         impute_strategy = float(impute_strategy)
+    if isinstance(zero_handle, str) and zero_handle in {"0", "0.01"}:
+        zero_handle = float(zero_handle)
     df_corr = preprocess_data(
         df=df_corr,
         target_cols=df_corr.columns.tolist(),
@@ -150,6 +155,7 @@ def handle_corr(
         drop_missing=drop_missing,
         impute_strategy=impute_strategy,
         drop_zero=drop_zero,
+        zero_handle=zero_handle,
     )
     if df_corr.empty:
         return ({"error": "No rows available after preprocessing for correlation matrices."}, 400)
@@ -259,6 +265,7 @@ def handle_pairplot(
     drop_missing = data.get("dropMissing", "none")
     impute_strategy = data.get("imputeStrategy", "none")
     drop_zero = data.get("dropZero", "none")
+    zero_handle = data.get("zeroHandle", "drop")
     if not x_col or not y_col:
         return ({"error": "Missing required fields: x, y"}, 400)
     df_numeric = df.select_dtypes(include="number")
@@ -266,6 +273,8 @@ def handle_pairplot(
         return ({"error": "No numeric columns available for pairplot."}, 400)
     if impute_strategy in {"0", "0.01"}:
         impute_strategy = float(impute_strategy)
+    if isinstance(zero_handle, str) and zero_handle in {"0", "0.01"}:
+        zero_handle = float(zero_handle)
     df_numeric = preprocess_data(
         df=df_numeric,
         target_cols=df_numeric.columns.tolist(),
@@ -273,6 +282,7 @@ def handle_pairplot(
         drop_missing=drop_missing,
         impute_strategy=impute_strategy,
         drop_zero=drop_zero,
+        zero_handle=zero_handle,
     )
     if df_numeric.empty:
         return ({"error": "No rows available after preprocessing for pairplot."}, 400)
