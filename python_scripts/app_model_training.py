@@ -187,6 +187,14 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
         drop_missing = data['dropMissing']
         impute_strategy = data['imputeStrategy']
         drop_zero = data['dropZero']
+        zero_handle = data.get('zeroHandle')
+        if zero_handle is None:
+            # Backward compatibility: older clients only sent dropZero + implicit row-drop behavior
+            zero_handle = 'drop' if drop_zero != 'none' else 'none'
+        elif isinstance(zero_handle, str) and zero_handle in {'0', '0.01'}:
+            zero_handle = float(zero_handle)
+        if drop_zero == 'none':
+            zero_handle = 'none'
         quantileBinDict = data['quantileBinDict']
         useTransformer = data['useTransformer']
         transformerCols = data['transformerCols']
@@ -261,6 +269,7 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
             'drop_missing': drop_missing,
             'impute_strategy': impute_strategy,
             'drop_zero': drop_zero,
+            'zero_handle': zero_handle,
             'useTransformer': useTransformer,
         }
         
@@ -311,7 +320,15 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
 
         tracker.update_stage('data_preprocessing', 'running', 50, 'Cleaning and preprocessing data...')
     ## Preprocessing
-        df = preprocess_data(df=df, target_cols=predictor_names, indicator_cols=indicator_names, drop_missing=drop_missing, impute_strategy=impute_strategy, drop_zero=drop_zero)
+        df = preprocess_data(
+            df=df,
+            target_cols=predictor_names,
+            indicator_cols=indicator_names,
+            drop_missing=drop_missing,
+            impute_strategy=impute_strategy,
+            drop_zero=drop_zero,
+            zero_handle=zero_handle,
+        )
         tracker.update_stage('data_preprocessing', 'completed', 100, 'Data preprocessing complete')
         
         # Update model training stage to indicate we're starting
@@ -456,6 +473,7 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
 
     ## Cluster results
         elif modelName in CLUSTER_MODELS:
+            best_k_int = int(best_k) if best_k is not None else 0
             result = {
                 'train_silhouette' : format(round(train_results['silhouette'],sigfig), fmt),
                 'train_calinski_harabasz': format(round(train_results['calinski_harabasz'],sigfig), fmt),
@@ -463,11 +481,14 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
                 'test_silhouette' : format(round(test_results['silhouette'],sigfig), fmt),
                 'test_calinski_harabasz': format(round(test_results['calinski_harabasz'],sigfig), fmt),
                 'test_davies_bouldin' : format(round(test_results['davies_bouldin'],sigfig), fmt),
-                'best_k': best_k,
+                'best_k': best_k_int,
                 'model_params': _json_safe_params(params),  # Sanitize: get_params() can include estimators
             }
-            #write to excel for cluster
-            write_to_excelCluster(data, indicator_names, stratify_name, scaler, seed, modelName, params, units, train_results['silhouette'], train_results['calinski_harabasz'], train_results['davies_bouldin'], test_results['silhouette'], test_results['calinski_harabasz'], test_results['davies_bouldin'], best_k, centers, silhouette_grid)
+            # write to excel for cluster (NaN metrics can make xlsxwriter raise with nan_inf_to_errors)
+            try:
+                write_to_excelCluster(data, indicator_names, stratify_name, scaler, seed, modelName, params, units, train_results['silhouette'], train_results['calinski_harabasz'], train_results['davies_bouldin'], test_results['silhouette'], test_results['calinski_harabasz'], test_results['davies_bouldin'], best_k, centers, silhouette_grid)
+            except Exception as excel_err:
+                logger.warning("Excel export failed for cluster (model results unchanged): %s", excel_err)
 
     ## Regression results
         else: 

@@ -453,8 +453,8 @@
                                 </select>
                             </div>
                             <br>
-                            <div class="scaling-container hidden" id="exploreImputeDiv">
-                                <label for="exploreImputeStrategy">How to handle blanks?</label>
+                            <div class="scaling-container" id="exploreImputeDiv">
+                                <label for="exploreImputeStrategy">Action for blanks</label>
                                 <select name="exploreImputeStrategy" id="exploreImputeStrategy">
                                     <option value="none">Remove rows with blanks</option>
                                     <option value="mean">Fill with column mean</option>
@@ -465,11 +465,22 @@
                             </div>
                             <br>
                             <div class="scaling-container">
-                                <label for="exploreDrop0">Treat zeros as invalid (remove rows) in:</label>
+                                <label for="exploreDrop0">Treat zeros in:</label>
                                 <select name="exploreDrop0" id="exploreDrop0">
                                     <option value="none">Don't apply</option>
                                     <option value="indicator">Selected columns only</option>
                                     <option value="all">All columns</option>
+                                </select>
+                            </div>
+                            <br>
+                            <div class="scaling-container hidden" id="exploreZeroActionDiv">
+                                <label for="exploreZeroHandle">Action for zeros</label>
+                                <select name="exploreZeroHandle" id="exploreZeroHandle">
+                                    <option value="drop">Remove rows with zeros (in scope)</option>
+                                    <option value="mean">Replace zeros with column mean</option>
+                                    <option value="median">Replace zeros with column median</option>
+                                    <option value="0">Replace zeros with 0</option>
+                                    <option value="0.01">Replace zeros with 0.01</option>
                                 </select>
                             </div>
                         </div>
@@ -542,8 +553,14 @@
                         </div>
                         <div id="dataCleaningAutodetectMessage" class="field-note" style="margin-bottom: 12px; min-height: 1.2em; color: #666;" aria-live="polite"></div>
                         <div id="dataCleaningMissingWrapper" class="scaling-container">
-                            <label for="dropMissing">Where to handle missing values (blanks)?</label>
-                            <select name="dropMissing" id="dropMissing">
+                            <div class="field-label-block" style="margin-bottom: 6px; font-weight: 600;">Missing values (blanks)</div>
+                            <p class="field-note" style="margin-bottom: 8px;">Select which columns this applies to, then how to handle blanks below.</p>
+                            <div class="cleaning-scope-checkboxes" style="display: flex; flex-wrap: nowrap; gap: 10px; align-items: center; margin-bottom: 8px; font-size: 0.82rem; white-space: nowrap;">
+                                <label style="margin: 0; flex-shrink: 0;"><input type="checkbox" id="missScopeInd"> Indicators</label>
+                                <label id="missScopeTgtLabel" style="margin: 0; flex-shrink: 0;"><input type="checkbox" id="missScopeTgt"> Targets</label>
+                                <label style="margin: 0; flex-shrink: 0;"><input type="checkbox" id="missScopeAll"> All numeric</label>
+                            </div>
+                            <select name="dropMissing" id="dropMissing" class="sr-only" aria-hidden="true" tabindex="-1">
                                 <option value="none">Don't apply</option>
                                 <option value="indicatorAndTarget">Indicator and target columns</option>
                                 <option value="indicator">Indicator columns only</option>
@@ -551,8 +568,8 @@
                                 <option value="all">All columns</option>
                             </select>
                         </div>
-                        <div class="scaling-container hidden" id="imputeDiv">
-                            <label for="imputeStrategy">How to handle blanks?</label>
+                        <div class="scaling-container" id="imputeDiv">
+                            <label for="imputeStrategy">Action for blanks</label>
                             <select name="imputeStrategy" id="imputeStrategy">
                                 <option value="none">Remove rows with blanks</option>
                                 <option value="mean">Fill with column mean</option>
@@ -562,8 +579,23 @@
                             </select>
                         </div>
                         <div id="dataCleaningZerosWrapper" class="scaling-container" style="margin-top: 8px;">
-                            <label for="drop0">Where to treat zeros as invalid (remove those rows)?</label>
-                            <select name="drop0" id="drop0">
+                            <div class="field-label-block" style="margin-bottom: 6px; font-weight: 600;">Zeros</div>
+                            <p class="field-note" style="margin-bottom: 8px;">Select which columns may contain invalid zeros, then choose an action.</p>
+                            <div class="cleaning-scope-checkboxes" style="display: flex; flex-wrap: nowrap; gap: 10px; align-items: center; margin-bottom: 8px; font-size: 0.82rem; white-space: nowrap;">
+                                <label style="margin: 0; flex-shrink: 0;"><input type="checkbox" id="zeroScopeInd"> Indicators</label>
+                                <label id="zeroScopeTgtLabel" style="margin: 0; flex-shrink: 0;"><input type="checkbox" id="zeroScopeTgt"> Targets</label>
+                                <label style="margin: 0; flex-shrink: 0;"><input type="checkbox" id="zeroScopeAll"> All numeric</label>
+                            </div>
+                            <label for="zeroHandle">Action for zeros</label>
+                            <select name="zeroHandle" id="zeroHandle">
+                                <option value="none">Don't apply</option>
+                                <option value="drop">Remove rows with zeros (in selected columns)</option>
+                                <option value="mean">Replace zeros with column mean</option>
+                                <option value="median">Replace zeros with column median</option>
+                                <option value="0">Replace zeros with 0</option>
+                                <option value="0.01">Replace zeros with 0.01</option>
+                            </select>
+                            <select name="drop0" id="drop0" class="sr-only" aria-hidden="true" tabindex="-1">
                                 <option value="none">Don't apply</option>
                                 <option value="indicatorAndTarget">Indicator and target columns</option>
                                 <option value="indicator">Indicator columns only</option>
@@ -2449,7 +2481,6 @@
             <div class="model-card">
                 <h2 style="margin-top: 0; margin-bottom: 20px;">Modeling Results</h2>
                 <div id="NumericResultDiv" role="region" aria-label="Regression model results" class="hidden">
-                    <div id="imageSelector"> </div>
                 </div>
                 <div id="ClusterResultDiv" role="region" aria-label="Clustering model results" class="hidden"></div>
                 <div id="ClassifierResultDiv" role="region" aria-label="Classification model results" class="hidden"></div>
@@ -3739,7 +3770,6 @@
                     <div class="model-card">
                         <h2 style="margin-top: 0; margin-bottom: 20px;">Modeling Results</h2>
                         <div id="AdvancedNumericResultDiv" role="region" aria-label="Advanced regression model results" class="hidden">
-                            <div id="advancedImageSelector"></div>
                         </div>
                         <div id="AdvancedClusterResultDiv" role="region" aria-label="Advanced clustering model results" class="hidden"></div>
                         <div id="AdvancedClassifierResultDiv" role="region" aria-label="Advanced classification model results" class="hidden"></div>
@@ -3944,7 +3974,6 @@
                     <div class="model-card">
                         <h2 style="margin-top: 0; margin-bottom: 20px;">Modeling Results</h2>
                         <div id="AutoMLNumericResultDiv" role="region" aria-label="AutoML regression model results" class="hidden">
-                            <div id="automlImageSelector"></div>
                         </div>
                         <div id="AutoMLClusterResultDiv" role="region" aria-label="AutoML clustering model results" class="hidden"></div>
                         <div id="AutoMLClassifierResultDiv" role="region" aria-label="AutoML classification model results" class="hidden"></div>
@@ -7376,22 +7405,11 @@
                             </p>
                         </div>
                     </div>
-
-                    <!-- Results display area on the right side -->
-                    <div class="visualSection">
-                        <div class="model-card">
-                            <div id="AdvancedNumericResultDiv" role="region" aria-label="Advanced regression model results">
-                                <div id="advancedImageSelector"></div>
-                            </div>
-                            <div id="AdvancedClusterResultDiv" role="region" aria-label="Advanced clustering model results"></div>
-                            <div id="AdvancedClassifierResultDiv" role="region" aria-label="Advanced classification model results"></div>
-                        </div>
-                    </div>
                 </div>
             </form>
             
             <!-- Loading bars positioned below graphics, aligned with the left column (button area) -->
-            <div id="advancedLoading" class="hidden" style="margin-top: 20px; max-width: 35%;" role="status" aria-live="polite" aria-atomic="true" aria-label="Advanced modeling loading status">
+            <div id="advancedOptimizationLegacyLoading" class="hidden" style="margin-top: 20px; max-width: 35%;" role="status" aria-live="polite" aria-atomic="true" aria-label="Advanced modeling loading status (legacy panel)">
             </div>
         </div>
     </div>

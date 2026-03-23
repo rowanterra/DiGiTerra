@@ -5,6 +5,7 @@
 Precision-Recall Curve plotting using scikit-learn's PrecisionRecallDisplay.
 """
 
+import logging
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend
@@ -12,6 +13,17 @@ import matplotlib.pyplot as plt
 import python_scripts.plotting.plot_style  # noqa: F401
 from sklearn.metrics import PrecisionRecallDisplay, precision_recall_curve, average_precision_score
 from python_scripts.config import VIS_DIR
+
+logger = logging.getLogger(__name__)
+
+
+def _finite_metric(x):
+    if x is None:
+        return False
+    try:
+        return bool(np.isfinite(float(x)))
+    except (TypeError, ValueError):
+        return False
 
 
 def plot_precision_recall_curve(y_true, y_score, model_name, pdf_pages=None,
@@ -64,8 +76,10 @@ def plot_precision_recall_curve(y_true, y_score, model_name, pdf_pages=None,
     
     # Add title
     title_base = f"{model_name} | Precision-Recall Curve"
-    if avg_precision is not None:
-        title_base += f" (AP = {avg_precision:.3f})"
+    if _finite_metric(avg_precision):
+        title_base += f" (AP = {float(avg_precision):.3f})"
+    elif avg_precision is not None:
+        logger.debug("Average precision non-finite; omitting from title")
     title_with_label = f"{title_base} {label_suffix}" if label_suffix else title_base
     if disp.ax_ is not None:
         disp.ax_.set_title(title_with_label, fontsize=14, pad=20)
@@ -77,13 +91,13 @@ def plot_precision_recall_curve(y_true, y_score, model_name, pdf_pages=None,
     plot_path = VIS_DIR / plot_filename
     if disp.figure_ is not None:
         disp.figure_.savefig(plot_path, dpi=150, bbox_inches='tight', facecolor='white')
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.debug(f"Precision-Recall curve plot saved to {plot_path}")
+        logger.debug("Precision-Recall curve plot saved to %s", plot_path)
         
         # Save to PDF if provided
         if pdf_pages is not None:
             pdf_pages.savefig(disp.figure_, bbox_inches='tight', facecolor='white')
+        if ax is None:
+            plt.close(disp.figure_)
     
     return disp
 
@@ -134,8 +148,10 @@ def plot_precision_recall_curve_from_estimator(estimator, X, y, model_name, pdf_
     
     # Add title
     title_base = f"{model_name} | Precision-Recall Curve"
-    if disp.average_precision is not None:
-        title_base += f" (AP = {disp.average_precision:.3f})"
+    if _finite_metric(getattr(disp, "average_precision", None)):
+        title_base += f" (AP = {float(disp.average_precision):.3f})"
+    elif getattr(disp, "average_precision", None) is not None:
+        logger.debug("Average precision from estimator is non-finite; omitting from title")
     title_with_label = f"{title_base} {label_suffix}" if label_suffix else title_base
     if disp.ax_ is not None:
         disp.ax_.set_title(title_with_label, fontsize=14, pad=20)
@@ -147,12 +163,12 @@ def plot_precision_recall_curve_from_estimator(estimator, X, y, model_name, pdf_
     plot_path = VIS_DIR / plot_filename
     if disp.figure_ is not None:
         disp.figure_.savefig(plot_path, dpi=150, bbox_inches='tight', facecolor='white')
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.debug(f"Precision-Recall curve plot saved to {plot_path}")
+        logger.debug("Precision-Recall curve plot saved to %s", plot_path)
         
         # Save to PDF if provided
         if pdf_pages is not None:
             pdf_pages.savefig(disp.figure_, bbox_inches='tight', facecolor='white')
+        if ax is None:
+            plt.close(disp.figure_)
     
     return disp
