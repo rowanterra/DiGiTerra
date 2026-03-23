@@ -177,12 +177,16 @@ def run_classification(model, model_name,
         model.fit(X_train_s, y_train)
 
     # Evaluate
+    y_train_pred = model.predict(X_train_s)
     y_pred = model.predict(X_test_s)
     _norm = _normalize_classes(model)
     classes = _norm if _norm is not None else model.classes_
     # Ensure 1D targets for metrics (MultiOutputClassifier returns 2D predict for single output)
     y_test_1d = np.asarray(y_test).ravel()
     y_pred_1d = np.asarray(y_pred).ravel()
+    y_train_1d = np.asarray(y_train).ravel()
+    y_train_pred_1d = np.asarray(y_train_pred).ravel()
+    train_report = classification_report(y_train_1d, y_train_pred_1d, output_dict=True)
     report = classification_report(y_test_1d, y_pred_1d, output_dict=True)
     cm = confusion_matrix(y_test_1d, y_pred_1d, labels=classes)
 
@@ -256,7 +260,7 @@ def run_classification(model, model_name,
     
     # Return in the expected order: report, cm, params, shapes, model, X_scaler, quantileBin_results, feature_order, additional_metrics
     # additional_metrics is added at the end for backward compatibility
-    return report, cm, params_to_return, {
+    return train_report, report, cm, params_to_return, {
                 'X_train': processed_X_train_shape,
                 'X_test': processed_X_test_shape,
                 'y_train': processed_y_train_shape,

@@ -37,10 +37,10 @@ def unpack_classification_result(result_tuple):
     Handles both old format (8 values) and new format (9 values with additional_metrics).
     
     Returns:
-        tuple: (report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics)
+        tuple: (train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics)
     """
-    if len(result_tuple) >= 9:
-        return result_tuple[:9]
+    if len(result_tuple) >= 10:
+        return result_tuple[:10]
     else:
         # Old format - pad with None for additional_metrics
         return result_tuple + (None,)
@@ -286,7 +286,7 @@ def write_to_excel(data, indicator_names, predictor_names, stratify_name, modelN
                 oi_df.to_excel(writer, sheet_name='Outlier Handling', index=False)
 
 
-def write_to_excelClassifier(data, indicator_names, predictor_names, stratify_name, scaler, seed, modelName, params, units, report, cm, additional_metrics=None):
+def write_to_excelClassifier(data, indicator_names, predictor_names, stratify_name, scaler, seed, modelName, params, units, train_report, report, cm, additional_metrics=None):
     """
     Write classification results to Excel with comprehensive metrics.
     
@@ -415,8 +415,21 @@ def write_to_excelClassifier(data, indicator_names, predictor_names, stratify_na
                         report_data.append({'Metric': f'{key}_{key2}', 'Value': value2})
             if report_data:
                 report_df = pd.DataFrame(report_data)
-                report_df.to_excel(writer, sheet_name='Classification Report', index=False)
+                report_df.to_excel(writer, sheet_name='Classification Test Report', index=False)
         
+        # Classification Report as DataFrame
+        if isinstance(train_report, dict):
+            train_report_data = []
+            for key, value in train_report.items():
+                if key == 'accuracy':
+                    train_report_data.append({'Metric': 'accuracy', 'Value': value})
+                else:
+                    for key2, value2 in value.items():
+                        train_report_data.append({'Metric': f'{key}_{key2}', 'Value': value2})
+            if train_report_data:
+                train_report_df = pd.DataFrame(train_report_data)
+                train_report_df.to_excel(writer, sheet_name='Classification Training Report', index=False)
+
         # Confusion Matrix as DataFrame
         cm_df = pd.DataFrame(cm)
         cm_df.to_excel(writer, sheet_name='Confusion Matrix', index=False)

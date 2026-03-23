@@ -1697,22 +1697,22 @@ def _run_model_training(session_id: str, data: dict):
             else:
                 result_tuple = train_logistic_classifier(target_variables=predictor_names, train_data=df, use_stratified_split=stratifyBool, X=df[indicator_names], y=df[predictor_names], stratifyColumn=stratify_name, units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, testSize=testSize, feature_selection_method=feature_selection_method, feature_selection_k=feature_selection_k, outlier_method=outlier_method, outlier_action=outlier_action, hyperparameter_search=hyperparameter_search, search_cv_folds=search_cv_folds, search_n_iter=search_n_iter, modeling_mode=modeling_mode)
                 if len(result_tuple) >= 9:
-                    report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = result_tuple
+                    train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = result_tuple
                 else:
-                    report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order = result_tuple[:8]
+                    train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order = result_tuple[:8]
                     additional_metrics = None
         
         elif modelName == 'ExtraTrees_classifier':
             result_tuple = train_extra_trees_classifier(target_variables=predictor_names, train_data=df, use_stratified_split=stratifyBool, X=df[indicator_names], y=df[predictor_names], stratifyColumn=stratify_name, units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, testSize=testSize, feature_selection_method=feature_selection_method, feature_selection_k=feature_selection_k, outlier_method=outlier_method, outlier_action=outlier_action, hyperparameter_search=hyperparameter_search, search_cv_folds=search_cv_folds, search_n_iter=search_n_iter, modeling_mode=modeling_mode)
-            report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+            train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
 
         elif modelName == 'GaussianNB_classifier':
             result_tuple = train_gaussian_nb(target_variables=predictor_names, train_data=df, use_stratified_split=stratifyBool, X=df[indicator_names], y=df[predictor_names], stratifyColumn=stratify_name, units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, testSize=testSize, feature_selection_method=feature_selection_method, feature_selection_k=feature_selection_k, outlier_method=outlier_method, outlier_action=outlier_action, hyperparameter_search=hyperparameter_search, search_cv_folds=search_cv_folds, search_n_iter=search_n_iter, modeling_mode=modeling_mode)
-            report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+            train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
 
         elif modelName == 'SGD_classifier':
             result_tuple = train_sgd_classifier(target_variables=predictor_names, train_data=df, use_stratified_split=stratifyBool, X=df[indicator_names], y=df[predictor_names], stratifyColumn=stratify_name, units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, testSize=testSize, feature_selection_method=feature_selection_method, feature_selection_k=feature_selection_k, outlier_method=outlier_method, outlier_action=outlier_action, hyperparameter_search=hyperparameter_search, search_cv_folds=search_cv_folds, search_n_iter=search_n_iter, modeling_mode=modeling_mode)
-            report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+            train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
 
         elif modelName == 'MLP_classifier':  
             if nonreq:
@@ -1761,7 +1761,7 @@ def _run_model_training(session_id: str, data: dict):
                                 validation_fraction=hyperparameters['MLPValidationFraction'],
                                 verbose=MLPVerbose,
                                 warm_start=MLPWarmStart)
-                    report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+                    train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
             else:
                 hiddenlayersizeString = '(' + hyperparameters['hidden_layer_sizes1'] + ',' + hyperparameters['hidden_layer_sizes2']
                 if hyperparameters['hidden_layer_sizes3']:
@@ -1773,7 +1773,7 @@ def _run_model_training(session_id: str, data: dict):
                             activation=hyperparameters['activation'], 
                             solver=hyperparameters['solver'],
                             random_state = seed    )
-                report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+                train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
 
         elif modelName == 'RF_classifier':
             if nonreq:
@@ -1806,11 +1806,11 @@ def _run_model_training(session_id: str, data: dict):
                             verbose=hyperparameters['RFVerbose'],
                             warm_start=RFWarmStart,
                             )
-                report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+                train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
             else:
                 result_tuple = train_rf_classifier(target_variables=predictor_names, train_data=df, use_stratified_split=stratifyBool, X=df[indicator_names], y=df[predictor_names], stratifyColumn=stratify_name, units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, testSize=testSize, feature_selection_method=feature_selection_method, feature_selection_k=feature_selection_k, outlier_method=outlier_method, outlier_action=outlier_action, hyperparameter_search=hyperparameter_search, search_cv_folds=search_cv_folds, search_n_iter=search_n_iter,
                             n_estimators=hyperparameters['n_estimators'], )
-                report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+                train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
        
 
         elif modelName == 'SVC_classifier':
@@ -1846,7 +1846,7 @@ def _run_model_training(session_id: str, data: dict):
                                 break_ties=SVMBreakTies,
                                 random_state=seed,
                                 )
-                    report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+                    train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
 
                     
                 elif kernel =='poly':
@@ -1866,7 +1866,7 @@ def _run_model_training(session_id: str, data: dict):
                             decision_function_shape=hyperparameters['SVCdecisionFunctionShape'],
                             break_ties=SVMBreakTies,
                             random_state=seed,)
-                    report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+                    train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
 
                 else:
                     result_tuple = train_svc(target_variables=predictor_names, train_data=df, use_stratified_split=stratifyBool, X=df[indicator_names], y=df[predictor_names], stratifyColumn=stratify_name, units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, testSize=testSize,
@@ -1885,7 +1885,7 @@ def _run_model_training(session_id: str, data: dict):
                                 decision_function_shape=hyperparameters['SVCdecisionFunctionShape'],
                                 break_ties=SVMBreakTies,
                                 random_state=seed,)
-                    report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+                    train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
 
 
             else:
@@ -1894,83 +1894,83 @@ def _run_model_training(session_id: str, data: dict):
                     result_tuple = train_svc(target_variables=predictor_names, train_data=df, use_stratified_split=stratifyBool, X=df[indicator_names], y=df[predictor_names], stratifyColumn=stratify_name, units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, testSize=testSize, feature_selection_method=feature_selection_method, feature_selection_k=feature_selection_k, outlier_method=outlier_method, outlier_action=outlier_action, hyperparameter_search=hyperparameter_search, search_cv_folds=search_cv_folds, search_n_iter=search_n_iter, modeling_mode=modeling_mode,
                             C=hyperparameters['C'], kernel=kernel,  gamma=hyperparameters['gamma'],
                             random_state = seed)
-                    report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+                    train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
 
                 elif kernel =='poly':
                     result_tuple = train_svc(target_variables=predictor_names, train_data=df, use_stratified_split=stratifyBool, X=df[indicator_names], y=df[predictor_names], stratifyColumn=stratify_name, units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, testSize=testSize, feature_selection_method=feature_selection_method, feature_selection_k=feature_selection_k, outlier_method=outlier_method, outlier_action=outlier_action, hyperparameter_search=hyperparameter_search, search_cv_folds=search_cv_folds, search_n_iter=search_n_iter, modeling_mode=modeling_mode,
                             C=hyperparameters['C'], kernel=kernel, degree=hyperparameters['degree'], gamma=hyperparameters['gamma'],
                             random_state = seed)
-                    report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+                    train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
                 else:
                     result_tuple = train_svc(target_variables=predictor_names, train_data=df, use_stratified_split=stratifyBool, X=df[indicator_names], y=df[predictor_names], stratifyColumn=stratify_name, units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, testSize=testSize, feature_selection_method=feature_selection_method, feature_selection_k=feature_selection_k, outlier_method=outlier_method, outlier_action=outlier_action, hyperparameter_search=hyperparameter_search, search_cv_folds=search_cv_folds, search_n_iter=search_n_iter, modeling_mode=modeling_mode,
                             C=hyperparameters['C'], kernel=kernel,
                             random_state = seed)
-                    report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+                    train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
 
         # Additional Classification Models
         elif modelName == 'AdaBoost_classifier':
             result_tuple = train_adaboost_classifier(target_variables=predictor_names, train_data=df, use_stratified_split=stratifyBool, X=df[indicator_names], y=df[predictor_names], stratifyColumn=stratify_name, units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, testSize=testSize, feature_selection_method=feature_selection_method, feature_selection_k=feature_selection_k, outlier_method=outlier_method, outlier_action=outlier_action, hyperparameter_search=hyperparameter_search, search_cv_folds=search_cv_folds, search_n_iter=search_n_iter, modeling_mode=modeling_mode)
-            report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+            train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
 
         elif modelName == 'Bagging_classifier':
             result_tuple = train_bagging_classifier(target_variables=predictor_names, train_data=df, use_stratified_split=stratifyBool, X=df[indicator_names], y=df[predictor_names], stratifyColumn=stratify_name, units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, testSize=testSize, feature_selection_method=feature_selection_method, feature_selection_k=feature_selection_k, outlier_method=outlier_method, outlier_action=outlier_action, hyperparameter_search=hyperparameter_search, search_cv_folds=search_cv_folds, search_n_iter=search_n_iter, modeling_mode=modeling_mode)
-            report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+            train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
 
         elif modelName == 'BernoulliNB_classifier':
             result_tuple = train_bernoulli_nb(target_variables=predictor_names, train_data=df, use_stratified_split=stratifyBool, X=df[indicator_names], y=df[predictor_names], stratifyColumn=stratify_name, units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, testSize=testSize, feature_selection_method=feature_selection_method, feature_selection_k=feature_selection_k, outlier_method=outlier_method, outlier_action=outlier_action, hyperparameter_search=hyperparameter_search, search_cv_folds=search_cv_folds, search_n_iter=search_n_iter, modeling_mode=modeling_mode)
-            report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+            train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
 
         elif modelName == 'CategoricalNB_classifier':
             result_tuple = train_categorical_nb(target_variables=predictor_names, train_data=df, use_stratified_split=stratifyBool, X=df[indicator_names], y=df[predictor_names], stratifyColumn=stratify_name, units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, testSize=testSize, feature_selection_method=feature_selection_method, feature_selection_k=feature_selection_k, outlier_method=outlier_method, outlier_action=outlier_action, hyperparameter_search=hyperparameter_search, search_cv_folds=search_cv_folds, search_n_iter=search_n_iter, modeling_mode=modeling_mode)
-            report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+            train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
 
         elif modelName == 'ComplementNB_classifier':
             result_tuple = train_complement_nb(target_variables=predictor_names, train_data=df, use_stratified_split=stratifyBool, X=df[indicator_names], y=df[predictor_names], stratifyColumn=stratify_name, units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, testSize=testSize, feature_selection_method=feature_selection_method, feature_selection_k=feature_selection_k, outlier_method=outlier_method, outlier_action=outlier_action, hyperparameter_search=hyperparameter_search, search_cv_folds=search_cv_folds, search_n_iter=search_n_iter, modeling_mode=modeling_mode)
-            report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+            train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
 
         elif modelName == 'DecisionTree_classifier':
             result_tuple = train_decision_tree_classifier(target_variables=predictor_names, train_data=df, use_stratified_split=stratifyBool, X=df[indicator_names], y=df[predictor_names], stratifyColumn=stratify_name, units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, testSize=testSize, feature_selection_method=feature_selection_method, feature_selection_k=feature_selection_k, outlier_method=outlier_method, outlier_action=outlier_action, hyperparameter_search=hyperparameter_search, search_cv_folds=search_cv_folds, search_n_iter=search_n_iter, modeling_mode=modeling_mode)
-            report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+            train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
 
         elif modelName == 'GradientBoosting_classifier':
             result_tuple = train_gradient_boosting_classifier(target_variables=predictor_names, train_data=df, use_stratified_split=stratifyBool, X=df[indicator_names], y=df[predictor_names], stratifyColumn=stratify_name, units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, testSize=testSize, feature_selection_method=feature_selection_method, feature_selection_k=feature_selection_k, outlier_method=outlier_method, outlier_action=outlier_action, hyperparameter_search=hyperparameter_search, search_cv_folds=search_cv_folds, search_n_iter=search_n_iter, modeling_mode=modeling_mode)
-            report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+            train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
 
         elif modelName == 'HistGradientBoosting_classifier':
             result_tuple = train_hist_gradient_boosting_classifier(target_variables=predictor_names, train_data=df, use_stratified_split=stratifyBool, X=df[indicator_names], y=df[predictor_names], stratifyColumn=stratify_name, units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, testSize=testSize, feature_selection_method=feature_selection_method, feature_selection_k=feature_selection_k, outlier_method=outlier_method, outlier_action=outlier_action, hyperparameter_search=hyperparameter_search, search_cv_folds=search_cv_folds, search_n_iter=search_n_iter, modeling_mode=modeling_mode)
-            report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+            train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
 
         elif modelName == 'KNeighbors_classifier':
             result_tuple = train_kneighbors_classifier(target_variables=predictor_names, train_data=df, use_stratified_split=stratifyBool, X=df[indicator_names], y=df[predictor_names], stratifyColumn=stratify_name, units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, testSize=testSize, feature_selection_method=feature_selection_method, feature_selection_k=feature_selection_k, outlier_method=outlier_method, outlier_action=outlier_action, hyperparameter_search=hyperparameter_search, search_cv_folds=search_cv_folds, search_n_iter=search_n_iter, modeling_mode=modeling_mode)
-            report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+            train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
 
         elif modelName == 'LDA_classifier':
             result_tuple = train_linear_discriminant_analysis(target_variables=predictor_names, train_data=df, use_stratified_split=stratifyBool, X=df[indicator_names], y=df[predictor_names], stratifyColumn=stratify_name, units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, testSize=testSize, feature_selection_method=feature_selection_method, feature_selection_k=feature_selection_k, outlier_method=outlier_method, outlier_action=outlier_action, hyperparameter_search=hyperparameter_search, search_cv_folds=search_cv_folds, search_n_iter=search_n_iter, modeling_mode=modeling_mode)
-            report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+            train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
 
         elif modelName == 'LinearSVC_classifier':
             result_tuple = train_linearsvc(target_variables=predictor_names, train_data=df, use_stratified_split=stratifyBool, X=df[indicator_names], y=df[predictor_names], stratifyColumn=stratify_name, units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, testSize=testSize, feature_selection_method=feature_selection_method, feature_selection_k=feature_selection_k, outlier_method=outlier_method, outlier_action=outlier_action, hyperparameter_search=hyperparameter_search, search_cv_folds=search_cv_folds, search_n_iter=search_n_iter, modeling_mode=modeling_mode)
-            report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+            train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
 
         elif modelName == 'MultinomialNB_classifier':
             result_tuple = train_multinomial_nb(target_variables=predictor_names, train_data=df, use_stratified_split=stratifyBool, X=df[indicator_names], y=df[predictor_names], stratifyColumn=stratify_name, units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, testSize=testSize, feature_selection_method=feature_selection_method, feature_selection_k=feature_selection_k, outlier_method=outlier_method, outlier_action=outlier_action, hyperparameter_search=hyperparameter_search, search_cv_folds=search_cv_folds, search_n_iter=search_n_iter, modeling_mode=modeling_mode)
-            report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+            train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
 
         elif modelName == 'NuSVC_classifier':
             result_tuple = train_nusvc(target_variables=predictor_names, train_data=df, use_stratified_split=stratifyBool, X=df[indicator_names], y=df[predictor_names], stratifyColumn=stratify_name, units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, testSize=testSize, feature_selection_method=feature_selection_method, feature_selection_k=feature_selection_k, outlier_method=outlier_method, outlier_action=outlier_action, hyperparameter_search=hyperparameter_search, search_cv_folds=search_cv_folds, search_n_iter=search_n_iter, modeling_mode=modeling_mode)
-            report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+            train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
 
         elif modelName == 'PassiveAggressive_classifier':
             result_tuple = train_passive_aggressive_classifier(target_variables=predictor_names, train_data=df, use_stratified_split=stratifyBool, X=df[indicator_names], y=df[predictor_names], stratifyColumn=stratify_name, units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, testSize=testSize, feature_selection_method=feature_selection_method, feature_selection_k=feature_selection_k, outlier_method=outlier_method, outlier_action=outlier_action, hyperparameter_search=hyperparameter_search, search_cv_folds=search_cv_folds, search_n_iter=search_n_iter, modeling_mode=modeling_mode)
-            report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+            train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
 
         elif modelName == 'QDA_classifier':
             result_tuple = train_quadratic_discriminant_analysis(target_variables=predictor_names, train_data=df, use_stratified_split=stratifyBool, X=df[indicator_names], y=df[predictor_names], stratifyColumn=stratify_name, units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, testSize=testSize, feature_selection_method=feature_selection_method, feature_selection_k=feature_selection_k, outlier_method=outlier_method, outlier_action=outlier_action, hyperparameter_search=hyperparameter_search, search_cv_folds=search_cv_folds, search_n_iter=search_n_iter, modeling_mode=modeling_mode)
-            report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+            train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
 
         elif modelName == 'Ridge_classifier':
             result_tuple = train_ridge_classifier(target_variables=predictor_names, train_data=df, use_stratified_split=stratifyBool, X=df[indicator_names], y=df[predictor_names], stratifyColumn=stratify_name, units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, testSize=testSize, feature_selection_method=feature_selection_method, feature_selection_k=feature_selection_k, outlier_method=outlier_method, outlier_action=outlier_action, hyperparameter_search=hyperparameter_search, search_cv_folds=search_cv_folds, search_n_iter=search_n_iter, modeling_mode=modeling_mode)
-            report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
+            train_report, report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics = unpack_classification_result(result_tuple)
 
         #Cluster Models 
         elif modelName == 'kmeans':
@@ -2231,7 +2231,7 @@ def _run_model_training(session_id: str, data: dict):
             }
 
             #write to excel for classifier with all comprehensive metrics
-            write_to_excelClassifier(data, indicator_names, predictor_names, stratify_name, scaler, seed, modelName, params, units, report, cm, 
+            write_to_excelClassifier(data, indicator_names, predictor_names, stratify_name, scaler, seed, modelName, params, units, train_report, report, cm, 
                                    additional_metrics=additional_metrics)
 
     ## Cluster results
