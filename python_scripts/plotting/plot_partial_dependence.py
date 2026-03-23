@@ -97,5 +97,6 @@ def plot_partial_dependence(estimator, X, features, model_name, pdf_pages=None,
         # Save to PDF if provided
         if pdf_pages is not None:
             pdf_pages.savefig(disp.figure_, bbox_inches='tight', facecolor='white')
+        plt.close(disp.figure_)
     
     return disp

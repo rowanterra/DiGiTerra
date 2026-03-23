@@ -68,7 +68,7 @@ def evaluate_by_quantile(model_name, y_true, y_pred, metadata, target_col, sigfi
 
     #Bar plot of R² by quantile
     plt.figure(figsize=(10, 6))
-    sns.barplot(data=results_df, x='quantile', y='R²', palette='viridis')
+    sns.barplot(data=results_df, x='quantile', y='R²', hue='quantile', palette='viridis', legend=False)
     plt.title(f"{model_name} | R² Score by Quantile")
     plt.ylabel("R² Score")
     plt.xlabel("Quantile")

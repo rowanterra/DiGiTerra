@@ -70,7 +70,7 @@ def _plot_feature_importance(model, feature_names, title="Feature importance (mo
     values = vals[order][::-1]
     fig, ax = plt.subplots(figsize=(7, min(12, 0.35 * len(order) + 2)))
     if sns is not None:
-        sns.barplot(x=values, y=names, ax=ax, palette="muted", orient="h")
+        sns.barplot(x=values, y=names, hue=names, ax=ax, palette="muted", orient="h", legend=False)
         ax.set_xlabel("Importance", fontsize=11)
     else:
         ax.barh(names, values, color=".7", edgecolor="none")
@@ -94,7 +94,7 @@ def _plot_permutation_importance(model, X, y, feature_names, title="Permutation 
     values = res.importances_mean[order][::-1]
     fig, ax = plt.subplots(figsize=(7, min(12, 0.35 * len(order) + 2)))
     if sns is not None:
-        sns.barplot(x=values, y=names, ax=ax, palette="muted", orient="h")
+        sns.barplot(x=values, y=names, hue=names, ax=ax, palette="muted", orient="h", legend=False)
         ax.set_xlabel("Mean importance", fontsize=11)
     else:
         ax.barh(names, values, color=".7", edgecolor="none")
@@ -279,8 +279,11 @@ def plot_classification_bundle(art: dict, svctrue: bool):
     _plot_single_confusion_matrix(y_test_1d, y_pred_labels, classes, VIS_DIR / "confusion_matrix.png", "Test")
 
     # prepare scores
-    # Binarize y for multi-class
+    # Binarize y for multi-class. For binary problems sklearn returns shape (n, 1); expand to (n, 2)
+    # so per-class indexing matches len(classes) and predict_proba columns.
     y_bin = label_binarize(y_test, classes=classes)
+    if y_bin.ndim == 2 and y_bin.shape[1] == 1 and len(classes) == 2:
+        y_bin = np.hstack([1.0 - y_bin, y_bin])
     if hasattr(model, "predict_proba"):
         y_score = model.predict_proba(X_test)
     elif hasattr(model, "decision_function"):
@@ -366,7 +369,6 @@ def plot_classification_bundle(art: dict, svctrue: bool):
                 logger.warning(f"Could not generate fallback PR curve: {e2}")
 
         # 4) Calibration curves (require predict_proba; decision_function scores not in [0,1])
-        from sklearn.calibration import CalibrationDisplay
         if not svctrue and hasattr(model, "predict_proba"):
             for i, cls in enumerate(classes):
                 fig_cal, ax_cal = plt.subplots(figsize=(6, 5))
@@ -443,20 +445,24 @@ def plot_clustering_bundle(art: dict):
     X_test = art["splits"]["X_test"].values if len(art["splits"]["X_test"]) else None
     labels_test = art["clusters"]["labels_test"] if len(art["splits"]["X_test"]) else None
 
-    # 1) Silhouette plot
+    # 1) Silhouette plot (iterate actual cluster labels — not range(best_k), which breaks for DBSCAN etc.)
     if len(np.unique(labels_train)) > 1:
         sample_sil = silhouette_samples(X_train, labels_train)
         y_lower = 10
         fig, ax = plt.subplots(figsize=(7, 5))
-        palette = sns.color_palette("muted", best_k) if sns else None
-        for i in range(best_k):
-            ith = sample_sil[labels_train == i]
+        cluster_ids = sorted(np.unique(labels_train))
+        n_pal = max(1, len(cluster_ids))
+        palette = sns.color_palette("muted", n_pal) if sns else None
+        for idx, cid in enumerate(cluster_ids):
+            ith = sample_sil[labels_train == cid]
+            if ith.size == 0:
+                continue
             ith.sort()
             size_i = ith.shape[0]
             y_upper = y_lower + size_i
-            color = palette[i] if palette is not None else f"C{i}"
+            color = palette[idx % len(palette)] if palette is not None else f"C{idx % 10}"
             ax.fill_betweenx(np.arange(y_lower, y_upper), 0, ith, alpha=0.7, color=color)
-            ax.text(-0.02, y_lower + 0.5 * size_i, str(i), fontsize=10, va="center")
+            ax.text(-0.02, y_lower + 0.5 * size_i, str(cid), fontsize=10, va="center")
             y_lower = y_upper + 10
         ax.axvline(np.mean(sample_sil), linestyle="--", color=".4")
         ax.set_xlabel("Silhouette coefficient")
@@ -509,7 +515,8 @@ def plot_clustering_bundle(art: dict):
     counts = pd.Series(labels_train).value_counts().sort_index()
     fig, ax = plt.subplots(figsize=(6, 4))
     if sns is not None:
-        sns.barplot(x=counts.index.astype(str), y=counts.values, ax=ax, palette="muted")
+        x_str = counts.index.astype(str)
+        sns.barplot(x=x_str, y=counts.values, hue=x_str, ax=ax, palette="muted", legend=False)
         ax.set_xlabel("Cluster")
         ax.set_ylabel("Count")
     else:

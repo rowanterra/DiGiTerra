@@ -56,11 +56,29 @@ def preprocess_data(
     drop_missing='all',  # 'all', 'indicator', 'target' should be a check box or something maybe?
     impute_strategy=None,  # None, 'mean', 'median', 'knn', or 0 or 0.01
     drop_zero='all',
+    zero_handle='drop',  # 'none', 'drop', 'mean', 'median', or numeric constant for replacement
     zero_replace_values=None,  # list of exact values to convert to 0
     zero_replace_patterns=None  # list of lambda or callable to match patterns (e.g., lambda x: str(x).startswith('<'))
 ):
     df_clean = df.copy()
+    indicator_cols = list(indicator_cols or [])
+    target_cols = list(target_cols or [])
 
+    # No supervised targets (e.g. clustering): target-only scopes are invalid; downgrade safely.
+    if not target_cols:
+        if drop_missing == 'target':
+            drop_missing = 'none'
+        elif drop_missing == 'indicatorAndTarget':
+            drop_missing = 'indicator'
+        if drop_zero == 'target':
+            drop_zero = 'none'
+        elif drop_zero == 'indicatorAndTarget':
+            drop_zero = 'indicator'
+
+    if drop_zero == 'none' or (isinstance(zero_handle, str) and str(zero_handle).lower() == 'none'):
+        zero_handle_norm = 'none'
+    else:
+        zero_handle_norm = zero_handle if zero_handle is not None else 'drop'
 
 #if no impute strategy -> drop rows indicated by user    
     if impute_strategy=='none':
@@ -72,9 +90,9 @@ def preprocess_data(
         elif drop_missing == 'target' and target_cols:
             #if one target missing drop the row
             df_clean.dropna(subset=target_cols, inplace=True, how='any')
-        elif drop_missing == 'indicatorAndTarget' and target_cols:
-            #if one target or indicator missing drop the row
-            df_clean.dropna(subset=indicator_cols + target_cols, inplace=True, how='any')
+        elif drop_missing == 'indicatorAndTarget':
+            subset = indicator_cols + target_cols
+            df_clean.dropna(subset=subset, inplace=True, how='any')
 
 #if impute strategy -> replace missing values 
     else:
@@ -105,8 +123,9 @@ def preprocess_data(
                 elif isinstance(impute_strategy, (int, float)):
                     df_clean[col].fillna(impute_strategy, inplace=True)
 
-        elif drop_missing == 'indicatorAndTarget' and target_cols:
-            for col in df_clean[indicator_cols+target_cols].select_dtypes(include=[np.number]).columns:
+        elif drop_missing == 'indicatorAndTarget':
+            subset_cols = indicator_cols + target_cols
+            for col in df_clean[subset_cols].select_dtypes(include=[np.number]).columns:
                 if impute_strategy == 'mean':
                     df_clean[col].fillna(df_clean[col].mean(), inplace=True)
                 elif impute_strategy == 'median':
@@ -114,18 +133,56 @@ def preprocess_data(
                 elif isinstance(impute_strategy, (int, float)):
                     df_clean[col].fillna(impute_strategy, inplace=True)
 
-    
+    def _numeric_columns_for_zero_scope(frame):
+        if drop_zero == 'all':
+            return list(frame.select_dtypes(include=[np.number]).columns)
+        if drop_zero == 'indicator':
+            cols = [c for c in indicator_cols if c in frame.columns]
+            return list(frame[cols].select_dtypes(include=[np.number]).columns) if cols else []
+        if drop_zero == 'target':
+            if not target_cols:
+                return []
+            cols = [c for c in target_cols if c in frame.columns]
+            return list(frame[cols].select_dtypes(include=[np.number]).columns) if cols else []
+        if drop_zero == 'indicatorAndTarget':
+            cols = list(dict.fromkeys([c for c in indicator_cols if c in frame.columns]
+                                      + [c for c in target_cols if c in frame.columns]))
+            return list(frame[cols].select_dtypes(include=[np.number]).columns) if cols else []
+        return []
 
-#drop rows that are zeros in the columns indicated 
-    if drop_zero == 'all':
-        df_clean = df_clean[(df_clean != 0).any(axis=1)]
-    elif drop_zero == 'indicator':
-        df_clean = df_clean[~(df_clean[indicator_cols].eq(0).all(axis=1))]
-    elif drop_zero == 'target' and target_cols:
-        df_clean = df_clean[~(df_clean[target_cols].eq(0).all(axis=1))]
-    elif drop_zero == 'indicatorAndTarget' and target_cols:
-        subset = indicator_cols + target_cols
-        df_clean = df_clean[~(df_clean[subset].eq(0).all(axis=1))]
+    # Zeros: either drop rows (legacy) or replace zeros in scoped numeric columns
+    if zero_handle_norm == 'none':
+        pass
+    elif zero_handle_norm == 'drop':
+        if drop_zero == 'all':
+            df_clean = df_clean[(df_clean != 0).any(axis=1)]
+        elif drop_zero == 'indicator':
+            df_clean = df_clean[~(df_clean[indicator_cols].eq(0).all(axis=1))]
+        elif drop_zero == 'target' and target_cols:
+            df_clean = df_clean[~(df_clean[target_cols].eq(0).all(axis=1))]
+        elif drop_zero == 'indicatorAndTarget':
+            subset = indicator_cols + target_cols
+            df_clean = df_clean[~(df_clean[subset].eq(0).all(axis=1))]
+    else:
+        zcols = _numeric_columns_for_zero_scope(df_clean)
+        for col in zcols:
+            if col not in df_clean.columns or not pd.api.types.is_numeric_dtype(df_clean[col]):
+                continue
+            mask = df_clean[col] == 0
+            if not mask.any():
+                continue
+            non_zero = df_clean.loc[~mask, col]
+            if zero_handle_norm == 'mean':
+                repl = non_zero.mean()
+            elif zero_handle_norm == 'median':
+                repl = non_zero.median()
+            elif isinstance(zero_handle_norm, (int, float, np.floating, np.integer)):
+                repl = float(zero_handle_norm)
+            else:
+                continue
+            if pd.isna(repl):
+                repl = 0.0
+            df_clean.loc[mask, col] = repl
 
     # ---- Step 2: Replace values with 0 ----
     if zero_replace_values:
@@ -504,6 +561,19 @@ def write_to_excelClassifier(data, indicator_names, predictor_names, stratify_na
                 removed_df.to_excel(writer, sheet_name='Outlier Samples Removed', index=False)
 
     
+def _xlsx_safe_metric(value):
+    """xlsxwriter with nan_inf_to_errors can raise on NaN/Inf; use a safe cell value."""
+    try:
+        if value is None:
+            return "N/A"
+        fv = float(value)
+        if fv != fv or fv in (float("inf"), float("-inf")):  # NaN or inf
+            return "N/A"
+        return fv
+    except (TypeError, ValueError):
+        return value
+
+
 def write_to_excelCluster(data, indicator_names, stratify_name, scaler, seed, modelName, params, units, train_silhouette, train_calinski_harabasz, train_davies_bouldin, test_silhouette, test_calinski_harabasz, test_davies_bouldin, best_k, centers, silhouette_grid):
     
     logger.debug(f"Cluster centers:\n{centers}")
@@ -545,21 +615,21 @@ def write_to_excelCluster(data, indicator_names, stratify_name, scaler, seed, mo
     worksheet3.write(0, 1, units)
 
     worksheet3.write('A2', 'Train Silhouette')
-    worksheet3.write('B2', train_silhouette)
+    worksheet3.write('B2', _xlsx_safe_metric(train_silhouette))
     worksheet3.write('A3', 'Train Calinski Harabasz')
-    worksheet3.write('B3', train_calinski_harabasz)
+    worksheet3.write('B3', _xlsx_safe_metric(train_calinski_harabasz))
     worksheet3.write('A4', 'Train Davies Bouldin')
-    worksheet3.write('B4', train_davies_bouldin)
+    worksheet3.write('B4', _xlsx_safe_metric(train_davies_bouldin))
 
     worksheet3.write('A5', 'Test Silhouette')
-    worksheet3.write('B5', test_silhouette)
+    worksheet3.write('B5', _xlsx_safe_metric(test_silhouette))
     worksheet3.write('A6', 'Test Calinski Harabasz')
-    worksheet3.write('B6', test_calinski_harabasz)
+    worksheet3.write('B6', _xlsx_safe_metric(test_calinski_harabasz))
     worksheet3.write('A7', 'Test Davies Bouldin')
-    worksheet3.write('B7', test_davies_bouldin)
+    worksheet3.write('B7', _xlsx_safe_metric(test_davies_bouldin))
 
     worksheet3.write('A8', 'Best K')
-    worksheet3.write('B8', best_k)
+    worksheet3.write('B8', int(best_k) if best_k is not None else "N/A")
 
     centersrow=8
     centerscol=1
@@ -567,7 +637,7 @@ def write_to_excelCluster(data, indicator_names, stratify_name, scaler, seed, mo
     if centers is not None and hasattr(centers, "shape"):
         for i in range(centers.shape[0]):      
             for j in range(centers.shape[1]):  
-                worksheet3.write(centersrow+i, centerscol+j, centers[i, j])
+                worksheet3.write(centersrow+i, centerscol+j, _xlsx_safe_metric(centers[i, j]))
         gridrow=centersrow+i+1
     else:
         worksheet3.write(centersrow, centerscol, "N/A")

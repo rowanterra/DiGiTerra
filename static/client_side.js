@@ -1572,6 +1572,7 @@ corrForm.addEventListener('submit', async(e) => {
         dropMissing: document.getElementById('exploreDropMissing').value,
         imputeStrategy: document.getElementById('exploreImputeStrategy').value,
         dropZero: document.getElementById('exploreDrop0').value,
+        zeroHandle: document.getElementById('exploreZeroHandle')?.value || 'drop',
     };
 
     try {
@@ -1740,6 +1741,7 @@ corrForm.addEventListener('submit', async(e) => {
                             dropMissing: document.getElementById('exploreDropMissing')?.value || 'none',
                             imputeStrategy: document.getElementById('exploreImputeStrategy')?.value || 'none',
                             dropZero: document.getElementById('exploreDrop0')?.value || 'none',
+                            zeroHandle: document.getElementById('exploreZeroHandle')?.value || 'drop',
                         }),
                     });
                     
@@ -2136,32 +2138,34 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
 
 /// Section 4: displaying and hidding divs based on user selection
 
-    // Handling displaying the 'how to replace missing values' user input
+    // Missing-values action: disable strategy when scope is "none" (impute row stays visible)
     document.getElementById('dropMissing').addEventListener('change', function(){
-        let missingColSelection = this.value;
-        let imputeDiv = document.getElementById('imputeDiv');
-        if (missingColSelection=='none'){
-            //impute div hidden
-            imputeDiv.classList.add('hidden')
-        }
-        else{
-            //impute div not hidden
-            imputeDiv.classList.remove('hidden')
-        }
+        const imputeStrat = document.getElementById('imputeStrategy');
+        if (imputeStrat) imputeStrat.disabled = this.value === 'none';
     })
 
-    document.getElementById('exploreDropMissing').addEventListener('change', function(){
-        let missingColSelection = this.value;
-        let imputeDiv = document.getElementById('exploreImputeDiv');
-        if (missingColSelection=='none'){
-            //impute div hidden
-            imputeDiv.classList.add('hidden')
+    function refreshExploreCleaningUiClient() {
+        const missSel = document.getElementById('exploreDropMissing');
+        const imputeStrat = document.getElementById('exploreImputeStrategy');
+        if (imputeStrat && missSel) imputeStrat.disabled = missSel.value === 'none';
+        const z0 = document.getElementById('exploreDrop0');
+        const zAct = document.getElementById('exploreZeroActionDiv');
+        const zHandle = document.getElementById('exploreZeroHandle');
+        if (zAct && z0) {
+            if (z0.value === 'none') {
+                zAct.classList.add('hidden');
+                if (zHandle) zHandle.disabled = true;
+            } else {
+                zAct.classList.remove('hidden');
+                if (zHandle) zHandle.disabled = false;
+            }
         }
-        else{
-            //impute div not hidden
-            imputeDiv.classList.remove('hidden')
-        }
-    })
+    }
+    const exploreDM = document.getElementById('exploreDropMissing');
+    if (exploreDM) exploreDM.addEventListener('change', refreshExploreCleaningUiClient);
+    const exploreZ0 = document.getElementById('exploreDrop0');
+    if (exploreZ0) exploreZ0.addEventListener('change', refreshExploreCleaningUiClient);
+    refreshExploreCleaningUiClient();
 
     // Handling displaying the stratifying options of bins or quantiles
     document.getElementById('scalingYesNo').addEventListener('change', function() {

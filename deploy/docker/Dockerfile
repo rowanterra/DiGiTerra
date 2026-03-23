@@ -1,21 +1,25 @@
 FROM python:3.11-slim
 
+# Writable XDG dirs for non-root user (defaults like /nonexistent break startup when libs try to create cache).
+ARG WORK_DIR=/app
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     DIGITERRA_HOST=0.0.0.0 \
     DIGITERRA_PORT=5000 \
-    URL_PREFIX=digiterra
+    URL_PREFIX=digiterra \
+    XDG_DATA_HOME=${WORK_DIR} \
+    XDG_CACHE_HOME=${WORK_DIR}
 
 RUN addgroup --system app && adduser --system --ingroup app app
 
-WORKDIR /app
+WORKDIR ${WORK_DIR}
 
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . /app
+COPY . .
 
-RUN chown -R app:app /app
+RUN chown -R app:app .
 USER app
 
 EXPOSE 5000

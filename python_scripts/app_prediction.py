@@ -83,6 +83,13 @@ def run_predict(
     drop_missing = normalize_preprocess_mode_fn(infer_cfg.get("drop_missing", "none"))
     impute_strategy = infer_cfg.get("impute_strategy", "none")
     drop_zero = normalize_preprocess_mode_fn(infer_cfg.get("drop_zero", "none"))
+    zero_handle = infer_cfg.get("zero_handle")
+    if zero_handle is None:
+        zero_handle = 'drop' if drop_zero != 'none' else 'none'
+    elif isinstance(zero_handle, str) and zero_handle in {"0", "0.01"}:
+        zero_handle = float(zero_handle)
+    if drop_zero == 'none':
+        zero_handle = 'none'
     if impute_strategy in {"0", "0.01"}:
         impute_strategy = float(impute_strategy)
     preprocess_indicator_cols = None
@@ -97,6 +104,7 @@ def run_predict(
         drop_missing=drop_missing,
         impute_strategy=impute_strategy,
         drop_zero=drop_zero,
+        zero_handle=zero_handle,
     )
     try:
         required_features = list(store["feature_order"])

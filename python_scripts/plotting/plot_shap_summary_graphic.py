@@ -147,10 +147,10 @@ def plot_shap_summary(model, X_train, feature_names, model_name, pdf_pages, file
     
     plt.tight_layout()
     
-    # Save to file
+    # Save to file (use explicit figure — avoid saving a leaked "current" figure from prior plots)
     plot_filename = f"shap_summary{file_suffix}.png"
     plot_path = VIS_DIR / plot_filename
-    plt.savefig(plot_path, dpi=150, bbox_inches='tight', facecolor='white')
+    fig.savefig(plot_path, dpi=150, bbox_inches='tight', facecolor='white')
     logger.debug(f"SHAP plot saved to {plot_path}")
     
     # Verify file was created and has content
@@ -163,7 +163,7 @@ def plot_shap_summary(model, X_train, feature_names, model_name, pdf_pages, file
     
     # Save to PDF if provided
     if pdf_pages is not None:
-        pdf_pages.savefig(bbox_inches='tight', facecolor='white')
+        pdf_pages.savefig(fig, bbox_inches='tight', facecolor='white')
     
     # Bug 1 Fix: Close the specific figure we created
     plt.close(fig)

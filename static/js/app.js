@@ -559,7 +559,7 @@ function stopModelRun() {
     } else if (currentMode === 'advanced') {
         stopButton = document.getElementById('stopAdvancedButton');
         runButton = document.getElementById('advancedOptimizationSubmitButton');
-        loadingDiv = document.getElementById('advancedLoading');
+        loadingDiv = getAdvancedLoadingDiv();
     } else {
         stopButton = document.getElementById('stopSimpleButton');
         runButton = getCachedElement('processButton');
