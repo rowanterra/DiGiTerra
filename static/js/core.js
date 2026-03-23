@@ -1487,7 +1487,7 @@ function showCrossValidationUnavailable() {
 /* eslint-disable-next-line no-unused-vars */
 function downloadAdditionalInfoTable(tableData, sheetName, timestamp) {
     const ts = timestamp || formatDateTimeForFilename();
-    fetch('/downloadAdditionalInfo', {
+    fetch(withApiRoot('/downloadAdditionalInfo'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ table_data: tableData, sheet_name: sheetName }),

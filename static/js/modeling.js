@@ -4,10 +4,6 @@
 processForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    if (typeof window.commitDataCleaningFormToHiddenSelects === 'function') {
-        window.commitDataCleaningFormToHiddenSelects();
-    }
-
     // Determine current mode
     const simpleModeRadio = document.getElementById('simpleMode');
     const advancedModeRadio = document.getElementById('advancedMode');
@@ -54,7 +50,6 @@ processForm.addEventListener('submit', async (e) => {
     const dropMissing = getCachedElement('dropMissing')?.value || '';
     const dropZero = getCachedElement('drop0')?.value || '';
     const imputeStrategy = getCachedElement('imputeStrategy')?.value || '';
-    const zeroHandle = getCachedElement('zeroHandle')?.value || 'none';
     const quantileBins = getCachedElement('quantileBins')?.value || '';
     const useTransformer = getCachedElement('useTransformer')?.value || '';
     
@@ -132,7 +127,7 @@ processForm.addEventListener('submit', async (e) => {
     // Check current mode and use appropriate loading div (reuse currentMode from above)
     let loadingDiv = null;
     if (currentMode === 'advanced') {
-        loadingDiv = getAdvancedLoadingDiv();
+        loadingDiv = document.getElementById('advancedLoading');
     } else if (currentMode === 'automl') {
         loadingDiv = document.getElementById('automlLoading');
     } else {
@@ -2138,7 +2133,6 @@ processForm.addEventListener('submit', async (e) => {
         dropMissing: dropMissing,
         imputeStrategy: imputeStrategy,
         dropZero: dropZero,
-        zeroHandle: zeroHandle,
         quantileBinDict: quantileBinDict,
         useTransformer: useTransformer,
         transformerCols: transformerCols,
@@ -2166,7 +2160,7 @@ processForm.addEventListener('submit', async (e) => {
         
         let loadingDiv;
         if (currentMode === 'advanced') {
-            loadingDiv = getAdvancedLoadingDiv();
+            loadingDiv = document.getElementById('advancedLoading');
         } else if (currentMode === 'automl') {
             loadingDiv = document.getElementById('automlLoading');
         } else {
@@ -2222,7 +2216,7 @@ processForm.addEventListener('submit', async (e) => {
                         
                         let loadingDiv;
                         if (currentMode === 'advanced') {
-                            loadingDiv = getAdvancedLoadingDiv();
+                            loadingDiv = document.getElementById('advancedLoading');
                         } else if (currentMode === 'automl') {
                             loadingDiv = document.getElementById('automlLoading');
                         } else {
@@ -2308,7 +2302,7 @@ processForm.addEventListener('submit', async (e) => {
                 
                 let loadingDiv;
                 if (currentMode === 'advanced') {
-                    loadingDiv = getAdvancedLoadingDiv();
+                    loadingDiv = document.getElementById('advancedLoading');
                 } else if (currentMode === 'automl') {
                     loadingDiv = document.getElementById('automlLoading');
                 } else {
@@ -2359,7 +2353,7 @@ processForm.addEventListener('submit', async (e) => {
             // This ensures errors are displayed in the correct loading div even if user changed modes
             let currentLoadingDiv;
             if (currentMode === 'advanced') {
-                currentLoadingDiv = getAdvancedLoadingDiv();
+                currentLoadingDiv = document.getElementById('advancedLoading');
             } else if (currentMode === 'automl') {
                 currentLoadingDiv = document.getElementById('automlLoading');
             } else {
@@ -2516,7 +2510,7 @@ processForm.addEventListener('submit', async (e) => {
                     }
                     stopButton = document.getElementById('stopAutomlButton');
                 } else if (currentMode === 'advanced') {
-                    loadingDiv = getAdvancedLoadingDiv();
+                    loadingDiv = document.getElementById('advancedLoading');
                     const advancedButton = document.getElementById('advancedOptimizationSubmitButton');
                     if (advancedButton) advancedButton.disabled = false;
                     stopButton = document.getElementById('stopAdvancedButton');
@@ -2562,7 +2556,7 @@ processForm.addEventListener('submit', async (e) => {
         
         let loadingDiv;
         if (currentMode === 'advanced') {
-            loadingDiv = getAdvancedLoadingDiv();
+            loadingDiv = document.getElementById('advancedLoading');
         } else if (currentMode === 'automl') {
             loadingDiv = document.getElementById('automlLoading');
         } else {
@@ -2604,7 +2598,7 @@ processForm.addEventListener('submit', async (e) => {
             }
             // Determine which loading div to use
             const isAdvancedPage = document.getElementById('advancedOptimization') && !document.getElementById('advancedOptimization').classList.contains('hidden');
-            const loadingDiv = isAdvancedPage ? getAdvancedLoadingDiv() : loading;
+            const loadingDiv = isAdvancedPage ? document.getElementById('advancedLoading') : loading;
             if (loadingDiv) {
                 loadingDiv.classList.add('hidden');
                 loadingDiv.innerHTML = ``;
@@ -2702,7 +2696,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
         
         if (data.error) {
             console.error('Error in result data:', data.error);
-            if (errorDiv) showError(errorDiv, `Error: ${data.error}`);
+            showError(errorDiv, `Error: ${data.error}`);
             return;
         }
         
@@ -2721,7 +2715,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
             allHyperparameters = {...allHyperparameters, ...data.model_params};
         }
         
-        if (errorDiv) errorDiv.innerHTML = '';
+        errorDiv.innerHTML = ''
         const resultTimestamp = formatDateTimeForFilename()
         // Determine prefix based on current mode
         let modePrefix = 'simplemodeling_';
@@ -2809,7 +2803,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                         .filter(v => !/combined/i.test(v.label || ''))
                         .map(v => ({
                             ...v,
-                            label: (v.label || '').replace(/\s*-\s*Baseline\s*$/i, '').trim()
+                            label: v.label.replace(/\s*-\s*Baseline\s*$/i, '').trim()
                         }));
                     // Build hyperparameter table HTML using merged hyperparameters (without wrapper for Simple Modeling page)
                     const hyperparameterTableHtml = Object.keys(allHyperparameters).length > 0 ? `
@@ -2984,10 +2978,11 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                     }
                     
                     // Populate dropdowns and wire two side-by-side visualization panels (multiple targets)
-                    // Always re-query after innerHTML: a static placeholder div may have had the same id before replace.
-                    imageSelector = document.getElementById("imageSelector") ||
-                        document.getElementById("advancedImageSelector") ||
-                        document.getElementById("automlImageSelector");
+                    if (!imageSelector) {
+                        imageSelector = document.getElementById("imageSelector") || 
+                                       document.getElementById("advancedImageSelector") || 
+                                       document.getElementById("automlImageSelector");
+                    }
                     const imageSelector2 = document.getElementById(currentMode === 'simple' ? 'imageSelector2' : currentMode === 'advanced' ? 'advancedImageSelector2' : 'automlImageSelector2');
                     const targetGraphicId = currentMode === 'simple' ? 'targetGraphic' : currentMode === 'advanced' ? 'advancedTargetGraphic' : 'automlTargetGraphic';
                     const targetGraphicId2 = currentMode === 'simple' ? 'targetGraphic2' : currentMode === 'advanced' ? 'advancedTargetGraphic2' : 'automlTargetGraphic2';
@@ -2998,22 +2993,18 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                     const regressionVisualSelector = document.getElementById(visualSelectorId);
                     const regressionVisualSelector2 = document.getElementById(visualSelectorId2);
 
-                    if (imageSelector && Array.isArray(data.predictors)) {
-                        data.predictors.forEach((predictor, index) => {
-                            const option = document.createElement("option");
-                            option.value = index + 1;
-                            option.textContent = predictor.split('/').pop();
-                            imageSelector.appendChild(option);
-                            if (imageSelector2) {
-                                const option2 = document.createElement("option");
-                                option2.value = index + 1;
-                                option2.textContent = predictor.split('/').pop();
-                                imageSelector2.appendChild(option2);
-                            }
-                        });
-                    } else {
-                        console.error('Regression multi-target: target <select> not found after render (check duplicate ids).');
-                    }
+                    data.predictors.forEach((predictor, index) => {
+                        const option = document.createElement("option");
+                        option.value = index + 1;
+                        option.textContent = predictor.split('/').pop();
+                        imageSelector.appendChild(option);
+                        if (imageSelector2) {
+                            const option2 = document.createElement("option");
+                            option2.value = index + 1;
+                            option2.textContent = predictor.split('/').pop();
+                            imageSelector2.appendChild(option2);
+                        }
+                    });
 
                     const buildRegressionGraphicUrl = (selectedVisual, selectedImage) => {
                         const visualObj = regressionVisuals.find(v => v.file === selectedVisual);
@@ -3047,7 +3038,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                     const defaultRes = regressionVisualsClean.find(v => v.label.includes('Test Residuals'))?.file;
                     if (defaultPa && regressionVisualSelector) regressionVisualSelector.value = defaultPa;
                     if (defaultRes && regressionVisualSelector2) regressionVisualSelector2.value = defaultRes;
-                    if (imageSelector) imageSelector.addEventListener("change", () => updateRegressionGraphic(1));
+                    imageSelector.addEventListener("change", () => updateRegressionGraphic(1));
                     if (regressionVisualSelector) regressionVisualSelector.addEventListener("change", () => updateRegressionGraphic(1));
                     if (imageSelector2) imageSelector2.addEventListener("change", () => updateRegressionGraphic(2));
                     if (regressionVisualSelector2) regressionVisualSelector2.addEventListener("change", () => updateRegressionGraphic(2));
@@ -3191,7 +3182,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                         .filter(v => !/combined/i.test(v.label || ''))
                         .map(v => ({
                             ...v,
-                            label: (v.label || '').replace(/\s*-\s*Baseline\s*$/i, '').trim()
+                            label: v.label.replace(/\s*-\s*Baseline\s*$/i, '').trim()
                         }));
                     const advancedVisualsSingle = allRegressionVisualsSingle.filter(v => v.type === 'advanced');
                     // Build hyperparameter table HTML for single target using merged hyperparameters (without wrapper for Simple Modeling page)
@@ -3805,15 +3796,15 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
 
         //if backend failed then show error div
         else {
-            if (errorDiv) showError(errorDiv, `Error: ${data.error}`);
+            showError(errorDiv, `Error: ${data.error}`);
             hideElement(NumericResultDiv);
             hideElement(ClassifierResultDiv);
             hideElement(ClusterResultDiv);
         }
     } catch (error) {
         console.error('Error processing result:', error);
-        const errDiv = getCachedElement('errorDiv');
-        if (errDiv) showError(errDiv, 'Result processing failed. See console for details.');
+        const errorDiv = getCachedElement('errorDiv');
+        showError(errorDiv, 'Result processing failed. See console for details.');
     }
 }
 

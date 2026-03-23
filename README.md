@@ -14,7 +14,7 @@ Then run **one** of these (they pull everything from `core/`, `routes/`, `python
 
 | Goal | Command |
 |------|---------|
-| **Web app** (browser) | `python app.py`, then open http://127.0.0.1:5000 |
+| **Web app** (browser) | `python app.py` → open http://127.0.0.1:5000 |
 | **Desktop app** (window) | `python desktop_app.py` |
 
 Tests: `pip install -r requirements-dev.txt` then `pytest tests/`.  

@@ -673,19 +673,6 @@ const getCachedElement = (() => {
     };
 })();
 
-/**
- * Unified Advanced tab uses #advancedLoading; legacy #advancedOptimization panel uses #advancedOptimizationLegacyLoading.
- */
-function getAdvancedLoadingDiv() {
-    const legacyPanel = document.getElementById('advancedOptimization');
-    if (legacyPanel && !legacyPanel.classList.contains('hidden')) {
-        return document.getElementById('advancedOptimizationLegacyLoading')
-            || document.getElementById('advancedLoading');
-    }
-    return document.getElementById('advancedLoading');
-}
-window.getAdvancedLoadingDiv = getAdvancedLoadingDiv;
-
 // Safely check for pywebview API with error handling
 function safeCheckPywebviewAPI() {
     try {
@@ -1258,10 +1245,6 @@ function updateOutputTypeDisplay(outputType) {
         if (clusterTargetMessage) clusterTargetMessage.classList.add('hidden');
         if (predictorsSelect) predictorsSelect.disabled = false;
     }
-
-    if (typeof window.updateDataCleaningScopeForOutputType === 'function') {
-        window.updateDataCleaningScopeForOutputType(outputType);
-    }
 }
 
 function updateAutomlSettingsDisplay() {
@@ -1524,7 +1507,7 @@ function showCrossValidationUnavailable() {
 /* eslint-disable-next-line no-unused-vars */
 function downloadAdditionalInfoTable(tableData, sheetName, timestamp) {
     const ts = timestamp || formatDateTimeForFilename();
-    fetch('/downloadAdditionalInfo', {
+    fetch(withApiRoot('/downloadAdditionalInfo'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ table_data: tableData, sheet_name: sheetName }),
@@ -1717,7 +1700,6 @@ corrForm.addEventListener('submit', async(e) => {
         dropMissing: document.getElementById('exploreDropMissing').value,
         imputeStrategy: document.getElementById('exploreImputeStrategy').value,
         dropZero: document.getElementById('exploreDrop0').value,
-        zeroHandle: document.getElementById('exploreZeroHandle')?.value || 'drop',
     };
 
     try {
@@ -1886,7 +1868,6 @@ corrForm.addEventListener('submit', async(e) => {
                             dropMissing: document.getElementById('exploreDropMissing')?.value || 'none',
                             imputeStrategy: document.getElementById('exploreImputeStrategy')?.value || 'none',
                             dropZero: document.getElementById('exploreDrop0')?.value || 'none',
-                            zeroHandle: document.getElementById('exploreZeroHandle')?.value || 'drop',
                         }),
                     });
                     
@@ -2076,9 +2057,6 @@ async function handlePreprocessFormSubmit(e) {
     // If required variables are filled in, send to route and only switch to Modeling on success
     if (!e.defaultPrevented) {
         e.preventDefault(); // prevent native form submit now that we're handling it
-        if (typeof window.commitDataCleaningFormToHiddenSelects === 'function') {
-            window.commitDataCleaningFormToHiddenSelects();
-        }
         // Clear any previous aria-invalid attributes since validation passed
         const formFields = [
             'specificVariableSelect', 'quantiles', 'bins', 'binsLabel', 
@@ -2197,236 +2175,32 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
 
 /// Section 4: displaying and hidding divs based on user selection
 
-    function refreshMissingActionUi(missingColSelection) {
-        const imputeStrat = document.getElementById('imputeStrategy');
-        if (imputeStrat) {
-            imputeStrat.disabled = missingColSelection === 'none';
-        }
-    }
-
-    function syncMissingCheckboxesFromSelect() {
-        const sel = document.getElementById('dropMissing');
-        const im = document.getElementById('missScopeInd');
-        const tgt = document.getElementById('missScopeTgt');
-        const all = document.getElementById('missScopeAll');
-        if (!sel || !im || !tgt || !all) return;
-        const v = sel.value;
-        all.checked = v === 'all';
-        im.checked = v === 'indicator' || v === 'indicatorAndTarget';
-        tgt.checked = v === 'target' || v === 'indicatorAndTarget';
-    }
-
-    function syncMissingSelectFromCheckboxes() {
-        const sel = document.getElementById('dropMissing');
-        const im = document.getElementById('missScopeInd');
-        const tgt = document.getElementById('missScopeTgt');
-        const all = document.getElementById('missScopeAll');
-        if (!sel || !im || !tgt || !all) return;
-        let v = 'none';
-        if (all.checked) v = 'all';
-        else if (im.checked && tgt.checked) v = 'indicatorAndTarget';
-        else if (im.checked) v = 'indicator';
-        else if (tgt.checked) v = 'target';
-        const prev = sel.value;
-        sel.value = v;
-        if (prev !== v) {
-            sel.dispatchEvent(new Event('change', { bubbles: true }));
-        } else {
-            refreshMissingActionUi(v);
-        }
-    }
-
-    function syncZeroCheckboxesFromSelect() {
-        const sel = document.getElementById('drop0');
-        const im = document.getElementById('zeroScopeInd');
-        const tgt = document.getElementById('zeroScopeTgt');
-        const all = document.getElementById('zeroScopeAll');
-        if (!sel || !im || !tgt || !all) return;
-        const v = sel.value;
-        all.checked = v === 'all';
-        im.checked = v === 'indicator' || v === 'indicatorAndTarget';
-        tgt.checked = v === 'target' || v === 'indicatorAndTarget';
-    }
-
-    function syncZeroSelectFromCheckboxes() {
-        const sel = document.getElementById('drop0');
-        const zh = document.getElementById('zeroHandle');
-        const im = document.getElementById('zeroScopeInd');
-        const tgt = document.getElementById('zeroScopeTgt');
-        const all = document.getElementById('zeroScopeAll');
-        if (!sel || !im || !tgt || !all) return;
-        if (zh && zh.value === 'none') {
-            sel.value = 'none';
-            return;
-        }
-        let v = 'none';
-        if (all.checked) v = 'all';
-        else if (im.checked && tgt.checked) v = 'indicatorAndTarget';
-        else if (im.checked) v = 'indicator';
-        else if (tgt.checked) v = 'target';
-        if (zh && zh.value !== 'none' && v === 'none') {
-            if (im && !im.disabled) im.checked = true;
-            v = 'indicator';
-        }
-        sel.value = v;
-    }
-
-    function setZeroScopeInputsDisabled(disabled) {
-        ['zeroScopeInd', 'zeroScopeTgt', 'zeroScopeAll'].forEach((id) => {
-            const el = document.getElementById(id);
-            if (el) el.disabled = disabled;
-        });
-    }
-
-    function refreshZeroHandleUi() {
-        const zh = document.getElementById('zeroHandle');
-        const drop0 = document.getElementById('drop0');
-        if (!zh || !drop0) return;
-        if (zh.value === 'none') {
-            setZeroScopeInputsDisabled(true);
-            drop0.value = 'none';
-            syncZeroCheckboxesFromSelect();
-        } else {
-            setZeroScopeInputsDisabled(false);
-            if (drop0.value === 'none') {
-                drop0.value = 'indicator';
-                syncZeroCheckboxesFromSelect();
-            }
-            syncZeroSelectFromCheckboxes();
-        }
-    }
-
-    function updateDataCleaningScopeForOutputType(outputType) {
-        const missTgt = document.getElementById('missScopeTgt');
-        const zeroTgt = document.getElementById('zeroScopeTgt');
-        const missLbl = document.getElementById('missScopeTgtLabel');
-        const zeroLbl = document.getElementById('zeroScopeTgtLabel');
-        const isCluster = outputType === 'Cluster';
-        if (missTgt) {
-            if (isCluster) missTgt.checked = false;
-            missTgt.disabled = isCluster;
-        }
-        if (zeroTgt) {
-            if (isCluster) zeroTgt.checked = false;
-            zeroTgt.disabled = isCluster;
-        }
-        if (missLbl) missLbl.style.opacity = isCluster ? '0.5' : '';
-        if (zeroLbl) zeroLbl.style.opacity = isCluster ? '0.5' : '';
-        syncMissingSelectFromCheckboxes();
-        syncZeroSelectFromCheckboxes();
-    }
-    window.updateDataCleaningScopeForOutputType = updateDataCleaningScopeForOutputType;
-
-    window.commitDataCleaningFormToHiddenSelects = function commitDataCleaningFormToHiddenSelects() {
-        syncMissingSelectFromCheckboxes();
-        syncZeroSelectFromCheckboxes();
-    };
-
-    function initDataCleaningScopeUi() {
-        const dm = document.getElementById('dropMissing');
-        if (!dm) return;
-        syncMissingCheckboxesFromSelect();
-        syncZeroCheckboxesFromSelect();
-        refreshZeroHandleUi();
-        refreshMissingActionUi(dm.value);
-        const out = document.getElementById('outputType1');
-        if (out && out.value) updateDataCleaningScopeForOutputType(out.value);
-    }
-
     // Handling displaying the 'how to replace missing values' user input
-    const dropMissingEl = document.getElementById('dropMissing');
-    if (dropMissingEl) {
-        dropMissingEl.addEventListener('change', function () {
-            refreshMissingActionUi(this.value);
-        });
-    }
-
-    const missScopeInd = document.getElementById('missScopeInd');
-    const missScopeTgt = document.getElementById('missScopeTgt');
-    const missScopeAll = document.getElementById('missScopeAll');
-    if (missScopeAll) {
-        missScopeAll.addEventListener('change', () => {
-            if (missScopeAll.checked) {
-                if (missScopeInd) missScopeInd.checked = false;
-                if (missScopeTgt) missScopeTgt.checked = false;
-            }
-            syncMissingSelectFromCheckboxes();
-        });
-    }
-    if (missScopeInd) {
-        missScopeInd.addEventListener('change', () => {
-            if (missScopeInd.checked && missScopeAll) missScopeAll.checked = false;
-            syncMissingSelectFromCheckboxes();
-        });
-    }
-    if (missScopeTgt) {
-        missScopeTgt.addEventListener('change', () => {
-            if (missScopeTgt.checked && missScopeAll) missScopeAll.checked = false;
-            syncMissingSelectFromCheckboxes();
-        });
-    }
-
-    const zeroScopeInd = document.getElementById('zeroScopeInd');
-    const zeroScopeTgt = document.getElementById('zeroScopeTgt');
-    const zeroScopeAll = document.getElementById('zeroScopeAll');
-    if (zeroScopeAll) {
-        zeroScopeAll.addEventListener('change', () => {
-            if (zeroScopeAll.checked) {
-                if (zeroScopeInd) zeroScopeInd.checked = false;
-                if (zeroScopeTgt) zeroScopeTgt.checked = false;
-            }
-            syncZeroSelectFromCheckboxes();
-        });
-    }
-    if (zeroScopeInd) {
-        zeroScopeInd.addEventListener('change', () => {
-            if (zeroScopeInd.checked && zeroScopeAll) zeroScopeAll.checked = false;
-            syncZeroSelectFromCheckboxes();
-        });
-    }
-    if (zeroScopeTgt) {
-        zeroScopeTgt.addEventListener('change', () => {
-            if (zeroScopeTgt.checked && zeroScopeAll) zeroScopeAll.checked = false;
-            syncZeroSelectFromCheckboxes();
-        });
-    }
-
-    const zeroHandleEl = document.getElementById('zeroHandle');
-    if (zeroHandleEl) {
-        zeroHandleEl.addEventListener('change', refreshZeroHandleUi);
-    }
-
-    initDataCleaningScopeUi();
-
-    function refreshExploreCleaningUi() {
-        const missSel = document.getElementById('exploreDropMissing');
-        const imputeStrat = document.getElementById('exploreImputeStrategy');
-        if (imputeStrat && missSel) {
-            imputeStrat.disabled = missSel.value === 'none';
+    document.getElementById('dropMissing').addEventListener('change', function(){
+        let missingColSelection = this.value;
+        let imputeDiv = document.getElementById('imputeDiv');
+        if (missingColSelection=='none'){
+            //impute div hidden
+            imputeDiv.classList.add('hidden')
         }
-        const z0 = document.getElementById('exploreDrop0');
-        const zAct = document.getElementById('exploreZeroActionDiv');
-        const zHandle = document.getElementById('exploreZeroHandle');
-        if (zAct && z0) {
-            if (z0.value === 'none') {
-                zAct.classList.add('hidden');
-                if (zHandle) zHandle.disabled = true;
-            } else {
-                zAct.classList.remove('hidden');
-                if (zHandle) zHandle.disabled = false;
-            }
+        else{
+            //impute div not hidden
+            imputeDiv.classList.remove('hidden')
         }
-    }
+    })
 
-    const exploreDropMissingEl = document.getElementById('exploreDropMissing');
-    if (exploreDropMissingEl) {
-        exploreDropMissingEl.addEventListener('change', refreshExploreCleaningUi);
-    }
-    const exploreDrop0El = document.getElementById('exploreDrop0');
-    if (exploreDrop0El) {
-        exploreDrop0El.addEventListener('change', refreshExploreCleaningUi);
-    }
-    refreshExploreCleaningUi();
+    document.getElementById('exploreDropMissing').addEventListener('change', function(){
+        let missingColSelection = this.value;
+        let imputeDiv = document.getElementById('exploreImputeDiv');
+        if (missingColSelection=='none'){
+            //impute div hidden
+            imputeDiv.classList.add('hidden')
+        }
+        else{
+            //impute div not hidden
+            imputeDiv.classList.remove('hidden')
+        }
+    })
 
     // Handling displaying the stratifying options of bins or quantiles
     document.getElementById('scalingYesNo').addEventListener('change', function() {
@@ -2489,32 +2263,20 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
     const drop0Select = document.getElementById('drop0');
     if (autoDetectNanZerosBtn && dataCleaningAutodetectMessage) {
         autoDetectNanZerosBtn.addEventListener('click', async function() {
-            const outputTypeEl = document.getElementById('outputType1');
-            const isCluster = outputTypeEl && outputTypeEl.value === 'Cluster';
-            if (!indicatorsSelect || !indicatorsSelect.value.trim()) {
-                alert('Please enter Indicator columns first (e.g., A-D).');
-                return;
-            }
-            if (!isCluster && (!predictorsSelect || !predictorsSelect.value.trim())) {
+            if (!indicatorsSelect || !indicatorsSelect.value.trim() || !predictorsSelect || !predictorsSelect.value.trim()) {
                 alert('Please enter Indicator and Target columns first (e.g., A-D and A).');
                 return;
             }
             const indicatorIndices = getColumnIndices(indicatorsSelect.value.toUpperCase().replace(/\s/g, ""));
-            const predictorIndices = isCluster || !predictorsSelect
-                ? []
-                : getColumnIndices(predictorsSelect.value.toUpperCase().replace(/\s/g, ""));
-            if (indicatorIndices.length === 0) {
-                alert('Could not parse indicator column indices. Use format like "A-D" or "A,B,C".');
-                return;
-            }
-            if (!isCluster && predictorIndices.length === 0) {
-                alert('Could not parse target column indices. Use format like "A-D" or "A,B,C".');
+            const predictorIndices = getColumnIndices(predictorsSelect.value.toUpperCase().replace(/\s/g, ""));
+            if (indicatorIndices.length === 0 || predictorIndices.length === 0) {
+                alert('Could not parse column indices. Use format like "A-D" or "A,B,C".');
                 return;
             }
             try {
                 autoDetectNanZerosBtn.disabled = true;
                 autoDetectNanZerosBtn.textContent = 'Detecting...';
-                const response = await fetch('/auto-detect-nan-zeros', {
+                const response = await fetch(withApiRoot('/auto-detect-nan-zeros'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ indicators: indicatorIndices, predictors: predictorIndices })
@@ -2609,7 +2371,7 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
             try {
                 autoDetectTransformersTopBtn.disabled = true;
                 autoDetectTransformersTopBtn.textContent = 'Detecting...';
-                const response = await fetch('/auto-detect-transformers', {
+                const response = await fetch(withApiRoot('/auto-detect-transformers'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ indicators: indicatorIndices })
@@ -2647,7 +2409,7 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
             try {
                 autoDetectTransformersBtn.disabled = true;
                 autoDetectTransformersBtn.textContent = 'Detecting...';
-                const response = await fetch('/auto-detect-transformers', {
+                const response = await fetch(withApiRoot('/auto-detect-transformers'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ indicators: indicatorIndices })
@@ -3609,10 +3371,6 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
 processForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    if (typeof window.commitDataCleaningFormToHiddenSelects === 'function') {
-        window.commitDataCleaningFormToHiddenSelects();
-    }
-
     // Determine current mode
     const simpleModeRadio = document.getElementById('simpleMode');
     const advancedModeRadio = document.getElementById('advancedMode');
@@ -3659,7 +3417,6 @@ processForm.addEventListener('submit', async (e) => {
     const dropMissing = getCachedElement('dropMissing')?.value || '';
     const dropZero = getCachedElement('drop0')?.value || '';
     const imputeStrategy = getCachedElement('imputeStrategy')?.value || '';
-    const zeroHandle = getCachedElement('zeroHandle')?.value || 'none';
     const quantileBins = getCachedElement('quantileBins')?.value || '';
     const useTransformer = getCachedElement('useTransformer')?.value || '';
     
@@ -3737,7 +3494,7 @@ processForm.addEventListener('submit', async (e) => {
     // Check current mode and use appropriate loading div (reuse currentMode from above)
     let loadingDiv = null;
     if (currentMode === 'advanced') {
-        loadingDiv = getAdvancedLoadingDiv();
+        loadingDiv = document.getElementById('advancedLoading');
     } else if (currentMode === 'automl') {
         loadingDiv = document.getElementById('automlLoading');
     } else {
@@ -5743,7 +5500,6 @@ processForm.addEventListener('submit', async (e) => {
         dropMissing: dropMissing,
         imputeStrategy: imputeStrategy,
         dropZero: dropZero,
-        zeroHandle: zeroHandle,
         quantileBinDict: quantileBinDict,
         useTransformer: useTransformer,
         transformerCols: transformerCols,
@@ -5771,7 +5527,7 @@ processForm.addEventListener('submit', async (e) => {
         
         let loadingDiv;
         if (currentMode === 'advanced') {
-            loadingDiv = getAdvancedLoadingDiv();
+            loadingDiv = document.getElementById('advancedLoading');
         } else if (currentMode === 'automl') {
             loadingDiv = document.getElementById('automlLoading');
         } else {
@@ -5827,7 +5583,7 @@ processForm.addEventListener('submit', async (e) => {
                         
                         let loadingDiv;
                         if (currentMode === 'advanced') {
-                            loadingDiv = getAdvancedLoadingDiv();
+                            loadingDiv = document.getElementById('advancedLoading');
                         } else if (currentMode === 'automl') {
                             loadingDiv = document.getElementById('automlLoading');
                         } else {
@@ -5913,7 +5669,7 @@ processForm.addEventListener('submit', async (e) => {
                 
                 let loadingDiv;
                 if (currentMode === 'advanced') {
-                    loadingDiv = getAdvancedLoadingDiv();
+                    loadingDiv = document.getElementById('advancedLoading');
                 } else if (currentMode === 'automl') {
                     loadingDiv = document.getElementById('automlLoading');
                 } else {
@@ -5964,7 +5720,7 @@ processForm.addEventListener('submit', async (e) => {
             // This ensures errors are displayed in the correct loading div even if user changed modes
             let currentLoadingDiv;
             if (currentMode === 'advanced') {
-                currentLoadingDiv = getAdvancedLoadingDiv();
+                currentLoadingDiv = document.getElementById('advancedLoading');
             } else if (currentMode === 'automl') {
                 currentLoadingDiv = document.getElementById('automlLoading');
             } else {
@@ -6121,7 +5877,7 @@ processForm.addEventListener('submit', async (e) => {
                     }
                     stopButton = document.getElementById('stopAutomlButton');
                 } else if (currentMode === 'advanced') {
-                    loadingDiv = getAdvancedLoadingDiv();
+                    loadingDiv = document.getElementById('advancedLoading');
                     const advancedButton = document.getElementById('advancedOptimizationSubmitButton');
                     if (advancedButton) advancedButton.disabled = false;
                     stopButton = document.getElementById('stopAdvancedButton');
@@ -6167,7 +5923,7 @@ processForm.addEventListener('submit', async (e) => {
         
         let loadingDiv;
         if (currentMode === 'advanced') {
-            loadingDiv = getAdvancedLoadingDiv();
+            loadingDiv = document.getElementById('advancedLoading');
         } else if (currentMode === 'automl') {
             loadingDiv = document.getElementById('automlLoading');
         } else {
@@ -6209,7 +5965,7 @@ processForm.addEventListener('submit', async (e) => {
             }
             // Determine which loading div to use
             const isAdvancedPage = document.getElementById('advancedOptimization') && !document.getElementById('advancedOptimization').classList.contains('hidden');
-            const loadingDiv = isAdvancedPage ? getAdvancedLoadingDiv() : loading;
+            const loadingDiv = isAdvancedPage ? document.getElementById('advancedLoading') : loading;
             if (loadingDiv) {
                 loadingDiv.classList.add('hidden');
                 loadingDiv.innerHTML = ``;
@@ -6307,7 +6063,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
         
         if (data.error) {
             console.error('Error in result data:', data.error);
-            if (errorDiv) showError(errorDiv, `Error: ${data.error}`);
+            showError(errorDiv, `Error: ${data.error}`);
             return;
         }
         
@@ -6326,7 +6082,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
             allHyperparameters = {...allHyperparameters, ...data.model_params};
         }
         
-        if (errorDiv) errorDiv.innerHTML = '';
+        errorDiv.innerHTML = ''
         const resultTimestamp = formatDateTimeForFilename()
         // Determine prefix based on current mode
         let modePrefix = 'simplemodeling_';
@@ -6414,7 +6170,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                         .filter(v => !/combined/i.test(v.label || ''))
                         .map(v => ({
                             ...v,
-                            label: (v.label || '').replace(/\s*-\s*Baseline\s*$/i, '').trim()
+                            label: v.label.replace(/\s*-\s*Baseline\s*$/i, '').trim()
                         }));
                     // Build hyperparameter table HTML using merged hyperparameters (without wrapper for Simple Modeling page)
                     const hyperparameterTableHtml = Object.keys(allHyperparameters).length > 0 ? `
@@ -6589,10 +6345,11 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                     }
                     
                     // Populate dropdowns and wire two side-by-side visualization panels (multiple targets)
-                    // Always re-query after innerHTML: a static placeholder div may have had the same id before replace.
-                    imageSelector = document.getElementById("imageSelector") ||
-                        document.getElementById("advancedImageSelector") ||
-                        document.getElementById("automlImageSelector");
+                    if (!imageSelector) {
+                        imageSelector = document.getElementById("imageSelector") || 
+                                       document.getElementById("advancedImageSelector") || 
+                                       document.getElementById("automlImageSelector");
+                    }
                     const imageSelector2 = document.getElementById(currentMode === 'simple' ? 'imageSelector2' : currentMode === 'advanced' ? 'advancedImageSelector2' : 'automlImageSelector2');
                     const targetGraphicId = currentMode === 'simple' ? 'targetGraphic' : currentMode === 'advanced' ? 'advancedTargetGraphic' : 'automlTargetGraphic';
                     const targetGraphicId2 = currentMode === 'simple' ? 'targetGraphic2' : currentMode === 'advanced' ? 'advancedTargetGraphic2' : 'automlTargetGraphic2';
@@ -6603,22 +6360,18 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                     const regressionVisualSelector = document.getElementById(visualSelectorId);
                     const regressionVisualSelector2 = document.getElementById(visualSelectorId2);
 
-                    if (imageSelector && Array.isArray(data.predictors)) {
-                        data.predictors.forEach((predictor, index) => {
-                            const option = document.createElement("option");
-                            option.value = index + 1;
-                            option.textContent = predictor.split('/').pop();
-                            imageSelector.appendChild(option);
-                            if (imageSelector2) {
-                                const option2 = document.createElement("option");
-                                option2.value = index + 1;
-                                option2.textContent = predictor.split('/').pop();
-                                imageSelector2.appendChild(option2);
-                            }
-                        });
-                    } else {
-                        console.error('Regression multi-target: target <select> not found after render (check duplicate ids).');
-                    }
+                    data.predictors.forEach((predictor, index) => {
+                        const option = document.createElement("option");
+                        option.value = index + 1;
+                        option.textContent = predictor.split('/').pop();
+                        imageSelector.appendChild(option);
+                        if (imageSelector2) {
+                            const option2 = document.createElement("option");
+                            option2.value = index + 1;
+                            option2.textContent = predictor.split('/').pop();
+                            imageSelector2.appendChild(option2);
+                        }
+                    });
 
                     const buildRegressionGraphicUrl = (selectedVisual, selectedImage) => {
                         const visualObj = regressionVisuals.find(v => v.file === selectedVisual);
@@ -6652,7 +6405,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                     const defaultRes = regressionVisualsClean.find(v => v.label.includes('Test Residuals'))?.file;
                     if (defaultPa && regressionVisualSelector) regressionVisualSelector.value = defaultPa;
                     if (defaultRes && regressionVisualSelector2) regressionVisualSelector2.value = defaultRes;
-                    if (imageSelector) imageSelector.addEventListener("change", () => updateRegressionGraphic(1));
+                    imageSelector.addEventListener("change", () => updateRegressionGraphic(1));
                     if (regressionVisualSelector) regressionVisualSelector.addEventListener("change", () => updateRegressionGraphic(1));
                     if (imageSelector2) imageSelector2.addEventListener("change", () => updateRegressionGraphic(2));
                     if (regressionVisualSelector2) regressionVisualSelector2.addEventListener("change", () => updateRegressionGraphic(2));
@@ -6796,7 +6549,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                         .filter(v => !/combined/i.test(v.label || ''))
                         .map(v => ({
                             ...v,
-                            label: (v.label || '').replace(/\s*-\s*Baseline\s*$/i, '').trim()
+                            label: v.label.replace(/\s*-\s*Baseline\s*$/i, '').trim()
                         }));
                     const advancedVisualsSingle = allRegressionVisualsSingle.filter(v => v.type === 'advanced');
                     // Build hyperparameter table HTML for single target using merged hyperparameters (without wrapper for Simple Modeling page)
@@ -7410,15 +7163,15 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
 
         //if backend failed then show error div
         else {
-            if (errorDiv) showError(errorDiv, `Error: ${data.error}`);
+            showError(errorDiv, `Error: ${data.error}`);
             hideElement(NumericResultDiv);
             hideElement(ClassifierResultDiv);
             hideElement(ClusterResultDiv);
         }
     } catch (error) {
         console.error('Error processing result:', error);
-        const errDiv = getCachedElement('errorDiv');
-        if (errDiv) showError(errDiv, 'Result processing failed. See console for details.');
+        const errorDiv = getCachedElement('errorDiv');
+        showError(errorDiv, 'Result processing failed. See console for details.');
     }
 }
 
@@ -7441,7 +7194,7 @@ predictionForm.addEventListener('submit', async (e) => {
     const predictionDownloadName = `predictions_${resultTimestamp}.csv`
 
     try{
-        const response = await fetch('/predict', {
+        const response = await fetch(withApiRoot('/predict'), {
             method: 'POST',
             body: formData,
         });
@@ -8391,7 +8144,7 @@ function stopModelRun() {
     } else if (currentMode === 'advanced') {
         stopButton = document.getElementById('stopAdvancedButton');
         runButton = document.getElementById('advancedOptimizationSubmitButton');
-        loadingDiv = getAdvancedLoadingDiv();
+        loadingDiv = document.getElementById('advancedLoading');
     } else {
         stopButton = document.getElementById('stopSimpleButton');
         runButton = getCachedElement('processButton');

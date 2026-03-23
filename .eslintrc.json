@@ -3,6 +3,6 @@
   "extends": "eslint:recommended",
   "parserOptions": { "ecmaVersion": 2021, "sourceType": "script" },
   "rules": {
-    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "ignoreRestSiblings": true }]
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }]
   }
 }
