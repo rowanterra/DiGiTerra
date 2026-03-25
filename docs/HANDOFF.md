@@ -41,7 +41,7 @@ Then open **http://127.0.0.1:5000/digiterra/** . The Dockerfile sets `URL_PREFIX
 | **`core/`** | All app logic that root entry points use: `flask_app.py` (Flask app, create_app, run_app), `desktop.py` (desktop launcher + DesktopApi), plus `constants.py`, `helpers.py`, `state.py` for routes. |
 | **`scripts/`** | Standalone dev/maintainer scripts (e.g. `check_requirements.py`). Not imported by the app. App and pipeline code live in `python_scripts/` and `routes/`. |
 | **`templates/index.html`** | Single-page UI. All tabs (Upload, Data Exploration, Model Preprocessing, Modeling, Inference) are in this file. |
-| **`static/client_side.js`** | Front-end logic: uploads, API calls, progress polling, result display, downloads. |
+| **`static/js/`** | Front-end logic split by feature: `core.js` (API root, fetch wrapper, shared helpers), `upload.js`, `preprocess.js`, `modeling.js`, `inference.js`, `app.js`. Optional `app.bundle.js` via `npm run build` and `DIGITERRA_USE_JS_BUNDLE=1`. |
 | **`static/style.css`** | Styles. |
 | **`python_scripts/`** | Core ML and preprocessing. `helpers.py`: shared helpers (`preprocess_data`, `prediction`). `config.py`: `VIS_DIR` (output folder). `models/`: regression, classification, and clustering trainers. `preprocessing/` and `plotting/`: pipelines and plots. **`app_model_training.py`**: model training orchestration. **`app_exploration.py`**: data exploration (correlation matrices, pairplot, auto-detect). **`app_prediction.py`**: inference/prediction. All three are invoked by `app.py`. |
 | **`deploy/`** | Docker and Kubernetes (Helm) deployment. See `deploy/README.md` for Docker build/run and Helm install. |

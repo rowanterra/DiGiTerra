@@ -90,6 +90,9 @@ async function handlePreprocessFormSubmit(e) {
     // If required variables are filled in, send to route and only switch to Modeling on success
     if (!e.defaultPrevented) {
         e.preventDefault(); // prevent native form submit now that we're handling it
+        if (typeof window.commitDataCleaningFormToHiddenSelects === 'function') {
+            window.commitDataCleaningFormToHiddenSelects();
+        }
         // Clear any previous aria-invalid attributes since validation passed
         const formFields = [
             'specificVariableSelect', 'quantiles', 'bins', 'binsLabel', 
@@ -208,32 +211,236 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
 
 /// Section 4: displaying and hidding divs based on user selection
 
-    // Handling displaying the 'how to replace missing values' user input
-    document.getElementById('dropMissing').addEventListener('change', function(){
-        let missingColSelection = this.value;
-        let imputeDiv = document.getElementById('imputeDiv');
-        if (missingColSelection=='none'){
-            //impute div hidden
-            imputeDiv.classList.add('hidden')
+    function refreshMissingActionUi(missingColSelection) {
+        const imputeStrat = document.getElementById('imputeStrategy');
+        if (imputeStrat) {
+            imputeStrat.disabled = missingColSelection === 'none';
         }
-        else{
-            //impute div not hidden
-            imputeDiv.classList.remove('hidden')
-        }
-    })
+    }
 
-    document.getElementById('exploreDropMissing').addEventListener('change', function(){
-        let missingColSelection = this.value;
-        let imputeDiv = document.getElementById('exploreImputeDiv');
-        if (missingColSelection=='none'){
-            //impute div hidden
-            imputeDiv.classList.add('hidden')
+    function syncMissingCheckboxesFromSelect() {
+        const sel = document.getElementById('dropMissing');
+        const im = document.getElementById('missScopeInd');
+        const tgt = document.getElementById('missScopeTgt');
+        const all = document.getElementById('missScopeAll');
+        if (!sel || !im || !tgt || !all) return;
+        const v = sel.value;
+        all.checked = v === 'all';
+        im.checked = v === 'indicator' || v === 'indicatorAndTarget';
+        tgt.checked = v === 'target' || v === 'indicatorAndTarget';
+    }
+
+    function syncMissingSelectFromCheckboxes() {
+        const sel = document.getElementById('dropMissing');
+        const im = document.getElementById('missScopeInd');
+        const tgt = document.getElementById('missScopeTgt');
+        const all = document.getElementById('missScopeAll');
+        if (!sel || !im || !tgt || !all) return;
+        let v = 'none';
+        if (all.checked) v = 'all';
+        else if (im.checked && tgt.checked) v = 'indicatorAndTarget';
+        else if (im.checked) v = 'indicator';
+        else if (tgt.checked) v = 'target';
+        const prev = sel.value;
+        sel.value = v;
+        if (prev !== v) {
+            sel.dispatchEvent(new Event('change', { bubbles: true }));
+        } else {
+            refreshMissingActionUi(v);
         }
-        else{
-            //impute div not hidden
-            imputeDiv.classList.remove('hidden')
+    }
+
+    function syncZeroCheckboxesFromSelect() {
+        const sel = document.getElementById('drop0');
+        const im = document.getElementById('zeroScopeInd');
+        const tgt = document.getElementById('zeroScopeTgt');
+        const all = document.getElementById('zeroScopeAll');
+        if (!sel || !im || !tgt || !all) return;
+        const v = sel.value;
+        all.checked = v === 'all';
+        im.checked = v === 'indicator' || v === 'indicatorAndTarget';
+        tgt.checked = v === 'target' || v === 'indicatorAndTarget';
+    }
+
+    function syncZeroSelectFromCheckboxes() {
+        const sel = document.getElementById('drop0');
+        const zh = document.getElementById('zeroHandle');
+        const im = document.getElementById('zeroScopeInd');
+        const tgt = document.getElementById('zeroScopeTgt');
+        const all = document.getElementById('zeroScopeAll');
+        if (!sel || !im || !tgt || !all) return;
+        if (zh && zh.value === 'none') {
+            sel.value = 'none';
+            return;
         }
-    })
+        let v = 'none';
+        if (all.checked) v = 'all';
+        else if (im.checked && tgt.checked) v = 'indicatorAndTarget';
+        else if (im.checked) v = 'indicator';
+        else if (tgt.checked) v = 'target';
+        if (zh && zh.value !== 'none' && v === 'none') {
+            if (im && !im.disabled) im.checked = true;
+            v = 'indicator';
+        }
+        sel.value = v;
+    }
+
+    function setZeroScopeInputsDisabled(disabled) {
+        ['zeroScopeInd', 'zeroScopeTgt', 'zeroScopeAll'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.disabled = disabled;
+        });
+    }
+
+    function refreshZeroHandleUi() {
+        const zh = document.getElementById('zeroHandle');
+        const drop0 = document.getElementById('drop0');
+        if (!zh || !drop0) return;
+        if (zh.value === 'none') {
+            setZeroScopeInputsDisabled(true);
+            drop0.value = 'none';
+            syncZeroCheckboxesFromSelect();
+        } else {
+            setZeroScopeInputsDisabled(false);
+            if (drop0.value === 'none') {
+                drop0.value = 'indicator';
+                syncZeroCheckboxesFromSelect();
+            }
+            syncZeroSelectFromCheckboxes();
+        }
+    }
+
+    function updateDataCleaningScopeForOutputType(outputType) {
+        const missTgt = document.getElementById('missScopeTgt');
+        const zeroTgt = document.getElementById('zeroScopeTgt');
+        const missLbl = document.getElementById('missScopeTgtLabel');
+        const zeroLbl = document.getElementById('zeroScopeTgtLabel');
+        const isCluster = outputType === 'Cluster';
+        if (missTgt) {
+            if (isCluster) missTgt.checked = false;
+            missTgt.disabled = isCluster;
+        }
+        if (zeroTgt) {
+            if (isCluster) zeroTgt.checked = false;
+            zeroTgt.disabled = isCluster;
+        }
+        if (missLbl) missLbl.style.opacity = isCluster ? '0.5' : '';
+        if (zeroLbl) zeroLbl.style.opacity = isCluster ? '0.5' : '';
+        syncMissingSelectFromCheckboxes();
+        syncZeroSelectFromCheckboxes();
+    }
+    window.updateDataCleaningScopeForOutputType = updateDataCleaningScopeForOutputType;
+
+    window.commitDataCleaningFormToHiddenSelects = function commitDataCleaningFormToHiddenSelects() {
+        syncMissingSelectFromCheckboxes();
+        syncZeroSelectFromCheckboxes();
+    };
+
+    function initDataCleaningScopeUi() {
+        const dm = document.getElementById('dropMissing');
+        if (!dm) return;
+        syncMissingCheckboxesFromSelect();
+        syncZeroCheckboxesFromSelect();
+        refreshZeroHandleUi();
+        refreshMissingActionUi(dm.value);
+        const out = document.getElementById('outputType1');
+        if (out && out.value) updateDataCleaningScopeForOutputType(out.value);
+    }
+
+    // Handling displaying the 'how to replace missing values' user input
+    const dropMissingEl = document.getElementById('dropMissing');
+    if (dropMissingEl) {
+        dropMissingEl.addEventListener('change', function () {
+            refreshMissingActionUi(this.value);
+        });
+    }
+
+    const missScopeInd = document.getElementById('missScopeInd');
+    const missScopeTgt = document.getElementById('missScopeTgt');
+    const missScopeAll = document.getElementById('missScopeAll');
+    if (missScopeAll) {
+        missScopeAll.addEventListener('change', () => {
+            if (missScopeAll.checked) {
+                if (missScopeInd) missScopeInd.checked = false;
+                if (missScopeTgt) missScopeTgt.checked = false;
+            }
+            syncMissingSelectFromCheckboxes();
+        });
+    }
+    if (missScopeInd) {
+        missScopeInd.addEventListener('change', () => {
+            if (missScopeInd.checked && missScopeAll) missScopeAll.checked = false;
+            syncMissingSelectFromCheckboxes();
+        });
+    }
+    if (missScopeTgt) {
+        missScopeTgt.addEventListener('change', () => {
+            if (missScopeTgt.checked && missScopeAll) missScopeAll.checked = false;
+            syncMissingSelectFromCheckboxes();
+        });
+    }
+
+    const zeroScopeInd = document.getElementById('zeroScopeInd');
+    const zeroScopeTgt = document.getElementById('zeroScopeTgt');
+    const zeroScopeAll = document.getElementById('zeroScopeAll');
+    if (zeroScopeAll) {
+        zeroScopeAll.addEventListener('change', () => {
+            if (zeroScopeAll.checked) {
+                if (zeroScopeInd) zeroScopeInd.checked = false;
+                if (zeroScopeTgt) zeroScopeTgt.checked = false;
+            }
+            syncZeroSelectFromCheckboxes();
+        });
+    }
+    if (zeroScopeInd) {
+        zeroScopeInd.addEventListener('change', () => {
+            if (zeroScopeInd.checked && zeroScopeAll) zeroScopeAll.checked = false;
+            syncZeroSelectFromCheckboxes();
+        });
+    }
+    if (zeroScopeTgt) {
+        zeroScopeTgt.addEventListener('change', () => {
+            if (zeroScopeTgt.checked && zeroScopeAll) zeroScopeAll.checked = false;
+            syncZeroSelectFromCheckboxes();
+        });
+    }
+
+    const zeroHandleEl = document.getElementById('zeroHandle');
+    if (zeroHandleEl) {
+        zeroHandleEl.addEventListener('change', refreshZeroHandleUi);
+    }
+
+    initDataCleaningScopeUi();
+
+    function refreshExploreCleaningUi() {
+        const missSel = document.getElementById('exploreDropMissing');
+        const imputeStrat = document.getElementById('exploreImputeStrategy');
+        if (imputeStrat && missSel) {
+            imputeStrat.disabled = missSel.value === 'none';
+        }
+        const z0 = document.getElementById('exploreDrop0');
+        const zAct = document.getElementById('exploreZeroActionDiv');
+        const zHandle = document.getElementById('exploreZeroHandle');
+        if (zAct && z0) {
+            if (z0.value === 'none') {
+                zAct.classList.add('hidden');
+                if (zHandle) zHandle.disabled = true;
+            } else {
+                zAct.classList.remove('hidden');
+                if (zHandle) zHandle.disabled = false;
+            }
+        }
+    }
+
+    const exploreDropMissingEl = document.getElementById('exploreDropMissing');
+    if (exploreDropMissingEl) {
+        exploreDropMissingEl.addEventListener('change', refreshExploreCleaningUi);
+    }
+    const exploreDrop0El = document.getElementById('exploreDrop0');
+    if (exploreDrop0El) {
+        exploreDrop0El.addEventListener('change', refreshExploreCleaningUi);
+    }
+    refreshExploreCleaningUi();
 
     // Handling displaying the stratifying options of bins or quantiles
     document.getElementById('scalingYesNo').addEventListener('change', function() {
@@ -296,20 +503,32 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
     const drop0Select = document.getElementById('drop0');
     if (autoDetectNanZerosBtn && dataCleaningAutodetectMessage) {
         autoDetectNanZerosBtn.addEventListener('click', async function() {
-            if (!indicatorsSelect || !indicatorsSelect.value.trim() || !predictorsSelect || !predictorsSelect.value.trim()) {
+            const outputTypeEl = document.getElementById('outputType1');
+            const isCluster = outputTypeEl && outputTypeEl.value === 'Cluster';
+            if (!indicatorsSelect || !indicatorsSelect.value.trim()) {
+                alert('Please enter Indicator columns first (e.g., A-D).');
+                return;
+            }
+            if (!isCluster && (!predictorsSelect || !predictorsSelect.value.trim())) {
                 alert('Please enter Indicator and Target columns first (e.g., A-D and A).');
                 return;
             }
             const indicatorIndices = getColumnIndices(indicatorsSelect.value.toUpperCase().replace(/\s/g, ""));
-            const predictorIndices = getColumnIndices(predictorsSelect.value.toUpperCase().replace(/\s/g, ""));
-            if (indicatorIndices.length === 0 || predictorIndices.length === 0) {
-                alert('Could not parse column indices. Use format like "A-D" or "A,B,C".');
+            const predictorIndices = isCluster || !predictorsSelect
+                ? []
+                : getColumnIndices(predictorsSelect.value.toUpperCase().replace(/\s/g, ""));
+            if (indicatorIndices.length === 0) {
+                alert('Could not parse indicator column indices. Use format like "A-D" or "A,B,C".');
+                return;
+            }
+            if (!isCluster && predictorIndices.length === 0) {
+                alert('Could not parse target column indices. Use format like "A-D" or "A,B,C".');
                 return;
             }
             try {
                 autoDetectNanZerosBtn.disabled = true;
-                autoDetectNanZerosBtn.textContent = 'Detecting...';
-                const response = await fetch(withApiRoot('/auto-detect-nan-zeros'), {
+                autoDetectNanZerosBtn.textContent = 'Detecting…';
+                const response = await fetch('/auto-detect-nan-zeros', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ indicators: indicatorIndices, predictors: predictorIndices })
@@ -353,7 +572,7 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
                 if (drop0Select) drop0Select.disabled = false;
             } finally {
                 autoDetectNanZerosBtn.disabled = false;
-                autoDetectNanZerosBtn.textContent = 'Run';
+                autoDetectNanZerosBtn.textContent = 'Run autodetect';
             }
         });
     }
@@ -404,7 +623,7 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
             try {
                 autoDetectTransformersTopBtn.disabled = true;
                 autoDetectTransformersTopBtn.textContent = 'Detecting...';
-                const response = await fetch(withApiRoot('/auto-detect-transformers'), {
+                const response = await fetch('/auto-detect-transformers', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ indicators: indicatorIndices })
@@ -442,7 +661,7 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
             try {
                 autoDetectTransformersBtn.disabled = true;
                 autoDetectTransformersBtn.textContent = 'Detecting...';
-                const response = await fetch(withApiRoot('/auto-detect-transformers'), {
+                const response = await fetch('/auto-detect-transformers', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ indicators: indicatorIndices })

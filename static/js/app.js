@@ -558,7 +558,7 @@ function stopModelRun() {
         loadingDiv = document.getElementById('automlLoading');
     } else if (currentMode === 'advanced') {
         stopButton = document.getElementById('stopAdvancedButton');
-        runButton = document.getElementById('advancedOptimizationSubmitButton');
+        runButton = getAdvancedRunSubmitButton();
         loadingDiv = getAdvancedLoadingDiv();
     } else {
         stopButton = document.getElementById('stopSimpleButton');

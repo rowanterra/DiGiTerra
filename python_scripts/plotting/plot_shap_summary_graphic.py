@@ -19,6 +19,10 @@ logger = logging.getLogger(__name__)
 def plot_shap_summary(model, X_train, feature_names, model_name, pdf_pages, file_suffix='', label_suffix=''):
     """
     Generate SHAP summary plot with optimized background sampling.
+
+    Uses ``shap.KernelExplainer``; the ``shap`` package logs detailed INFO during
+    Shapley estimation (not errors). App startup sets the ``shap`` logger to WARNING
+    so the console stays readable; set LOG_LEVEL=DEBUG and lower ``shap`` if you need it.
     
     Args:
         model: Trained model with predict method
