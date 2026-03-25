@@ -11,7 +11,6 @@ const columnSelection = document.getElementById('columnSelection');
 const _indicatorsSelect = document.getElementById('indicators');
 const predictorsSelect = document.getElementById('predictors');
 const _processForm = document.getElementById('processForm');
-const _advancedOptimizationForm = document.getElementById('advancedOptimizationForm');
 const _errorDiv = document.getElementById('errorDiv');
 const _NumericResultDiv = document.getElementById('NumericResultDiv');
 const _ClusterResultDiv = document.getElementById('ClusterResultDiv');
@@ -648,6 +647,20 @@ function getAdvancedLoadingDiv() {
     return document.getElementById('advancedLoading');
 }
 window.getAdvancedLoadingDiv = getAdvancedLoadingDiv;
+
+/**
+ * Advanced run button: unified Modeling tab (#advancedModelingSection) uses #advancedOptimizationSubmitButton;
+ * standalone legacy panel #advancedOptimization uses #advancedOptimizationLegacySubmitButton.
+ */
+function getAdvancedRunSubmitButton() {
+    const legacyPanel = document.getElementById('advancedOptimization');
+    if (legacyPanel && !legacyPanel.classList.contains('hidden')) {
+        return document.getElementById('advancedOptimizationLegacySubmitButton')
+            || document.getElementById('advancedOptimizationSubmitButton');
+    }
+    return document.getElementById('advancedOptimizationSubmitButton');
+}
+window.getAdvancedRunSubmitButton = getAdvancedRunSubmitButton;
 
 // Safely check for pywebview API with error handling
 function safeCheckPywebviewAPI() {
@@ -1520,6 +1533,7 @@ window.preprocessform = document.getElementById('preprocessform');
 window.indicatorsSelect = document.getElementById('indicators');
 window.processForm = document.getElementById('processForm');
 window.advancedOptimizationForm = document.getElementById('advancedOptimizationForm');
+window.advancedOptimizationLegacyForm = document.getElementById('advancedOptimizationLegacyForm');
 window.errorDiv = document.getElementById('errorDiv');
 window.NumericResultDiv = document.getElementById('NumericResultDiv');
 window.ClusterResultDiv = document.getElementById('ClusterResultDiv');

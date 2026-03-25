@@ -17,7 +17,7 @@ Checklist for tightening repo hygiene and presentation. Done items are listed fi
   `tests/conftest.py` sets `DIGITERRA_APP_SUPPORT_DIR` and `DIGITERRA_OUTPUT_DIR` to a temp dir before any app/config import, so upload tests no longer touch `~/Library/Application Support/DiGiTerra` (or equivalent).
 
 - **Lint scope and cap**  
-  `package.json` lint script now runs ESLint on the files the app actually loads (`static/js/app.js`, `static/js/core.js`) plus legacy `static/client_side.js`, with `--max-warnings 35` so the current 35 warnings don’t block CI but new ones do.
+  `package.json` lint script runs ESLint on the loaded split modules under `static/js/` (`--max-warnings 0`).
 
 ---
 
@@ -30,12 +30,11 @@ Checklist for tightening repo hygiene and presentation. Done items are listed fi
 
 ### 2. Tighten lint over time
 
-- **Done.** `--max-warnings 0`. All 86+ warnings resolved: unused vars prefixed with `_` or annotated (HTML-called functions), `.eslintrc.cjs` and `.eslintrc.json` use `varsIgnorePattern: "^_"`. MLP `hidden_layer_size1` typo fixed in `app.js` and `client_side.js`. CI runs `npm run lint` with zero warnings.
+- **Done.** `--max-warnings 0`. All 86+ warnings resolved: unused vars prefixed with `_` or annotated (HTML-called functions), ESLint config is `.eslintrc.cjs` with `varsIgnorePattern: "^_"`. MLP `hidden_layer_size1` typo fixed in `app.js`. CI runs `npm run lint` with zero warnings.
 
 ### 3. Frontend migration and consistency
 
-- **Documented.** CONTRIBUTING “Where things live” states canonical sources (`static/js/app.js`, `static/js/core.js`), legacy (`static/client_side.js`), and that new changes go in canonical files; lint covers all three.  
-- You can complete the migration (remove or replace `client_side.js` and update references) when ready.
+- **Done.** Legacy monolithic `static/client_side.js` was removed; CONTRIBUTING and lint target only the split modules under `static/js/`.
 
 ### 4. Shrink large UI assets (medium effort)
 

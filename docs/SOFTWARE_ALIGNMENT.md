@@ -63,7 +63,7 @@ Practical next steps to make the project more in line with typical software engi
 **Still useful:**
 
 - **Flask Blueprints:** Split routes in `app.py` into e.g. `routes/upload.py`, `routes/modeling.py`, `routes/inference.py`, `routes/assets.py` and register with `url_prefix`. Keeps `app.py` small and groups endpoints by feature.
-- **Split frontend:** Break `client_side.js` into modules (e.g. config, upload, preprocess, modeling, inference) and load them in order or bundle; same for `templates/index.html` (Jinja2 includes). See `docs/ARCHITECTURE_RECOMMENDATIONS.md`.
+- **Split frontend:** **Done** for JS (`static/js/` modules + optional `app.bundle.js`). Still useful: break up `templates/index.html` with Jinja2 includes. See `docs/ARCHITECTURE_RECOMMENDATIONS.md`.
 
 **Result:** Easier navigation and ownership; fewer merge conflicts.
 

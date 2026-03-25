@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- DiGiTerra UI: single-page app. Tabs = Upload, Data Exploration, Model Preprocessing, Modeling, Inference. Logic in static/client_side.js. HANDOFF.md has repo notes. -->
+    <!-- DiGiTerra UI: single-page app. Tabs = Upload, Data Exploration, Model Preprocessing, Modeling, Inference. Logic in static/js/*.js (or app.bundle.js when DIGITERRA_USE_JS_BUNDLE=1). See CONTRIBUTING.md. -->
     <!--
     Accessibility Features:
     This application includes comprehensive accessibility support including ARIA attributes (roles, labels, live regions),
@@ -35,12 +35,6 @@
             <button type="button" class="tab-button" data-tab="historic">Inference on New Data</button>
         </nav>
         <div class="right">
-            <!-- DARK MODE TOGGLE DISABLED - Code kept for potential future use -->
-            <!--
-            <button type="button" class="tab-button dark-mode-toggle" id="darkModeToggle" aria-label="Toggle dark mode" title="Toggle dark mode">
-                <span id="darkModeIcon">Dark</span>
-            </button>
-            -->
             <button type="button" class="tab-button documentation-button" data-tab="documentation" id="documentationButton">Documentation</button>
         </div>
     </header>
@@ -549,7 +543,7 @@
                         <p class="field-note" style="margin-bottom: 10px;">Your data may contain <strong>blanks (missing values)</strong> or <strong>zeros</strong>. Run the check below first; then choose which columns to clean and how.</p>
                         <div class="scaling-container" style="margin-bottom: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
                             <span>Check selected columns for blanks or zeros:</span>
-                            <button type="button" id="autoDetectNanZeros" class="button-secondary" style="padding: 6px 14px; font-size: 0.9em;">Check</button>
+                            <button type="button" id="autoDetectNanZeros" class="button-secondary" style="padding: 6px 14px; font-size: 0.9em;">Run autodetect</button>
                         </div>
                         <div id="dataCleaningAutodetectMessage" class="field-note" style="margin-bottom: 12px; min-height: 1.2em; color: #666;" aria-live="polite"></div>
                         <div id="dataCleaningMissingWrapper" class="scaling-container">
@@ -2615,9 +2609,7 @@
                             
                             <div style="margin-bottom: 30px;">
                                 
-                                <!-- Note: Hyperparameter fields are duplicated from the old advancedOptimization container -->
-                                <!-- They are also present there for backward compatibility, but these are the active ones -->
-                                <!-- The hyperparameter fields start below and are copied from the old Advanced page -->
+                                <!-- Hyperparameter blocks are mirrored in #advancedOptimization (legacy panel) for cloning; active advanced run uses this section + #advancedOptimizationForm / #advancedOptimizationSubmitButton -->
                                 
                             <!-- Ridge Hyperparameters -->
                             <div id="advancedRidgeFields" class="hidden">
@@ -4012,7 +4004,7 @@
         </div>
     </div>
 
-<!-- Advanced Modeling Page -->
+<!-- Advanced Modeling Page (legacy full-page panel; kept for DOM clone source — unified advanced UI is #advancedModelingSection) -->
     <div id="advancedOptimization" class="container hidden">
         <div class="form">
             <div class="section-header">
@@ -4024,7 +4016,7 @@
             <div class="topSection">
             </div>
 
-            <form id="advancedOptimizationForm">
+            <form id="advancedOptimizationLegacyForm">
                 <div class="model-layout">
                     <div class="modelSection">
                         <div class="preprocess-card" style="margin-bottom: 20px;">
@@ -7399,7 +7391,7 @@
                             <p class="field-note" style="margin-bottom: 12px;">
                                 <strong>Note:</strong> Select your model above and configure all hyperparameters here. Then configure advanced options (feature selection, outlier handling, hyperparameter search, cross-validation). Click the button below to run the model with these advanced settings.
                             </p>
-                            <button type="submit" class='processButton processButton--compact' id="advancedOptimizationSubmitButton">Run Model with Advanced Options</button>
+                            <button type="submit" class='processButton processButton--compact' id="advancedOptimizationLegacySubmitButton">Run Model with Advanced Options</button>
                             <p class="field-note" style="color: #856404; margin-top: 12px; margin-bottom: 0;">
                                 <strong>Warning:</strong> Advanced options such as hyperparameter search, feature selection, and extensive cross-validation can take multiple hours to complete, especially with large datasets.
                             </p>

@@ -527,7 +527,7 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
             }
             try {
                 autoDetectNanZerosBtn.disabled = true;
-                autoDetectNanZerosBtn.textContent = 'Detecting...';
+                autoDetectNanZerosBtn.textContent = 'Detecting…';
                 const response = await fetch('/auto-detect-nan-zeros', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -572,7 +572,7 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
                 if (drop0Select) drop0Select.disabled = false;
             } finally {
                 autoDetectNanZerosBtn.disabled = false;
-                autoDetectNanZerosBtn.textContent = 'Run';
+                autoDetectNanZerosBtn.textContent = 'Run autodetect';
             }
         });
     }

@@ -20,7 +20,7 @@ processForm.addEventListener('submit', async (e) => {
         runButton = document.getElementById('automlSubmitButton');
         stopButton = document.getElementById('stopAutomlButton');
     } else if (currentMode === 'advanced') {
-        runButton = document.getElementById('advancedOptimizationSubmitButton');
+        runButton = getAdvancedRunSubmitButton();
         stopButton = document.getElementById('stopAdvancedButton');
     } else {
         runButton = getCachedElement('processButton');
@@ -102,11 +102,31 @@ processForm.addEventListener('submit', async (e) => {
     let selectedOutputType = outputType.value
     if (!indicators.length || (!predictors.length && selectedOutputType !== 'Cluster')) {
         showError(NumericResultDiv, 'Please select at least one predictor and one indicator column.');
-        const processButton = getCachedElement('processButton');
-        if (processButton) processButton.disabled = false; // Re-enable button on validation failure
+        if (runButton) runButton.disabled = false;
+        if (stopButton) stopButton.style.display = 'none';
         return;
     }
-    
+
+    // Simple / Advanced: require an explicit model (placeholder "-- Select an option --" sends empty value)
+    if (currentMode === 'simple' || currentMode === 'advanced') {
+        let modelPick = '';
+        if (selectedOutputType === 'Numeric') {
+            modelPick = (currentMode === 'simple' ? document.getElementById('simpleNModels') : document.getElementById('advancedNModels'))?.value || '';
+        } else if (selectedOutputType === 'Classifier') {
+            modelPick = (currentMode === 'simple' ? document.getElementById('simpleClassModels') : document.getElementById('advancedClassModels'))?.value || '';
+        } else if (selectedOutputType === 'Cluster') {
+            modelPick = (currentMode === 'simple' ? document.getElementById('simpleClModels') : document.getElementById('advancedClModels'))?.value || '';
+        }
+        if (!String(modelPick).trim()) {
+            const errDiv = getCachedElement('errorDiv');
+            if (errDiv) showError(errDiv, 'Please select a model from the dropdown before running.');
+            else showError(NumericResultDiv, 'Please select a model from the dropdown before running.');
+            if (runButton) runButton.disabled = false;
+            if (stopButton) stopButton.style.display = 'none';
+            return;
+        }
+    }
+
     // Clear old results only after validation passes
     // Hide all result divs - processModelResult will show the appropriate one based on output type
     NumericResultDiv.innerHTML = '';
@@ -2243,7 +2263,7 @@ processForm.addEventListener('submit', async (e) => {
                             }
                             stopButton = document.getElementById('stopAutomlButton');
                         } else if (currentMode === 'advanced') {
-                            const advancedButton = document.getElementById('advancedOptimizationSubmitButton');
+                            const advancedButton = getAdvancedRunSubmitButton();
                             if (advancedButton) advancedButton.disabled = false;
                             stopButton = document.getElementById('stopAdvancedButton');
                         } else {
@@ -2279,7 +2299,7 @@ processForm.addEventListener('submit', async (e) => {
                         }
                         stopButton = document.getElementById('stopAutomlButton');
                     } else if (currentMode === 'advanced') {
-                        const advancedButton = document.getElementById('advancedOptimizationSubmitButton');
+                        const advancedButton = getAdvancedRunSubmitButton();
                         if (advancedButton) advancedButton.disabled = false;
                         stopButton = document.getElementById('stopAdvancedButton');
                     } else {
@@ -2345,7 +2365,7 @@ processForm.addEventListener('submit', async (e) => {
                 }
                 stopButton = document.getElementById('stopAutomlButton');
             } else if (currentMode === 'advanced') {
-                const advancedButton = document.getElementById('advancedOptimizationSubmitButton');
+                const advancedButton = getAdvancedRunSubmitButton();
                 if (advancedButton) advancedButton.disabled = false;
                 stopButton = document.getElementById('stopAdvancedButton');
             } else {
@@ -2517,7 +2537,7 @@ processForm.addEventListener('submit', async (e) => {
                     stopButton = document.getElementById('stopAutomlButton');
                 } else if (currentMode === 'advanced') {
                     loadingDiv = getAdvancedLoadingDiv();
-                    const advancedButton = document.getElementById('advancedOptimizationSubmitButton');
+                    const advancedButton = getAdvancedRunSubmitButton();
                     if (advancedButton) advancedButton.disabled = false;
                     stopButton = document.getElementById('stopAdvancedButton');
                 } else {
@@ -2583,7 +2603,7 @@ processForm.addEventListener('submit', async (e) => {
             }
             stopButton = document.getElementById('stopAutomlButton');
         } else if (currentMode === 'advanced') {
-            const advancedButton = document.getElementById('advancedOptimizationSubmitButton');
+                    const advancedButton = getAdvancedRunSubmitButton();
             if (advancedButton) advancedButton.disabled = false;
             stopButton = document.getElementById('stopAdvancedButton');
         } else {
@@ -2602,9 +2622,14 @@ processForm.addEventListener('submit', async (e) => {
                 progressEventSource.close();
                 progressEventSource = null;
             }
-            // Determine which loading div to use
-            const isAdvancedPage = document.getElementById('advancedOptimization') && !document.getElementById('advancedOptimization').classList.contains('hidden');
-            const loadingDiv = isAdvancedPage ? getAdvancedLoadingDiv() : loading;
+            // Hide the correct loading region (unified advanced tab uses #advancedLoading, legacy panel uses #advancedOptimizationLegacyLoading)
+            const _smFin = document.getElementById('simpleMode');
+            const _amFin = document.getElementById('advancedMode');
+            const _umFin = document.getElementById('automlMode');
+            const cleanupMode = _smFin?.checked ? 'simple' : (_amFin?.checked ? 'advanced' : (_umFin?.checked ? 'automl' : 'simple'));
+            const loadingDiv = cleanupMode === 'advanced'
+                ? getAdvancedLoadingDiv()
+                : (cleanupMode === 'automl' ? document.getElementById('automlLoading') : loading);
             if (loadingDiv) {
                 loadingDiv.classList.add('hidden');
                 loadingDiv.innerHTML = ``;
@@ -2767,11 +2792,6 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
         // Show placeholder when no results are displayed
         if (resultsPlaceholder) resultsPlaceholder.style.display = 'block';
         
-        // Check if advanced options were used - look for advanced visuals or advanced option data
-        const allRegressionVisualsCheck = data.regression_visuals || [];
-        const hasAdvancedVisuals = allRegressionVisualsCheck.some(v => v.type === 'advanced');
-        const hasAdvancedOptions = data.feature_selection_info || data.outlier_info || hasAdvancedVisuals;
-        
         if (selectedOutputType === 'Numeric'){
                 // Ensure results container is visible
                 if (resultsContainer) {
@@ -2785,7 +2805,9 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
 
                 //if multiple targets then need to let users select which graphic they want to see for each target
                 // Check if we're on Simple Modeling page (not Advanced Modeling)
-                const isSimpleModelingPage = !document.getElementById('advancedOptimization') || document.getElementById('advancedOptimization').classList.contains('hidden');
+                // True when not on the standalone legacy advanced page (#advancedOptimization); unified advanced tab is still "simple" for this flag (CV button placement).
+                const isLegacyAdvancedPageVisible = document.getElementById('advancedOptimization') && !document.getElementById('advancedOptimization').classList.contains('hidden');
+                const isSimpleModelingPage = !isLegacyAdvancedPageVisible;
                 const crossValidationButton = isSimpleModelingPage ? '' : (data.cross_validation_file ? `
                             <a href="/download/${data.cross_validation_file}?download_name=${encodeURIComponent(crossValidationDownloadName)}" onclick="return downloadFile('${data.cross_validation_file}', '${crossValidationDownloadName}')">
                                 <button type="button" class='downloadperformanceButton export-button'>Cross-Validation XLSX</button>
@@ -2798,9 +2820,8 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                         { label: 'Predicted vs Actual + Residuals', file: 'target_plot' },
                     ];
                     
-                    // Filter visuals: baseline only for Modeling page, advanced only for Advanced Optimization page
+                    // Filter visuals: baseline only for Modeling page (advanced-only entries are for the Advanced Optimization flow)
                     const baselineVisuals = allRegressionVisuals.filter(v => v.type === 'baseline' || !v.type || v.type === 'default');
-                    const advancedVisuals = allRegressionVisuals.filter(v => v.type === 'advanced');
                     
                     // Use baseline visuals for Modeling page
                     const regressionVisuals = baselineVisuals.length > 0 ? baselineVisuals : allRegressionVisuals;
@@ -3053,127 +3074,6 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                     if (regressionVisualSelector2) regressionVisualSelector2.addEventListener("change", () => updateRegressionGraphic(2));
                     updateRegressionGraphic(1);
                     updateRegressionGraphic(2);
-                    
-                    // Note: Advanced results are now shown in the Simple mode result divs above
-                    // Removed separate AdvancedNumericResultDiv population since all results use Simple mode divs
-                    if (false && hasAdvancedOptions && AdvancedNumericResultDiv && advancedVisuals.length > 0) {
-                        // This code is disabled - all results now show in Simple mode divs
-                        AdvancedNumericResultDiv.innerHTML = `
-                    <div class="resultValues">
-                        <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start;">
-                            <div style="flex: 1; min-width: 300px;">
-                                <h3 style="margin: 0; margin-bottom: 10px;">Performance</h3> 
-                                <div class="model-stats-table-wrapper">
-                                    <table class="stats-table model-stats-table performance-table">
-                                        <tr><th>Value</th><th>Training</th><th>Validation</th><th class="delta-col">Δ (Train-Validation)</th></tr>
-                                        <tr> <td>n</td> <td>${data.train_n != null ? data.train_n : 'N/A'}</td> <td>${data.test_n != null ? data.test_n : 'N/A'}</td> <td class="delta-col">${data.train_n != null && data.test_n != null ? (data.train_n - data.test_n) : 'N/A'}</td> </tr>
-                                        <tr> <td>R²</td> <td>${data.trainscore}</td> <td>${data.valscore}</td> <td class="delta-col">${formatDelta(data.trainscore, data.valscore)}</td> </tr>
-                                        <tr> <td>RMSE</td> <td>${data.trainrmse}  ${unitStr}</td> <td>${data.valrmse}  ${unitStr}</td> <td class="delta-col">${formatDelta(data.trainrmse, data.valrmse, unitStr)}</td> </tr>
-                                        ${data.trainrmsestd && data.trainrmsestd !== 'N/A' && data.valrmsestd && data.valrmsestd !== 'N/A' ? `<tr> <td>RMSE σ</td> <td>${data.trainrmsestd}  ${unitStr}</td> <td>${data.valrmsestd}  ${unitStr}</td> <td class="delta-col">${formatDelta(data.trainrmsestd, data.valrmsestd, unitStr)}</td> </tr>` : ''}
-                                        <tr> <td>MAE</td> <td>${data.trainmae}  ${unitStr}</td> <td>${data.valmae} ${unitStr}</td> <td class="delta-col">${formatDelta(data.trainmae, data.valmae, unitStr)}</td> </tr>
-                                        ${data.trainmaestd && data.trainmaestd !== 'N/A' && data.valmaestd && data.valmaestd !== 'N/A' ? `<tr> <td>MAE σ</td> <td>${data.trainmaestd}  ${unitStr}</td> <td>${data.valmaestd} ${unitStr}</td> <td class="delta-col">${formatDelta(data.trainmaestd, data.valmaestd, unitStr)}</td> </tr>` : ''}
-                                    </table>
-                                </div>
-                                <div class="download-buttons" style="margin-top: 12px; display: flex; gap: 12px; align-items: center;">
-                                    <a href="/download/model_performance.xlsx?download_name=${encodeURIComponent(performanceDownloadName)}" onclick="return downloadFile('model_performance.xlsx', '${performanceDownloadName}')">
-                                        <button type="button" class='downloadperformanceButton export-button'>Model Performance XLSX</button>
-                                    </a>
-                                    <a href="/download/visualizations.pdf?download_name=${encodeURIComponent(visualizationsDownloadName)}" onclick="return downloadFile('visualizations.pdf', '${visualizationsDownloadName}')">
-                                        <button class="export-button" style="font-size: 0.95rem;">Visualizations PDF</button>
-                                    </a>
-                                    ${crossValidationButton}
-                                </div>
-                            </div>
-                            <div style="flex: 1; min-width: 300px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                    <h3 style="margin: 0;">Additional Information</h3>
-                                    <button type="button" class="export-button" id="advancedDownloadAdditionalInfo" style="font-size: 0.9rem; padding: 6px 12px;">Download XLSX</button>
-                                </div>
-                                <label for="advancedAdditionalTableToggle" style="display: block; margin-bottom: 5px;">Select Table to Display:</label>
-                                <select id="advancedAdditionalTableToggle" style="margin-bottom: 10px; width: 100%;">
-                                    <option value="hyperparameters">Hyperparameters</option>
-                                    <option value="crossvalidation" ${data.cross_validation_summary && data.cross_validation_summary.length > 0 ? '' : 'disabled'}>Cross Validation</option>
-                                    <option value="featureselection" ${data.feature_selection_info ? '' : 'disabled'}>Feature Selection</option>
-                                    <option value="outlierhandling" ${data.outlier_info ? '' : 'disabled'}>Outlier Handling</option>
-                                </select>
-                                <div id="advancedAdditionalTableContent">
-                                    ${hyperparameterTableHtmlWithWrapper}
-                                </div>
-                            </div>
-                        </div>
-                            <br>
-                            <br>
-                        </div>
-
-                    <div class="results-header" style="margin-top: 24px; margin-bottom: 16px;">
-                        <h2>Advanced Modeling Results</h2>
-                        <p>Charts, tables, and downloads will appear here.</p>
-                    </div>
-                    <label for="advancedRegressionVisualSelector">Select Visualization to Display</label>
-                    <select id="advancedRegressionVisualSelector">
-                        ${advancedVisuals
-                            .map((visual) => `<option value="${visual.file}">${visual.label}</option>`)
-                            .join('')}
-                    </select>
-                    <label for="advancedImageSelector">Select Target Graphic to Display</label>
-                    <select id="advancedImageSelector"></select>
-                    <br>
-                    <br>
-                    <img id="advancedTargetGraphic" class="result-graphic" src='/user-visualizations/target_plot_1_advanced.png?t=${new Date().getTime()}' alt="Advanced model visualization">
-                        <div><br></div>
-                        
-                        <div><br></div>
-                    </div>
-                        `;
-                        
-                        // Set up event listeners for advanced results
-                        const advancedImageSelector = document.getElementById('advancedImageSelector');
-                        const advancedTargetGraphic = document.getElementById('advancedTargetGraphic');
-                        const advancedVisualSelector = document.getElementById('advancedRegressionVisualSelector');
-                        
-                        if (advancedImageSelector && data.predictors) {
-                            data.predictors.forEach((predictor, index) => {
-                                const option = document.createElement("option");
-                                option.value = index + 1;
-                                option.textContent = predictor.split('/').pop();
-                                advancedImageSelector.appendChild(option);
-                            });
-                        }
-                        
-                        if (advancedVisualSelector && advancedTargetGraphic) {
-                            const updateAdvancedGraphic = () => {
-                                const selectedImage = advancedImageSelector ? advancedImageSelector.value : '1';
-                                const selectedVisual = advancedVisualSelector.value;
-                                
-                                const visualObj = advancedVisuals.find(v => v.file === selectedVisual);
-                                const visualType = visualObj ? visualObj.type : 'default';
-                                
-                                if (selectedVisual !== 'target_plot' && selectedVisual !== 'target_plot_advanced') {
-                                    let filename = selectedVisual;
-                                    if (!filename.includes('.png') && !filename.includes('_advanced')) {
-                                        filename = filename.endsWith('_advanced') ? `${filename}.png` : `${filename}.png`;
-                                    } else if (filename.endsWith('_advanced') && !filename.includes('.png')) {
-                                        filename = `${filename}.png`;
-                                    }
-                                    advancedTargetGraphic.src = withApiRoot(`/user-visualizations/${filename}?t=${Date.now()}`);
-                                    return;
-                                }
-                                
-                                let suffix = '';
-                                if (selectedVisual === 'target_plot_advanced' || (visualType === 'advanced')) {
-                                    suffix = '_advanced';
-                                }
-                                
-                                advancedTargetGraphic.src = withApiRoot(`/user-visualizations/target_plot_${selectedImage}${suffix}.png?t=${Date.now()}`);
-                            };
-                            
-                            if (advancedImageSelector) {
-                                advancedImageSelector.addEventListener("change", updateAdvancedGraphic);
-                            }
-                            advancedVisualSelector.addEventListener("change", updateAdvancedGraphic);
-                            updateAdvancedGraphic();
-                        }
-                    }
                 }
 
                 //when only one target to display 
@@ -3184,7 +3084,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                         { label: 'Predicted vs Actual + Residuals', file: 'target_plot' },
                     ];
                     
-                    // Filter visuals: baseline only for Modeling page, advanced for Advanced Optimization page
+                    // Filter visuals: baseline only for Modeling page
                     const regressionVisuals = allRegressionVisualsSingle.filter(v => v.type === 'baseline' || !v.type || v.type === 'default');
                     // Remove "Baseline" and any combined-view options for Simple Modeling page
                     const regressionVisualsClean = regressionVisuals
@@ -3193,7 +3093,6 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                             ...v,
                             label: (v.label || '').replace(/\s*-\s*Baseline\s*$/i, '').trim()
                         }));
-                    const advancedVisualsSingle = allRegressionVisualsSingle.filter(v => v.type === 'advanced');
                     // Build hyperparameter table HTML for single target using merged hyperparameters (without wrapper for Simple Modeling page)
                     const hyperparameterTableHtmlSingle = Object.keys(allHyperparameters).length > 0 ? `
                         <table class="stats-table model-stats-table">
@@ -3395,107 +3294,6 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                 if (targetGraphic2) targetGraphic2.onerror = function() { console.error('Failed to load graphic:', this.src); };
                 updateSingleTargetGraphic(1);
                 updateSingleTargetGraphic(2);
-                    
-                    // Note: Advanced results are now shown in the Simple mode result divs above
-                    // Removed separate AdvancedNumericResultDiv population since all results use Simple mode divs
-                    if (false && hasAdvancedOptions && AdvancedNumericResultDiv && advancedVisualsSingle.length > 0) {
-                        // This code is disabled - all results now show in Simple mode divs
-                        AdvancedNumericResultDiv.innerHTML = `
-                <div class="resultValues">
-                    <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start;">
-                        <div style="flex: 1; min-width: 300px;">
-                            <h3>Performance </h3> 
-                            <div class="model-stats-table-wrapper">
-                                <table class="stats-table model-stats-table performance-table">
-                                    <tr><th>Value</th><th>Training</th><th>Validation</th><th class="delta-col">Δ (Train-Validation)</th></tr>
-                                    <tr> <td>n</td> <td>${data.train_n != null ? data.train_n : 'N/A'}</td> <td>${data.test_n != null ? data.test_n : 'N/A'}</td> <td class="delta-col">${data.train_n != null && data.test_n != null ? (data.train_n - data.test_n) : 'N/A'}</td> </tr>
-                                    <tr> <td>R²</td> <td>${data.trainscore}</td> <td>${data.valscore}</td> <td class="delta-col">${formatDelta(data.trainscore, data.valscore)}</td> </tr>
-                                    <tr> <td>RMSE</td> <td>${data.trainrmse} ${unitStr}</td> <td>${data.valrmse}  ${unitStr}</td> <td class="delta-col">${formatDelta(data.trainrmse, data.valrmse, unitStr)}</td> </tr>
-                                    ${data.trainrmsestd && data.trainrmsestd !== 'N/A' && data.valrmsestd && data.valrmsestd !== 'N/A' ? `<tr> <td>RMSE σ</td> <td>${data.trainrmsestd} ${unitStr}</td> <td>${data.valrmsestd}  ${unitStr}</td> <td class="delta-col">${formatDelta(data.trainrmsestd, data.valrmsestd, unitStr)}</td> </tr>` : ''}
-                                    <tr> <td>MAE</td> <td>${data.trainmae} ${unitStr}</td> <td>${data.valmae} ${unitStr}</td> <td class="delta-col">${formatDelta(data.trainmae, data.valmae, unitStr)}</td> </tr>
-                                    ${data.trainmaestd && data.trainmaestd !== 'N/A' && data.valmaestd && data.valmaestd !== 'N/A' ? `<tr> <td>MAE σ</td> <td>${data.trainmaestd} ${unitStr}</td> <td>${data.valmaestd} ${unitStr}</td> <td class="delta-col">${formatDelta(data.trainmaestd, data.valmaestd, unitStr)}</td> </tr>` : ''}
-                                </table>
-                            </div>
-                            <div class="download-buttons" style="margin-top: 12px; display: flex; gap: 12px; align-items: center;">
-                                <a href="/download/model_performance.xlsx?download_name=${encodeURIComponent(performanceDownloadName)}" onclick="return downloadFile('model_performance.xlsx', '${performanceDownloadName}')">
-                                    <button type="button" class='downloadperformanceButton export-button'>Model Performance XLSX</button>
-                                </a>
-                                <a href="/download/visualizations.pdf?download_name=${encodeURIComponent(visualizationsDownloadName)}" onclick="return downloadFile('visualizations.pdf', '${visualizationsDownloadName}')">
-                                    <button class="export-button" style="font-size: 0.95rem;">Visualizations PDF</button>
-                                </a>
-                                ${crossValidationButton}
-                            </div>
-                        </div>
-                        <div style="flex: 1; min-width: 300px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                <h3 style="margin: 0;">Additional Information</h3>
-                                <button type="button" class="export-button" id="advancedDownloadAdditionalInfoSingle" style="font-size: 0.9rem; padding: 6px 12px;">Download XLSX</button>
-                            </div>
-                            <label for="advancedAdditionalTableToggleSingle" style="display: block; margin-bottom: 5px;">Select Table to Display:</label>
-                            <select id="advancedAdditionalTableToggleSingle" style="margin-bottom: 10px; width: 100%;">
-                                <option value="hyperparameters">Hyperparameters</option>
-                                <option value="crossvalidation" ${data.cross_validation_summary && data.cross_validation_summary.length > 0 ? '' : 'disabled'}>Cross Validation</option>
-                                <option value="featureselection" ${data.feature_selection_info ? '' : 'disabled'}>Feature Selection</option>
-                                <option value="outlierhandling" ${data.outlier_info ? '' : 'disabled'}>Outlier Handling</option>
-                            </select>
-                            <div id="advancedAdditionalTableContentSingle">
-                                ${hyperparameterTableHtmlSingleWithWrapper}
-                            </div>
-                        </div>
-                    </div>
-                        <br>
-                        <br>
-                    </div>
-
-                    <h3>Graphics</h3>
-                    <p style="margin-top: 4px; margin-bottom: 12px; color: #666; font-size: 0.95rem;">Advanced optimization graphics will be displayed here</p>
-                    <label for="advancedRegressionVisualSelectorSingle">Select Visualization to Display</label>
-                    <select id="advancedRegressionVisualSelectorSingle">
-                        ${advancedVisualsSingle
-                            .map((visual) => `<option value="${visual.file}">${visual.label}</option>`)
-                            .join('')}
-                    </select>
-                    <br>
-                    <br>
-                    <img id="advancedTargetGraphicSingle" class="result-graphic" src='/user-visualizations/target_plot_1_advanced.png?t=${new Date().getTime()}'>
-                    <div><br></div>
-                </div>
-                        `;
-                        
-                        // Set up event listeners for advanced results (single target)
-                        const advancedVisualSelectorSingle = document.getElementById('advancedRegressionVisualSelectorSingle');
-                        const advancedTargetGraphicSingle = document.getElementById('advancedTargetGraphicSingle');
-                        
-                        if (advancedVisualSelectorSingle && advancedTargetGraphicSingle) {
-                            const updateAdvancedGraphicSingle = () => {
-                                const selectedVisual = advancedVisualSelectorSingle.value;
-                                
-                                const visualObj = advancedVisualsSingle.find(v => v.file === selectedVisual);
-                                const visualType = visualObj ? visualObj.type : 'default';
-                                
-                                if (selectedVisual !== 'target_plot' && selectedVisual !== 'target_plot_advanced') {
-                                    let filename = selectedVisual;
-                                    if (!filename.includes('.png') && !filename.includes('_advanced')) {
-                                        filename = filename.endsWith('_advanced') ? `${filename}.png` : `${filename}.png`;
-                                    } else if (filename.endsWith('_advanced') && !filename.includes('.png')) {
-                                        filename = `${filename}.png`;
-                                    }
-                                    advancedTargetGraphicSingle.src = withApiRoot(`/user-visualizations/${filename}?t=${Date.now()}`);
-                                    return;
-                                }
-                                
-                                let suffix = '';
-                                if (selectedVisual === 'target_plot_advanced' || (visualType === 'advanced')) {
-                                    suffix = '_advanced';
-                                }
-                                
-                                advancedTargetGraphicSingle.src = withApiRoot(`/user-visualizations/target_plot_1${suffix}.png?t=${Date.now()}`);
-                            };
-                            
-                            advancedVisualSelectorSingle.addEventListener("change", updateAdvancedGraphicSingle);
-                            updateAdvancedGraphicSingle();
-                        }
-                    }
                 }
 
                 // <img src='${data.ActVpredval}?t=${new Date().getTime()}' style="width: 70%; height: auto;">

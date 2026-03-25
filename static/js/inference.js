@@ -341,25 +341,26 @@ if (automlForm) {
     });
 }
 
-// Advanced Optimization form submission - triggers the same model training as processForm
-if (advancedOptimizationForm) {
-    advancedOptimizationForm.addEventListener('submit', async (e) => {
+// Advanced Optimization forms (unified Modeling tab + legacy full-page panel) — same training flow as processForm
+function wireAdvancedOptimizationFormSubmit(form) {
+    if (!form) return;
+    form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+
         // Switch to Advanced mode if not already selected
         const advancedModeRadio = document.getElementById('advancedMode');
         if (advancedModeRadio && !advancedModeRadio.checked) {
             advancedModeRadio.checked = true;
             switchModelingMode('advanced');
         }
-        
+
         // Check if a model has been selected
         const advancedNModels = getCachedElement('advancedNModels');
         const advancedClModels = getCachedElement('advancedClModels');
         const advancedClassModels = getCachedElement('advancedClassModels');
-        
+
         const selectedModel = advancedNModels?.value || advancedClModels?.value || advancedClassModels?.value;
-        
+
         if (!selectedModel) {
             const errorDiv = getCachedElement('errorDiv');
             if (errorDiv) {
@@ -368,8 +369,7 @@ if (advancedOptimizationForm) {
             }
             return;
         }
-        
-        // Check if processForm exists and is valid
+
         if (!processForm) {
             const errorDiv = getCachedElement('errorDiv');
             if (errorDiv) {
@@ -378,20 +378,19 @@ if (advancedOptimizationForm) {
             }
             return;
         }
-        
-        // Disable the submit button to prevent double submission
-        const submitButton = document.getElementById('advancedOptimizationSubmitButton');
+
+        const submitter = e.submitter;
+        const submitButton = (submitter && submitter.tagName === 'BUTTON' && submitter.getAttribute('type') === 'submit')
+            ? submitter
+            : form.querySelector('button[type="submit"]');
         if (submitButton) {
             submitButton.disabled = true;
             submitButton.textContent = 'Running...';
         }
-        
-        // Programmatically trigger the processForm submission
-        // This will use all the settings from both Modeling page and Advanced Optimization page
+
         const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
         processForm.dispatchEvent(submitEvent);
-        
-        // Re-enable button after a delay (in case of error)
+
         setTimeout(() => {
             if (submitButton) {
                 submitButton.disabled = false;
@@ -400,3 +399,5 @@ if (advancedOptimizationForm) {
         }, 1000);
     });
 }
+wireAdvancedOptimizationFormSubmit(document.getElementById('advancedOptimizationForm'));
+wireAdvancedOptimizationFormSubmit(document.getElementById('advancedOptimizationLegacyForm'));

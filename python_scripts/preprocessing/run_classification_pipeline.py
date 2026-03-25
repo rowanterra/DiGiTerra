@@ -35,6 +35,27 @@ from python_scripts.config import VIS_DIR
 import python_scripts.plotting.plot_style  # noqa: F401 - apply soft seaborn-like style
 
 
+def _encode_ordinal_target(y_part, label_to_int: Dict[str, int]) -> pd.Series:
+    """
+    Map raw class labels to integers. label_to_int keys are strings (from str(v) over train/test);
+    pandas .map(dict) uses raw values as keys, so float 1.0 would miss key '1.0' and become NaN.
+    """
+    ys = y_part if isinstance(y_part, pd.Series) else pd.Series(np.asarray(y_part).ravel())
+
+    def _one(v):
+        if pd.isna(v):
+            return np.nan
+        k = str(v)
+        if k not in label_to_int:
+            raise ValueError(
+                f"Target label {k!r} has no ordinal mapping; known labels: {sorted(label_to_int.keys())!r}. "
+                "Check for inconsistent label types (e.g. int vs float) or typos."
+            )
+        return label_to_int[k]
+
+    return ys.map(_one)
+
+
 def _normalize_classes(model):
     """Return a 1D array of class labels. Unwrap MultiOutputClassifier single-output list-of-one-array."""
     try:
@@ -148,8 +169,8 @@ def run_classification(model, model_name,
         ordinal_classes = sort_class_labels_numeric_bins(all_labels)
         label_to_int = {c: i for i, c in enumerate(ordinal_classes)}
         int_to_label = {i: c for c, i in label_to_int.items()}
-        y_train_int = y_train.map(label_to_int) if hasattr(y_train, "map") else pd.Series(y_train).map(label_to_int)
-        y_test_int = y_test.map(label_to_int) if hasattr(y_test, "map") else pd.Series(y_test).map(label_to_int)
+        y_train_int = _encode_ordinal_target(y_train, label_to_int)
+        y_test_int = _encode_ordinal_target(y_test, label_to_int)
 
     # RAW splits for transformer
     X_train_raw = ddf.loc[X_train.index, nump + catp + textp].copy()
@@ -211,6 +232,14 @@ def run_classification(model, model_name,
 
     # Fit using ordinal integers when we have pre-made bins so the model sees ordered classes (0,1,2,...)
     fit_y = y_train_int if y_train_int is not None else y_train
+    fit_y_series = fit_y if isinstance(fit_y, pd.Series) else pd.Series(np.asarray(fit_y).ravel())
+    if fit_y_series.isna().any():
+        n_bad = int(fit_y_series.isna().sum())
+        raise ValueError(
+            f"Target y contains {n_bad} missing value(s) after preprocessing. "
+            "In Data Cleaning, include the target in missing-value handling or drop rows that include the target; "
+            "re-run autodetect with Targets (or All numeric) selected if blanks are in y."
+        )
     if hyperparameter_search != 'none':
         model = apply_hyperparameter_search(
             model, X_train_s, fit_y, hyperparameter_search,

@@ -173,6 +173,8 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
         selected_predictors = data['predictors']
         hyperparameters = data['hyperparameters']
         modelName = data['models']
+        if modelName is None or (isinstance(modelName, str) and not str(modelName).strip()):
+            raise ValueError("No model selected. Choose a model from the dropdown before running.")
         nonreq = data['nonreq']
         scaler = data['scaler']
         units = data['units']
@@ -337,7 +339,10 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
 
         # Registry-based dispatch
         if modelName == 'TerraFORMER' or modelName not in MODEL_REGISTRY or MODEL_REGISTRY[modelName][0] is None:
-            raise ValueError('invalid model architecture specified')
+            raise ValueError(
+                f"Invalid or unsupported model: {modelName!r}. "
+                "If you did not pick a model, select one from the list; reserved names are not valid."
+            )
         else:
             train_fn, problem_type = MODEL_REGISTRY[modelName]
             X_data = _safe_select_columns(df, indicator_names)
