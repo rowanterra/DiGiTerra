@@ -145,6 +145,9 @@ const _formatDelta = (trainValue, validationValue, unit = '') => {
     return unit ? `${delta} ${unit}` : delta;
 };
 
+/** Exposed for modeling.js / template strings (same file scope is not shared across script tags). */
+window.formatDelta = _formatDelta;
+
 // DOM utility functions
 const _queryOne = (selector) => document.querySelector(selector);
 const _queryAll = (selector) => document.querySelectorAll(selector);
@@ -7151,10 +7154,10 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                                 </div>
                                 <p style="margin-top: 12px;"><strong>Best K:</strong> ${data.best_k}</p>
                                 <div class="download-buttons" style="margin-top: 12px; display: flex; gap: 12px; align-items: center;">
-                                    <a href="/download/model_performance.xlsx?download_name=${encodeURIComponent(performanceDownloadName)}" onclick="return downloadFile('model_performance.xlsx', '${performanceDownloadName}')">
+                                    <a href="${withApiRoot('/download/model_performance.xlsx')}?download_name=${encodeURIComponent(performanceDownloadName)}" onclick="return downloadFile('model_performance.xlsx', '${performanceDownloadName}')">
                                         <button class='downloadperformanceButton export-button'>Model Performance XLSX</button>
                                     </a>
-                                    <a href="/download/visualizations.pdf?download_name=${encodeURIComponent(visualizationsDownloadName)}" onclick="return downloadFile('visualizations.pdf', '${visualizationsDownloadName}')">
+                                    <a href="${withApiRoot('/download/visualizations.pdf')}?download_name=${encodeURIComponent(visualizationsDownloadName)}" onclick="return downloadFile('visualizations.pdf', '${visualizationsDownloadName}')">
                                         <button class="export-button" style="font-size: 0.95rem;">Visualizations PDF</button>
                                     </a>
                                 </div>
