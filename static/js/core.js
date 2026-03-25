@@ -108,6 +108,9 @@ const _formatDelta = (trainValue, validationValue, unit = '') => {
     return unit ? `${delta} ${unit}` : delta;
 };
 
+/** Exposed for modeling.js / template strings (same file scope is not shared across script tags). */
+window.formatDelta = _formatDelta;
+
 // DOM utility functions
 const _queryOne = (selector) => document.querySelector(selector);
 const _queryAll = (selector) => document.querySelectorAll(selector);
