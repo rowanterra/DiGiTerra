@@ -1589,6 +1589,21 @@ button:hover {
   margin-top: 2px;
 }
 
+/* Data cleaning: checkbox row must own a full line so labels like "Action for zeros" don't sit inline */
+#dataCleaningMissingWrapper .cleaning-scope-checkboxes,
+#dataCleaningZerosWrapper .cleaning-scope-checkboxes {
+  flex: 1 1 100%;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+#dataCleaningZerosWrapper > label[for="zeroHandle"],
+#imputeDiv > label[for="imputeStrategy"] {
+  flex: 1 1 100%;
+  margin-top: 2px;
+}
+
 .scaling-container h2 {
   margin: 0; /* Remove extra spacing */
 }

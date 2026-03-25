@@ -93,6 +93,24 @@ def _fit_clusterer(model, algo, Xtr: np.ndarray, n_clusters):
     return mdl, predict, labels_tr, centers
 
 
+def _assign_labels_by_centers(Xv: np.ndarray, centers: Optional[np.ndarray]) -> np.ndarray:
+    """Nearest cluster for each row when the estimator has no .predict (e.g. SpectralClustering)."""
+    if centers is None or len(Xv) == 0:
+        return np.array([], dtype=int)
+    C = np.asarray(centers, dtype=float)
+    if C.ndim != 2 or C.shape[0] < 1:
+        return np.array([], dtype=int)
+    try:
+        from scipy.spatial.distance import cdist
+
+        return cdist(Xv, C).argmin(axis=1).astype(int)
+    except Exception:
+        AA = (Xv.astype(float) ** 2).sum(1)[:, None]
+        BB = (C ** 2).sum(1)[None, :]
+        D = np.sqrt(np.maximum(AA + BB - 2 * Xv.astype(float) @ C.T, 0.0))
+        return D.argmin(axis=1).astype(int)
+
+
 def run_clustering(model, model_name,
                     train_data,
                     X,
@@ -261,10 +279,15 @@ def run_clustering(model, model_name,
         else:
             X_test_s = pd.DataFrame(columns=X_train_s.columns, dtype=X_train_s.dtypes)
     
-    if predict_fn is not None and len(X_test_s) > 0:
-        labels_test = predict_fn(X_test_s.values)
+    if len(X_test_s) > 0:
+        if predict_fn is not None:
+            labels_test = predict_fn(X_test_s.values)
+        else:
+            labels_test = np.array([], dtype=int)
+        if len(labels_test) != len(X_test_s):
+            labels_test = _assign_labels_by_centers(X_test_s.values, centers)
     else:
-        labels_test = np.array([])
+        labels_test = np.array([], dtype=int)
     logger.debug("Computing cluster scores")
     # Scores
     def _cluster_scores(Xa, labels):

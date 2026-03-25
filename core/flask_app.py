@@ -26,6 +26,8 @@ def _configure_logging():
     level = getattr(logging, level_name, logging.INFO)
     fmt = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
     logging.basicConfig(level=level, format=fmt, datefmt="%Y-%m-%d %H:%M:%S", force=True)
+    # SHAP KernelExplainer logs very chatty INFO (num_full_subsets, phi, weights) on every explain call.
+    logging.getLogger("shap").setLevel(logging.WARNING)
     root = logging.getLogger()
     try:
         LOG_DIR.mkdir(parents=True, exist_ok=True)

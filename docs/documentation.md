@@ -38,7 +38,7 @@ Upload  ->  Data Exploration  ->  Model Preprocessing  ->  Modeling  ->  Outputs
 ```
 
 ## System Touchpoints
-- Front-end UI: `templates/index.html`, `static/client_side.js`
+- Front-end UI: `templates/index.html`, `static/js/` modules (`core.js`, `upload.js`, `preprocess.js`, `modeling.js`, `inference.js`, `app.js`) or `static/js/app.bundle.js` when bundled
 - Styling: `static/style.css`
 - Model orchestration: `app.py` (routes) and `python_scripts/app_model_training.py` (training pipeline)
 - Data exploration (correlation, pairplot, auto-detect): `python_scripts/app_exploration.py`

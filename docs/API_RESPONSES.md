@@ -12,7 +12,7 @@ DiGiTerra’s JSON API uses a simple, consistent shape where possible.
 - **HTTP status:** Use standard codes: `400` (validation/bad request), `404` (not found), `500` (server error).
 - **JSON body:** When returning JSON for an error, include an `error` string so the client can show it:
   - `{ "error": "Human-readable message" }`
-- The frontend (`static/client_side.js`) shows `data.error` when present and falls back to a generic “See console for details” message.
+- The frontend (`static/js/*.js`) shows `data.error` when present and falls back to a generic “See console for details” message.
 
 ## Main endpoints (summary)
 

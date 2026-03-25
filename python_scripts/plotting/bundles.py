@@ -34,6 +34,24 @@ from python_scripts.plotting.plot_shap_summary_graphic import plot_shap_summary
 logger = logging.getLogger(__name__)
 
 
+def _y_test_aligned_with_classifier(y_test, int_to_label: Optional[dict]) -> pd.Series:
+    """
+    Ordinal classification fits on integer codes; splits may still carry raw labels (strings).
+    sklearn RocCurveDisplay / PrecisionRecallDisplay.from_estimator require y to match model.classes_.
+    """
+    if int_to_label is None:
+        return y_test if isinstance(y_test, pd.Series) else pd.Series(np.asarray(y_test).ravel())
+    lut = {str(v): k for k, v in int_to_label.items()}
+    s = y_test if isinstance(y_test, pd.Series) else pd.Series(np.asarray(y_test).ravel())
+
+    def _one(x):
+        if pd.isna(x):
+            return np.nan
+        return lut[str(x)]
+
+    return s.map(_one)
+
+
 def _fig_save_all_to_pdf(pdf_pages):
     """Save all open matplotlib figures to a PdfPages object.
     
@@ -273,6 +291,8 @@ def plot_classification_bundle(art: dict, svctrue: bool):
         flat = np.asarray(arr).ravel()
         return np.array([int_to_label[int(x)] for x in flat])
 
+    y_for_sklearn = _y_test_aligned_with_classifier(y_test, int_to_label)
+
     # 1) Confusion matrix – test set only (train matrix removed; no separate train confusion matrix)
     y_test_1d = np.asarray(y_test).ravel()
     y_pred_labels = _to_labels(y_pred)
@@ -300,7 +320,7 @@ def plot_classification_bundle(art: dict, svctrue: bool):
     if y_score is not None:
         try:
             plot_roc_curve_from_estimator(
-                model, X_test, y_test,
+                model, X_test, y_for_sklearn,
                 model_name=art.get("model_name", "Model"),
                 pdf_pages=None,
                 plot_chance_level=True,
@@ -332,7 +352,7 @@ def plot_classification_bundle(art: dict, svctrue: bool):
         # 3) PR curves using scikit-learn's PrecisionRecallDisplay
         try:
             plot_precision_recall_curve_from_estimator(
-                model, X_test, y_test,
+                model, X_test, y_for_sklearn,
                 model_name=art.get("model_name", "Model"),
                 pdf_pages=None,
                 plot_chance_level=True,
@@ -399,7 +419,9 @@ def plot_classification_bundle(art: dict, svctrue: bool):
     feat_names = art.get("feature_names", [])
     ok = _plot_feature_importance(model, feat_names, title="Feature importance (model)")
     if not ok:
-        _ = _plot_permutation_importance(model, X_test.values, y_test.values, feat_names, title="Permutation importance")
+        _ = _plot_permutation_importance(
+            model, X_test.values, np.asarray(y_for_sklearn).ravel(), feat_names, title="Permutation importance"
+        )
     
     # 6) Partial Dependence Plots (for tree-based models)
     try:
@@ -442,8 +464,16 @@ def plot_clustering_bundle(art: dict):
     labels_train = art["clusters"]["labels_train"]
     centers = art["clusters"]["centers"]
     best_k = art["clusters"]["best_k"]
-    X_test = art["splits"]["X_test"].values if len(art["splits"]["X_test"]) else None
-    labels_test = art["clusters"]["labels_test"] if len(art["splits"]["X_test"]) else None
+    X_test_df = art["splits"]["X_test"]
+    X_test = X_test_df.values if len(X_test_df) else None
+    labels_test = art["clusters"]["labels_test"] if len(X_test_df) else None
+    n_test = len(X_test_df) if X_test is not None else 0
+    lt = np.asarray(labels_test).ravel() if labels_test is not None else np.array([])
+    labels_test_ok = (
+        n_test > 0
+        and labels_test is not None
+        and lt.size == n_test
+    )
 
     # 1) Silhouette plot (iterate actual cluster labels — not range(best_k), which breaks for DBSCAN etc.)
     if len(np.unique(labels_train)) > 1:
@@ -479,10 +509,13 @@ def plot_clustering_bundle(art: dict):
         pca = PCA(n_components=2, random_state=42).fit(X_train)
         Z = pca.transform(X_train)
         fig, ax = plt.subplots(figsize=(6.5, 5.5))
+        hue_train = pd.Categorical(np.asarray(labels_train).astype(int))
         if sns is not None:
-            sns.scatterplot(x=Z[:, 0], y=Z[:, 1], hue=labels_train, palette="muted", s=35, alpha=0.85, ax=ax, legend="brief")
+            sns.scatterplot(
+                x=Z[:, 0], y=Z[:, 1], hue=hue_train, palette="muted", s=35, alpha=0.85, ax=ax, legend="brief"
+            )
         else:
-            ax.scatter(Z[:, 0], Z[:, 1], c=labels_train, s=25, edgecolor="k", alpha=0.8, cmap="tab10")
+            ax.scatter(Z[:, 0], Z[:, 1], c=np.asarray(labels_train).astype(int), s=25, edgecolor="k", alpha=0.8, cmap="tab10")
         Cz = pca.transform(centers) if centers is not None else None
         if Cz is not None:
             ax.scatter(Cz[:, 0], Cz[:, 1], s=120, marker="X", c="black", label="centers", zorder=5)
@@ -494,13 +527,16 @@ def plot_clustering_bundle(art: dict):
         plt.savefig(VIS_DIR / "cluster_pca_train.png", dpi=150, bbox_inches="tight", facecolor="white")
         plt.close(fig)
 
-        if X_test is not None and labels_test is not None and len(X_test):
+        if X_test is not None and labels_test_ok:
             Zt = pca.transform(X_test)
             fig, ax = plt.subplots(figsize=(6.5, 5.5))
+            hue_test = pd.Categorical(lt.astype(int))
             if sns is not None:
-                sns.scatterplot(x=Zt[:, 0], y=Zt[:, 1], hue=labels_test, palette="muted", s=35, alpha=0.85, ax=ax, legend="brief")
+                sns.scatterplot(
+                    x=Zt[:, 0], y=Zt[:, 1], hue=hue_test, palette="muted", s=35, alpha=0.85, ax=ax, legend="brief"
+                )
             else:
-                ax.scatter(Zt[:, 0], Zt[:, 1], c=labels_test, s=25, edgecolor="k", alpha=0.8, cmap="tab10")
+                ax.scatter(Zt[:, 0], Zt[:, 1], c=lt.astype(int), s=25, edgecolor="k", alpha=0.8, cmap="tab10")
             if Cz is not None:
                 ax.scatter(Cz[:, 0], Cz[:, 1], s=120, marker="X", c="black", label="centers", zorder=5)
                 ax.legend()
@@ -515,8 +551,8 @@ def plot_clustering_bundle(art: dict):
     counts = pd.Series(labels_train).value_counts().sort_index()
     fig, ax = plt.subplots(figsize=(6, 4))
     if sns is not None:
-        x_str = counts.index.astype(str)
-        sns.barplot(x=x_str, y=counts.values, hue=x_str, ax=ax, palette="muted", legend=False)
+        x_num = counts.index.astype(int)
+        sns.barplot(x=x_num, y=counts.values, hue=x_num, ax=ax, palette="muted", legend=False)
         ax.set_xlabel("Cluster")
         ax.set_ylabel("Count")
     else:

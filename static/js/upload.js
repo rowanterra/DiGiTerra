@@ -145,6 +145,7 @@ corrForm.addEventListener('submit', async(e) => {
         dropMissing: document.getElementById('exploreDropMissing').value,
         imputeStrategy: document.getElementById('exploreImputeStrategy').value,
         dropZero: document.getElementById('exploreDrop0').value,
+        zeroHandle: document.getElementById('exploreZeroHandle')?.value || 'drop',
     };
 
     try {
@@ -313,6 +314,7 @@ corrForm.addEventListener('submit', async(e) => {
                             dropMissing: document.getElementById('exploreDropMissing')?.value || 'none',
                             imputeStrategy: document.getElementById('exploreImputeStrategy')?.value || 'none',
                             dropZero: document.getElementById('exploreDrop0')?.value || 'none',
+                            zeroHandle: document.getElementById('exploreZeroHandle')?.value || 'drop',
                         }),
                     });
                     

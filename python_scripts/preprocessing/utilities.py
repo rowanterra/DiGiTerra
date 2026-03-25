@@ -25,9 +25,7 @@ from sklearn.metrics import (
     precision_recall_curve, average_precision_score, roc_curve, auc, roc_auc_score,
     silhouette_samples
 )
-from sklearn.calibration import CalibrationDisplay
 from sklearn.inspection import permutation_importance
-from sklearn.preprocessing import label_binarize
 from python_scripts.plotting.plot_shap_summary_graphic import plot_shap_summary
 from python_scripts.plotting.plot_roc_curve import plot_roc_curve_from_estimator
 from python_scripts.plotting.plot_precision_recall_curve import plot_precision_recall_curve_from_estimator

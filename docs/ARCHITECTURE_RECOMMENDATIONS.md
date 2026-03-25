@@ -13,7 +13,7 @@ This document summarizes the current architecture and recommends changes to make
 | **Training orchestration** | `python_scripts/app_model_training.py` | ~1,660 lines | Single entry `run_model_training`; **69 `elif modelName == ...` branches** that call individual `train_*` functions |
 | **Pipelines** | `python_scripts/preprocessing/run_*_pipeline.py` | Various | Actual fit/predict logic: `run_regression`, `run_classification`, `run_clustering` |
 | **Model wrappers** | `python_scripts/models/{regression,classify,cluster}_models/train_*.py` | ~30–80 lines each | Thin wrappers: build sklearn model, call corresponding pipeline |
-| **Frontend logic** | `static/client_side.js` | **~8,316 lines** | Upload, exploration, preprocess, modeling, inference, all UI state and result rendering in one file |
+| **Frontend logic** | `static/js/*.js` (+ optional `app.bundle.js`) | Split by feature | `core.js`, `upload.js`, `preprocess.js`, `modeling.js`, `inference.js`, `app.js` (legacy monolith removed) |
 | **UI markup** | `templates/index.html` | **~7,474 lines** | Single-page app: all tabs and sections in one HTML file |
 | **Helpers** | `python_scripts/helpers.py` | ~772 lines | `preprocess_data`, `prediction`, Excel writers, etc. |
 
@@ -24,8 +24,8 @@ This document summarizes the current architecture and recommends changes to make
 1. **Model dispatch is one giant if/elif**  
    Adding a model requires editing the 1,600+ line orchestrator in two places (branch + hyperparameter coercion). Easy to miss one or introduce inconsistency.
 
-2. **One huge JS file**  
-   All behavior lives in `client_side.js`. Hard to find “where does inference run?” or “where is the cluster result table built?” without searching. No clear modules or boundaries.
+2. **~~One huge JS file~~ (addressed)**  
+   Front-end logic now lives in `static/js/` modules by tab/feature (`core.js`, `upload.js`, etc., plus optional bundle).
 
 3. **One huge HTML file**  
    All tabs and panels in a single 7k-line template. Editing one flow (e.g. Modeling) means scrolling through unrelated markup.
@@ -123,23 +123,11 @@ DiGiTerra/
 
 ---
 
-### 2. **Split the frontend into multiple JS modules** (High impact)
+### 2. **Split the frontend into multiple JS modules** (Done)
 
-**Idea:** Break `client_side.js` into several files by **feature** (not by “all in one”). Load them in order via `<script>` tags, or introduce a minimal bundler later.
+**Implemented:** Load order in `templates/index.html`: `init.js`, `core.js`, `upload.js`, `preprocess.js`, `modeling.js`, `inference.js`, `app.js`. **`core.js`** covers API root, `withApiRoot`, fetch/EventSource wrapping, and shared helpers; other files map to upload/exploration, preprocess, modeling (including results), and inference. **`npm run build`** produces `app.bundle.js` for single-script deploy (`DIGITERRA_USE_JS_BUNDLE=1`).
 
-Suggested split:
-
-- **`client_config.js`** – `API_ROOT`, `withApiRoot`, fetch/EventSource wrapping, URL rewriting.
-- **`client_ui.js`** – Tabs, show/hide, focus, accessibility, header offset, shared DOM helpers.
-- **`client_upload.js`** – Upload form, file handling, column selection.
-- **`client_exploration.js`** – Correlation matrices, pairplot, auto-detect.
-- **`client_preprocess.js`** – Preprocess form, train/test size, indicators/predictors, “Process” flow.
-- **`client_modeling.js`** – Model choice, simple/advanced/automl, “Run” training, progress, result display (regression / classification / cluster).
-- **`client_inference.js`** – Prediction upload, run inference, inference results UI.
-
-Each file can attach to a single namespace (e.g. `window.DiGiTerra`) to avoid globals. No framework required; same HTML, just more `<script src="...">` (or one bundle).
-
-**Result:** “Where is cluster result HTML built?” → open `client_modeling.js`. Easier to work on one flow without scrolling 8k lines; easier to test or stub one area.
+**Result:** “Where is cluster result HTML built?” → open `modeling.js`. The old monolithic `client_side.js` was removed to avoid maintaining two frontends.
 
 ---
 
