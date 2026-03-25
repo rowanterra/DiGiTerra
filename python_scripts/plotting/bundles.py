@@ -8,6 +8,8 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
 
 from python_scripts.plotting.plot_style import apply_plot_style
 from python_scripts.config import VIS_DIR
@@ -503,8 +505,7 @@ def plot_clustering_bundle(art: dict):
         plt.savefig(VIS_DIR / "cluster_silhouette.png", dpi=150, bbox_inches="tight", facecolor="white")
         plt.close(fig)
 
-    # 2) PCA scatter
-    from sklearn.decomposition import PCA
+    # 2) PCA scatter (matplotlib RGB per point — avoids matplotlib.category INFO from seaborn)
     if X_train.shape[1] >= 2:
         pca = PCA(n_components=2, random_state=42).fit(X_train)
         Z = pca.transform(X_train)
@@ -517,9 +518,7 @@ def plot_clustering_bundle(art: dict):
         else:
             ax.scatter(Z[:, 0], Z[:, 1], c=np.asarray(labels_train).astype(int), s=25, edgecolor="k", alpha=0.8, cmap="tab10")
         Cz = pca.transform(centers) if centers is not None else None
-        if Cz is not None:
-            ax.scatter(Cz[:, 0], Cz[:, 1], s=120, marker="X", c="black", label="centers", zorder=5)
-            ax.legend()
+        _scatter_pca_by_cluster(ax, Z[:, 0], Z[:, 1], labels_train, sns, centers_2d=Cz)
         ax.set_title(f"Clusters (PCA 2D): k={best_k} (train)")
         ax.set_xlabel("PC1")
         ax.set_ylabel("PC2")
@@ -547,7 +546,7 @@ def plot_clustering_bundle(art: dict):
             plt.savefig(VIS_DIR / "cluster_pca_test.png", dpi=150, bbox_inches="tight", facecolor="white")
             plt.close(fig)
 
-    # 3) Cluster sizes (seaborn barplot for cleaner look)
+    # 3) Cluster sizes (matplotlib bar + numeric x — avoids seaborn → matplotlib.category INFO)
     counts = pd.Series(labels_train).value_counts().sort_index()
     fig, ax = plt.subplots(figsize=(6, 4))
     if sns is not None:
@@ -556,9 +555,14 @@ def plot_clustering_bundle(art: dict):
         ax.set_xlabel("Cluster")
         ax.set_ylabel("Count")
     else:
-        counts.plot(kind="bar", ax=ax, color=".7", edgecolor="none")
-        ax.set_xlabel("Cluster")
-        ax.set_ylabel("Count")
+        if sns is not None:
+            bar_colors = sns.color_palette("muted", n_bars)
+        else:
+            bar_colors = [".65"] * n_bars
+        w = min(0.72, 2.2 / max(n_bars, 1))
+        ax.bar(x_vals, heights, width=w, color=bar_colors, edgecolor="none", align="center")
+    ax.set_xlabel("Cluster")
+    ax.set_ylabel("Count")
     ax.set_title("Cluster sizes (train)")
     ax.grid(False)
     plt.tight_layout()
