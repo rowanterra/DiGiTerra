@@ -36,51 +36,6 @@ from python_scripts.plotting.plot_shap_summary_graphic import plot_shap_summary
 logger = logging.getLogger(__name__)
 
 
-def _scatter_pca_by_cluster(ax, pc1, pc2, labels, sns_module, centers_2d=None) -> None:
-    """
-    PCA scatter colored by cluster id using explicit RGBA lists (no string categorical axes).
-    Avoids matplotlib.category INFO from seaborn legend labels like "0"/"1".
-    """
-    x = np.asarray(pc1, dtype=float)
-    y = np.asarray(pc2, dtype=float)
-    labs = np.asarray(labels).astype(int)
-    uniq = np.sort(np.unique(labs))
-    n = max(len(uniq), 1)
-    if sns_module is not None:
-        palette = list(sns_module.color_palette("muted", n))
-    else:
-        palette = [plt.cm.tab10(i % 10) for i in range(n)]
-    rank = {v: i for i, v in enumerate(uniq)}
-    colors = [palette[rank[lv] % len(palette)] for lv in labs]
-    ax.scatter(x, y, c=colors, s=35, alpha=0.85, edgecolors="none")
-    handles = [
-        Patch(facecolor=palette[rank[u] % len(palette)], edgecolor="none", label=str(int(u)))
-        for u in uniq
-    ]
-    if centers_2d is not None:
-        ax.scatter(
-            np.asarray(centers_2d[:, 0], dtype=float),
-            np.asarray(centers_2d[:, 1], dtype=float),
-            s=120,
-            marker="X",
-            c="black",
-            zorder=5,
-        )
-        handles.append(
-            Line2D(
-                [0],
-                [0],
-                marker="X",
-                color="w",
-                markerfacecolor="black",
-                markersize=10,
-                linestyle="None",
-                label="Centroids",
-            )
-        )
-    ax.legend(handles=handles, title="Cluster", loc="best", fontsize=9)
-
-
 def _y_test_aligned_with_classifier(y_test, int_to_label: Optional[dict]) -> pd.Series:
     """
     Ordinal classification fits on integer codes; splits may still carry raw labels (strings).
@@ -555,6 +510,13 @@ def plot_clustering_bundle(art: dict):
         pca = PCA(n_components=2, random_state=42).fit(X_train)
         Z = pca.transform(X_train)
         fig, ax = plt.subplots(figsize=(6.5, 5.5))
+        hue_train = pd.Categorical(np.asarray(labels_train).astype(int))
+        if sns is not None:
+            sns.scatterplot(
+                x=Z[:, 0], y=Z[:, 1], hue=hue_train, palette="muted", s=35, alpha=0.85, ax=ax, legend="brief"
+            )
+        else:
+            ax.scatter(Z[:, 0], Z[:, 1], c=np.asarray(labels_train).astype(int), s=25, edgecolor="k", alpha=0.8, cmap="tab10")
         Cz = pca.transform(centers) if centers is not None else None
         _scatter_pca_by_cluster(ax, Z[:, 0], Z[:, 1], labels_train, sns, centers_2d=Cz)
         ax.set_title(f"Clusters (PCA 2D): k={best_k} (train)")
@@ -567,7 +529,16 @@ def plot_clustering_bundle(art: dict):
         if X_test is not None and labels_test_ok:
             Zt = pca.transform(X_test)
             fig, ax = plt.subplots(figsize=(6.5, 5.5))
-            _scatter_pca_by_cluster(ax, Zt[:, 0], Zt[:, 1], lt, sns, centers_2d=Cz)
+            hue_test = pd.Categorical(lt.astype(int))
+            if sns is not None:
+                sns.scatterplot(
+                    x=Zt[:, 0], y=Zt[:, 1], hue=hue_test, palette="muted", s=35, alpha=0.85, ax=ax, legend="brief"
+                )
+            else:
+                ax.scatter(Zt[:, 0], Zt[:, 1], c=lt.astype(int), s=25, edgecolor="k", alpha=0.8, cmap="tab10")
+            if Cz is not None:
+                ax.scatter(Cz[:, 0], Cz[:, 1], s=120, marker="X", c="black", label="centers", zorder=5)
+                ax.legend()
             ax.set_title(f"Clusters (PCA 2D): k={best_k} (test)")
             ax.set_xlabel("PC1")
             ax.set_ylabel("PC2")
@@ -578,11 +549,11 @@ def plot_clustering_bundle(art: dict):
     # 3) Cluster sizes (matplotlib bar + numeric x — avoids seaborn → matplotlib.category INFO)
     counts = pd.Series(labels_train).value_counts().sort_index()
     fig, ax = plt.subplots(figsize=(6, 4))
-    x_vals = counts.index.astype(float).to_numpy()
-    heights = counts.values.astype(float)
-    n_bars = len(x_vals)
-    if n_bars == 0:
-        ax.text(0.5, 0.5, "No clusters", ha="center", va="center", transform=ax.transAxes)
+    if sns is not None:
+        x_num = counts.index.astype(int)
+        sns.barplot(x=x_num, y=counts.values, hue=x_num, ax=ax, palette="muted", legend=False)
+        ax.set_xlabel("Cluster")
+        ax.set_ylabel("Count")
     else:
         if sns is not None:
             bar_colors = sns.color_palette("muted", n_bars)

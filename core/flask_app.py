@@ -28,8 +28,6 @@ def _configure_logging():
     logging.basicConfig(level=level, format=fmt, datefmt="%Y-%m-%d %H:%M:%S", force=True)
     # SHAP KernelExplainer logs very chatty INFO (num_full_subsets, phi, weights) on every explain call.
     logging.getLogger("shap").setLevel(logging.WARNING)
-    # Matplotlib logs INFO when string tick data looks numeric; not actionable for our plots.
-    logging.getLogger("matplotlib.category").setLevel(logging.WARNING)
     root = logging.getLogger()
     try:
         LOG_DIR.mkdir(parents=True, exist_ok=True)
