@@ -40,7 +40,7 @@ from python_scripts.plotting.bundles import export_plots
 
 def sort_class_labels_numeric_bins(labels: Sequence[Any]) -> List[Any]:
     """
-    Sort class labels so numeric bins appear in logical numeric order (e.g. <50, 50-150, 150-500, >500).
+    Sort class labels so numeric bins appear in numeric order (<50, 50-150, 150-500, >500).
     Labels that look like ranges or thresholds are ordered by their lower bound. When no number is
     detected in a label (plain categories), those labels are sorted alphabetically and appear after
     any numeric-style labels.
@@ -169,7 +169,7 @@ def make_preprocessor(numeric_cols: List[str],
             raise ValueError("cat_mode must be 'onehot' or 'passthrough'")
 
     if not transformers:
-        raise ValueError("No columns were provided to the preprocessor. Check your predictor lists.")
+        raise ValueError("No columns were provided to the preprocessor. The predictor lists are empty.")
 
     coltx = ColumnTransformer(transformers, remainder="drop", sparse_threshold=0.3)
     return Pipeline(steps=[("group_map", FunctionTransformer(apply_group_map)),
@@ -275,7 +275,7 @@ def _scale_pairs(X_train: pd.DataFrame, X_test: pd.DataFrame,
     y_scaler = _get_scaler(scale_y) if y_train is not None else None
 
     if X_train.shape[1] == 0:
-        raise ValueError("X_train has 0 columns before scaling. Did your transformer drop everything?")
+        raise ValueError("X_train has 0 columns before scaling. The transformer removed every column.")
 
     if X_scaler:
         X_train_s = pd.DataFrame(X_scaler.fit_transform(X_train), index=X_train.index, columns=X_train.columns)
@@ -302,7 +302,7 @@ def _scale_pairs(X_train: pd.DataFrame, X_test: pd.DataFrame,
 
 def regression_report(y_true, y_pred, target_names=None, sigfig=3) -> pd.DataFrame:
     """
-    Calculate comprehensive regression metrics using the enhanced calculate_all_metrics module.
+    Compute regression metrics through calculate_all_metrics.
     """
     from python_scripts.preprocessing.calculate_all_metrics import calculate_regression_metrics
     return calculate_regression_metrics(y_true, y_pred, target_names=target_names, sigfig=sigfig)

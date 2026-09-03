@@ -28,18 +28,15 @@ def train_logistic_classifier(train_data, target_variables, use_stratified_split
         'random_state': seed
     }
     
-    # Try creating model without multi_class first (for sklearn >= 1.8.0)
-    # If that fails, try with multi_class for older versions
+    # sklearn >= 1.8 rejects multi_class; older versions accept the argument
     try:
         model = LogisticRegression(**model_params)
     except TypeError as e:
         if 'multi_class' in str(e):
-            # If error mentions multi_class, it's likely an older sklearn expecting it
-            # But since we're getting "unexpected keyword argument", it's newer sklearn
-            # So the issue is we're passing it when we shouldn't - already handled by not including it
+            # multi_class was not passed, so the error is not a version mismatch
             raise
         else:
-            # Different TypeError - try with multi_class for older sklearn compatibility
+            # retry with multi_class for older sklearn
             model_params['multi_class'] = kwargs.get('Class_LogisticMultiClass', 'auto')
             model = LogisticRegression(**model_params)
     import logging

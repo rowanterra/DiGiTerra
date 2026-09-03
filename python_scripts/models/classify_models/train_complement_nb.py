@@ -15,11 +15,11 @@ def train_complement_nb(train_data, target_variables, use_stratified_split,
     """
     Train ComplementNB classifier.
     
-    Note: ComplementNB requires non-negative values. If StandardScaler is selected,
-    it will be automatically changed to MinMaxScaler to ensure non-negative values.
+    ComplementNB requires non-negative values, so a StandardScaler selection is
+    replaced with MinMaxScaler.
     """
     # ComplementNB requires non-negative values
-    # StandardScaler can produce negative values, so we use MinMaxScaler instead
+    # StandardScaler can produce negative values, so MinMaxScaler is used instead
     effective_scaler = X_scaler_type
     if X_scaler_type in ['StandardScaler', 'standard', 'Standard', 'robust']:
         effective_scaler = 'minmax'

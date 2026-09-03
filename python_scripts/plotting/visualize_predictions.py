@@ -160,7 +160,7 @@ def plot_inference_pred_vs_actual(
     inference_pred, target_name, units, model_name, out_path,
 ):
     """Draw Predicted vs Actual with train, test, and inference.
-    Inference has no actuals, so we plot (pred, pred) on the diagonal with a clear label.
+    Inference has no actual values, so the plot draws (pred, pred) on the diagonal with a label.
     """
     apply_plot_style()
     y_train_actual = np.asarray(y_train_actual).ravel()

@@ -27,7 +27,7 @@ CORRELATION_CBAR_SHRINK = 0.8
 def handle_auto_detect_transformers(store: dict, data: dict):
     """Return (response_dict, status_code). On error, response_dict has 'error' key."""
     if "data" not in store:
-        return ({"error": "No data uploaded. Please upload a file first."}, 400)
+        return ({"error": "No data uploaded. Upload a file first."}, 400)
     if not data or "indicators" not in data:
         return ({"error": "No indicators provided"}, 400)
     try:
@@ -69,7 +69,7 @@ def handle_auto_detect_transformers(store: dict, data: dict):
 def handle_auto_detect_nan_zeros(store: dict, data: dict):
     """Return (response_dict, status_code). On error, response_dict has 'error' key."""
     if "data" not in store:
-        return ({"error": "No data uploaded. Please upload a file first."}, 400)
+        return ({"error": "No data uploaded. Upload a file first."}, 400)
     if not data or "indicators" not in data:
         return ({"error": "Indicators are required"}, 400)
     try:
@@ -92,14 +92,14 @@ def handle_auto_detect_nan_zeros(store: dict, data: dict):
         numeric_cols = cols_df.select_dtypes(include=[np.number])
         needs_zero_handling = (numeric_cols == 0).any().any() if not numeric_cols.empty else False
         if not needs_missing_handling and not needs_zero_handling:
-            message = "No blanks or zeros found in your selected columns. You can leave both options as \"Don't apply\"."
+            message = "No blanks or zeros in the selected columns. Both options can stay at \"Don't apply\"."
         else:
             parts = []
             if needs_missing_handling:
                 parts.append("blanks (missing values)")
             if needs_zero_handling:
                 parts.append("zeros")
-            message = f"Found {' and '.join(parts)} in your selected columns. Choose where to handle them and how."
+            message = f"Found {' and '.join(parts)} in the selected columns. Select the columns to clean and the action."
         return (
             {
                 "needs_missing_handling": bool(needs_missing_handling),
@@ -124,7 +124,7 @@ def handle_corr(
     if not data:
         return ({"error": "No data provided"}, 400)
     if "data" not in store:
-        return ({"error": "No data uploaded. Please upload a file first."}, 400)
+        return ({"error": "No data uploaded. Upload a file first."}, 400)
     df = store["data"]
     drop_missing = data.get("dropMissing", "none")
     impute_strategy = data.get("imputeStrategy", "none")
@@ -256,7 +256,7 @@ def handle_pairplot(
     if not data:
         return ({"error": "No data provided"}, 400)
     if "data" not in store:
-        return ({"error": "No data uploaded. Please upload a file first."}, 400)
+        return ({"error": "No data uploaded. Upload a file first."}, 400)
     if "colsIgnore" not in data:
         return ({"error": "Missing required field: colsIgnore"}, 400)
     df = store["data"]

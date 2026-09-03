@@ -84,8 +84,8 @@ def run_regression(model, model_name,
             bad_mask = y_numeric.isna().any(axis=1)
             sample_bad = y.loc[bad_mask].iloc[0].loc[y_numeric.loc[bad_mask].iloc[0].isna()].iloc[0]
         raise ValueError(
-            f"Target column contains non-numeric values (e.g. '{sample_bad}'). "
-            "Regression requires a numeric target. For binned categories (e.g. '<50', '50-150', '>500') use Modeling Task Type: Classification and set Stratify to Bins with your bin boundaries."
+            f"Target column contains non-numeric values such as '{sample_bad}'. "
+            "Regression requires a numeric target. Binned categories such as '<50' and '>500' require Modeling Task Type Classification with Stratify set to Bins."
         )
     y = y_numeric
     # ddf dropped rows with missing values in the modeling columns; y still holds
@@ -136,7 +136,6 @@ def run_regression(model, model_name,
                 break
 
     X = ddf[nump + catp + textp].copy()
-    #y = ddf[[target_variable]].copy()
     #Rowan 10/13
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=testSize, stratify=strat, random_state=seed
@@ -286,8 +285,8 @@ def run_regression(model, model_name,
     if outlier_method != 'none':
         if progress_tracker:
             progress_tracker.update_stage('outlier_handling', 'running', 0, f'Detecting outliers using {outlier_method}...')
-        train_index_before = X_train_s.index  # capture so we can report which rows were removed
-        # For outlier detection, we don't need y_train, but pass None to be safe
+        train_index_before = X_train_s.index  # kept to report which rows were removed
+        # outlier detection does not use y_train; None is passed
         # (y_train is not used in apply_outlier_handling for detection)
         X_train_s, X_test_s, outlier_mask = apply_outlier_handling(
             X_train_s, X_test_s, None, outlier_method, outlier_action, seed=seed
@@ -354,7 +353,7 @@ def run_regression(model, model_name,
                     # After selection, X_train_s.columns contains the selected features
                     selected_features = X_train_s.columns.tolist()
                 else:
-                    # If we lost column names, reconstruct from original names
+                    # rebuild lost column names from the original names
                     selected_features = [original_feature_names[i] for i, selected in enumerate(selected_indices) if selected]
         if progress_tracker:
             progress_tracker.update_stage('feature_selection', 'completed', 100, 
@@ -434,7 +433,7 @@ def run_regression(model, model_name,
     # Ensure X_train_s remains a DataFrame for SHAP (with correct columns)
     # This is important because SHAP needs column names for feature names
     if not isinstance(X_train_s, pd.DataFrame):
-        # Reconstruct DataFrame from array using the column names we should have
+        # rebuild the DataFrame from the array with the expected column names
         # This shouldn't happen if the pipeline is correct, but handle it gracefully
         if hasattr(X_train_t, 'columns') and X_train_array.shape[1] <= len(X_train_t.columns):
             X_train_s = pd.DataFrame(X_train_array, 
@@ -657,14 +656,14 @@ def run_regression(model, model_name,
                 if shap_features.isna().any().any():
                     remaining_nan_cols = shap_features.columns[shap_features.isna().any()].tolist()
                     shap_features = shap_features.dropna(axis=1)
-                    logger.warning(f"Dropped columns with NaN: {remaining_nan_cols}")
+                    logger.warning(f"Removed columns with NaN: {remaining_nan_cols}")
             
             # Final check - ensure no NaN values remain
             if shap_features.isna().any().any():
                 remaining_nan_cols = shap_features.columns[shap_features.isna().any()].tolist()
                 raise ValueError(f"Input X contains NaN values that could not be removed. NaN columns: {remaining_nan_cols}")
             
-            # Ensure we have valid data
+            # check the data is non-empty
             if shap_features.empty or shap_features.shape[1] == 0:
                 raise ValueError("SHAP input is empty after processing")
             

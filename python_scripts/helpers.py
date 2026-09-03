@@ -1,7 +1,6 @@
 """
 Shared helpers for preprocessing, prediction, and Excel export. VIS_DIR (from config)
-is where we write predictions.csv and similar. Handoff: see python_scripts/config.py
-and docs/HANDOFF.md for paths.
+is the directory for predictions.csv and similar output. Paths are set in python_scripts/config.py.
 """
 import os
 import logging
@@ -33,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 def unpack_classification_result(result_tuple):
     """
-    Helper function to unpack classification model results with backward compatibility.
+    Split a classification result tuple into named parts, accepting the older shorter tuple.
     Handles old format (8 or 9 values) and new format (11 values with additional_metrics, feature_selection_info, outlier_info).
 
     Returns:
@@ -82,21 +81,21 @@ def preprocess_data(
     else:
         zero_handle_norm = zero_handle if zero_handle is not None else 'drop'
 
-#if no impute strategy -> drop rows indicated by user    
+# no impute strategy: drop the rows the user selected    
     if impute_strategy=='none':
         if drop_missing == 'all':
             df_clean.dropna(inplace=True)
         elif drop_missing == 'indicator':
-            #if one indicator missing drop the row
+            # one missing indicator drops the row
             df_clean.dropna(subset=indicator_cols, how='any', inplace=True)
         elif drop_missing == 'target' and target_cols:
-            #if one target missing drop the row
+            # one missing target drops the row
             df_clean.dropna(subset=target_cols, inplace=True, how='any')
         elif drop_missing == 'indicatorAndTarget':
             subset = indicator_cols + target_cols
             df_clean.dropna(subset=subset, inplace=True, how='any')
 
-#if impute strategy -> replace missing values
+# impute strategy: replace missing values
     else:
         if drop_missing == 'all':
             impute_scope = list(df_clean.select_dtypes(include=[np.number]).columns)
@@ -354,7 +353,7 @@ write_to_excel = write_to_excelRegression
 
 def write_to_excelClassifier(data, indicator_names, predictor_names, stratify_name, scaler, seed, modelName, params, units, report, cm, additional_metrics=None, outlier_info=None):
     """
-    Write classification results to Excel with comprehensive metrics.
+    Write classification results and metrics to Excel.
     
     Args:
         additional_metrics: Dictionary with additional metrics like ROC AUC, Average Precision, etc.

@@ -12,7 +12,6 @@ from pathlib import Path
 REQUIREMENT_TO_IMPORT = {
     "flask": "flask",
     "gunicorn": "gunicorn",
-    "requests": "requests",
     "matplotlib": "matplotlib",
     "numpy": "numpy",
     "openpyxl": "openpyxl",

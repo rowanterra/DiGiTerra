@@ -22,7 +22,7 @@ def plot_shap_summary(model, X_train, feature_names, model_name, pdf_pages, file
 
     Uses ``shap.KernelExplainer``; the ``shap`` package logs detailed INFO during
     Shapley estimation (not errors). App startup sets the ``shap`` logger to WARNING
-    so the console stays readable; set LOG_LEVEL=DEBUG and lower ``shap`` if you need it.
+    so the console stays readable. LOG_LEVEL=DEBUG restores the ``shap`` output.
     
     Args:
         model: Trained model with predict method
@@ -90,7 +90,7 @@ def plot_shap_summary(model, X_train, feature_names, model_name, pdf_pages, file
     plot_created = False
     fig = None
     
-    # Track figures that exist before we start, so we can clean up only what we create
+    # record the figures open before the call, so only new figures are closed
     initial_fig_nums = set(plt.get_fignums())
     
     try:
@@ -122,10 +122,10 @@ def plot_shap_summary(model, X_train, feature_names, model_name, pdf_pages, file
             
             # Bug 2 Fix: Validate that mean_shap length matches feature_names length
             if len(mean_shap) == 0:
-                plt.close(fig)  # Close the figure we just created
+                plt.close(fig)  # close the new figure
                 raise ValueError(f"No SHAP values to plot. Mean SHAP is empty.")
             if len(mean_shap) != len(feature_names):
-                plt.close(fig)  # Close the figure we just created
+                plt.close(fig)  # close the new figure
                 raise ValueError(f"SHAP values shape mismatch: {len(mean_shap)} SHAP values but {len(feature_names)} feature names. "
                                f"This indicates a data alignment issue.")
             
@@ -142,7 +142,7 @@ def plot_shap_summary(model, X_train, feature_names, model_name, pdf_pages, file
             plot_created = True
     
     if not plot_created or fig is None:
-        # Clean up any orphaned figures we created before raising error
+        # close figures opened in this call before raising
         current_fig_nums = set(plt.get_fignums())
         for fig_num in current_fig_nums - initial_fig_nums:
             plt.close(fig_num)
@@ -155,7 +155,7 @@ def plot_shap_summary(model, X_train, feature_names, model_name, pdf_pages, file
     
     plt.tight_layout()
     
-    # Save to file (use explicit figure — avoid saving a leaked "current" figure from prior plots)
+    # save the explicit figure, not the current figure left by earlier plots
     plot_filename = f"shap_summary{file_suffix}.png"
     plot_path = VIS_DIR / plot_filename
     fig.savefig(plot_path, dpi=150, bbox_inches='tight', facecolor='white')

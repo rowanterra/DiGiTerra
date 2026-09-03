@@ -1,99 +1,87 @@
-# DiGiTerra Documentation
+# DiGiTerra documentation
 
-## Workflow Overview
-DiGiTerra follows a consistent workflow:
+## Workflow
 
-1. **Upload** a CSV file to populate the working dataset.
-2. **Data Exploration** builds correlation matrices, pairplots, and descriptive statistics.
-3. **Model Preprocessing** selects targets/indicators, cleaning, and transformations.
-4. **Modeling** trains the model and calculates metrics.
-5. **Inference** applies the trained model to a new dataset; the Inference Results page shows inference summary, the training plot (Predicted vs Actual + Residuals) with inference points overlaid on the scatter panel only, and the inference distribution histogram. The left column scrolls when needed so all content is visible.
-6. **Downloads** provide PDF visuals and spreadsheet summaries.
+1. Upload a CSV file. The file becomes the working dataset.
+2. Data Exploration computes correlation matrices, pairplots, and descriptive statistics.
+3. Model Preprocessing selects targets and indicators, cleaning, and transformations.
+4. Modeling trains the model and computes metrics.
+5. Inference applies the trained model to a new dataset. The Inference Results page shows the inference summary, training plot (Predicted vs Actual and Residuals) with the inference points drawn on the scatter panel, and inference distribution histogram.
+6. Downloads provide PDF figures and spreadsheet summaries.
 
-## Core Concepts
-- **Indicators** are the input columns used to predict targets.
-- **Targets** are the output columns you want to predict or cluster.
-- **Transformers** encode non-numeric columns for modeling.
-- **Stratification** balances splits or evaluation based on a selected variable.
+## Terms
 
-## Robustness Validation (Regression)
-- Use repeated multi-seed evaluation when you need reputation-grade evidence that results are not tied to one random split.
-- DiGiTerra includes `python_scripts/preprocessing/evaluate_regression_robustness.py` for this purpose.
-- The script repeats train/test + CV over many seeds, keeps splitting consistent within each seed, and exports:
-  - per-seed metrics for every model/feature-set combination
-  - aggregate statistics (median, mean, std, and 95% empirical interval)
-- Recommended minimum: 30 seeds for model screening, then confirm the finalist on an external validation dataset.
+Indicators are the input columns. Targets are the output columns to predict or cluster. Transformers encode non-numeric columns for modeling. Stratification balances the split or the evaluation on a selected variable.
 
-## File Format & Column Entry Tips
-- **CSV only:** DiGiTerra expects CSV files. If you have an Excel spreadsheet, open it and choose **File → Save As** to export a `.csv` file.
-- **Column letters:** Columns are selected using spreadsheet-style letters (A, B, C...). Ranges look like `A-D` and multiple selections can be separated with commas (for example: `A-D, F, H`).
-- **Indicators vs targets:** Indicators are the inputs; targets are the outputs you want to predict.
+## Regression stability across seeds
 
-## Process Map (Flow Chart)
+`python_scripts/preprocessing/evaluate_regression_robustness.py` repeats the train/test split and cross-validation over a range of seeds, keeps the split consistent within each seed, and writes per-seed metrics for every model and feature-set combination together with aggregate statistics (median, mean, standard deviation, and 95% empirical interval). A run of 30 seeds is a reasonable screen. The finalist is then confirmed on an external validation dataset.
+
+## File format and column entry
+
+DiGiTerra reads CSV files only. An Excel sheet is exported with File, Save As, CSV.
+
+Columns are selected with spreadsheet-style letters (A, B, C, ...). A range is written `A-D`, and several selections are separated with commas, for example `A-D, F, H`.
+
+## Process map
 
 ```
 Upload  ->  Data Exploration  ->  Model Preprocessing  ->  Modeling  ->  Outputs
               |                        |                      |
-              +------ Backend Pipelines +---------------------+
+              +------ Backend pipelines +---------------------+
 ```
 
-## System Touchpoints
-- Front-end UI: `templates/index.html`, `static/js/` modules (`core.js`, `upload.js`, `preprocess.js`, `modeling.js`, `inference.js`, `app.js`) or `static/js/app.bundle.js` when bundled
-- Styling: `static/style.css`
-- Model orchestration: `app.py` (routes) and `python_scripts/app_model_training.py` (training pipeline)
-- Data exploration (correlation, pairplot, auto-detect): `python_scripts/app_exploration.py`
-- Inference: `python_scripts/app_prediction.py`
-- Preprocessing and plotting: `python_scripts/preprocessing/*`, `python_scripts/plotting/*`
-- Plot style: `python_scripts/plotting/plot_style.py` defines the shared figure style (seaborn-like); `apply_plot_style()` is called at the start of `visualize_predictions()` and `plot_regression_bundle()` so training and export figures use the same look.
+## Code map
 
-## Accessibility Features
+- Page: `templates/index.html`, with `static/js/` modules (`init.js`, `core.js`, `upload.js`, `preprocess.js`, `modeling.js`, `inference.js`, `app.js`) or `static/js/app.bundle.js` when `DIGITERRA_USE_JS_BUNDLE=1`.
+- Styling: `static/style.css`.
+- Application object, session cookie, and upload size limit: `core/flask_app.py`.
+- Routes: `routes/` (`main.py`, `upload.py`, `exploration.py`, `preprocess.py`, `modeling.py`, `prediction.py`, `assets.py`).
+- Session store, error handlers, constants: `core/state.py`, `core/errors.py`, `core/constants.py`.
+- Training orchestration: `python_scripts/app_model_training.py`, with the model lookup in `python_scripts/model_registry.py`.
+- Data exploration (correlation, pairplot, auto-detect): `python_scripts/app_exploration.py`.
+- Inference: `python_scripts/app_prediction.py`.
+- Preprocessing and plotting: `python_scripts/preprocessing/`, `python_scripts/plotting/`.
+- Plot style: `python_scripts/plotting/plot_style.py`. `apply_plot_style()` runs at the start of `visualize_predictions()` and `plot_regression_bundle()`, so training and export figures share one style.
+- Paths and URL prefix: `python_scripts/config.py`.
 
-DiGiTerra supports assistive technologies and follows accessibility practices.
+## Running the web app
 
-### ARIA Attributes and Semantic HTML
+`python app.py` starts the Flask development server on `127.0.0.1:5000`. `DIGITERRA_HOST` and `DIGITERRA_PORT` override the address.
 
-The application uses ARIA (Accessible Rich Internet Applications) attributes throughout the interface to provide context and state information to screen readers and other assistive technologies. Key implementations include:
+For production, gunicorn with one worker:
 
-- **ARIA roles**: Navigation elements use `role="navigation"`, status messages use `role="status"` or `role="alert"`, and interactive regions use `role="region"` with descriptive labels
-- **ARIA live regions**: Dynamic content updates are announced to screen readers using `aria-live` attributes with appropriate priority levels (`polite` for general updates, `assertive` for critical errors)
-- **ARIA labels**: Interactive elements without visible text labels include `aria-label` attributes to provide accessible names
-- **ARIA describedby**: Form inputs reference help text using `aria-describedby` to provide additional context
-- **ARIA required**: Required form fields are marked with `aria-required="true"` to indicate mandatory inputs
-- **ARIA invalid**: Form validation errors set `aria-invalid="true"` to communicate validation state
+```bash
+gunicorn --bind 0.0.0.0:5000 --workers 1 --timeout 120 app:app
+```
 
-### Keyboard Navigation
+Session state is in process memory, so a second worker would answer "No data uploaded" for a session the first worker created.
 
-Full keyboard navigation support is provided throughout the application:
+`URL_PREFIX` serves the app under a prefix as well as at the root:
 
-- **Skip link**: A "Skip to main content" link appears when focused, allowing keyboard users to bypass repetitive navigation elements
-- **Focus management**: The application programmatically manages focus to guide users through workflows and direct attention to important updates or errors
-- **Focus indicators**: All interactive elements have visible focus styles with high contrast outlines to clearly indicate keyboard focus position
-- **Tab order**: Logical tab order ensures that interactive elements are reached in a meaningful sequence
+```bash
+export URL_PREFIX=digiterra
+python app.py
+```
 
-### Screen Reader Support
+The page is then at `http://127.0.0.1:5000/digiterra/` and at `http://127.0.0.1:5000/`. The Dockerfile sets `URL_PREFIX=digiterra`.
 
-Screen reader users receive clear information about the application state:
+Other environment variables: `DIGITERRA_BASE_DIR`, `DIGITERRA_APP_SUPPORT_DIR`, `DIGITERRA_OUTPUT_DIR` (paths), `LOG_LEVEL`, `DIGITERRA_MAX_UPLOAD_MB`, `DIGITERRA_WARN_UPLOAD_MB`, `DIGITERRA_ENFORCE_UPLOAD_LIMIT`, `DIGITERRA_MAX_SESSIONS`, and `DIGITERRA_COOKIE_SECURE`. `docs/SECURITY_REVIEW.md` describes what each limit does.
 
-- **Screen reader announcements**: Dynamic content changes, error messages, and status updates are automatically announced using live regions
-- **Descriptive labels**: All form controls, buttons, and interactive elements have accessible names that clearly describe their purpose
-- **Hidden text**: Contextual help text and additional descriptions are available to screen readers using the `sr-only` class while remaining visually hidden
-- **Toggle enhancements**: Toggle switches and checkboxes automatically receive ARIA labels based on their associated text or structure
+## Accessibility
 
-### Form Accessibility
+### ARIA attributes
 
-Forms are designed to be accessible and provide clear feedback:
+`templates/index.html` uses `role="navigation"` on the navigation, `role="status"` on status messages, and `role="region"` with labels on the main sections. Dynamic updates use `aria-live` regions (`polite` for general updates, `assertive` for errors). Controls without visible text have `aria-label`. Form inputs reference help text with `aria-describedby`, required fields have `aria-required="true"`, and the scripts set `aria-invalid="true"` on a field that fails validation.
 
-- **Required field indicators**: Required fields are marked both visually and programmatically
-- **Error communication**: Validation errors are announced to screen readers and associated with the relevant form fields
-- **Help text**: Input fields include accessible help text that explains expected formats and requirements
-- **Field relationships**: Related form fields are grouped and labeled appropriately
+### Keyboard navigation
 
-### Visual Accessibility
+A "Skip to main content" link appears on focus. The scripts move focus to the active tab and to error messages. Interactive elements have visible focus outlines, and the tab order follows the page order.
 
-The interface supports users with visual impairments:
+### Screen readers
 
-- **High contrast focus indicators**: Focus states use high contrast colors and sufficient outline width for visibility
-- **Semantic structure**: Content is organized using proper heading hierarchy and semantic HTML elements
-- **Language declaration**: The HTML document declares its language (`lang="en"`) to assist screen readers with pronunciation
+Status changes and errors are announced through the live regions. Every form control and button has an accessible name. Extra descriptions use the `sr-only` class, which hides the text visually. Toggle switches receive ARIA labels from the adjacent text.
 
-These accessibility features ensure that DiGiTerra can be effectively used with screen readers, keyboard-only navigation, and other assistive technologies, making the application accessible to a broader range of users.
+### Visual structure
+
+Focus states use a high-contrast outline. Headings follow a hierarchy, and the document declares `lang="en"`.

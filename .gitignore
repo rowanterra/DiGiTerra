@@ -13,8 +13,7 @@ __pycache__/
 *$py.class
 *.so
 .Python
-# Note: build/ directory contains build scripts and spec files - these should be tracked
-# Only ignore PyInstaller build artifacts, not the build/ directory itself
+# build/ contains build scripts and spec files and is tracked. Only PyInstaller output is ignored.
 build/DiGiTerra/
 build/*.toc
 build/*.pkg
@@ -39,9 +38,8 @@ MANIFEST
 
 # PyInstaller
 *.manifest
-build/DiGiTerra/  # PyInstaller build artifacts (not the build/ directory itself)
-# Note: *.spec files should be tracked - they contain build configuration
-# Spec files in build/ are intentionally committed to version control
+# PyInstaller build artifacts only. The build/ directory and the *.spec files in it are tracked.
+build/DiGiTerra/
 
 # Unit test / coverage reports
 htmlcov/

@@ -15,15 +15,6 @@ module.exports = {
   processForm: 'readonly',
   uploadForm: 'readonly',
   corrForm: 'readonly',
-  // Assigned without a declaration and shared across files. Flagged in the audit
-  // report as worth declaring explicitly; listed here so no-undef still catches
-  // the genuinely undeclared names.
-  model1: 'writable',
-  stratifyColumnNumber: 'writable',
-  stratifyBool: 'writable',
-  stratifyStr: 'writable',
-  quantileBinDict: 'writable',
-  corrColsIndices: 'writable',
     ClassifierResultDiv: 'writable',
     ClusterResultDiv: 'writable',
     EventSource: 'writable',

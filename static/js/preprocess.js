@@ -1,6 +1,8 @@
 /**
  * Preprocess tab: handlePreprocessFormSubmit, preprocess-form and exploration UI. Depends on core.js.
  */
+// Shared across the split files (they run in one script scope).
+let stratifyColumnNumber = '';
 async function handlePreprocessFormSubmit(e) {
     if (!e.target || e.target.id !== 'preprocessform') return;
     const stratErrorDiv = document.getElementById('stratErrorDiv');
@@ -78,7 +80,7 @@ async function handlePreprocessFormSubmit(e) {
         const stratNum = columnToIndex(stratifyColumn.trim().toUpperCase());
         if (pCols.indexOf(stratNum) !== -1) {
             e.preventDefault();
-            showError(stratErrorDiv, 'Do not stratify by your target column. That would leak target information into the train/test split. Choose a different column to stratify by.', false);
+            showError(stratErrorDiv, 'Stratifying by the target column leaks target information into the train/test split, so a different stratify column is required.', false);
             const stratifyInput = document.getElementById('specificVariableSelect');
             if (stratifyInput) {
                 stratifyInput.setAttribute('aria-invalid', 'true');
@@ -129,7 +131,7 @@ async function handlePreprocessFormSubmit(e) {
             const data = await response.json();
 
             if (!response.ok) {
-                if (stratErrorDiv) showError(stratErrorDiv, data.error || 'Preprocess failed. Please check your selections.', false);
+                if (stratErrorDiv) showError(stratErrorDiv, data.error || 'Preprocessing failed for the selected columns.', false);
                 else if (errorDiv) showError(errorDiv, data.error || 'Preprocess failed.', false);
                 return;
             }
@@ -147,11 +149,6 @@ async function handlePreprocessFormSubmit(e) {
                 columnSelection.style.display = 'block';
             }
             if (typeof showTab === 'function') showTab('modeling');
-
-            stratifyStr = '';
-            if (stratifyColumn && stratifyColumn.trim() !== '' && data.stratify) {
-                stratifyStr = 'with stratification by ' + data.stratify + ' value';
-            }
 
             const preds = data.predictors;
             let predictorsColNameString = Array.isArray(preds) ? preds.join(',').substring(0, 10) : (preds || '').substring(0, 10);
@@ -196,7 +193,7 @@ async function handlePreprocessFormSubmit(e) {
             }
         } catch (error) {
             console.error('Preprocess submit error:', error);
-            const msg = error && error.message ? error.message : 'Request failed. See console for details.';
+            const msg = error && error.message ? error.message : 'The request failed; the console has details.';
             if (stratErrorDiv) showError(stratErrorDiv, msg, false);
             else if (errorDiv) showError(errorDiv, msg, false);
         }
@@ -506,11 +503,11 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
             const outputTypeEl = document.getElementById('outputType1');
             const isCluster = outputTypeEl && outputTypeEl.value === 'Cluster';
             if (!indicatorsSelect || !indicatorsSelect.value.trim()) {
-                alert('Please enter Indicator columns first (e.g., A-D).');
+                alert('Indicator columns are required first (for example A-D).');
                 return;
             }
             if (!isCluster && (!predictorsSelect || !predictorsSelect.value.trim())) {
-                alert('Please enter Indicator and Target columns first (e.g., A-D and A).');
+                alert('Indicator and target columns are required first (for example A-D and A).');
                 return;
             }
             const indicatorIndices = getColumnIndices(indicatorsSelect.value.toUpperCase().replace(/\s/g, ""));
@@ -565,7 +562,7 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
                 }
             } catch (err) {
                 console.error(err);
-                dataCleaningAutodetectMessage.textContent = 'Autodetect failed. Check console.';
+                dataCleaningAutodetectMessage.textContent = 'Autodetect failed; the console has details.';
                 if (dataCleaningMissingWrapper) dataCleaningMissingWrapper.classList.remove('autodetect-greyed');
                 if (dataCleaningZerosWrapper) dataCleaningZerosWrapper.classList.remove('autodetect-greyed');
                 if (dropMissingSelect) dropMissingSelect.disabled = false;
@@ -612,7 +609,7 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
     if (autoDetectTransformersTopBtn) {
         autoDetectTransformersTopBtn.addEventListener('click', async function() {
             if (!indicatorsSelect || !indicatorsSelect.value.trim()) {
-                alert('Please enter indicator columns first (e.g., A-D).');
+                alert('Indicator columns are required first (for example A-D).');
                 return;
             }
             const indicatorIndices = getColumnIndices(indicatorsSelect.value.toUpperCase().replace(/\s/g, ""));
@@ -650,12 +647,12 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
         autoDetectTransformersBtn.addEventListener('click', async function() {
             const indicatorsInput = document.getElementById('indicators');
             if (!indicatorsInput || !indicatorsInput.value.trim()) {
-                alert('Please enter indicator columns first (e.g., A-D).');
+                alert('Indicator columns are required first (for example A-D).');
                 return;
             }
             const indicatorIndices = getColumnIndices(indicatorsInput.value.toUpperCase().replace(/\s/g, ""));
             if (indicatorIndices.length === 0) {
-                alert('Could not parse indicator column indices. Please use format like "A-D" or "A,B,C".');
+                alert('The indicator column indices did not parse; the accepted formats are "A-D" and "A,B,C".');
                 return;
             }
             try {

@@ -1,4 +1,4 @@
-# DiGiTerra Flask app. Routes in routes/; session state in core.state. See docs/HANDOFF.md.
+# DiGiTerra Flask app. Routes in routes/; session state in core.state. See docs/documentation.md.
 
 import os
 import re

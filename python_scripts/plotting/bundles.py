@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 def _y_test_aligned_with_classifier(y_test, int_to_label: Optional[dict]) -> pd.Series:
     """
-    Ordinal classification fits on integer codes; splits may still carry raw labels (strings).
+    Ordinal classification fits on integer codes. The splits can still contain the raw string labels.
     sklearn RocCurveDisplay / PrecisionRecallDisplay.from_estimator require y to match model.classes_.
     """
     if int_to_label is None:

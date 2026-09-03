@@ -79,7 +79,36 @@ Frontend
   bundle with `no-undef` on. `npm run check-bundle` fails if the committed bundle
   has drifted.
 
-## Not done
+## Second pass, 2026-09-03 evening (commit 2)
+
+Done: XSS closed (escapeHtml escapes quotes; every innerHTML sink that takes
+server or CSV data is wrapped; the echoed filename comes from secure_filename);
+pairplot and the other nine fetch calls show an error in the page on failure;
+implicit globals declared; clustering now applies outlier handling and reports
+feature selection, search and CV as "Not applicable to clustering" in both the
+tracker and the result (`skipped_options`, rendered on the results panel); the
+every-model sweep (scripts/train_every_model.py) trains 67 of 67 offered
+estimators after fixes to SVR/NuSVR/SVC/NuSVC gamma, MLP hidden_layer_sizes,
+LassoCV/ElasticNetCV n_alphas (removed in scikit-learn 1.9), PassiveAggressive
+n_jobs, and SGDClassifier eta0; Perceptron (a classifier registered as a
+regressor) is now a rejected entry like Polynomial; a Playwright test
+(tests/integration/test_browser_advanced.py) drives the page and proves Ridge,
+Logistic classifier and the relocated AdaBoost group reach the /process payload
+in Advanced mode, which also caught 11 slider gates that still read the Simple
+id; docs rewritten for truth and register (four stale architecture docs
+deleted), requirements pinned, LICENSE, CHANGELOG, CITATION.cff,
+THIRD_PARTY_NOTICES.md (generated from installed metadata), Makefile, ruff
+config, CI matrix 3.11-3.12 with the bundle-drift check; UI copy cut from 6,678
+to 4,899 characters of field notes under the plain-technical-prose rules.
+
+Still open: imputation leakage (unchanged, see item 2 below); RadiusNeighbors
+regression returns NaN when no training row is inside the radius (needs a
+larger default radius or a fallback); ruff baseline is 592 errors (354
+auto-fixable) and the CI step is continue-on-error; Helm deployment.yaml does
+not `required`-guard an empty image.repository; the UI still names "(33
+models)" for regression where the registry has 32 trainable.
+
+## Not done (first pass list, items 1 and 3-7 now closed)
 
 1. XSS. `routes/upload.py` echoes the raw filename and column names, and
    `static/js/upload.js` interpolates them with `innerHTML` (lines 85, 96, 104,

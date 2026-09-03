@@ -103,8 +103,10 @@ def upload_file():
     lastcol = columns[-1][:COLUMN_NAME_DISPLAY_LENGTH]
     if len(columns[-1]) > COLUMN_NAME_DISPLAY_LENGTH - 1:
         lastcol += "..."
-    filename_display = file.filename[:FILENAME_DISPLAY_LENGTH]
-    if len(file.filename) > FILENAME_DISPLAY_LENGTH - 1:
+    # Display the sanitized name, not the raw browser name, so the response
+    # never echoes markup from the client.
+    filename_display = safe_filename_val[:FILENAME_DISPLAY_LENGTH]
+    if len(safe_filename_val) > FILENAME_DISPLAY_LENGTH - 1:
         filename_display += "..."
 
     response_data = {

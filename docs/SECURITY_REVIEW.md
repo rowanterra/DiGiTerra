@@ -1,135 +1,49 @@
-# DiGiTerra Security Review
+# Security posture
 
-**Date:** January 27, 2026  
-**Status:** Production-ready for desktop use; additional hardening recommended for multi-user web deployment
+Reviewed against the `audit-fixes` branch on 2026-09-03. The statements below describe the code on that branch. DiGiTerra is a single-user desktop application that also runs as a web app behind gunicorn. There is no authentication, CSRF protection, or rate limiting. A multi-user deployment needs those before exposure to untrusted clients.
 
----
+## Uploads
 
-## Summary
+Only `.csv` files are accepted. `allowed_file` in `core/helpers.py` checks the extension, and `routes/upload.py` rejects anything else with a 400.
 
-DiGiTerra is a desktop application for data exploration, preprocessing, and machine learning model training. This document reviews security for both desktop and potential web deployment scenarios.
+Uploaded filenames pass through `werkzeug.utils.secure_filename` before the file is written under `UPLOAD_DIR`.
 
-The application has addressed critical security vulnerabilities and is production-ready for desktop use. For multi-user web deployment, additional security measures are needed (see "Security Considerations for Web Deployment" below).
+`MAX_CONTENT_LENGTH` is set in `core/flask_app.py`. The limit is `DIGITERRA_MAX_UPLOAD_MB` when that variable is a positive number, and 256 MB otherwise. An oversized request body is rejected before the file is read, and the handler in `core/errors.py` answers with a JSON 413.
 
----
+`routes/upload.py` also displays a warning for files larger than `FILE_SIZE_WARNING_MB` (`DIGITERRA_WARN_UPLOAD_MB`, default 1 MB) and for high cell counts. The warning does not block the upload. A second, application-level size check against `DIGITERRA_MAX_UPLOAD_MB` runs only when `DIGITERRA_ENFORCE_UPLOAD_LIMIT` is true (`core/constants.py`).
 
-## Security Measures Already Implemented
+The upload response returns the filename and the column names without HTML escaping, and the page inserts them with `innerHTML`. This is an open cross-site scripting issue for a shared deployment where one user can upload a file that another user views. The issue is not fixed on this branch.
 
-### File Upload Security
+## Downloads
 
-1. **File Type Validation**
-   - Only `.csv` files are accepted via `ALLOWED_EXTENSIONS = {'csv'}`
-   - Validation performed using `allowed_file()` function
-   - **Location:** `app.py` lines 150, 187-189, 452-453, 2429-2430
+`routes/assets.py` serves generated files from the session's output directory. The requested path is resolved with `Path.resolve()` and checked with `relative_to` against the resolved base, so a path outside the directory returns 404. Only regular files are served, and the download name passes through `secure_filename`.
 
-2. **Filename Sanitization**
-   - All uploaded filenames sanitized using `werkzeug.utils.secure_filename()`
-   - Prevents path traversal attacks through malicious filenames
-   - **Location:** `app.py` lines 456, 2433
+## Sessions and generated files
 
-3. **File Size Warnings**
-   - Advisory warnings for large files (>50MB) and high cell counts
-   - Non-restrictive (does not block uploads)
-   - **Location:** `app.py` lines 153-155, 464-477
+Each browser session has a cookie named `digiterra_session` (`core/state.py`) whose value is 32 hex characters issued by the server. `core/flask_app.py` replaces any cookie value that does not have that form, so a crafted value cannot name another session's storage or output directory. The cookie is `HttpOnly` and `SameSite=Lax`, and `Secure` when the request is HTTPS or `DIGITERRA_COOKIE_SECURE` is set.
 
-### File Download Security
+Generated files are written under a per-session subdirectory. `config.set_session_scope` in `python_scripts/config.py` sets a context variable that the request and the training thread both use, so one session's `predictions.csv` does not overwrite another's.
 
-1. **Path Traversal Protection**
-   - Download route (`/download/<path:filename>`) validates that requested files stay within `USER_VIS_DIR`
-   - Uses `Path.resolve()` and `Path.relative_to()` to prevent directory traversal
-   - Only files (not directories) are served
-   - **Location:** `app.py` lines 370-383
+Session state is in process memory. `core/state.py` bounds the store to `DIGITERRA_MAX_SESSIONS` entries (default 32), evicts the oldest entry past that bound, and guards the store with a lock. Because the state is in one process, gunicorn must run with one worker.
 
-2. **Filename Sanitization on Download**
-   - Download filenames sanitized using `secure_filename()`
-   - **Location:** `app.py` line 382
+## Progress streams
 
-### Input Validation
+`GET /progress/<id>` in `routes/main.py` returns 404 for an id that has no tracker. Trackers are capped at 256 (`MAX_TRACKED_SESSIONS` in `python_scripts/preprocessing/progress_tracker.py`). A stream for a valid id stays open for up to `PROGRESS_STREAM_TIMEOUT_SECONDS` (3600), which on a single synchronous worker blocks other requests for that time.
 
-1. **CSV Reading Error Handling**
-   - Comprehensive try/except blocks for CSV parsing errors
-   - Specific error types handled: `EmptyDataError`, `ParserError`
-   - **Location:** `app.py` lines 357-366, 2442-2449
+## Error responses
 
-2. **Route Input Validation**
-   - Validation on critical routes: `/preprocess`, model training, `/correlationMatrices`, `/pairplot`
-   - **Location:** `app.py` lines 632-633, 663-669, 436-437, 578-589, 752
+`core/errors.py` registers handlers so `ApiError`, `RequestEntityTooLarge`, other `HTTPException` types, and unhandled exceptions return a JSON body with an `error` string. A 404 on a page request still returns the HTML error page. Stack traces go to the log, not the response.
 
-### Platform Security
+## Desktop wrapper
 
-1. **Cross-Platform Path Handling**
-   - Platform-specific paths for Windows, Linux, and macOS
-   - Prevents hardcoded path vulnerabilities
-   - **Location:** `app.py` lines 34-40
+`core/desktop.py` exposes `save_file` to page JavaScript through the pywebview `js_api`. The method resolves the requested name under the output directory and refuses a path that resolves outside that directory.
 
-2. **Container Security (Docker)**
-   - Runs as non-root user (`app:app`)
-   - Minimal base image (`python:3.11-slim`)
-   - **Location:** `deploy/docker/Dockerfile` lines 8, 18
+## Container
 
----
+`deploy/docker/Dockerfile` builds from `python:3.11-slim`, creates an `app` user, and switches to that user before the `CMD`. Gunicorn binds `0.0.0.0:5000` with one worker.
 
-## Security Choices & Design Decisions
+## Open items
 
-### Acceptable for Desktop Use
-
-1. **Global `memStorage`**
-   - **Decision:** Acceptable for single-user desktop application
-   - **Rationale:** Desktop apps run in user's own environment; no multi-user risk
-   - **Action Required:** Only if deploying as multi-user web service
-
-2. **No Authentication**
-   - **Decision:** Acceptable for desktop application
-   - **Rationale:** Desktop apps run locally; OS-level security applies
-   - **Action Required:** Only if deploying as web service
-
-3. **Flask Development Server**
-   - **Decision:** Acceptable for desktop application
-   - **Rationale:** Desktop apps typically run on localhost only
-   - **Action Required:** Use production WSGI server for web deployment
-
-### Security Trade-offs
-
-1. **File Size Warnings (Non-Restrictive)**
-   - **Decision:** Warn but don't block large files
-   - **Rationale:** User may legitimately need to process large datasets
-   - **Risk:** Resource exhaustion if maliciously large files uploaded
-   - **Mitigation:** Acceptable for desktop; add hard limits for web deployment
-
-2. **No Dependency Version Pinning**
-   - **Decision:** Flexibility in dependency versions
-   - **Rationale:** Easier updates, but less reproducible builds
-   - **Risk:** Potential for vulnerable or incompatible versions
-   - **Mitigation:** Pin versions for production deployments
-
----
-
-## Summary of Recommendations
-
-### For Desktop Use (Current State)
-**Status:** Production Ready
-
-No additional security measures required. Current security measures are appropriate for single-user desktop deployment.
-
-### For Web Deployment (Future)
-
-Before deploying as a multi-user web service:
-1. Session-based storage (replace `memStorage`)
-2. CSRF protection
-3. Authentication & authorization
-4. Rate limiting
-5. Production WSGI server
-6. Reverse proxy with HTTPS
-7. Dependency version pinning
-
----
-
-## References
-
-- **Security Fixes:** See `ISSUES_FOUND.md` for historical security fixes
-- **Developer Notes:** See `docs/HANDOFF.md` for integration guidance
-- **Current Status:** See `DEBUG_REPORT.md` for verification results
-
----
-
-Next review: 1-3 months or after major changes
+- HTML-escape the filename and column names in the upload response, and make `escapeHtml` in `static/js/core.js` escape quotes.
+- Add CSRF protection, authentication, and rate limiting before a multi-user deployment.
+- Put the app behind HTTPS and a reverse proxy for any network deployment.

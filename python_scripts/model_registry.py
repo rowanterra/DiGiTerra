@@ -145,7 +145,9 @@ MODEL_REGISTRY: Dict[str, Tuple[Optional[Callable], str]] = {
     "SGD": (train_sgd_regressor, "regression"),
     "TheilSen": (train_theilsen_regressor, "regression"),
     "Polynomial": (None, "regression"),  # no train_* in codebase
-    "Perceptron": (train_perceptron, "regression"),
+    # Perceptron is a classifier but train_perceptron has the regression signature and fails on any
+    # numeric target. No <option> in the template offers it, so dispatch rejects it like Polynomial.
+    "Perceptron": (None, "classification"),
     # Classification
     "Logistic_classifier": (train_logistic_classifier, "classification"),
     "ExtraTrees_classifier": (train_extra_trees_classifier, "classification"),
@@ -191,12 +193,20 @@ CLUSTER_MODELS: frozenset = frozenset(
 
 
 def _hidden_layer_sizes_tuple(h: Dict[str, Any]) -> str:
-    s = '(' + str(h.get('hidden_layer_sizes1', '')) + ',' + str(h.get('hidden_layer_sizes2', ''))
-    if h.get('hidden_layer_sizes3'):
-        s += ',' + str(h.get('hidden_layer_sizes3', '')) + ')'
-    else:
-        s += ')'
-    return s
+    """Build the tuple literal for MLP hidden_layer_sizes from the three form fields.
+
+    Empty fields are dropped; with no sizes at all the sklearn default (100,) is used,
+    so an empty form does not produce the unparsable literal "(,)".
+    """
+    sizes = []
+    for key in ('hidden_layer_sizes1', 'hidden_layer_sizes2', 'hidden_layer_sizes3'):
+        v = h.get(key)
+        if v is None or str(v).strip() == '':
+            continue
+        sizes.append(str(int(float(v))))
+    if not sizes:
+        sizes = ['100']
+    return '(' + ','.join(sizes) + ',)'
 
 
 def get_model_kwargs(

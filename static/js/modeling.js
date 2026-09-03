@@ -1,6 +1,10 @@
 /**
  * Modeling tab: run model, process results, hyperparameters. Depends on core.js, formatDateTimeForFilename, downloadFile, etc.
  */
+// Shared across the split files (they run in one script scope).
+let model1 = null;
+let stratifyBool = false;
+let quantileBinDict = {};
 processForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -101,7 +105,7 @@ processForm.addEventListener('submit', async (e) => {
     //ensure predictors and indicators - validate BEFORE clearing results
     let selectedOutputType = outputType.value
     if (!indicators.length || (!predictors.length && selectedOutputType !== 'Cluster')) {
-        showError(NumericResultDiv, 'Please select at least one predictor and one indicator column.');
+        showError(NumericResultDiv, 'At least one predictor column and one indicator column are required.');
         if (runButton) runButton.disabled = false;
         if (stopButton) stopButton.style.display = 'none';
         return;
@@ -119,8 +123,8 @@ processForm.addEventListener('submit', async (e) => {
         }
         if (!String(modelPick).trim()) {
             const errDiv = getCachedElement('errorDiv');
-            if (errDiv) showError(errDiv, 'Please select a model from the dropdown before running.');
-            else showError(NumericResultDiv, 'Please select a model from the dropdown before running.');
+            if (errDiv) showError(errDiv, 'A model must be selected from the dropdown before the run.');
+            else showError(NumericResultDiv, 'A model must be selected from the dropdown before the run.');
             if (runButton) runButton.disabled = false;
             if (stopButton) stopButton.style.display = 'none';
             return;
@@ -185,7 +189,7 @@ processForm.addEventListener('submit', async (e) => {
     }
 
     if (stratifyBool && selectedOutputType !== 'Cluster' && predictorCols.indexOf(stratifyColumnNumber) !== -1) {
-        showError(NumericResultDiv, 'Do not stratify by your target column. That would leak target information into the train/test split. Choose a different column to stratify by.', false);
+        showError(NumericResultDiv, 'Stratifying by the target column leaks target information into the train/test split, so a different stratify column is required.', false);
         const processButton = getCachedElement('processButton');
         if (processButton) processButton.disabled = false;
         if (loadingDiv) loadingDiv.classList.add('hidden');
@@ -226,7 +230,7 @@ processForm.addEventListener('submit', async (e) => {
         if (selectedOutputType === 'Numeric'){
             model1 = document.getElementById('automlNModels');
             selectedModel1 = model1 ? model1.value : ''
-            // If no model selected in AutoML, use a sensible default (Random Forest is robust and works well with AutoML features)
+            // If no model selected in AutoML, use a sensible default (Random Forest tolerates unscaled and mixed features)
             if (!selectedModel1 || selectedModel1 === '') {
                 selectedModel1 = 'RF';
             }
@@ -530,7 +534,7 @@ processForm.addEventListener('submit', async (e) => {
         hyperparameters['max_iter'] = parseFloat(max_iter.value)
         hyperparameters['eta0'] = parseFloat(eta0.value)
 
-        let nonreqPerceptronSlider = document.getElementById('nonreqPerceptronSlider')
+        let nonreqPerceptronSlider = getModeScopedElement('nonreqPerceptronSlider')
         if (nonreqPerceptronSlider.checked){
             nonreq=true
             let PerceptronFitIntercept = getModeScopedElement('PerceptronFitIntercept')?.value
@@ -578,7 +582,7 @@ processForm.addEventListener('submit', async (e) => {
         hyperparameters['activation'] = activation.value
         hyperparameters['solver'] = solver.value
 
-        let nonreqMLPSlider = document.getElementById('nonreqMLPSlider')
+        let nonreqMLPSlider = getModeScopedElement('nonreqMLPSlider')
         if (nonreqMLPSlider.checked){
             nonreq=true
             let MLPNesterovsMomentum = getModeScopedElement('MLPNesterovsMomentum').value
@@ -636,7 +640,7 @@ processForm.addEventListener('submit', async (e) => {
             hyperparameters['n_neighbors'] = parseFloat(n_neighbors.value);
         }
 
-        let nonreqKNearestSlider = document.getElementById('nonreqKNearestSlider')
+        let nonreqKNearestSlider = getModeScopedElement('nonreqKNearestSlider')
         if (nonreqKNearestSlider.checked){
             nonreq=true
             let KNearestWeights = getModeScopedElement('KNearestWeights').value
@@ -670,7 +674,7 @@ processForm.addEventListener('submit', async (e) => {
         if (learning_rate) hyperparameters['learning_rate'] = parseFloat(learning_rate.value);
     
 
-        let nonreqGBSlider = document.getElementById('nonreqGBSlider')
+        let nonreqGBSlider = getModeScopedElement('nonreqGBSlider')
         if (nonreqGBSlider.checked){
             nonreq=true
             let GBLoss = getModeScopedElement('GBLoss').value
@@ -709,7 +713,7 @@ processForm.addEventListener('submit', async (e) => {
     }
 
     else if (selectedModel === "Logistic_classifier"){
-        let nonreqLogisticClassifierSlider = document.getElementById('nonreqLogisticClassifierSlider')
+        let nonreqLogisticClassifierSlider = getModeScopedElement('nonreqLogisticClassifierSlider')
         if (nonreqLogisticClassifierSlider.checked){
             nonreq=true
             let Class_LogisticDual = getModeScopedElement('Class_LogisticDual').value
@@ -757,7 +761,7 @@ processForm.addEventListener('submit', async (e) => {
         hyperparameters['activation'] = activation.value
         hyperparameters['solver'] = solver.value
 
-        let nonreqMLPSlider = document.getElementById('nonreqMLPClassifierSlider')
+        let nonreqMLPSlider = getModeScopedElement('nonreqMLPClassifierSlider')
         if (nonreqMLPSlider.checked){
             nonreq=true
             let MLPNesterovsMomentum = getModeScopedElement('Class_MLPNesterovsMomentum').value
@@ -816,7 +820,7 @@ processForm.addEventListener('submit', async (e) => {
         }
         
 
-        let nonreqRFSlider = document.getElementById('nonreqRFClassifierSlider')
+        let nonreqRFSlider = getModeScopedElement('nonreqRFClassifierSlider')
         if (nonreqRFSlider.checked){
             nonreq=true
             let RFBoostrap = getModeScopedElement('Class_RFBoostrap').value
@@ -876,7 +880,7 @@ processForm.addEventListener('submit', async (e) => {
             }
         }
 
-        let nonreqSVMSlider = document.getElementById('nonreqSVCClassifierSlider')
+        let nonreqSVMSlider = getModeScopedElement('nonreqSVCClassifierSlider')
         if (nonreqSVMSlider.checked){
             nonreq=true
             let SVCshrinking = getModeScopedElement('SVCshrinking').value
@@ -910,7 +914,7 @@ processForm.addEventListener('submit', async (e) => {
         const n_clusters = document.getElementById('Agg_n_clusters').value
         hyperparameters['n_clusters'] = parseInt(n_clusters)
         
-        let nonreqAgglomerativeSlider = document.getElementById('nonreqAgglomerativeSlider')
+        let nonreqAgglomerativeSlider = getModeScopedElement('nonreqAgglomerativeSlider')
         if (nonreqAgglomerativeSlider.checked){
             nonreq=true
             let metric = getModeScopedElement('Aggmetric').value
@@ -937,7 +941,7 @@ processForm.addEventListener('submit', async (e) => {
         const n_components = document.getElementById('Gaun_components').value
         hyperparameters['n_components'] = parseInt(n_components)
         
-        let nonreqGaussianSlider = document.getElementById('nonreqGaussianSlider')
+        let nonreqGaussianSlider = getModeScopedElement('nonreqGaussianSlider')
         if (nonreqGaussianSlider.checked){
             nonreq=true
             let covariance_type = getModeScopedElement('Gaucovariance_type').value
@@ -973,7 +977,7 @@ processForm.addEventListener('submit', async (e) => {
         const n_clusters = document.getElementById('Kmeansn_clusters').value
         hyperparameters['n_clusters'] = parseInt(n_clusters)
         
-        let nonreqKmeansSlider = document.getElementById('nonreqKmeansSlider')
+        let nonreqKmeansSlider = getModeScopedElement('nonreqKmeansSlider')
         if (nonreqKmeansSlider.checked){
             nonreq=true
             let init = getModeScopedElement('kmeansInit').value
@@ -2220,7 +2224,7 @@ processForm.addEventListener('submit', async (e) => {
                         processResultData(progress.data);
                         return; // Exit early - callback handles cleanup
                     } else {
-                        console.error('processResultData function not set!');
+                        console.error('processResultData function not set');
                         // Fallback: process directly (with empty defaults for variables)
                         // Try to get unitStr from DOM if available
                         const unitNameElement = getCachedElement('unitName');
@@ -2389,7 +2393,7 @@ processForm.addEventListener('submit', async (e) => {
             if (currentLoadingDiv) {
                 currentLoadingDiv.innerHTML = `
                     <p style="color: #d32f2f; font-weight: 600;">Connection Error</p>
-                    <p style="color: #666;">Unable to establish connection with the server. Please try again.</p>
+                    <p style="color: #666;">The connection to the server failed.</p>
                 `;
             }
             
@@ -2561,7 +2565,7 @@ processForm.addEventListener('submit', async (e) => {
         if (response.ok) {
             processModelResult(data, unitStr, predictorCols, hyperparameters);
         } else {
-            showError(errorDiv, data.error ? `Error: ${data.error}` : 'Request failed. See console for details.');
+            showError(errorDiv, data.error ? `Error: ${data.error}` : 'The request failed; the console has details.');
         }
     } catch (error) {
         console.error('Error:', error);
@@ -2571,7 +2575,7 @@ processForm.addEventListener('submit', async (e) => {
             progressEventSource.close();
             progressEventSource = null;
         }
-        showError(errorDiv, 'Something went wrong. See console for details.');
+        showError(errorDiv, 'The run failed; the console has details.');
         
         // Determine which loading div and button to use based on current mode
         const simpleMode = document.getElementById('simpleMode');
@@ -2804,7 +2808,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
 
                 //if multiple targets then need to let users select which graphic they want to see for each target
                 // Check if we're on Simple Modeling page (not Advanced Modeling)
-                // True when not on the standalone legacy advanced page (#advancedOptimization); unified advanced tab is still "simple" for this flag (CV button placement).
+                // True when not on the standalone legacy advanced page (#advancedOptimization); unified advanced tab is still "simple" for this value (CV button placement).
                 const isLegacyAdvancedPageVisible = document.getElementById('advancedOptimization') && !document.getElementById('advancedOptimization').classList.contains('hidden');
                 const isSimpleModelingPage = !isLegacyAdvancedPageVisible;
                 const crossValidationButton = isSimpleModelingPage ? '' : (data.cross_validation_file ? `
@@ -2866,9 +2870,9 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                                 <tr><td>Original Features</td><td>${data.feature_selection_info.original_count || 'N/A'}</td></tr>
                                 <tr><td>Selected Features</td><td>${data.feature_selection_info.selected_count || 'N/A'}</td></tr>
                                 ${data.feature_selection_info.selected_features && data.feature_selection_info.selected_features.length > 0 ? 
-                                    `<tr><td colspan="2"><strong>Selected Feature Names:</strong><br>${data.feature_selection_info.selected_features.join(', ')}</td></tr>` : ''}
+                                    `<tr><td colspan="2"><strong>Selected Feature Names:</strong><br>${escapeHtml(data.feature_selection_info.selected_features.join(', '))}</td></tr>` : ''}
                             </table>
-                        </div>` : '<p>No feature selection data available</p>';
+                        </div>` : (Array.isArray(data.skipped_options) && data.skipped_options.length > 0 ? `<p class="field-note">${escapeHtml(data.skipped_options.map(o => `${o.option}: ${o.reason}`).join('. '))}.</p>` : '<p>No feature selection data available</p>');
                     
                     // Build outlier handling table HTML
                     const outlierHandlingTableHtml = data.outlier_info ? `
@@ -3127,9 +3131,9 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                                 <tr><td>Original Features</td><td>${data.feature_selection_info.original_count || 'N/A'}</td></tr>
                                 <tr><td>Selected Features</td><td>${data.feature_selection_info.selected_count || 'N/A'}</td></tr>
                                 ${data.feature_selection_info.selected_features && data.feature_selection_info.selected_features.length > 0 ? 
-                                    `<tr><td colspan="2"><strong>Selected Feature Names:</strong><br>${data.feature_selection_info.selected_features.join(', ')}</td></tr>` : ''}
+                                    `<tr><td colspan="2"><strong>Selected Feature Names:</strong><br>${escapeHtml(data.feature_selection_info.selected_features.join(', '))}</td></tr>` : ''}
                             </table>
-                        </div>` : '<p>No feature selection data available</p>';
+                        </div>` : (Array.isArray(data.skipped_options) && data.skipped_options.length > 0 ? `<p class="field-note">${escapeHtml(data.skipped_options.map(o => `${o.option}: ${o.reason}`).join('. '))}.</p>` : '<p>No feature selection data available</p>');
                     
                     // Build outlier handling table HTML for single target
                     const outlierHandlingTableHtmlSingle = data.outlier_info ? `
@@ -3337,9 +3341,9 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                             <tr><td>Original Features</td><td>${data.feature_selection_info.original_count || 'N/A'}</td></tr>
                             <tr><td>Selected Features</td><td>${data.feature_selection_info.selected_count || 'N/A'}</td></tr>
                             ${data.feature_selection_info.selected_features && data.feature_selection_info.selected_features.length > 0 ? 
-                                `<tr><td colspan="2"><strong>Selected Feature Names:</strong><br>${data.feature_selection_info.selected_features.join(', ')}</td></tr>` : ''}
+                                `<tr><td colspan="2"><strong>Selected Feature Names:</strong><br>${escapeHtml(data.feature_selection_info.selected_features.join(', '))}</td></tr>` : ''}
                         </table>
-                    </div>` : '<p>No feature selection data available</p>';
+                    </div>` : (Array.isArray(data.skipped_options) && data.skipped_options.length > 0 ? `<p class="field-note">${escapeHtml(data.skipped_options.map(o => `${o.option}: ${o.reason}`).join('. '))}.</p>` : '<p>No feature selection data available</p>');
                 
                 // Build outlier handling table HTML
                 const outlierHandlingTableHtml = data.outlier_info ? `
@@ -3610,7 +3614,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
     } catch (error) {
         console.error('Error processing result:', error);
         const errDiv = getCachedElement('errorDiv');
-        if (errDiv) showError(errDiv, 'Result processing failed. See console for details.');
+        if (errDiv) showError(errDiv, 'Result processing failed; the console has details.');
     }
 }
 

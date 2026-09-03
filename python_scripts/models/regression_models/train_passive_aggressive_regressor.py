@@ -24,7 +24,6 @@ def train_passive_aggressive_regressor(model_type, train_data, target_variables,
                                        random_state=kwargs.get('random_state', seed),
                                        warm_start=kwargs.get('warm_start', False),
                                        average=kwargs.get('average', False),
-                                       n_jobs=kwargs.get('n_jobs', None),
                                        )
 
     return run_regression(

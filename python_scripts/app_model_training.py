@@ -217,11 +217,33 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
         cv_type_normalized = str(cross_validation_type).strip() if cross_validation_type else 'None'
         cv_enabled = cv_type_normalized.lower() not in ['none', '']
         
+        # Clustering has no target, so the stages that score against one cannot run.
+        # Outlier handling works on X alone and is passed through.
+        is_cluster_run = modelName in CLUSTER_MODELS
+        skipped_options = []
+        if is_cluster_run:
+            not_applicable = [
+                ('feature_selection', 'feature_selection_method', feature_selection_method != 'none'),
+                ('hyperparameter_search', 'hyperparameter_search', hyperparameter_search != 'none'),
+                ('cross_validation', 'cross_validation', cv_enabled),
+            ]
+            for stage, option, requested in not_applicable:
+                if requested:
+                    skipped_options.append({'option': option, 'reason': 'Not applicable to clustering'})
+                    logger.info("%s requested for cluster model %s; skipped (no target to score against).", option, modelName)
+            feature_selection_method = 'none'
+            feature_selection_k = None
+            hyperparameter_search = 'none'
+            cv_enabled = False
+
         # Set up progress tracking based on selected features
         tracker.set_stage_enabled('outlier_handling', outlier_method != 'none')
         tracker.set_stage_enabled('feature_selection', feature_selection_method != 'none')
         tracker.set_stage_enabled('hyperparameter_search', hyperparameter_search != 'none')
         tracker.set_stage_enabled('cross_validation', cv_enabled)
+        if is_cluster_run:
+            for stage in ('feature_selection', 'hyperparameter_search', 'cross_validation'):
+                tracker.update_stage(stage, 'skipped', 100, 'Not applicable to clustering')
         
         # Advanced features are now implemented - log when used
         if hyperparameter_search != 'none':
@@ -357,7 +379,8 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
                 base['y_scaler_type'] = scaler
             kwargs = get_model_kwargs(modelName, hyperparameters, nonreq, seed)
             if problem_type == 'cluster':
-                base_c = dict(train_data=df, X=df[indicator_names], units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, test_size=testSize, k_min=2, k_max=8)
+                base_c = dict(train_data=df, X=df[indicator_names], units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, test_size=testSize, k_min=2, k_max=8,
+                              outlier_method=outlier_method, outlier_action=outlier_action, progress_tracker=tracker, modeling_mode=modeling_mode)
                 result = train_fn(**base_c, **kwargs)
             elif problem_type == 'regression':
                 result = train_fn(modelName, **base, **kwargs)
@@ -366,7 +389,10 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
             if problem_type == 'classification':
                 report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics, feature_selection_info, outlier_info = unpack_classification_result(result)
             elif problem_type == 'cluster':
-                train_results, test_results, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, best_k, centers, silhouette_grid = result
+                # run_clustering appends outlier_info; older trainers may still return 11 items.
+                (train_results, test_results, params, shapes, storedModel, X_scaler, quantileBin_results,
+                 feature_order, best_k, centers, silhouette_grid) = result[:11]
+                outlier_info = result[11] if len(result) > 11 else None
             else:
                 train_results, test_results, params, shapes, storedModel, y_scaler, X_scaler, quantileBin_results, feature_order, feature_selection_info, outlier_info = result
 
@@ -493,6 +519,9 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
                 'test_davies_bouldin' : format(round(test_results['davies_bouldin'],sigfig), fmt),
                 'best_k': best_k_int,
                 'model_params': _json_safe_params(params),  # Sanitize: get_params() can include estimators
+                'outlier_info': outlier_info,
+                'feature_selection_info': None,
+                'skipped_options': skipped_options,
             }
             # write to excel for cluster (NaN metrics can make xlsxwriter raise with nan_inf_to_errors)
             try:

@@ -96,7 +96,7 @@ function setupHeaderLogoClick() {
     const headerLogo = document.getElementById('headerLogo');
     if (headerLogo) {
         headerLogo.addEventListener('click', function() {
-            if (confirm('Are you sure you want to return to the welcome screen? This will reset your current session.')) {
+            if (confirm('Returning to the welcome screen resets the current session. Continue?')) {
                 resetToWelcomeScreen();
             }
         });
@@ -105,7 +105,7 @@ function setupHeaderLogoClick() {
         headerLogo.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                if (confirm('Are you sure you want to return to the welcome screen? This will reset your current session.')) {
+                if (confirm('Returning to the welcome screen resets the current session. Continue?')) {
                     resetToWelcomeScreen();
                 }
             }
@@ -443,7 +443,7 @@ function navigateToAdvancedWithModel(){
     if (!outputType || !outputType.value) {
         const errorDiv = getCachedElement('errorDiv');
         if (errorDiv) {
-            showError(errorDiv, 'Please select a model first before navigating to Advanced Modeling.');
+            showError(errorDiv, 'A model must be selected before Advanced Modeling opens.');
             errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
         return;
@@ -476,7 +476,7 @@ function navigateToAdvancedWithModel(){
     if (!selectedModel) {
         const errorDiv = getCachedElement('errorDiv');
         if (errorDiv) {
-            showError(errorDiv, 'Please select a model first before navigating to Advanced Modeling.');
+            showError(errorDiv, 'A model must be selected before Advanced Modeling opens.');
             errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
         return;

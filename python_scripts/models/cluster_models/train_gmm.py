@@ -1,4 +1,4 @@
-from python_scripts.preprocessing.run_clustering_pipeline import run_clustering
+from python_scripts.preprocessing.run_clustering_pipeline import run_clustering, clustering_options
 from sklearn.mixture import GaussianMixture
 
 def train_gmm(train_data,
@@ -29,4 +29,5 @@ def train_gmm(train_data,
         train_data,
         X,
         units, X_scaler_type,
-        seed, sigfig, quantileBinDict, useTransformer, categorical_cols,test_size, k_min, k_max)
+        seed, sigfig, quantileBinDict, useTransformer, categorical_cols,test_size, k_min, k_max,
+        **clustering_options(kwargs))

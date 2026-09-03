@@ -1,5 +1,5 @@
 """
-Comprehensive metrics calculation for classification, regression, and clustering.
+Metric calculation for classification, regression, and clustering.
 This module ensures all relevant scikit-learn statistics are calculated and available for export.
 """
 
@@ -26,7 +26,7 @@ from sklearn.preprocessing import label_binarize
 
 def calculate_classification_metrics(y_true, y_pred, y_score=None, classes=None, model=None, X_test=None):
     """
-    Calculate comprehensive classification metrics.
+    Compute classification metrics.
     
     Args:
         y_true: True labels
@@ -127,7 +127,7 @@ def calculate_classification_metrics(y_true, y_pred, y_score=None, classes=None,
 
 def calculate_regression_metrics(y_true, y_pred, target_names=None, sigfig=3):
     """
-    Calculate comprehensive regression metrics.
+    Compute regression metrics.
     
     Args:
         y_true: True values
@@ -204,7 +204,7 @@ def calculate_regression_metrics(y_true, y_pred, target_names=None, sigfig=3):
 
 def calculate_clustering_metrics(X, labels):
     """
-    Calculate comprehensive clustering metrics.
+    Compute clustering metrics.
     
     Args:
         X: Feature matrix

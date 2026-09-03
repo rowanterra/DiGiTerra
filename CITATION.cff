@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: >-
+  If you use DiGiTerra, cite this software.
+title: >-
+  DiGiTerra: Tabular Machine Learning in the Browser with scikit-learn
+abstract: >-
+  DiGiTerra is a Flask application for exploring a tabular dataset, training a
+  scikit-learn model on the dataset, and running inference on new rows. The
+  application offers 67 trainable estimators (32 regression, 23 classification, 12 clustering) across regression,
+  classification, and clustering, with optional feature selection, outlier
+  handling, hyperparameter search, and cross-validation, and ships as a desktop
+  application for macOS, Windows, and Linux.
+type: software
+authors:
+  - family-names: Terra
+    given-names: Rowan R.
+    email: rowan.r.terra@gmail.com
+    orcid: 'https://orcid.org/0009-0001-3890-705X'
+version: 0.1.0
+date-released: '2026-09-03'
+license: MIT
+repository-code: 'https://github.com/rowanterra/DiGiTerra'
+keywords:
+  - machine learning
+  - scikit-learn
+  - Flask
+  - tabular data
+  - desktop application

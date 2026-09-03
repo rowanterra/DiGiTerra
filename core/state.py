@@ -1,6 +1,6 @@
 """Session state and request-scoped helpers for DiGiTerra. Used by app and blueprints.
 
-Storage is per process and holds whole DataFrames and fitted models, so it is
+Storage is per process and contains whole DataFrames and fitted models, so it is
 bounded and thread-safe: entries are evicted oldest-first once the cap is reached,
 and every access takes a lock because training runs in a background thread while
 the browser keeps polling.

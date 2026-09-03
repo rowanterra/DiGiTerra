@@ -34,6 +34,7 @@ from python_scripts.preprocessing.utilities import make_preprocessor
 from python_scripts.preprocessing.utilities import get_feature_names
 from python_scripts.preprocessing.utilities import _scale_pairs
 from python_scripts.preprocessing.utilities import export_plots
+from python_scripts.preprocessing.outlier_handling import apply_outlier_handling
 
 from python_scripts.config import VIS_DIR
 import python_scripts.plotting.plot_style  # noqa: F401
@@ -120,12 +121,33 @@ def _assign_labels_by_centers(Xv: np.ndarray, centers: Optional[np.ndarray]) -> 
         return D.argmin(axis=1).astype(int)
 
 
+# Advanced-option keys a cluster train_* function forwards from its **kwargs.
+CLUSTERING_OPTION_KEYS = ('outlier_method', 'outlier_action', 'progress_tracker', 'modeling_mode')
+
+
+def clustering_options(kwargs: Dict[str, Any]) -> Dict[str, Any]:
+    """Pick the advanced options out of a train_* function's **kwargs.
+
+    The remaining keys are estimator hyperparameters and stay with the caller.
+    """
+    return {k: kwargs[k] for k in CLUSTERING_OPTION_KEYS if k in kwargs}
+
+
 def run_clustering(model, model_name,
                     train_data,
                     X,
                     units, X_scaler_type,
-                    seed, sigfig, quantileBinDict, useTransformer, transformer_cols, test_size, k_min, k_max) -> Dict[str, Any]:
-    
+                    seed, sigfig, quantileBinDict, useTransformer, transformer_cols, test_size, k_min, k_max,
+                    outlier_method='none', outlier_action='remove',
+                    progress_tracker=None, modeling_mode='simple', **kwargs) -> Tuple[Any, ...]:
+    """Fit a clusterer and score it. quantileBinDict is accepted for call-site
+    symmetry with the supervised pipelines; clustering has no target to bin.
+
+    Returns a 12-tuple: the 11 legacy items followed by ``outlier_info`` (None
+    when outlier_method is 'none').
+    """
+    if progress_tracker:
+        progress_tracker.update_stage('model_training', 'running', 5, f'Preparing data for {model_name}...')
 
     # Build modeling frame (no target)
     # Ensure train_data is a DataFrame
@@ -213,6 +235,35 @@ def run_clustering(model, model_name,
     if not isinstance(X_test_t, pd.DataFrame):
         X_test_t = pd.DataFrame(X_test_t) if X_test_t is not None else pd.DataFrame(columns=X_train_t.columns, dtype=X_train_t.dtypes)
     X_train_s, X_test_s, _, _, X_scaler, _ = _scale_pairs(X_train_t, X_test_t, None, None, X_scaler_type, "none")
+
+    # Outlier handling on X only; clustering has no target, so this is the whole step.
+    outlier_info = None
+    if outlier_method and outlier_method != 'none':
+        if progress_tracker:
+            progress_tracker.update_stage('outlier_handling', 'running', 0, f'Detecting outliers using {outlier_method}...')
+        train_index_before = X_train_s.index
+        X_train_s, X_test_s, outlier_mask = apply_outlier_handling(
+            X_train_s, X_test_s, None, outlier_method, outlier_action, seed=seed
+        )
+        outlier_mask = np.asarray(outlier_mask, dtype=bool)
+        n_outliers = int((~outlier_mask).sum())
+        outlier_info = {
+            'method': outlier_method,
+            'action': outlier_action,
+            'n_outliers': n_outliers,
+            'original_samples': int(len(outlier_mask)),
+            'remaining_samples': int(outlier_mask.sum()),
+        }
+        if outlier_action == 'remove' and n_outliers > 0:
+            outlier_info['removed_row_indices'] = train_index_before[~outlier_mask].tolist()
+        if progress_tracker:
+            progress_tracker.update_stage('outlier_handling', 'completed', 100,
+                                          f'Outlier handling complete ({n_outliers} outliers {"removed" if outlier_action == "remove" else "capped"})')
+        if len(X_train_s) < 2:
+            raise ValueError("Outlier removal left fewer than 2 training rows; choose a less aggressive method or 'cap'.")
+
+    if progress_tracker:
+        progress_tracker.update_stage('model_training', 'running', 30, f'Fitting {model_name}...')
 
     # Choose k & fit
     sil_scores = {}
@@ -373,4 +424,4 @@ def run_clustering(model, model_name,
     return train_scores, test_scores, model.get_params(), {
                 'X_train': X_train_s.shape,
                 'X_test': X_test_s.shape
-            }, model, X_scaler, quantileBinResults, X_train_raw.columns.tolist(), clusters['best_k'], clusters['centers'], clusters['silhouette_grid']
+            }, model, X_scaler, quantileBinResults, X_train_raw.columns.tolist(), clusters['best_k'], clusters['centers'], clusters['silhouette_grid'], outlier_info

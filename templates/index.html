@@ -77,8 +77,8 @@
             <div class="doc-header">
                 <h3>About DiGiTerra</h3>
             </div>
-            <p>DiGiTerra is an interactive machine learning exploration tool designed to help researchers and analysts explore datasets, build predictive models, and generate insights through an intuitive web-based interface.</p>
-            <p style="margin: 16px 0; color: #555;">DiGiTerra guides you through a repeatable pipeline:</p>
+            <p>DiGiTerra is a browser tool for exploring a tabular dataset, training a model on the dataset, and reviewing the results.</p>
+            <p style="margin: 16px 0; color: #555;">The pipeline has five steps:</p>
             <div class="doc-workflow-badges">
                 <span class="doc-badge doc-workflow-step">1. Upload</span>
                 <span class="doc-badge doc-workflow-arrow">→</span>
@@ -91,34 +91,34 @@
                 <span class="doc-badge doc-workflow-step">5. Review Results</span>
             </div>
             <div class="doc-warning-content" style="margin-top: 24px; padding: 16px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
-                <p style="margin: 0 0 12px 0; font-weight: 600; color: #856404;">Disclaimer: This is an exploration tool, not a production system.</p>
-                <p style="margin: 0 0 12px 0; color: #856404;">DiGiTerra is designed as an <strong>exploratory data analysis and modeling tool</strong> to help researchers investigate patterns and relationships in their data. <strong>We do not claim that results from this application will be reliable for decision-making purposes.</strong></p>
-                <p style="margin: 0; color: #856404;"><strong>Users should consult with computational and statistics experts</strong> to verify findings, validate model assumptions, assess model performance in context, and ensure appropriate interpretation of results. This tool is intended to support, not replace, expert analysis and domain knowledge.</p>
+                <p style="margin: 0 0 12px 0; font-weight: 600; color: #856404;">Disclaimer: DiGiTerra is an exploration tool, not a production system.</p>
+                <p style="margin: 0 0 12px 0; color: #856404;">DiGiTerra is an <strong>exploratory analysis and modeling tool</strong>. <strong>Results from the application are not claimed to be reliable for decision making.</strong></p>
+                <p style="margin: 0; color: #856404;"><strong>Findings should be checked with a statistician</strong> for model assumptions, performance in context, and interpretation. The tool supports expert analysis and does not replace the analysis.</p>
             </div>
         </div>
 
         <!-- File Format Section -->
         <div class="documentation-card doc-fileformat">
             <div class="doc-header">
-                <h3>File Format & Column Entry Tips</h3>
+                <h3>File Format and Column Entry</h3>
             </div>
             <div class="doc-tips-list">
                 <div class="doc-tip-item">
                     <div>
                         <strong>CSV only</strong>
-                        <p>DiGiTerra accepts CSV files. Lab exports, field data, assay results, or other tabular data can be exported from Excel via <em>File → Save As</em> as <code>.csv</code>.</p>
+                        <p>DiGiTerra accepts CSV files. Excel exports a sheet as <code>.csv</code> through <em>File, Save As</em>.</p>
                     </div>
                 </div>
                 <div class="doc-tip-item">
                     <div>
                         <strong>Column letters</strong>
-                        <p>When selecting columns, use spreadsheet-style letters (A, B, C...). Ranges are written as <code>A-D</code> and multiple selections can be separated with commas like <code>A-D, F, H</code>.</p>
+                        <p>Columns are selected by spreadsheet letter. A range is written <code>A-D</code>, and selections are separated by commas, as in <code>A-D, F, H</code>.</p>
                     </div>
                 </div>
                 <div class="doc-tip-item">
                     <div>
                         <strong>Targets vs indicators</strong>
-                        <p>Indicators are inputs (e.g., geochemical or environmental measurements); targets are the outputs you want to predict (e.g., species, concentration, or sample class).</p>
+                        <p>Indicators are the input columns, such as geochemical or environmental measurements. Targets are the columns to predict, such as species or concentration.</p>
                     </div>
                 </div>
             </div>
@@ -129,60 +129,60 @@
             <div class="doc-header">
                 <h3>Modeling Types</h3>
             </div>
-            <p class="doc-intro-text">DiGiTerra supports three types of machine learning tasks. Choose the type that matches your goal:</p>
+            <p class="doc-intro-text">DiGiTerra supports three task types.</p>
             <div class="doc-modeling-types-grid">
                 <div class="doc-modeling-type-card">
                     <div class="doc-approach-header">
                         <h4>Regression <span style="font-size: 0.75em; font-weight: 500; color: #666;">(33 models)</span></h4>
                     </div>
-                    <p><strong>When to use:</strong> When you want to predict a continuous numeric value (e.g., concentration, temperature, yield, or other measurable outcome).</p>
-                    <p><strong>What it does:</strong> Regression models learn the relationship between input features and a continuous target variable, allowing you to predict numeric outcomes for new data.</p>
+                    <p><strong>Use case:</strong> a continuous numeric target, such as concentration or yield.</p>
+                    <p><strong>Method:</strong> a regression model fits the relation between the indicators and a continuous target and predicts the target for new rows.</p>
                     <ul class="doc-feature-list">
-                        <li>Predict numeric targets (e.g., pollutant concentration, crop yield, biomarker levels)</li>
-                        <li>Evaluate with R², MSE, RMSE, MAE metrics</li>
-                        <li>Visualize predictions vs actuals with scatter plots</li>
-                        <li>Analyze residuals to assess model quality</li>
+                        <li>Predict numeric targets</li>
+                        <li>Report R², MSE, RMSE, and MAE</li>
+                        <li>Plot predicted against actual values</li>
+                        <li>Plot residuals</li>
                     </ul>
                 </div>
                 <div class="doc-modeling-type-card">
                     <div class="doc-approach-header">
                         <h4>Classification <span style="font-size: 0.75em; font-weight: 500; color: #666;">(23 models)</span></h4>
                     </div>
-                    <p><strong>When to use:</strong> When you want to predict a category or class label (e.g., species, sample type, or diagnostic class).</p>
-                    <p><strong>What it does:</strong> Classification models learn to assign data points to predefined categories, making them ideal for categorical predictions.</p>
+                    <p><strong>Use case:</strong> a categorical target, such as species or sample type.</p>
+                    <p><strong>Method:</strong> a classifier assigns each row to one of the classes in the target column.</p>
                     <ul class="doc-feature-list">
-                        <li>Predict categorical targets (e.g., species, rock type, disease diagnosis)</li>
-                        <li>Evaluate with accuracy, precision, recall, F1-score</li>
-                        <li>ROC curves and confusion matrices</li>
-                        <li>Support for binary and multi-class problems</li>
+                        <li>Predict categorical targets</li>
+                        <li>Report accuracy, precision, recall, and F1</li>
+                        <li>Draw ROC curves and confusion matrices</li>
+                        <li>Binary and multi-class targets</li>
                     </ul>
                 </div>
                 <div class="doc-modeling-type-card">
                     <div class="doc-approach-header">
                         <h4>Clustering <span style="font-size: 0.75em; font-weight: 500; color: #666;">(12 models)</span></h4>
                     </div>
-                    <p><strong>When to use:</strong> When you want to discover hidden patterns or group similar data points without predefined categories.</p>
-                    <p><strong>What it does:</strong> Clustering models identify natural groupings in your data by finding similarities between data points, useful for exploratory analysis.</p>
+                    <p><strong>Use case:</strong> grouping rows without a target column.</p>
+                    <p><strong>Method:</strong> a clustering model groups rows by similarity of the indicator values.</p>
                     <ul class="doc-feature-list">
-                        <li>No target variable needed (unsupervised learning)</li>
-                        <li>Evaluate with silhouette score, Calinski-Harabasz, Davies-Bouldin</li>
-                        <li>Visualize cluster assignments with PCA plots</li>
-                        <li>Discover hidden patterns in your data</li>
+                        <li>No target column (unsupervised)</li>
+                        <li>Report silhouette, Calinski-Harabasz, and Davies-Bouldin scores</li>
+                        <li>Plot cluster labels on PCA axes</li>
+                        <li>Write cluster labels to a CSV</li>
                     </ul>
                 </div>
             </div>
             
             <!-- Types Not Supported -->
             <div class="doc-not-supported">
-                <h4 class="doc-not-supported-header">Types Not Currently Supported</h4>
-                <p class="doc-intro-text">DiGiTerra focuses on the three core machine learning types above. The following are not currently supported:</p>
+                <h4 class="doc-not-supported-header">Unsupported Task Types</h4>
+                <p class="doc-intro-text">The following task types are not supported:</p>
                 <ul class="doc-not-supported-list">
-                    <li><strong>Time Series Forecasting:</strong> DiGiTerra does not include specialized time series models (e.g., ARIMA, LSTM for sequences). Use regression models for simple time-based predictions if needed.</li>
-                    <li><strong>Reinforcement Learning:</strong> DiGiTerra does not support reinforcement learning algorithms that learn through interaction with an environment.</li>
-                    <li><strong>Transformer Models (Deep Learning):</strong> DiGiTerra does not include Transformer model architectures (e.g., BERT, GPT, Vision Transformers). These are specialized deep learning models for NLP, computer vision, and other domains. <em>Note: DiGiTerra does support data transformers for preprocessing (OneHotEncoder, etc.) to encode categorical columns. This is different from Transformer model architectures.</em></li>
-                    <li><strong>Other Deep Learning Architectures:</strong> While some models use neural networks (MLP), DiGiTerra does not include other deep learning architectures like CNNs or RNNs.</li>
-                    <li><strong>Anomaly Detection:</strong> While some clustering models can identify outliers, DiGiTerra does not include specialized anomaly detection algorithms.</li>
-                    <li><strong>Recommendation Systems:</strong> DiGiTerra does not include collaborative filtering or recommendation algorithms.</li>
+                    <li><strong>Time Series Forecasting:</strong> no ARIMA or sequence models. A regression model on lagged columns is the available substitute.</li>
+                    <li><strong>Reinforcement Learning:</strong> not included.</li>
+                    <li><strong>Transformer Models (Deep Learning):</strong> no BERT, GPT, or vision transformer architectures. The preprocessing transformers (OneHotEncoder and others) that encode categorical columns are unrelated and are included.</li>
+                    <li><strong>Other Deep Learning Architectures:</strong> MLP is included. CNN and RNN architectures are not.</li>
+                    <li><strong>Anomaly Detection:</strong> the outlier step (Isolation Forest, LOF) removes or caps training rows and is not an anomaly detector for new data.</li>
+                    <li><strong>Recommendation Systems:</strong> not included.</li>
                 </ul>
             </div>
         </div>
@@ -192,13 +192,13 @@
             <div class="doc-header">
                 <h3>Modeling Approaches</h3>
             </div>
-            <p class="doc-intro-text">For Regression and Classification tasks, you can choose between three modeling approaches after configuring Model Preprocessing:</p>
+            <p class="doc-intro-text">Regression and classification offer three modeling modes after Model Preprocessing.</p>
             <div class="doc-approach-grid">
                 <div class="doc-approach-card doc-automl">
                     <div class="doc-approach-header">
                         <h4>AutoML</h4>
                     </div>
-                    <p>Fully automated modeling that lets the system optimize everything for you. Ideal for users who want the best results without manual configuration.</p>
+                    <p>AutoML selects and tunes the model without manual configuration.</p>
                     <ul class="doc-feature-list">
                         <li>Automatic model selection (or specify one)</li>
                         <li>Automatic feature selection (RFE)</li>
@@ -211,7 +211,7 @@
                     <div class="doc-approach-header">
                         <h4>Simple Modeling</h4>
                     </div>
-                    <p>Basic model selection and configuration. Ideal for quick experiments and straightforward modeling tasks.</p>
+                    <p>One model with the main hyperparameters.</p>
                     <ul class="doc-feature-list">
                         <li>Select a model</li>
                         <li>Configure essential hyperparameters</li>
@@ -222,7 +222,7 @@
                     <div class="doc-approach-header">
                         <h4>Advanced Modeling</h4>
                     </div>
-                    <p>All Simple features plus advanced options for maximum control and optimization.</p>
+                    <p>Every Simple setting together with the options below.</p>
                     <ul class="doc-feature-list">
                         <li>Feature selection</li>
                         <li>Outlier handling</li>
@@ -231,7 +231,7 @@
                     </ul>
                 </div>
             </div>
-            <p class="doc-note">All three approaches are fully independent. You can use any without configuring the others. Note: Clustering models use a simplified interface without the Simple/Advanced/AutoML distinction.</p>
+            <p class="doc-note">The three modes are independent. Clustering has one interface with no mode selection.</p>
         </div>
 
         <!-- Core Concepts Section -->
@@ -246,7 +246,7 @@
                 </div>
                 <div class="doc-concept-item">
                     <strong>Targets</strong>
-                    <p>Output columns you want to predict or cluster</p>
+                    <p>Output columns to predict</p>
                 </div>
                 <div class="doc-concept-item">
                     <strong>Transformers</strong>
@@ -254,11 +254,11 @@
                 </div>
                 <div class="doc-concept-item">
                     <strong>Data Cleaning</strong>
-                    <p>Handle missing values, zeros, and outliers to prepare data for modeling</p>
+                    <p>Missing values, zeros, and outliers</p>
                 </div>
                 <div class="doc-concept-item">
                     <strong>Stratification</strong>
-                    <p>Groups data for balanced splits or evaluation</p>
+                    <p>Groups rows so the train and test split keeps the group proportions</p>
                 </div>
             </div>
         </div>
@@ -268,43 +268,43 @@
             <div class="doc-header">
                 <h3>Advanced Options</h3>
             </div>
-            <p class="doc-intro-text">Advanced mode adds cross-validation, feature selection, outlier handling, SHAP/explainability, and more. These options can increase run time on large datasets.</p>
+            <p class="doc-intro-text">Advanced mode adds cross-validation, feature selection, outlier handling, and SHAP. Each option increases run time.</p>
             
             <div class="doc-advanced-features">
                 <div class="doc-feature-card">
                     <div>
                         <h4>Cross-Validation</h4>
-                        <p>Multiple strategies including K-Fold, Stratified K-Fold, Repeated K-Fold, and Repeated Stratified K-Fold for robust model evaluation.</p>
+                        <p>K-Fold, Stratified K-Fold, Repeated K-Fold, and Repeated Stratified K-Fold.</p>
                     </div>
                 </div>
                 <div class="doc-feature-card">
                     <div>
                         <h4>Data Preprocessing</h4>
-                        <p>Robust scaling options, missing value imputation strategies (mean, median, drop), and zero-value handling.</p>
+                        <p>Scaler choice, imputation (mean, median, drop), and zero handling.</p>
                     </div>
                 </div>
                 <div class="doc-feature-card">
                     <div>
                         <h4>Class Imbalance Handling</h4>
-                        <p>Class weight adjustments for classification models to handle imbalanced datasets.</p>
+                        <p>Class weights for classifiers that accept them.</p>
                     </div>
                 </div>
                 <div class="doc-feature-card">
                     <div>
                         <h4>Model Explainability</h4>
-                        <p>SHAP summaries and feature importance visualizations (model-based and permutation importance) to understand model predictions.</p>
+                        <p>SHAP summaries, model feature importance, and permutation importance.</p>
                     </div>
                 </div>
                 <div class="doc-feature-card">
                     <div>
                         <h4>Calibration Curves</h4>
-                        <p>For classification models, calibration curves help assess prediction probability reliability.</p>
+                        <p>Predicted probability against observed frequency for classifiers.</p>
                     </div>
                 </div>
                 <div class="doc-feature-card">
                     <div>
                         <h4>Ensemble Models</h4>
-                        <p>Random Forest, Gradient Boosting, and Extra Trees models that combine multiple learners for improved performance.</p>
+                        <p>Random Forest, Gradient Boosting, and Extra Trees.</p>
                     </div>
                 </div>
             </div>
@@ -314,22 +314,22 @@
                 <h4 class="doc-subsection-header">
                     Feature Selection
                 </h4>
-                <p class="doc-subsection-intro">Feature selection helps identify and use only the most relevant features for modeling, which can improve model performance and reduce overfitting:</p>
+                <p class="doc-subsection-intro">Feature selection keeps a subset of the indicator columns.</p>
                 <div class="doc-method-grid">
                     <div class="doc-method-card">
                         <strong>Select K Best</strong>
                         <span class="doc-method-badge">Filter Method</span>
-                        <p>Selects the K features with the highest statistical scores (F-test). Fast and effective for identifying features with strong relationships to the target.</p>
+                        <p>Keeps the K columns with the highest F-test score against the target.</p>
                     </div>
                     <div class="doc-method-card">
                         <strong>Recursive Feature Elimination (RFE)</strong>
                         <span class="doc-method-badge">Wrapper Method</span>
-                        <p>Iteratively removes the least important features based on model performance. More computationally intensive but often finds better feature subsets.</p>
+                        <p>Fits an estimator, removes the lowest-ranked columns, and repeats until the requested count remains. Slower than Select K Best.</p>
                     </div>
                     <div class="doc-method-card">
                         <strong>Select From Model</strong>
                         <span class="doc-method-badge">Model-based</span>
-                        <p>Uses a model's built-in feature importance (e.g., Random Forest) to select features. Good balance between speed and effectiveness.</p>
+                        <p>Keeps the columns whose importance or coefficient in a fitted estimator exceeds a threshold.</p>
                     </div>
                 </div>
             </div>
@@ -339,27 +339,27 @@
                 <h4 class="doc-subsection-header">
                     Outlier Handling
                 </h4>
-                <p class="doc-subsection-intro">Outlier detection and handling can improve model robustness by identifying and managing extreme values:</p>
+                <p class="doc-subsection-intro">Outlier handling removes or caps extreme rows in the training data.</p>
                 <div class="doc-method-grid">
                     <div class="doc-method-card">
                         <strong>Interquartile Range (IQR)</strong>
-                        <p>Identifies outliers as values outside 1.5 × IQR from the quartiles. Simple and interpretable statistical method.</p>
+                        <p>Marks values below Q1 minus 1.5 IQR or above Q3 plus 1.5 IQR.</p>
                     </div>
                     <div class="doc-method-card">
                         <strong>Z-Score (3σ rule)</strong>
-                        <p>Identifies outliers as values more than 3 standard deviations from the mean. Works well for normally distributed data.</p>
+                        <p>Marks values more than 3 standard deviations from the mean.</p>
                     </div>
                     <div class="doc-method-card">
                         <strong>Isolation Forest</strong>
-                        <p>Machine learning-based method that isolates outliers using random decision trees. Effective for complex, high-dimensional data.</p>
+                        <p>Scores each row by the depth needed to isolate the row in random trees.</p>
                     </div>
                     <div class="doc-method-card">
                         <strong>Local Outlier Factor (LOF)</strong>
-                        <p>Density-based method that identifies outliers relative to their local neighborhood. Good for detecting outliers in clustered data.</p>
+                        <p>Compares the local density of each row with the density of the neighbors of the row.</p>
                     </div>
                 </div>
                 <div class="doc-action-note">
-                    <strong>Actions:</strong> <span class="doc-action-badge">Remove</span> completely removes outliers from training data; <span class="doc-action-badge">Cap</span> limits extreme values to threshold boundaries while preserving data points.
+                    <strong>Actions:</strong> <span class="doc-action-badge">Remove</span> deletes the marked rows from the training data. <span class="doc-action-badge">Cap</span> clips the marked values to the threshold.
                 </div>
             </div>
 
@@ -368,26 +368,26 @@
                 <h4 class="doc-subsection-header">
                     Hyperparameter Search
                 </h4>
-                <p class="doc-subsection-intro">Automatically finds optimal hyperparameter values instead of using manual settings:</p>
+                <p class="doc-subsection-intro">The search replaces the manual hyperparameter values.</p>
                 <div class="doc-method-grid">
                     <div class="doc-method-card">
                         <strong>Grid Search</strong>
                         <span class="doc-method-badge doc-badge-slow">Slowest</span>
-                        <p>Exhaustively searches all combinations of hyperparameters in a predefined grid. Most thorough but computationally expensive. Best for small parameter spaces.</p>
+                        <p>Fits every combination in the grid. Slowest.</p>
                     </div>
                     <div class="doc-method-card">
                         <strong>Randomized Search</strong>
                         <span class="doc-method-badge doc-badge-medium">Faster</span>
-                        <p>Randomly samples hyperparameter combinations from the grid. Faster than grid search and often finds good solutions with fewer evaluations. Good for large parameter spaces.</p>
+                        <p>Fits a fixed number of combinations sampled from the grid.</p>
                     </div>
                     <div class="doc-method-card">
                         <strong>Bayesian Optimization</strong>
                         <span class="doc-method-badge doc-badge-fast">Most Efficient</span>
-                        <p>Uses probabilistic models to intelligently select the next hyperparameters to try. Most efficient for expensive evaluations but requires additional dependencies.</p>
+                        <p>Selects each next combination from a probabilistic model of the scores. Requires an extra dependency.</p>
                     </div>
                 </div>
                 <div class="doc-warning-box">
-                    <strong>Warning:</strong> Hyperparameter search can take hours or days depending on the model, dataset size, and number of CV folds. Grid search is the slowest; randomized search is faster but less thorough.
+                    <strong>Warning:</strong> Search time grows with the model, row count, grid size, and fold count. Grid search is the slowest.
                 </div>
             </div>
         </div>
@@ -437,7 +437,7 @@
 
                         <div class="exploration-card">
                             <h2>Optional Exploration Preprocessing</h2>
-                            <p class="field-note" style="margin-bottom: 10px;">Optionally clean blanks (missing values) or zeros before running correlation or pairplots.</p>
+                            <p class="field-note" style="margin-bottom: 10px;">Blanks and zeros can be cleaned before the correlation or pairplot.</p>
                             <div class="scaling-container">
                                 <label for="exploreDropMissing">Handle missing values (blanks) in:</label>
                                 <select name="exploreDropMissing" id="exploreDropMissing">
@@ -527,7 +527,7 @@
                             <div><br></div>
                             <label for ="indicators">Indicator Columns <span class="requiredAsterisk" aria-label="required">*</span></label>
                             <input type="text" id="indicators" name="indicators" placeholder="Ex: A-D" required aria-required="true" aria-describedby="indicators-help">
-                            <span id="indicators-help" class="sr-only">Enter column letters separated by commas, e.g., A-C,E,G</span>
+                            <span id="indicators-help" class="sr-only">Column letters separated by commas, as in A-C,E,G</span>
                             <div><br></div>
                             <div class="target-input-row">
                                 <label for ="predictors">Target Columns <span class="requiredAsterisk" aria-label="required">*</span></label>
@@ -535,12 +535,12 @@
                                 <span id="predictors-help" class="sr-only">Enter column letters for target variables</span>
                                 <span id="clusterTargetMessage" class="hidden cluster-target-message">Cluster models do not have targets.</span>
                             </div>
-                            <p class="field-note"><i>Columns not chosen will be ignored.</i></p>
+                            <p class="field-note"><i>Unselected columns are ignored.</i></p>
                             <p class="field-note"><i>Non-numeric columns must be transformed below.</i></p>
                         </div>
 
                         <h3 style="margin-top: 24px; margin-bottom: 12px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 1.1em; font-weight: 600; color: #000000;">Data Cleaning</h3>
-                        <p class="field-note" style="margin-bottom: 10px;">Your data may contain <strong>blanks (missing values)</strong> or <strong>zeros</strong>. Run the check below first; then choose which columns to clean and how.</p>
+                        <p class="field-note" style="margin-bottom: 10px;">The check below reports <strong>blanks</strong> and <strong>zeros</strong> per column.</p>
                         <div class="scaling-container" style="margin-bottom: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
                             <span>Check selected columns for blanks or zeros:</span>
                             <button type="button" id="autoDetectNanZeros" class="button-secondary" style="padding: 6px 14px; font-size: 0.9em;">Run autodetect</button>
@@ -548,7 +548,7 @@
                         <div id="dataCleaningAutodetectMessage" class="field-note" style="margin-bottom: 12px; min-height: 1.2em; color: #666;" aria-live="polite"></div>
                         <div id="dataCleaningMissingWrapper" class="scaling-container">
                             <div class="field-label-block" style="margin-bottom: 6px; font-weight: 600;">Missing values (blanks)</div>
-                            <p class="field-note" style="margin-bottom: 8px;">Select which columns this applies to, then how to handle blanks below.</p>
+                            <p class="field-note" style="margin-bottom: 8px;">Columns to clean, then the action for blanks.</p>
                             <div class="cleaning-scope-checkboxes" style="display: flex; flex-wrap: nowrap; gap: 10px; align-items: center; margin-bottom: 8px; font-size: 0.82rem; white-space: nowrap;">
                                 <label style="margin: 0; flex-shrink: 0;"><input type="checkbox" id="missScopeInd"> Indicators</label>
                                 <label id="missScopeTgtLabel" style="margin: 0; flex-shrink: 0;"><input type="checkbox" id="missScopeTgt"> Targets</label>
@@ -574,7 +574,7 @@
                         </div>
                         <div id="dataCleaningZerosWrapper" class="scaling-container" style="margin-top: 8px;">
                             <div class="field-label-block" style="margin-bottom: 6px; font-weight: 600;">Zeros</div>
-                            <p class="field-note" style="margin-bottom: 8px;">Select which columns may contain invalid zeros, then choose an action.</p>
+                            <p class="field-note" style="margin-bottom: 8px;">Columns with invalid zeros, then the action.</p>
                             <div class="cleaning-scope-checkboxes" style="display: flex; flex-wrap: nowrap; gap: 10px; align-items: center; margin-bottom: 8px; font-size: 0.82rem; white-space: nowrap;">
                                 <label style="margin: 0; flex-shrink: 0;"><input type="checkbox" id="zeroScopeInd"> Indicators</label>
                                 <label id="zeroScopeTgtLabel" style="margin: 0; flex-shrink: 0;"><input type="checkbox" id="zeroScopeTgt"> Targets</label>
@@ -599,7 +599,7 @@
                         </div>
 
                         <h3 style="margin-top: 24px; margin-bottom: 12px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 1.1em; font-weight: 600; color: #000000;">Transformer</h3>
-                        <p class="field-note" style="margin-bottom: 8px;">Autodetect to set or grey out if all numeric.</p>
+                        <p class="field-note" style="margin-bottom: 8px;">Autodetect selects the non-numeric columns.</p>
                         <div id="transformerOptionWrapper">
                         <div class="scaling-container" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
                             <label for="useTransformer">Are any columns non-numeric?</label>
@@ -620,7 +620,7 @@
                                     <input type="text" id="transformerColumn" name="transformerColumn" placeholder="Ex: A-D" style="flex: 1;">
                                     <button type="button" id="autoDetectTransformers" class="button-secondary" style="white-space: nowrap; padding: 8px 16px; font-size: 0.9em;">Auto-detect</button>
                                 </div>
-                                <small style="display: block; margin-top: 4px; color: #666; font-size: 0.85em;">Detects non-numeric columns and low-cardinality numeric columns from your indicators</small>
+                                <small style="display: block; margin-top: 4px; color: #666; font-size: 0.85em;">Selects non-numeric and low-cardinality numeric indicator columns</small>
                             </div>
                         </div>
                     </div>
@@ -689,7 +689,7 @@
                         <div class="scaling-container">
                             <label for="seedValue">Select Seed</label>
                             <input type="number" id="seedValue" name="seedValue" placeholder="Ex: 33">
-                            <p class="field-note"><i>Leave blank for random.</i></p>
+                            <p class="field-note"><i>Blank selects a random seed.</i></p>
                         </div>
 
                         <h3 class="preprocess-section-title">Train/Test Split</h3>
@@ -711,7 +711,7 @@
                     <div class="preprocess-card">
                         <h2>Continue to Modeling</h2>
                         <p class="field-note" style="margin-bottom: 16px;">
-                            Configure your modeling settings, then select "Process" below to proceed and choose between Automatic, Simple, and Advanced Modeling.
+                            Process applies these settings and opens the mode selection.
                         </p>
                         <button class="processButton processButton--compact success-button" type="submit" id="continueToModelingButton" onclick="var f=document.getElementById('preprocessform');if(f&&window.handlePreprocessFormSubmit){var e={target:f,defaultPrevented:false,preventDefault:function(){e.defaultPrevented=true;}};window.handlePreprocessFormSubmit(e);}return false;">Process Configurations and Continue</button>
                         <br>
@@ -740,14 +740,14 @@
         <!-- Modeling Mode Selector -->
         <div class="preprocess-card" style="margin: 20px 0; max-width: 100%;">
             <h2 style="margin-top: 0; margin-bottom: 16px;">Select Modeling Mode</h2>
-            <p class="field-note" style="margin-bottom: 16px;">Choose your modeling approach. Each mode provides different levels of control and automation.</p>
+            <p class="field-note" style="margin-bottom: 16px;">Modeling mode.</p>
             <div class="scaling-container">
                 <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: stretch; width: 100%;">
                     <label class="modeling-mode-option" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; flex: 1; min-width: 250px; transition: all 0.2s;">
                         <input type="radio" name="modelingMode" id="automlMode" value="automl" style="margin: 0;">
                         <div>
                             <strong>AutoML</strong>
-                            <p style="margin: 4px 0 0 0; font-size: 0.9em; color: #666;">Fully automated - let the system optimize everything for you</p>
+                            <p style="margin: 4px 0 0 0; font-size: 0.9em; color: #666;">Model selection, tuning, and preprocessing run without manual settings</p>
                         </div>
                     </label>
                     <label class="modeling-mode-option" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; flex: 1; min-width: 250px; transition: all 0.2s;">
@@ -771,7 +771,7 @@
         <!-- Model Selection in Header (will be moved into each mode section) -->
         <div class="preprocess-card" style="margin: 20px 0; max-width: 600px; display: none;" id="headerModelSelection">
             <h3 style="margin-top: 0; margin-bottom: 12px;">Select Model</h3>
-            <p class="field-note" style="margin-bottom: 16px;">Choose the model algorithm for your selected output type.</p>
+            <p class="field-note" style="margin-bottom: 16px;">Model for the selected output type.</p>
             
             <!-- Simple Mode Model Selection -->
             <div id="headerNumericModels" class="hidden">
@@ -1097,7 +1097,7 @@
             <!-- Model Selection -->
             <div class="preprocess-card" style="margin-bottom: 20px;">
                 <h3 style="margin-top: 0; margin-bottom: 12px;">Select Model</h3>
-                <p class="field-note" style="margin-bottom: 16px;">Choose the model algorithm for your selected output type.</p>
+                <p class="field-note" style="margin-bottom: 16px;">Model for the selected output type.</p>
                 
                 <!-- Simple Mode Model Selection -->
                 <div id="simpleNumericModels" class="hidden">
@@ -2479,7 +2479,7 @@
                 <div id="ClusterResultDiv" role="region" aria-label="Clustering model results" class="hidden"></div>
                 <div id="ClassifierResultDiv" role="region" aria-label="Classification model results" class="hidden"></div>
                 <div id="resultsPlaceholder" style="padding: 40px; text-align: center; color: #666; font-style: italic;">
-                    <p>Results will appear here after you run a model.</p>
+                    <p>Results appear here after a model runs.</p>
                 </div>
             </div>
         </div>
@@ -2499,7 +2499,7 @@
                         
                         <div class="preprocess-card" style="margin-bottom: 16px;">
                             <h3 style="margin-top: 0; margin-bottom: 8px;">Select Model</h3>
-                            <p class="field-note" style="margin-bottom: 12px;">Choose the algorithm for your selected output type.</p>
+                            <p class="field-note" style="margin-bottom: 12px;">Model for the selected output type.</p>
                             
                             <div id="advancedNumericModels" class="hidden">
                                 <label for="advancedNModels" style="display: block; margin-bottom: 8px; font-weight: 600;">Regression Model:</label>
@@ -2605,7 +2605,7 @@
                         
                         <div class="model-card">
                             <h2 style="margin-top: 0; margin-bottom: 16px;">Hyperparameters</h2>
-                            <p class="field-note" style="margin-bottom: 16px;">Key settings for the selected model. Use &quot;More options&quot; to show optional parameters.</p>
+                            <p class="field-note" style="margin-bottom: 16px;">Main settings for the selected model. More options shows the rest.</p>
                             
                             <div style="margin-bottom: 30px;">
                                 
@@ -2614,7 +2614,7 @@
                             <!-- Ridge Hyperparameters -->
                             <div id="advancedRidgeFields" class="hidden">
                                 <h3>Ridge Model Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Ridge regression adds L2 regularization to prevent overfitting. Higher alpha values increase regularization.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Ridge adds an L2 penalty. Alpha scales the penalty.</p>
                                 <label for="advancedRidgeAlpha">Alpha - regularization strength (float >=0):</label>
                                 <input type="number" value=1.0 placeholder=1 min=0 id="advancedRidgeAlpha" name="advancedRidgeAlpha">
                                 <div class="nonreqHyperparams">
@@ -2673,7 +2673,7 @@
                             <!-- Lasso Hyperparameters -->
                             <div id="advancedLassoFields" class="hidden">
                                 <h3>Lasso Model Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Lasso regression uses L1 regularization, which can set coefficients to zero for feature selection.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Lasso adds an L1 penalty, which can set coefficients to zero.</p>
                                 <label for="advancedLassoAlpha">Alpha - regularization strength (float >=0):</label>
                                 <input type="number" value=1 min=0 placeholder=1 id="advancedLassoAlpha" name="advancedLassoAlpha">
                                 <div class="nonreqHyperparams">
@@ -2888,7 +2888,7 @@
                             <!-- Random Forest Hyperparameters -->
                             <div id="advancedRFFields" class="hidden">
                                 <h3>Random Forest Model Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Random Forest combines multiple decision trees. More trees generally improve performance but increase computation time.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Random Forest averages decision trees fit on bootstrap samples. Run time grows with the tree count.</p>
                                 <label for="advancedRFn_estmators">N Estimators - # of trees (integer >=1):</label>
                                 <input type="number" step=1 value=100 placeholder="100" min=1 id="advancedRFn_estmators" name="advancedRFn_estmators">
                                 <div class="nonreqHyperparams">
@@ -3012,7 +3012,7 @@
                             <!-- MLP Non-Essential Hyperparameters -->
                             <div id="advancedMLPFields" class="hidden">
                                 <h3>MLP Model Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Multi-Layer Perceptron is a neural network. Configure hidden layers and learning parameters for optimal performance.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Multi-Layer Perceptron regressor. Hidden layer sizes and learning rate are set below.</p>
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
@@ -3143,7 +3143,7 @@
                             <!-- Gradient Boosting Hyperparameters -->
                             <div id="advancedGradientBoostingFields" class="hidden">
                                 <h3>Gradient Boosting Model Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Gradient Boosting builds trees sequentially, each correcting previous errors. Often achieves high performance.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Gradient Boosting fits each tree to the residuals of the previous trees.</p>
                                 <label for="advancedGBn_estimators">N Estimators - Trees (integer >=1):</label>
                                 <input type="number" step=1 value=100 placeholder=100 min=1 id="advancedGBn_estimators" name="advancedGBn_estimators">
                                 <div><br></div>
@@ -3216,7 +3216,7 @@
                             <!-- Classifier Non-Essential Hyperparameters -->
                             <div id="advancedLogistic_classifierFields" class="hidden">
                                 <h3>Logistic Classifier Model Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Logistic regression for classification. Uses a sigmoid function to predict class probabilities.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Logistic regression computes class probabilities from a linear function through the logistic link.</p>
                                 <div class="nonreqHyperparams">
                                     <div class="toggle-container">
                                         <span class="optional-param-label">More options</span>
@@ -3294,7 +3294,7 @@
                             
                             <div id="advancedMLP_classifierFields" class="hidden">
                                 <h3>MLP Classifier Model Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Neural network classifier. Configure hidden layers and learning parameters for classification tasks.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Multi-Layer Perceptron classifier. Hidden layer sizes and learning rate are set below.</p>
                                 <div class="nonreqHyperparams">
                                     <div class="toggle-container">
                                         <span class="optional-param-label">More options</span>
@@ -3376,7 +3376,7 @@
                             
                             <div id="advancedRF_classifierFields" class="hidden">
                                 <h3>Random Forest Classifier Model Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Ensemble classifier using multiple decision trees. More trees generally improve accuracy but increase computation time.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Random Forest votes across decision trees fit on bootstrap samples. Run time grows with the tree count.</p>
                                 <label for="advancedClass_RFn_estmators">N Estimators - # of trees (integer >=1):</label>
                                 <input type="number" step=1 value=100 placeholder="100" min=1 id="advancedClass_RFn_estmators" name="advancedClass_RFn_estmators">
                                 <div class="nonreqHyperparams">
@@ -3433,7 +3433,7 @@
                             
                             <div id="advancedSVC_classifierFields" class="hidden">
                                 <h3>SVC Classifier Model Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Support Vector Classifier finds optimal decision boundaries between classes. Effective for complex classification problems.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Support Vector Classifier fits a maximum-margin boundary in the kernel space.</p>
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
                                     <div class="toggle-container">
@@ -3643,7 +3643,7 @@
                                 <!-- Field groups relocated from the legacy #advancedOptimization panel, which is never displayed. -->
                             <div id="advancedAdaBoostFields" class="hidden">
                                 <h3>AdaBoost Regressor Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">AdaBoost combines multiple weak learners sequentially, with each focusing on previous errors.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">AdaBoost fits weak learners in sequence and reweights rows the previous learners mispredicted.</p>
                                 <label for="advancedAdaBoostNEstimators">N Estimators - Number of estimators (integer >=1):</label>
                                 <input type="number" step=1 value=50 placeholder=50 min=1 id="advancedAdaBoostNEstimators" name="advancedAdaBoostNEstimators">
                                 <div><br></div>
@@ -3670,7 +3670,7 @@
                             </div>
                             <div id="advancedBaggingFields" class="hidden">
                                 <h3>Bagging Regressor Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Bagging trains multiple estimators on random subsets of data and averages predictions.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Bagging fits estimators on random subsets and averages the predictions.</p>
                                 <label for="advancedBaggingNEstimators">N Estimators - Number of base estimators (integer >=1):</label>
                                 <input type="number" step=1 value=10 placeholder=10 min=1 id="advancedBaggingNEstimators" name="advancedBaggingNEstimators">
                                 <div class="nonreqHyperparams">
@@ -3721,7 +3721,7 @@
                             </div>
                             <div id="advancedDecisionTreeFields" class="hidden">
                                 <h3>Decision Tree Regressor Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Decision trees split data recursively based on feature values to make predictions.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Decision tree splits rows recursively on feature thresholds.</p>
                                 <div class="nonreqHyperparams">
                                     <div class="toggle-container">
                                         <span><h3>Edit Hyperparameters?</h3></span>
@@ -3772,7 +3772,7 @@
                             </div>
                             <div id="advancedSGDFields" class="hidden">
                                 <h3>SGD Regressor Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Stochastic Gradient Descent for linear regression. Fast and scalable for large datasets.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Linear regression fit by stochastic gradient descent.</p>
                                 <label for="advancedSGDLoss">Loss Function:</label>
                                 <select name="advancedSGDLoss" id="advancedSGDLoss">
                                     <option value="squared_error">Squared Error</option>
@@ -3871,7 +3871,7 @@
                             </div>
                             <div id="advancedHistGradientBoostingFields" class="hidden">
                                 <h3>Histogram Gradient Boosting Regressor Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Fast gradient boosting using histogram-based tree building. More efficient than standard gradient boosting.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Gradient boosting with histogram-binned features. Faster than Gradient Boosting on large tables.</p>
                                 <label for="advancedHistGBLearningRate">Learning Rate (float >0):</label>
                                 <input type="number" value=0.1 placeholder=0.1 min="0.0000001" step="any" id="advancedHistGBLearningRate" name="advancedHistGBLearningRate">
                                 <div><br></div>
@@ -3942,7 +3942,7 @@
                             </div>
                             <div id="advancedHuberFields" class="hidden">
                                 <h3>Huber Regressor Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Robust regression that is less sensitive to outliers than standard linear regression.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Huber loss regression, which is less sensitive to outliers than squared loss.</p>
                                 <label for="advancedHuberEpsilon">Epsilon - Outlier threshold (float >1.0):</label>
                                 <input type="number" value=1.35 placeholder=1.35 min="1.0000001" step="any" id="advancedHuberEpsilon" name="advancedHuberEpsilon">
                                 <div><br></div>
@@ -3980,7 +3980,7 @@
                             </div>
                             <div id="advancedQuantileFields" class="hidden">
                                 <h3>Quantile Regressor Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Predicts conditional quantiles rather than the mean. Useful for understanding prediction uncertainty.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Predicts a conditional quantile rather than the mean.</p>
                                 <label for="advancedQuantileQuantile">Quantile (float (0,1)):</label>
                                 <input type="number" value=0.5 placeholder=0.5 min="0.0000001" max=0.999999 step="any" id="advancedQuantileQuantile" name="advancedQuantileQuantile">
                                 <div><br></div>
@@ -4015,7 +4015,7 @@
                             </div>
                             <div id="advancedLinearSVRFields" class="hidden">
                                 <h3>Linear SVR Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Linear Support Vector Regression. Fast for large datasets.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Linear Support Vector Regression.</p>
                                 <label for="advancedLinearSVRC">C - Regularization parameter (float >0):</label>
                                 <input type="number" value=1.0 placeholder=1.0 min="0.0000001" step="any" id="advancedLinearSVRC" name="advancedLinearSVRC">
                                 <div><br></div>
@@ -4123,7 +4123,7 @@
                             </div>
                             <div id="advancedPassiveAggressiveFields" class="hidden">
                                 <h3>Passive Aggressive Regressor Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Online learning algorithm that updates model only when prediction error exceeds threshold.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Passive Aggressive updates the weights only when the loss exceeds the margin.</p>
                                 <label for="advancedPassiveAggressiveC">C - Regularization strength (float >0):</label>
                                 <input type="number" value=1.0 placeholder=1.0 min="0.0000001" step="any" id="advancedPassiveAggressiveC" name="advancedPassiveAggressiveC">
                                 <div><br></div>
@@ -4197,7 +4197,7 @@
                             </div>
                             <div id="advancedRANSACFields" class="hidden">
                                 <h3>RANSAC Regressor Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Robust regression using RANSAC algorithm. Handles outliers well.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">RANSAC fits the base estimator on random inlier subsets and keeps the fit with the most inliers.</p>
                                 <label for="advancedRANSACMaxTrials">Max Trials - Maximum iterations (int >=1):</label>
                                 <input type="number" step=1 value=100 placeholder=100 min=1 id="advancedRANSACMaxTrials" name="advancedRANSACMaxTrials">
                                 <div class="nonreqHyperparams">
@@ -4235,7 +4235,7 @@
                             </div>
                             <div id="advancedTheilSenFields" class="hidden">
                                 <h3>Theil-Sen Regressor Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Robust regression using Theil-Sen estimator. Very robust to outliers.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Theil-Sen takes the spatial median of least-squares fits on subsets.</p>
                                 <div class="nonreqHyperparams">
                                     <div class="toggle-container">
                                         <span><h3>Edit Hyperparameters?</h3></span>
@@ -4276,7 +4276,7 @@
                             </div>
                             <div id="advancedRadiusNeighborsFields" class="hidden">
                                 <h3>Radius Neighbors Regressor Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Predicts using neighbors within a fixed radius. Useful for sparse datasets.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Predicts from the neighbors within a fixed radius.</p>
                                 <label for="advancedRadiusNeighborsRadius">Radius - Neighbor search radius (float >0):</label>
                                 <input type="number" value=1.0 placeholder=1.0 min="0.0000001" step="any" id="advancedRadiusNeighborsRadius" name="advancedRadiusNeighborsRadius">
                                 <div class="nonreqHyperparams">
@@ -4352,7 +4352,7 @@
                             </div>
                             <div id="advancedLARSFields" class="hidden">
                                 <h3>LARS Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Least Angle Regression. Good for high-dimensional data.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Least Angle Regression.</p>
                                 <div class="nonreqHyperparams">
                                     <div class="toggle-container">
                                         <span><h3>Edit Hyperparameters?</h3></span>
@@ -4757,7 +4757,7 @@
                             </div>
                             <div id="advancedGradientBoosting_classifierFields" class="hidden">
                                 <h3>Gradient Boosting Classifier Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Gradient Boosting builds trees sequentially, each correcting previous errors. Often achieves high performance.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Gradient Boosting fits each tree to the residuals of the previous trees.</p>
                                 <label for="advancedGradientBoostingClassifierNEstimators">N Estimators - Trees (integer >=1):</label>
                                 <input type="number" step=1 value=100 placeholder=100 min=1 id="advancedGradientBoostingClassifierNEstimators" name="advancedGradientBoostingClassifierNEstimators">
                                 <div><br></div>
@@ -4831,7 +4831,7 @@
                             </div>
                             <div id="advancedHistGradientBoosting_classifierFields" class="hidden">
                                 <h3>Histogram Gradient Boosting Classifier Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Fast gradient boosting using histogram-based tree building. More efficient than standard gradient boosting.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Gradient boosting with histogram-binned features. Faster than Gradient Boosting on large tables.</p>
                                 <label for="advancedHistGradientBoostingClassifierLearningRate">Learning Rate (float >0):</label>
                                 <input type="number" value=0.1 placeholder=0.1 min="0.0000001" step="any" id="advancedHistGradientBoostingClassifierLearningRate" name="advancedHistGradientBoostingClassifierLearningRate">
                                 <div><br></div>
@@ -4900,7 +4900,7 @@
                             </div>
                             <div id="advancedKNeighbors_classifierFields" class="hidden">
                                 <h3>K-Neighbors Classifier Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Classifies based on k nearest neighbors. Simple and effective for many problems.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Votes across the k nearest neighbors.</p>
                                 <label for="advancedKNeighborsClassifierNNeighbors">N Neighbors - Number of neighbors (int >=1):</label>
                                 <input type="number" step=1 value=5 placeholder=5 min=1 id="advancedKNeighborsClassifierNNeighbors" name="advancedKNeighborsClassifierNNeighbors">
                                 <div class="nonreqHyperparams">
@@ -4943,7 +4943,7 @@
                             </div>
                             <div id="advancedLDA_classifierFields" class="hidden">
                                 <h3>Linear Discriminant Analysis Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Linear classifier that finds optimal linear combination of features for class separation.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Linear Discriminant Analysis fits a linear boundary from class means and a shared covariance.</p>
                                 <div class="nonreqHyperparams">
                                     <div class="toggle-container">
                                         <span><h3>Edit Hyperparameters?</h3></span>
@@ -4982,7 +4982,7 @@
                             </div>
                             <div id="advancedLinearSVC_classifierFields" class="hidden">
                                 <h3>Linear SVC Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Linear Support Vector Classification. Fast for large datasets.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Linear Support Vector Classification.</p>
                                 <label for="advancedLinearSVCC">C - Regularization parameter (float >0):</label>
                                 <input type="number" value=1.0 placeholder=1.0 min="0.0000001" step="any" id="advancedLinearSVCC" name="advancedLinearSVCC">
                                 <div class="nonreqHyperparams">
@@ -5117,7 +5117,7 @@
                             </div>
                             <div id="advancedPassiveAggressive_classifierFields" class="hidden">
                                 <h3>Passive Aggressive Classifier Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Online learning algorithm that updates model only when prediction error exceeds threshold.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Passive Aggressive updates the weights only when the loss exceeds the margin.</p>
                                 <label for="advancedPassiveAggressiveClassifierC">C - Regularization strength (float >0):</label>
                                 <input type="number" value=1.0 placeholder=1.0 min="0.0000001" step="any" id="advancedPassiveAggressiveClassifierC" name="advancedPassiveAggressiveClassifierC">
                                 <div class="nonreqHyperparams">
@@ -5264,7 +5264,7 @@
                             </div>
                             <div id="advancedBernoulliNB_classifierFields" class="hidden">
                                 <h3>Bernoulli Naive Bayes Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Naive Bayes for binary/boolean features. Assumes features are independent.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Naive Bayes for binary features.</p>
                                 <div class="nonreqHyperparams">
                                     <div class="toggle-container">
                                         <span><h3>Edit Hyperparameters?</h3></span>
@@ -5290,7 +5290,7 @@
                             </div>
                             <div id="advancedCategoricalNB_classifierFields" class="hidden">
                                 <h3>Categorical Naive Bayes Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Naive Bayes for categorical features. Each feature is assumed to follow a categorical distribution.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Naive Bayes for categorical features.</p>
                                 <div class="nonreqHyperparams">
                                     <div class="toggle-container">
                                         <span><h3>Edit Hyperparameters?</h3></span>
@@ -5316,7 +5316,7 @@
                             </div>
                             <div id="advancedComplementNB_classifierFields" class="hidden">
                                 <h3>Complement Naive Bayes Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Adaptation of Multinomial Naive Bayes that works well with imbalanced datasets.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Complement Naive Bayes, a Multinomial variant for imbalanced classes.</p>
                                 <div class="nonreqHyperparams">
                                     <div class="toggle-container">
                                         <span><h3>Edit Hyperparameters?</h3></span>
@@ -5345,7 +5345,7 @@
                             </div>
                             <div id="advancedMultinomialNB_classifierFields" class="hidden">
                                 <h3>Multinomial Naive Bayes Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Naive Bayes for multinomial data. Good for text classification and count data.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Naive Bayes for count features.</p>
                                 <div class="nonreqHyperparams">
                                     <div class="toggle-container">
                                         <span><h3>Edit Hyperparameters?</h3></span>
@@ -5371,7 +5371,7 @@
                             </div>
                             <div id="advancedAffinityPropagationFields" class="hidden">
                                 <h3>Affinity Propagation Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Clustering by passing messages between data points. Automatically determines number of clusters.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Affinity Propagation passes messages between rows and sets the cluster count from the data.</p>
                                 <div class="nonreqHyperparams">
                                     <div class="toggle-container">
                                         <span><h3>Edit Hyperparameters?</h3></span>
@@ -5415,7 +5415,7 @@
                             </div>
                             <div id="advancedBisectingKmeansFields" class="hidden">
                                 <h3>Bisecting K-Means Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Hierarchical variant of K-Means that recursively splits clusters.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Bisecting K-Means splits one cluster at a time.</p>
                                 <label for="advancedBisectingKmeansNClusters">N Clusters - Number of clusters (int >=2):</label>
                                 <input type="number" step=1 value=8 placeholder=8 min=2 id="advancedBisectingKmeansNClusters" name="advancedBisectingKmeansNClusters">
                                 <div class="nonreqHyperparams">
@@ -5468,7 +5468,7 @@
                             </div>
                             <div id="advancedHDBSCANFields" class="hidden">
                                 <h3>HDBSCAN Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Hierarchical density-based clustering. Handles clusters of varying densities and noise points.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">HDBSCAN is density based, accepts clusters of different densities, and labels noise as -1.</p>
                                 <label for="advancedHDBSCANMinClusterSize">Min Cluster Size (int >=2):</label>
                                 <input type="number" step=1 value=5 placeholder=5 min=2 id="advancedHDBSCANMinClusterSize" name="advancedHDBSCANMinClusterSize">
                                 <div class="nonreqHyperparams">
@@ -5532,7 +5532,7 @@
                             </div>
                             <div id="advancedMeanshiftFields" class="hidden">
                                 <h3>Mean Shift Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Centroid-based clustering that finds modes in data density. Automatically determines number of clusters.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Mean Shift moves centroids to density modes and sets the cluster count from the data.</p>
                                 <div class="nonreqHyperparams">
                                     <div class="toggle-container">
                                         <span><h3>Edit Hyperparameters?</h3></span>
@@ -5573,7 +5573,7 @@
                             </div>
                             <div id="advancedMinibatchKmeansFields" class="hidden">
                                 <h3>Mini-Batch K-Means Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Faster variant of K-Means using mini-batches. Good for large datasets.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">K-Means fit on mini-batches.</p>
                                 <label for="advancedMinibatchKmeansNClusters">N Clusters - Number of clusters (int >=2):</label>
                                 <input type="number" step=1 value=8 placeholder=8 min=2 id="advancedMinibatchKmeansNClusters" name="advancedMinibatchKmeansNClusters">
                                 <div class="nonreqHyperparams">
@@ -5623,7 +5623,7 @@
                             </div>
                             <div id="advancedOPTICSFields" class="hidden">
                                 <h3>OPTICS Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Ordering points to identify clustering structure. Similar to DBSCAN but handles varying densities better.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">OPTICS orders rows by reachability distance and accepts clusters of different densities.</p>
                                 <label for="advancedOPTICSMinSamples">Min Samples (int >=1):</label>
                                 <input type="number" step=1 value=5 placeholder=5 min=1 id="advancedOPTICSMinSamples" name="advancedOPTICSMinSamples">
                                 <div class="nonreqHyperparams">
@@ -5689,7 +5689,7 @@
                                 <h3 style="margin-top: 0; margin-bottom: 16px; font-size: 1.2em; font-weight: 600;">Advanced Options</h3>
                                 
                                 <h4 style="margin-top: 24px; margin-bottom: 12px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 1.1em; font-weight: 600; color: #000000;">Feature Selection</h4>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Automatically select the most important features to improve model performance and reduce overfitting.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Keeps a subset of the indicator columns.</p>
                                 <div class="scaling-container">
                                     <label for="featureSelectionMethod">Feature Selection Method</label>
                                     <select name="featureSelectionMethod" id="featureSelectionMethod">
@@ -5705,7 +5705,7 @@
                                 </div>
 
                                 <h4 style="margin-top: 24px; margin-bottom: 12px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 1.1em; font-weight: 600; color: #000000;">Outlier Handling</h4>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Detect and handle outliers that may negatively impact model performance.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Removes or caps outlier rows in the training data.</p>
                                 <div class="scaling-container">
                                     <label for="outlierMethod">Outlier Detection Method</label>
                                     <select name="outlierMethod" id="outlierMethod">
@@ -5725,7 +5725,7 @@
                                 </div>
 
                                 <h4 style="margin-top: 24px; margin-bottom: 12px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 1.1em; font-weight: 600; color: #000000;">Hyperparameter Search</h4>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Automatically find optimal hyperparameter values. This can significantly increase processing time.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Searches hyperparameter values in place of the manual settings. Run time grows with the grid.</p>
                                 <div class="scaling-container">
                                     <label for="hyperparameterSearch">Enable Hyperparameter Search</label>
                                     <select name="hyperparameterSearch" id="hyperparameterSearch">
@@ -5740,11 +5740,11 @@
                                     <input type="number" min="2" max="10" value="5" id="searchCVFolds" name="searchCVFolds">
                                     <label for="searchNIter">Number of Iterations (Randomized/Bayesian)</label>
                                     <input type="number" min="10" max="100" value="50" id="searchNIter" name="searchNIter">
-                                    <p class="field-note">Parameter grids are automatically generated based on selected model</p>
+                                    <p class="field-note">The grid is generated for the selected model</p>
                                 </div>
 
                                 <h4 style="margin-top: 24px; margin-bottom: 12px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 1.1em; font-weight: 600; color: #000000;">Cross-Validation</h4>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Evaluate model performance across multiple data splits for more robust performance estimates.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Scores the model on repeated splits and reports the mean and spread.</p>
                                 <div class="scaling-container">
                                     <label for="advancedCrossValidationType">Cross-Validation Type</label>
                                     <select name="advancedCrossValidationType" id="advancedCrossValidationType">
@@ -5792,7 +5792,7 @@
                                     <button type="button" class='secondary-button' id="stopAdvancedButton" style="display: none; padding: 12px 24px;">Stop Model</button>
                                 </div>
                                 <p class="field-note" style="color: #856404; margin-top: 12px; margin-bottom: 0;">
-                                    <strong>Warning:</strong> Advanced options such as hyperparameter search, feature selection, and extensive cross-validation can take multiple hours to complete, especially with large datasets.
+                                    <strong>Warning:</strong> Hyperparameter search, feature selection, and cross-validation can run for hours on a large table.
                                 </p>
                             </div>
                         </div>
@@ -5808,7 +5808,7 @@
                         <div id="AdvancedClusterResultDiv" role="region" aria-label="Advanced clustering model results" class="hidden"></div>
                         <div id="AdvancedClassifierResultDiv" role="region" aria-label="Advanced classification model results" class="hidden"></div>
                         <div id="advancedResultsPlaceholder" style="padding: 40px; text-align: center; color: #666; font-style: italic;">
-                            <p>Results will appear here after you run a model.</p>
+                            <p>Results appear here after a model runs.</p>
                         </div>
                     </div>
                 </div>
@@ -5831,7 +5831,7 @@
                         <!-- Model Selection -->
                         <div class="preprocess-card" style="margin-bottom: 20px;">
                             <h3 style="margin-top: 0; margin-bottom: 12px;">Select Model (Optional)</h3>
-                            <p class="field-note" style="margin-bottom: 16px;">Choose a model algorithm, or let AutoML choose automatically.</p>
+                            <p class="field-note" style="margin-bottom: 16px;">A model, or blank for AutoML to select one.</p>
                             
                             <div id="automlNumericModels" class="hidden">
                                 <label for="automlNModels" style="display: block; margin-bottom: 8px; font-weight: 600;">Regression Model (Optional - AutoML will try multiple if not specified):</label>
@@ -5937,25 +5937,25 @@
                         
                         <div class="preprocess-card">
                             <h2>AutoML Configuration</h2>
-                            <p class="field-note" style="margin-bottom: 16px;">AutoML will automatically select the best model, optimize hyperparameters, handle feature selection and outliers, and perform cross-validation.</p>
+                            <p class="field-note" style="margin-bottom: 16px;">AutoML selects the model, searches hyperparameters, runs feature selection and outlier handling, and cross-validates.</p>
                             
                             <div class="scaling-container" style="margin-bottom: 20px;">
                                 <label for="automlIntensity" style="display: block; margin-bottom: 8px; font-weight: 600;">AutoML Intensity Level:</label>
                                 <select name="automlIntensity" id="automlIntensity" style="width: 100%; max-width: 400px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                                    <option value="quick">Quick (Fast, minimal preprocessing)</option>
-                                    <option value="medium" selected>Medium (Balanced, moderate preprocessing)</option>
-                                    <option value="long">Long (Thorough, comprehensive preprocessing)</option>
+                                    <option value="quick">Quick (hyperparameter search only)</option>
+                                    <option value="medium" selected>Medium (feature selection, outliers, randomized search)</option>
+                                    <option value="long">Long (feature selection, outliers, grid search)</option>
                                 </select>
                                 <p class="field-note" style="margin-top: 8px; font-size: 0.9em;">
-                                    <strong>Quick:</strong> Focuses on hyperparameter optimization only (no feature selection or outlier detection). Fastest option.<br>
-                                    <strong>Medium:</strong> Includes feature selection and outlier detection with moderate hyperparameter search. Good balance of speed and thoroughness.<br>
-                                    <strong>Long:</strong> Comprehensive preprocessing (feature selection, outlier detection) with exhaustive grid search. Slowest but most thorough.
+                                    <strong>Quick:</strong> hyperparameter search only.<br>
+                                    <strong>Medium:</strong> feature selection, outlier detection, and randomized search.<br>
+                                    <strong>Long:</strong> feature selection, outlier detection, and grid search. Slowest.
                                 </p>
                             </div>
                             
                             <div class="preprocess-card" style="margin-top: 20px;">
                                 <h2>AutoML Settings Summary</h2>
-                                <p class="field-note" style="margin-bottom: 16px;">AutoML will use the following configuration:</p>
+                                <p class="field-note" style="margin-bottom: 16px;">AutoML configuration:</p>
                                 <div id="automlSettingsDisplay" style="padding: 16px; background-color: #f0f7ff; border: 2px solid #357a53; border-radius: 8px; margin: 12px 0;">
                                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 0.95rem;">
                                         <div><strong>Model:</strong> <span id="automlDisplayModel" style="color: #2c3e50;">-</span></div>
@@ -5996,7 +5996,7 @@
                                     <button type="button" class='secondary-button' id="stopAutomlButton" style="display: none; padding: 12px 24px;">Stop AutoML</button>
                                 </div>
                                 <p class="field-note" style="color: #856404; margin-top: 12px; margin-bottom: 0;">
-                                    <strong>Warning:</strong> AutoML performs extensive optimization and may take several hours to complete, especially with large datasets.
+                                    <strong>Warning:</strong> AutoML can run for hours on a large table.
                                 </p>
                             </div>
                         </div>
@@ -6012,7 +6012,7 @@
                         <div id="AutoMLClusterResultDiv" role="region" aria-label="AutoML clustering model results" class="hidden"></div>
                         <div id="AutoMLClassifierResultDiv" role="region" aria-label="AutoML classification model results" class="hidden"></div>
                         <div id="automlResultsPlaceholder" style="padding: 40px; text-align: center; color: #666; font-style: italic;">
-                            <p>Results will appear here after you run AutoML.</p>
+                            <p>Results appear here after AutoML runs.</p>
                         </div>
                     </div>
                 </div>
@@ -6037,8 +6037,8 @@
 
     <div id="resetPopup" class="popup-container">
         <div class="popup-box">
-            <h2>Are you sure you want to restart?</h2>
-            <p>Restarting will lose all of your data</p>
+            <h2>Restart and discard the session?</h2>
+            <p>Restart clears the uploaded data and every result.</p>
             <button onclick="closeResetPopup()">Cancel</button> 
             &nbsp; &nbsp;
             <button class='orangebutton' onclick="fileUploadPage()">Restart</button> 

@@ -168,7 +168,7 @@ predictionForm.addEventListener('submit', async (e) => {
                 })() : '';
                 const inferenceDistLabel = 'Inference distribution';
                 previewChartHtml = `
-                    <h4 style="margin: 0 0 8px 0;">Inference visuals (${firstCol})</h4>
+                    <h4 style="margin: 0 0 8px 0;">Inference visuals (${escapeHtml(firstCol)})</h4>
                     <p style="margin: 0 0 10px 0; font-size: 0.9rem; color: #666;">Training Predicted vs Actual with inference points overlaid (left); inference distribution (right).</p>
                     <div class="inference-visuals-row" style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;">
                         ${(trainingViz || inferenceVizUrl) ? `<div class="inference-training-plot-wrap" style="flex: 0 1 320px; min-width: 200px;"><p style="margin: 0 0 6px 0; font-size: 0.85rem; font-weight: 600;">${inferenceVizUrl ? 'Predicted vs Actual (training + inference)' : 'Training plot + inference overlay'}</p>${leftPlotHtml}</div>` : ''}
@@ -227,7 +227,7 @@ predictionForm.addEventListener('submit', async (e) => {
             ` : '';
             const modelGraphicSectionHtml = trainingViz ? `
                 <h3 style="margin: 0 0 8px 0;">Model used (training performance)</h3>
-                <p style="margin: 0 0 12px 0; font-size: 0.95rem; color: #666;">Performance graphic from the model you trained.</p>
+                <p style="margin: 0 0 12px 0; font-size: 0.95rem; color: #666;">Performance graphic from the trained model.</p>
                 <img src="${trainingPerfUrl || trainingVizUrl}" alt="Training performance" class="inference-model-graphic-img" style="display: block; max-height: 400px; width: auto; object-fit: contain;">
             ` : '';
             const rightPanelHtml = (trainingSummaryTableHtml || modelGraphicSectionHtml) ? `
@@ -298,7 +298,7 @@ if (automlForm) {
         if (!processForm) {
             const errorDiv = getCachedElement('errorDiv');
             if (errorDiv) {
-                showError(errorDiv, 'Error: Unable to find model configuration. Please configure your data first.');
+                showError(errorDiv, 'No model configuration was found; the data must be configured first.');
                 errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
             return;
@@ -364,7 +364,7 @@ function wireAdvancedOptimizationFormSubmit(form) {
         if (!selectedModel) {
             const errorDiv = getCachedElement('errorDiv');
             if (errorDiv) {
-                showError(errorDiv, 'Please select a model before running with advanced options.');
+                showError(errorDiv, 'A model must be selected before a run with advanced options.');
                 errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
             return;
@@ -373,7 +373,7 @@ function wireAdvancedOptimizationFormSubmit(form) {
         if (!processForm) {
             const errorDiv = getCachedElement('errorDiv');
             if (errorDiv) {
-                showError(errorDiv, 'Error: Unable to find model configuration. Please configure your data first.');
+                showError(errorDiv, 'No model configuration was found; the data must be configured first.');
                 errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
             return;

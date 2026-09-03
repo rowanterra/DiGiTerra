@@ -1,4 +1,4 @@
-# Run tests on push and pull requests.
+# Lint and test on push and pull requests.
 name: Tests
 
 on:
@@ -10,21 +10,28 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r requirements-dev.txt
+          pip install -r requirements.txt -r requirements-dev.txt
 
-      - name: Set up Node (frontend lint)
+      - name: Check that every package in requirements.txt imports
+        run: python scripts/check_requirements.py
+
+      - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -33,10 +40,19 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Lint frontend
+      - name: Build and lint the frontend
         run: npm run lint
 
+      - name: Check that the committed bundle matches the split files
+        run: npm run check-bundle
+
+      - name: Run ruff
+        # The ruff baseline is not yet clean (592 findings on 2026-09-03), so this
+        # step reports without failing the job until the baseline is fixed.
+        continue-on-error: true
+        run: ruff check .
+
       - name: Run tests
-        run: pytest tests/ -v --tb=short
+        run: pytest tests/ -q --tb=short
         env:
           MPLBACKEND: Agg

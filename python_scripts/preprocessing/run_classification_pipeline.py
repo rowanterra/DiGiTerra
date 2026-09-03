@@ -49,7 +49,7 @@ def _encode_ordinal_target(y_part, label_to_int: Dict[str, int]) -> pd.Series:
         if k not in label_to_int:
             raise ValueError(
                 f"Target label {k!r} has no ordinal mapping; known labels: {sorted(label_to_int.keys())!r}. "
-                "Check for inconsistent label types (e.g. int vs float) or typos."
+                "Check for mixed label types (int and float) or typos."
             )
         return label_to_int[k]
 
@@ -159,7 +159,7 @@ def run_classification(model, model_name,
     )
 
     # Ordinal encoding for pre-made bins: map labels to integers in numeric bin order
-    # so the classifier "understands" order (e.g. <50 < 50-150 < 150-500 < >500).
+    # so the classifier fits ordered classes (<50, 50-150, 150-500, >500).
     ordinal_classes = None
     label_to_int = None
     int_to_label = None
@@ -193,7 +193,7 @@ def run_classification(model, model_name,
     train_indices_kept = X_train_s.index  # Track which training samples are kept
     outlier_info = None
     if outlier_method != 'none':
-        train_index_before = X_train_s.index  # capture so we can report which rows were removed
+        train_index_before = X_train_s.index  # kept to report which rows were removed
         X_train_s, X_test_s, outlier_mask = apply_outlier_handling(
             X_train_s, X_test_s, y_train, outlier_method, outlier_action, seed=seed
         )
@@ -233,7 +233,7 @@ def run_classification(model, model_name,
                 'selected_features': selected_features,
             }
 
-    # Fit using ordinal integers when we have pre-made bins so the model sees ordered classes (0,1,2,...)
+    # fit on ordinal integers when bins are pre-made so the model sees ordered classes (0,1,2,...)
     fit_y = y_train_int if y_train_int is not None else y_train
     fit_y_series = fit_y if isinstance(fit_y, pd.Series) else pd.Series(np.asarray(fit_y).ravel())
     if fit_y_series.isna().any():
@@ -258,7 +258,7 @@ def run_classification(model, model_name,
         # Map integer predictions back to original bin labels for report and display
         y_pred_1d = np.array([int_to_label[int(p)] for p in np.ravel(y_pred)])
         classes = ordinal_classes
-        # int_to_label holds the str(v) forms the vocabulary was built from, so a
+        # int_to_label records the str(v) forms the vocabulary was built from, so a
         # numeric target would leave y_test as ints against string predictions and
         # classification_report would reject the mixed input.
         y_test_1d = np.array([str(v) for v in np.ravel(y_test)])
@@ -271,7 +271,7 @@ def run_classification(model, model_name,
     report = classification_report(y_test_1d, y_pred_1d, output_dict=True)
     cm = confusion_matrix(y_test_1d, y_pred_1d, labels=classes)
 
-    # Calculate comprehensive additional metrics
+    # compute additional metrics
     from python_scripts.preprocessing.calculate_all_metrics import calculate_classification_metrics
     additional_metrics = calculate_classification_metrics(
         y_test_1d, y_pred_1d,

@@ -1,5 +1,5 @@
 from sklearn.cluster import MeanShift
-from python_scripts.preprocessing.run_clustering_pipeline import run_clustering
+from python_scripts.preprocessing.run_clustering_pipeline import run_clustering, clustering_options
 
 def train_meanshift(train_data, X, units, X_scaler_type,
                  seed, sigfig, quantileBinDict, useTransformer, categorical_cols, test_size, **kwargs):
@@ -19,5 +19,5 @@ def train_meanshift(train_data, X, units, X_scaler_type,
         X,
         units, X_scaler_type,
         seed, sigfig, quantileBinDict, useTransformer, categorical_cols, test_size,
-        k_min=2, k_max=8
-    )
+        k_min=2, k_max=8,
+        **clustering_options(kwargs))

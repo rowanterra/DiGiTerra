@@ -354,7 +354,7 @@ def apply_hyperparameter_search(
                         progress = min(90, 5 + (elapsed / estimated_total_time) * 85)
                         progress_tracker.update_stage('hyperparameter_search', 'running', progress,
                                                     f'Searching... ({int(elapsed)}s elapsed, ~{total_combinations} combinations)')
-                # Wait with timeout so we can check the event periodically
+                # wait with a timeout so the cancel event is checked periodically
                 search_complete.wait(timeout=2)  # Check every 2 seconds
         
         progress_thread = threading.Thread(target=update_progress_estimate, daemon=True)

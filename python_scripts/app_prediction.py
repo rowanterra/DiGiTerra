@@ -77,7 +77,7 @@ def run_predict(
     if store.get("model_type") == "cluster":
         m = store["model"]
         if not (hasattr(m, "predict") and callable(getattr(m, "predict", None))):
-            return ({"error": "Inference on new data is not supported for this cluster model (e.g. Spectral, DBSCAN, OPTICS). Use a model that supports prediction (e.g. KMeans, GMM) to assign new points to clusters."}, 400)
+            return ({"error": "This cluster model (Spectral, DBSCAN, or OPTICS) has no predict method. KMeans and GMM assign new rows to clusters."}, 400)
     infer_cfg = store.get("inference_config", {})
     indicator_names = infer_cfg.get("indicator_names")
     drop_missing = normalize_preprocess_mode_fn(infer_cfg.get("drop_missing", "none"))

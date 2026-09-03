@@ -1,68 +1,60 @@
-# DiGiTerra
+# DiGiTerra 0.1.0
 
-Flask-based UI plus a desktop wrapper. **macOS, Windows, Linux.**
+[![tests](https://github.com/rowanterra/DiGiTerra/actions/workflows/tests.yml/badge.svg)](https://github.com/rowanterra/DiGiTerra/actions/workflows/tests.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-forestgreen.svg)](https://github.com/rowanterra/DiGiTerra/blob/main/LICENSE)
+![Python 3.11 to 3.12](https://img.shields.io/badge/python-3.11%20to%203.12-forestgreen.svg)
 
-## What to run (after you clone)
+A Flask application for data exploration, preprocessing, model training, and inference on CSV data, with a desktop wrapper for macOS, Windows, and Linux.
 
-From the **project root** (the folder that has `app.py` and `requirements.txt`):
+## Install and run
+
+From the project root (the directory with `app.py` and `requirements.txt`):
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Then run **one** of these (they pull everything from `core/`, `routes/`, `python_scripts/`):
+Then run one of the two entry points:
 
 | Goal | Command |
 |------|---------|
-| **Web app** (browser) | `python app.py` → open http://127.0.0.1:5000 |
-| **Desktop app** (window) | `python desktop_app.py` |
+| Web app in the browser | `python app.py`, then open http://127.0.0.1:5000 |
+| Desktop window | `python desktop_app.py` |
 
-Tests: `pip install -r requirements-dev.txt` then `pytest tests/`.  
-Production web server: `gunicorn app:app` (see `deploy/README.md` and `docs/HANDOFF.md`).
+Both entry points import the application from `core/`, `routes/`, and `python_scripts/`.
 
-**Root is kept minimal:** only these two entry scripts plus standard config (`requirements.txt`, `README.md`, etc.). All app logic lives in `core/`, `routes/`, `python_scripts/`, `scripts/`, and `docs/`.
+Tests: `pip install -r requirements-dev.txt` then `MPLBACKEND=Agg pytest tests/ -q`, or `make test`. Production web server: `gunicorn --workers 1 app:app` (see `deploy/README.md`). `make dev` installs the Python and npm dependencies, and `make check` runs lint, tests, the bundle check, and the requirements check.
 
-## End-user install (no Terminal)
+## End-user install without a terminal
+
+The prebuilt application contains the Python interpreter and every dependency, so an end user does not install Python or pip.
 
 ### macOS
-Provide a prebuilt `DiGiTerra.app` (or `.dmg` containing it). End users can:
 
-1. Download the app from Releases (or your distribution link).
+1. Download `DiGiTerra.app` (or the `.dmg` that contains it) from Releases.
 2. Drag `DiGiTerra.app` into `/Applications`.
-3. Double-click to launch.
+3. Double-click the app.
 
 ### Windows
-Provide a prebuilt `DiGiTerra` folder. End users can:
 
-1. Download the folder from Releases.
-2. Extract the folder to their desired location (e.g., `C:\Program Files\DiGiTerra`).
-3. Double-click `DiGiTerra.exe` to launch.
+1. Download the `DiGiTerra` folder from Releases.
+2. Extract the folder, for example to `C:\Program Files\DiGiTerra`.
+3. Double-click `DiGiTerra.exe`.
 
 ### Linux
-Provide a prebuilt `DiGiTerra` folder. End users can:
 
-1. Download the folder from Releases.
-2. Extract the folder to their desired location (e.g., `~/Applications/DiGiTerra`).
-3. Make the executable: `chmod +x DiGiTerra/DiGiTerra`
-4. Double-click `DiGiTerra` or run from terminal: `./DiGiTerra/DiGiTerra`
+1. Download the `DiGiTerra` folder from Releases.
+2. Extract the folder, for example to `~/Applications/DiGiTerra`.
+3. Run `chmod +x DiGiTerra/DiGiTerra`.
+4. Double-click `DiGiTerra` or run `./DiGiTerra/DiGiTerra`.
 
-No Python, pip, or Terminal steps are required for end users when you distribute
-a prebuilt application. The compiled application contains all Python dependencies inside it.
+## Example datasets
 
-## Local development (browser)
+The `examples/` directory contains 9 CSV files: 3 classification (Iris, Wine, Breast cancer), 3 regression (Diabetes, Synthetic, Linnerud), and 3 feature-only clustering copies. `examples/README.md` lists the column setup for each file.
 
-```bash
-pip install -r requirements.txt
-python app.py
-```
+## Regression stability across seeds
 
-Then open `http://127.0.0.1:5000`. For version constraints and install verification, see `docs/DEPENDENCIES.md`.
-
-**Example datasets:** The `examples/` directory contains 9 CSVs: 3 classification (Iris, Wine, Breast cancer), 3 regression (Diabetes, Synthetic, Linnerud), and 3 clustering (feature-only versions). See `examples/README.md` for usage.
-
-## Regression robustness check (multi-seed)
-
-To confirm regression performance is stable (not seed-dependent), run:
+`python_scripts/preprocessing/evaluate_regression_robustness.py` repeats the train/test split and cross-validation over a range of seeds and records the spread:
 
 ```bash
 python python_scripts/preprocessing/evaluate_regression_robustness.py \
@@ -78,134 +70,87 @@ python python_scripts/preprocessing/evaluate_regression_robustness.py \
   --output-stem tree_robustness
 ```
 
-This writes:
-- `output/tree_robustness_per_seed.csv` (each seed/model/feature-set run)
-- `output/tree_robustness_summary.csv` (median/mean/std and 95% empirical interval)
+The script writes `output/tree_robustness_per_seed.csv` (one row per seed, model, and feature set) and `output/tree_robustness_summary.csv` (median, mean, standard deviation, and 95% empirical interval).
 
-## Local development (desktop window)
+## Building the desktop application
 
-```bash
-pip install -r requirements.txt
-python desktop_app.py
-```
+These steps are for maintainers. Run every command from the project root.
 
-## Building Desktop Applications
-
-> These steps are for maintainers building the distributable. Run all commands from the project root (the directory containing `app.py` and the `build/` folder).
-
-### Prerequisites
-
-1. Install build tooling and app dependencies:
+1. Install the dependencies and PyInstaller:
 
 ```bash
 pip install -r requirements.txt
 pip install pyinstaller
 ```
 
-### macOS
+2. Run the build for the platform.
 
-**Option 1: Using the build script (recommended):**
+macOS:
+
 ```bash
 chmod +x build/build_macos.sh
 ./build/build_macos.sh
 ```
 
-**Option 2: Manual build:**
-```bash
-pyinstaller build/DiGiTerra.spec
-```
+or `pyinstaller build/DiGiTerra.spec`. The result is `dist/DiGiTerra.app`. macOS needs an `.icns` icon; `build/DiGiTerra.spec` describes how to make one.
 
-The resulting `DiGiTerra.app` will be in the `dist/` directory. Distribute that
-`.app` (or wrap it in a `.dmg`) so users can double-click the app without
-launching Terminal or installing dependencies.
+Windows:
 
-macOS requires `.icns` format for app icons. See `build/DiGiTerra.spec` for instructions on creating the icon file.
-
-### Windows
-
-**Option 1: Using the build script (recommended):**
 ```cmd
 build\build_windows.bat
 ```
 
-**Option 2: Manual build:**
-```cmd
-pyinstaller build\DiGiTerra_Windows.spec
-```
+or `pyinstaller build\DiGiTerra_Windows.spec`. The result is the `dist\DiGiTerra` folder with `DiGiTerra.exe`. The spec references `static/Terra_Axe_Logo.ico`.
 
-The resulting `DiGiTerra` folder (containing `DiGiTerra.exe` and dependencies) will be in the `dist/` directory. Distribute the entire folder to users.
+Linux:
 
-Windows uses `.ico` format for icons. The spec file references `static/Terra_Axe_Logo.ico`.
-
-### Linux
-
-**Option 1: Using the build script (recommended):**
 ```bash
 chmod +x build/build_linux.sh
 ./build/build_linux.sh
 ```
 
-**Option 2: Manual build:**
-```bash
-pyinstaller build/DiGiTerra_Linux.spec
-```
+or `pyinstaller build/DiGiTerra_Linux.spec`. The result is the `dist/DiGiTerra` folder. Run `chmod +x dist/DiGiTerra/DiGiTerra` before distribution.
 
-The resulting `DiGiTerra` folder (containing the `DiGiTerra` executable and dependencies) will be in the `dist/` directory. Distribute the entire folder to users.
+## Requirements check
 
-Give the executable run permission: `chmod +x dist/DiGiTerra/DiGiTerra`
-
-## Dependency audit (maintainers)
-
-To avoid missing imports, run a quick dependency scan whenever you add new
-Python imports:
-
-```bash
-python scripts/check_requirements.py
-```
+`python scripts/check_requirements.py` imports each package listed in `requirements.txt` and reports the ones that fail to import. The script does not scan the source for imports, so a package that the code needs but `requirements.txt` omits is not detected.
 
 ## Configuration
 
-The desktop launcher uses a random open port by default. You can override the
-port with:
+The desktop launcher picks a random open port. `DIGITERRA_PORT` overrides the port:
 
-**macOS/Linux:**
 ```bash
 export DIGITERRA_PORT=5050
 ```
 
-**Windows:**
-```cmd
-set DIGITERRA_PORT=5050
-```
+On Windows, `set DIGITERRA_PORT=5050`.
 
-If the desktop app closes immediately, enable debug logging and check the log
-file:
+If the desktop app closes at once, set `DIGITERRA_DEBUG=1` (`set DIGITERRA_DEBUG=1` on Windows) and read the log file:
 
-**macOS/Linux:**
-```bash
-export DIGITERRA_DEBUG=1
-```
+| Platform | Log file |
+|----------|----------|
+| macOS | `~/Library/Logs/DiGiTerra/digiterra.log` |
+| Windows | `%APPDATA%\DiGiTerra\Logs\digiterra.log` |
+| Linux | `~/.cache/DiGiTerra/logs/digiterra.log` (under `XDG_CACHE_HOME` when set) |
 
-**Windows:**
-```cmd
-set DIGITERRA_DEBUG=1
-```
+Application data, including generated visualizations:
 
-**Log file locations:**
-- **macOS**: `~/Library/Logs/DiGiTerra/digiterra.log`
-- **Windows**: `%APPDATA%\DiGiTerra\Logs\digiterra.log`
-- **Linux**: `~/.cache/DiGiTerra/logs/digiterra.log`
+| Platform | Directory |
+|----------|-----------|
+| macOS | `~/Library/Application Support/DiGiTerra/user_visualizations/` |
+| Windows | `%APPDATA%\DiGiTerra\user_visualizations\` |
+| Linux | `~/.local/share/DiGiTerra/user_visualizations/` (under `XDG_DATA_HOME` when set) |
 
-**Application data locations:**
-- **macOS**: `~/Library/Application Support/DiGiTerra/user_visualizations/`
-- **Windows**: `%APPDATA%\DiGiTerra\user_visualizations\`
-- **Linux**: `~/.local/share/DiGiTerra/user_visualizations/`
+`docs/DEPENDENCIES.md` lists the version pins and the install check.
 
-## Deployment (Docker and Kubernetes)
+## Docker and Kubernetes
 
-Docker and Kubernetes (Helm) assets live under `deploy/`. See `deploy/README.md` for
-Docker build/run and Helm install instructions.
+Docker and Helm assets are under `deploy/`. `deploy/README.md` describes the Docker build and the Helm install.
 
 ## Accessibility
 
-DiGiTerra supports assistive technologies: ARIA attributes, keyboard navigation, screen reader announcements, and accessible form labels. A skip link is provided for keyboard users. See the Accessibility section in `docs/documentation.md` for details.
+The page uses ARIA attributes, keyboard navigation with a skip link, screen reader announcements through live regions, and labeled form controls. The Accessibility section of `docs/documentation.md` lists the details.
+
+## License
+
+MIT. See `LICENSE`.

@@ -23,7 +23,7 @@ def preprocess():
 
     store = get_session_storage()
     if "data" not in store:
-        return jsonify({"error": "No data uploaded. Please upload a file first."}), HTTP_BAD_REQUEST
+        return jsonify({"error": "No data uploaded. Upload a file first."}), HTTP_BAD_REQUEST
 
     required_fields = ["indicators", "predictors", "stratify"]
     missing_fields = [f for f in required_fields if f not in data]
@@ -47,7 +47,7 @@ def preprocess():
             indicator_names = df.columns[selected_indicators].tolist()
         except Exception as e2:
             logger.error("Error in preprocess: %s", e2, exc_info=True)
-            return jsonify({"error": f"Invalid column indices provided. This may be due to duplicate column names in your CSV file: {str(e2)}"}), HTTP_BAD_REQUEST
+            return jsonify({"error": f"Invalid column indices, possibly from duplicate column names in the CSV: {str(e2)}"}), HTTP_BAD_REQUEST
 
     try:
         if isinstance(stratify, (int, np.integer)):
@@ -74,7 +74,7 @@ def preprocess():
         pred_list = {int(p) for p in pred_raw if isinstance(p, (int, np.integer))}
         if strat_idx & pred_list:
             return jsonify({
-                "error": "Do not stratify by your target column. That would leak target information into the train/test split. Choose a different column to stratify by."
+                "error": "The stratify column is the target column, which leaks the target into the split. Select a different column."
             }), HTTP_BAD_REQUEST
 
     store["last_preprocess_request"] = {

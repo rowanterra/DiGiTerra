@@ -11,8 +11,7 @@ def train_lasso_cv(model_type, train_data, target_variables, use_stratified_spli
                 progress_tracker=None, **kwargs):
 
     model = LassoCV(eps=kwargs.get('eps', 1e-3),
-                   n_alphas=kwargs.get('n_alphas', 100),
-                   alphas=kwargs.get('alphas', None),
+                   alphas=kwargs.get('alphas') or int(kwargs.get('n_alphas') or 100),
                    fit_intercept=kwargs.get('fit_intercept', True),
                    precompute=kwargs.get('precompute', 'auto'),
                    max_iter=kwargs.get('max_iter', 1000),

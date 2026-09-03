@@ -175,11 +175,15 @@ function initModelingModeSelectionSync() {
     });
 }
 
-// HTML escape utility to prevent XSS
+// HTML escape utility. Escapes the five characters that matter in both text and
+// attribute position, so the result is safe inside value="..." as well.
 function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    return String(text ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 // Error display utility
@@ -384,7 +388,7 @@ function switchModelingMode(mode) {
  * Resolve a hyperparameter control for the modeling mode in use.
  *
  * The Simple and Advanced sections offer the same optional parameters. The
- * Advanced copies carry an "advanced" prefix so the document has unique ids;
+ * Advanced copies have an "advanced" prefix so the document has unique ids;
  * this returns the Advanced node while Advanced or AutoML mode is selected and
  * the plain node otherwise.
  */
@@ -400,7 +404,7 @@ function getModeScopedElement(id) {
 }
 window.getModeScopedElement = getModeScopedElement;
 
-// The Advanced section carries its own hyperparameter fields, so nothing is cloned
+// The Advanced section has its own hyperparameter fields, so nothing is cloned
 // at runtime any more. Kept as a no-op because switchModelingMode still calls it.
 function ensureAdvancedHyperparametersAvailable() {}
 
@@ -1494,7 +1498,7 @@ function downloadAdditionalInfoTable(tableData, sheetName, timestamp) {
         .catch(error => {
             console.error('Error downloading additional information:', error);
             const errDiv = getCachedElement('errorDiv');
-            if (errDiv) { showError(errDiv, 'Error downloading file. Please try again.'); }
+            if (errDiv) { showError(errDiv, 'The file download failed.'); }
         });
 }
 

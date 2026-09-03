@@ -11,3 +11,11 @@ python_files = ["test_*.py"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short -p no:dash"
 filterwarnings = ["ignore:Matplotlib", "ignore:Fontconfig"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+exclude = ["node_modules", ".venv", "build", "dist"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

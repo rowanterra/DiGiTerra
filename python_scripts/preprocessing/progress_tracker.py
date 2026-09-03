@@ -115,7 +115,7 @@ class ProgressTracker:
         """Mark the run as failed and drive overall progress to the terminal value.
 
         The progress stream ends only when overall progress reaches the completion
-        threshold. Leaving a failed run below it holds the stream open until its
+        threshold. A failed run left below the threshold keeps the stream open until the
         one-hour timeout and the error never reaches the client.
         """
         with self.lock:
