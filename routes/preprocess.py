@@ -1,4 +1,5 @@
 """Model preprocessing route."""
+
 import logging
 
 import numpy as np
@@ -47,7 +48,9 @@ def preprocess():
             indicator_names = df.columns[selected_indicators].tolist()
         except Exception as e2:
             logger.error("Error in preprocess: %s", e2, exc_info=True)
-            return jsonify({"error": f"Invalid column indices, possibly from duplicate column names in the CSV: {str(e2)}"}), HTTP_BAD_REQUEST
+            return jsonify(
+                {"error": f"Invalid column indices, possibly from duplicate column names in the CSV: {str(e2)}"}
+            ), HTTP_BAD_REQUEST
 
     try:
         if isinstance(stratify, (int, np.integer)):
@@ -60,9 +63,9 @@ def preprocess():
                 stratify_name = str(stratify_name)
     except (KeyError, IndexError, TypeError, ValueError):
         # A stratify value that names no column is a client error, not a server fault.
-        return jsonify({
-            "error": f"Stratify selection {stratify!r} does not match a column in this file."
-        }), HTTP_BAD_REQUEST
+        return jsonify(
+            {"error": f"Stratify selection {stratify!r} does not match a column in this file."}
+        ), HTTP_BAD_REQUEST
 
     output_type = (data.get("outputType") or "").strip()
     # Clustering has no supervised target, so the guard applies to everything else.
@@ -73,17 +76,22 @@ def preprocess():
         pred_raw = selected_predictors if isinstance(selected_predictors, (list, tuple)) else [selected_predictors]
         pred_list = {int(p) for p in pred_raw if isinstance(p, (int, np.integer))}
         if strat_idx & pred_list:
-            return jsonify({
-                "error": "The stratify column is the target column, which leaks the target into the split. Select a different column."
-            }), HTTP_BAD_REQUEST
+            return jsonify(
+                {
+                    "error": "The stratify column is the target column, which leaks the target into the split. Select "
+                    "a different column."
+                }
+            ), HTTP_BAD_REQUEST
 
     store["last_preprocess_request"] = {
         "indicators": selected_indicators,
         "predictors": selected_predictors,
         "stratify": stratify,
     }
-    return jsonify({
-        "predictors": [str(p)[:COLUMN_NAME_DISPLAY_LENGTH] for p in predictor_names],
-        "indicators": [str(i)[:COLUMN_NAME_DISPLAY_LENGTH] for i in indicator_names],
-        "stratify": stratify_name[:COLUMN_NAME_DISPLAY_LENGTH] if stratify_name else "",
-    })
+    return jsonify(
+        {
+            "predictors": [str(p)[:COLUMN_NAME_DISPLAY_LENGTH] for p in predictor_names],
+            "indicators": [str(i)[:COLUMN_NAME_DISPLAY_LENGTH] for i in indicator_names],
+            "stratify": stratify_name[:COLUMN_NAME_DISPLAY_LENGTH] if stratify_name else "",
+        }
+    )

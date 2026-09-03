@@ -1,4 +1,5 @@
 """Unit tests for python_scripts.preprocessing.utilities."""
+
 from python_scripts.preprocessing.utilities import sort_class_labels_numeric_bins
 
 

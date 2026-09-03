@@ -3,8 +3,19 @@ from sklearn.cluster import SpectralClustering
 from python_scripts.preprocessing.run_clustering_pipeline import clustering_options, run_clustering
 
 
-def train_spectral(train_data, X, units, X_scaler_type,
-                   seed, sigfig, quantileBinDict, useTransformer, categorical_cols, test_size, **kwargs):
+def train_spectral(
+    train_data,
+    X,
+    units,
+    X_scaler_type,
+    seed,
+    sigfig,
+    quantileBinDict,
+    useTransformer,
+    categorical_cols,
+    test_size,
+    **kwargs,
+):
     model = SpectralClustering(
         n_clusters=kwargs.get("n_clusters", 3),
         eigen_solver=kwargs.get("eigen_solver", None),
@@ -24,10 +35,19 @@ def train_spectral(train_data, X, units, X_scaler_type,
     )
 
     return run_clustering(
-        model, "spectral",
+        model,
+        "spectral",
         train_data,
         X,
-        units, X_scaler_type,
-        seed, sigfig, quantileBinDict, useTransformer, categorical_cols, test_size,
-        k_min=2, k_max=8,
-        **clustering_options(kwargs))
+        units,
+        X_scaler_type,
+        seed,
+        sigfig,
+        quantileBinDict,
+        useTransformer,
+        categorical_cols,
+        test_size,
+        k_min=2,
+        k_max=8,
+        **clustering_options(kwargs),
+    )

@@ -5,6 +5,7 @@ bounded and thread-safe: entries are evicted oldest-first once the cap is reache
 and every access takes a lock because training runs in a background thread while
 the browser keeps polling.
 """
+
 import os
 import threading
 from collections import OrderedDict

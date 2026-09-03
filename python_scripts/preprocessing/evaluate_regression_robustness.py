@@ -196,12 +196,7 @@ def aggregate_results(per_seed_results: pd.DataFrame) -> pd.DataFrame:
         Test_MAE_Std=("Test_MAE", "std"),
     )
 
-    q = (
-        per_seed_results.groupby(group_cols)["Test_R2"]
-        .quantile([0.025, 0.975])
-        .unstack()
-        .reset_index()
-    )
+    q = per_seed_results.groupby(group_cols)["Test_R2"].quantile([0.025, 0.975]).unstack().reset_index()
     q.columns = group_cols + ["Test_R2_P2_5", "Test_R2_P97_5"]
     summary = summary.merge(q, on=group_cols, how="left")
     return summary.sort_values(by="Test_R2_Median", ascending=False).reset_index(drop=True)

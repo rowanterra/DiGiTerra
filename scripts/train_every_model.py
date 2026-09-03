@@ -9,6 +9,7 @@ reported, since the UI would send None for them.
 Usage:
     MPLBACKEND=Agg .venv/bin/python scripts/train_every_model.py [--only NAME ...] [--json out.json]
 """
+
 import argparse
 import json
 import os
@@ -72,12 +73,23 @@ DEFAULT_FILLS = {
 }
 
 BASE = dict(
-    hyperparameters={}, nonreq=False, scaler="standard", units="", sigfig=3,
-    seedValue=42, testSize="0.20", stratifyBool=False, dropMissing="none",
-    imputeStrategy="none", dropZero="none",
+    hyperparameters={},
+    nonreq=False,
+    scaler="standard",
+    units="",
+    sigfig=3,
+    seedValue=42,
+    testSize="0.20",
+    stratifyBool=False,
+    dropMissing="none",
+    imputeStrategy="none",
+    dropZero="none",
     quantileBinDict={"quantile": 0, "bin": 0, "binsLabel": ""},
-    useTransformer="No", transformerCols=[], filename="sweep.csv",
-    crossValidationType="None", modelingMode="simple",
+    useTransformer="No",
+    transformerCols=[],
+    filename="sweep.csv",
+    crossValidationType="None",
+    modelingMode="simple",
 )
 
 
@@ -128,8 +140,12 @@ def run_one(name, problem_type, wait=300):
     secs = time.time() - t0
     status = "fail" if (res is None or "error" in res) else "pass"
     return {
-        "model": name, "task": problem_type, "status": status, "seconds": round(secs, 2),
-        "dataset": csv.name, "filled_defaults": filled,
+        "model": name,
+        "task": problem_type,
+        "status": status,
+        "seconds": round(secs, 2),
+        "dataset": csv.name,
+        "filled_defaults": filled,
         "error": (res or {}).get("error") if status == "fail" else None,
     }
 
@@ -140,20 +156,35 @@ def _run_parallel(args, names):
 
     def child(name):
         if MODEL_REGISTRY[name][0] is None:
-            return {"model": name, "task": MODEL_REGISTRY[name][1], "status": "skip", "seconds": 0.0,
-                    "dataset": None, "filled_defaults": [], "error": "no train function registered"}
+            return {
+                "model": name,
+                "task": MODEL_REGISTRY[name][1],
+                "status": "skip",
+                "seconds": 0.0,
+                "dataset": None,
+                "filled_defaults": [],
+                "error": "no train function registered",
+            }
         env = dict(os.environ)
         sub = Path(tempfile.mkdtemp(prefix=f"dgt_sweep_{name}_"))
         env["DIGITERRA_APP_SUPPORT_DIR"] = str(sub)
         env["DIGITERRA_OUTPUT_DIR"] = str(sub / "vis")
-        proc = subprocess.run([sys.executable, __file__, "--_child", name], capture_output=True, text=True,
-                              env=env, cwd=ROOT, timeout=900)
+        proc = subprocess.run(
+            [sys.executable, __file__, "--_child", name], capture_output=True, text=True, env=env, cwd=ROOT, timeout=900
+        )
         last = proc.stdout.strip().splitlines()[-1] if proc.stdout.strip() else ""
         try:
             return json.loads(last)
         except Exception:
-            return {"model": name, "task": MODEL_REGISTRY[name][1], "status": "fail", "seconds": 0.0,
-                    "dataset": None, "filled_defaults": [], "error": (proc.stderr or proc.stdout)[-600:]}
+            return {
+                "model": name,
+                "task": MODEL_REGISTRY[name][1],
+                "status": "fail",
+                "seconds": 0.0,
+                "dataset": None,
+                "filled_defaults": [],
+                "error": (proc.stderr or proc.stdout)[-600:],
+            }
 
     rows = []
     with ThreadPoolExecutor(max_workers=args.workers) as ex:
@@ -161,7 +192,10 @@ def _run_parallel(args, names):
             rows.append(row)
             extra = f"  filled={row['filled_defaults']}" if row["filled_defaults"] else ""
             err = f"  {str(row['error'])[:160]}" if row["error"] else ""
-            print(f"{row['model']:32s} {row['task']:14s} {row['status']:5s} {row['seconds']:7.2f}s{extra}{err}", flush=True)
+            print(
+                f"{row['model']:32s} {row['task']:14s} {row['status']:5s} {row['seconds']:7.2f}s{extra}{err}",
+                flush=True,
+            )
     if args.json:
         Path(args.json).write_text(json.dumps(rows, indent=2, default=str))
     n_fail = sum(r["status"] == "fail" for r in rows)
@@ -187,8 +221,17 @@ def main():
         if args.only and name not in args.only:
             continue
         if train_fn is None:
-            rows.append({"model": name, "task": problem_type, "status": "skip", "seconds": 0.0,
-                         "dataset": None, "filled_defaults": [], "error": "no train function registered"})
+            rows.append(
+                {
+                    "model": name,
+                    "task": problem_type,
+                    "status": "skip",
+                    "seconds": 0.0,
+                    "dataset": None,
+                    "filled_defaults": [],
+                    "error": "no train function registered",
+                }
+            )
             print(f"{name:32s} {problem_type:14s} skip   (no train function)", flush=True)
             continue
         row = run_one(name, problem_type)

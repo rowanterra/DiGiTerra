@@ -3,6 +3,7 @@
 Runs headless Chromium through Playwright against a live app instance.
 Skipped automatically when Playwright or the browser is unavailable.
 """
+
 import glob
 import json
 import os
@@ -41,13 +42,20 @@ def _chromium_executable():
 def base_url(tmp_path_factory):
     support = tmp_path_factory.mktemp("pw_support")
     port = _free_port()
-    env = dict(os.environ,
-               DIGITERRA_APP_SUPPORT_DIR=str(support),
-               DIGITERRA_OUTPUT_DIR=str(support / "vis"),
-               DIGITERRA_PORT=str(port),
-               MPLBACKEND="Agg")
-    proc = subprocess.Popen([sys.executable, os.path.join(ROOT, "app.py")], cwd=ROOT, env=env,
-                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    env = dict(
+        os.environ,
+        DIGITERRA_APP_SUPPORT_DIR=str(support),
+        DIGITERRA_OUTPUT_DIR=str(support / "vis"),
+        DIGITERRA_PORT=str(port),
+        MPLBACKEND="Agg",
+    )
+    proc = subprocess.Popen(
+        [sys.executable, os.path.join(ROOT, "app.py")],
+        cwd=ROOT,
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
     url = f"http://127.0.0.1:{port}"
     for _ in range(60):
         try:
@@ -96,14 +104,21 @@ class Session:
         # load resource" line is the browser reporting an HTTP status; the payload
         # assertions cover the requests that matter, and a 4xx from a stale
         # user-visualizations fetch during the full suite is not a script fault.
-        self.page.on("console", lambda m: self.errors.append(f"console.error: {m.text}")
-                     if m.type == "error" and "Failed to load resource" not in m.text else None)
+        self.page.on(
+            "console",
+            lambda m: (
+                self.errors.append(f"console.error: {m.text}")
+                if m.type == "error" and "Failed to load resource" not in m.text
+                else None
+            ),
+        )
 
         def handle(route, request):
             if request.method == "POST":
                 self.payloads.append(json.loads(request.post_data or "{}"))
-                route.fulfill(status=400, content_type="application/json",
-                              body=json.dumps({"error": "intercepted by test"}))
+                route.fulfill(
+                    status=400, content_type="application/json", body=json.dumps({"error": "intercepted by test"})
+                )
             else:
                 route.continue_()
 
@@ -140,19 +155,25 @@ class Session:
         p.wait_for_timeout(100)
 
     def visible(self, el_id):
-        return self.page.evaluate("""(id) => {
+        return self.page.evaluate(
+            """(id) => {
             let el = document.getElementById(id);
             if (!el) return 'missing';
             for (let n = el; n && n.nodeType === 1; n = n.parentElement) {
                 if (getComputedStyle(n).display === 'none') return 'hidden:' + (n.id || n.className);
             }
             return 'visible';
-        }""", el_id)
+        }""",
+            el_id,
+        )
 
     def toggle(self, el_id):
         # Switch-styled checkboxes sit off-screen behind a .slider span; set them directly.
-        self.page.evaluate("""(id) => { const el = document.getElementById(id);
-            el.checked = true; el.dispatchEvent(new Event('change', {bubbles: true})); }""", el_id)
+        self.page.evaluate(
+            """(id) => { const el = document.getElementById(id);
+            el.checked = true; el.dispatchEvent(new Event('change', {bubbles: true})); }""",
+            el_id,
+        )
 
     def submit_advanced(self):
         n = len(self.payloads)
@@ -179,7 +200,9 @@ def _assert_visible(session, ids):
 
 def test_no_duplicate_ids(session):
     total, distinct = session.page.evaluate(
-        "() => { const ids=[...document.querySelectorAll('[id]')].map(e=>e.id); return [ids.length, new Set(ids).size]; }")
+        "() => { const ids=[...document.querySelectorAll('[id]')].map(e=>e.id); return [ids.length, new "
+        "Set(ids).size]; }"
+    )
     assert total == distinct, f"{total - distinct} duplicate ids on the live page"
     assert not session.errors, session.errors
 
@@ -191,8 +214,16 @@ def test_ridge_advanced_controls_reach_payload(session):
     session.page.select_option("#advancedRidgeSolver", "saga")
     session.page.fill("#advancedRidgeTol", "0.000001")
     session.page.fill("#advancedRidgeMaxIter", "5000")
-    _assert_visible(session, ["advancedRidgeFields", "advancedNonreqRidgeSlider",
-                              "advancedRidgeSolver", "advancedRidgeTol", "advancedRidgeMaxIter"])
+    _assert_visible(
+        session,
+        [
+            "advancedRidgeFields",
+            "advancedNonreqRidgeSlider",
+            "advancedRidgeSolver",
+            "advancedRidgeTol",
+            "advancedRidgeMaxIter",
+        ],
+    )
     payload = session.submit_advanced()
     hp = payload.get("hyperparameters", {})
     print("hyperparameters:", json.dumps(hp))
@@ -220,8 +251,9 @@ def test_logistic_classifier_advanced_controls_reach_payload(session):
     session.toggle("advancedNonreqLogisticClassifierSlider")
     session.page.select_option("#advancedClass_LogisticSolver", "saga")
     session.page.fill("#advancedClass_LogisticTol", "0.000001")
-    _assert_visible(session, ["advancedNonreqLogisticClassifierSlider",
-                              "advancedClass_LogisticSolver", "advancedClass_LogisticTol"])
+    _assert_visible(
+        session, ["advancedNonreqLogisticClassifierSlider", "advancedClass_LogisticSolver", "advancedClass_LogisticTol"]
+    )
     payload = session.submit_advanced()
     hp = payload.get("hyperparameters", {})
     print("hyperparameters:", json.dumps(hp))

@@ -1,4 +1,5 @@
 """Unit tests for python_scripts.model_registry."""
+
 from python_scripts.model_registry import CLUSTER_MODELS, MODEL_REGISTRY, get_model_kwargs
 
 

@@ -47,10 +47,9 @@ jobs:
         run: npm run check-bundle
 
       - name: Run ruff
-        # The ruff baseline is not yet clean (592 findings on 2026-09-03), so this
-        # step reports without failing the job until the baseline is fixed.
-        continue-on-error: true
-        run: ruff check .
+        run: |
+          ruff check .
+          ruff format --check .
 
       - name: Run tests
         run: pytest tests/ -q --tb=short

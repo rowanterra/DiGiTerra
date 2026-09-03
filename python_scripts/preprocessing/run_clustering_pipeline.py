@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -6,9 +5,6 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-
-logger = logging.getLogger(__name__)
-
 from matplotlib.backends.backend_pdf import PdfPages
 from sklearn.cluster import AgglomerativeClustering, KMeans
 from sklearn.metrics import (
@@ -24,6 +20,8 @@ from python_scripts.config import VIS_DIR
 from python_scripts.plotting.bundles import export_plots
 from python_scripts.preprocessing.outlier_handling import apply_outlier_handling
 from python_scripts.preprocessing.utilities import _scale_pairs, get_feature_names, make_preprocessor
+
+logger = logging.getLogger(__name__)
 
 
 def _choose_k_silhouette(X: np.ndarray, k_min=2, k_max=10, algo="kmeans", seed=42):
@@ -50,21 +48,22 @@ def _choose_k_silhouette(X: np.ndarray, k_min=2, k_max=10, algo="kmeans", seed=4
     best_k = max(scores, key=scores.get)
     return best_k, scores
 
+
 def _fit_clusterer(model, algo, Xtr: np.ndarray, n_clusters):
     if algo == "kmeans":
-        #mdl = KMeans(n_clusters=n_clusters, n_init=10, random_state=42).fit(Xtr)
+        # mdl = KMeans(n_clusters=n_clusters, n_init=10, random_state=42).fit(Xtr)
         mdl = model.fit(Xtr)
         centers = mdl.cluster_centers_
         predict = mdl.predict
         labels_tr = mdl.labels_
     elif algo == "gmm":
-        #mdl = GaussianMixture(n_components=n_clusters, covariance_type="full", random_state=42).fit(Xtr)
+        # mdl = GaussianMixture(n_components=n_clusters, covariance_type="full", random_state=42).fit(Xtr)
         mdl = model.fit(Xtr)
         centers = mdl.means_
         predict = mdl.predict
         labels_tr = predict(Xtr)
     else:  # agglo
-        #mdl = AgglomerativeClustering(n_clusters=n_clusters).fit(Xtr)
+        # mdl = AgglomerativeClustering(n_clusters=n_clusters).fit(Xtr)
         mdl = model.fit(Xtr)
         labels_tr = mdl.labels_
         # Build one centroid per cluster that actually exists. Ranging over a
@@ -72,6 +71,7 @@ def _fit_clusterer(model, algo, Xtr: np.ndarray, n_clusters):
         # fitted model has fewer clusters than the number passed in.
         present = np.unique(labels_tr)
         centers = np.vstack([Xtr[labels_tr == i].mean(axis=0) for i in present])
+
         def predict(Xv):
             try:
                 from scipy.spatial.distance import cdist
@@ -79,13 +79,15 @@ def _fit_clusterer(model, algo, Xtr: np.ndarray, n_clusters):
                 # naive nearest-center w/o scipy
                 def _cdist(A, B):
                     # squared Euclidean
-                    AA = (A**2).sum(1)[:,None]
-                    BB = (B**2).sum(1)[None,:]
-                    return np.sqrt(AA + BB - 2*A@B.T)
+                    AA = (A**2).sum(1)[:, None]
+                    BB = (B**2).sum(1)[None, :]
+                    return np.sqrt(AA + BB - 2 * A @ B.T)
+
                 D = _cdist(Xv, centers)
                 return D.argmin(axis=1)
             else:
                 return cdist(Xv, centers).argmin(axis=1)
+
     return mdl, predict, labels_tr, centers
 
 
@@ -102,13 +104,13 @@ def _assign_labels_by_centers(Xv: np.ndarray, centers: np.ndarray | None) -> np.
         return cdist(Xv, C).argmin(axis=1).astype(int)
     except Exception:
         AA = (Xv.astype(float) ** 2).sum(1)[:, None]
-        BB = (C ** 2).sum(1)[None, :]
+        BB = (C**2).sum(1)[None, :]
         D = np.sqrt(np.maximum(AA + BB - 2 * Xv.astype(float) @ C.T, 0.0))
         return D.argmin(axis=1).astype(int)
 
 
 # Advanced-option keys a cluster train_* function forwards from its **kwargs.
-CLUSTERING_OPTION_KEYS = ('outlier_method', 'outlier_action', 'progress_tracker', 'modeling_mode')
+CLUSTERING_OPTION_KEYS = ("outlier_method", "outlier_action", "progress_tracker", "modeling_mode")
 
 
 def clustering_options(kwargs: dict[str, Any]) -> dict[str, Any]:
@@ -119,13 +121,27 @@ def clustering_options(kwargs: dict[str, Any]) -> dict[str, Any]:
     return {k: kwargs[k] for k in CLUSTERING_OPTION_KEYS if k in kwargs}
 
 
-def run_clustering(model, model_name,
-                    train_data,
-                    X,
-                    units, X_scaler_type,
-                    seed, sigfig, quantileBinDict, useTransformer, transformer_cols, test_size, k_min, k_max,
-                    outlier_method='none', outlier_action='remove',
-                    progress_tracker=None, modeling_mode='simple', **kwargs) -> tuple[Any, ...]:
+def run_clustering(
+    model,
+    model_name,
+    train_data,
+    X,
+    units,
+    X_scaler_type,
+    seed,
+    sigfig,
+    quantileBinDict,
+    useTransformer,
+    transformer_cols,
+    test_size,
+    k_min,
+    k_max,
+    outlier_method="none",
+    outlier_action="remove",
+    progress_tracker=None,
+    modeling_mode="simple",
+    **kwargs,
+) -> tuple[Any, ...]:
     """Fit a clusterer and score it. quantileBinDict is accepted for call-site
     symmetry with the supervised pipelines; clustering has no target to bin.
 
@@ -133,7 +149,7 @@ def run_clustering(model, model_name,
     when outlier_method is 'none').
     """
     if progress_tracker:
-        progress_tracker.update_stage('model_training', 'running', 5, f'Preparing data for {model_name}...')
+        progress_tracker.update_stage("model_training", "running", 5, f"Preparing data for {model_name}...")
 
     # Build modeling frame (no target)
     # Ensure train_data is a DataFrame
@@ -142,25 +158,26 @@ def run_clustering(model, model_name,
             train_data = pd.DataFrame(train_data)
         else:
             raise TypeError(f"train_data must be a DataFrame, got {type(train_data)}")
-    
+
     # Ensure X is a DataFrame
     if not isinstance(X, pd.DataFrame):
         if isinstance(X, dict):
             X = pd.DataFrame(X)
-        elif hasattr(X, '__array__'):
+        elif hasattr(X, "__array__"):
             # If it's array-like, try to convert to DataFrame
             X = pd.DataFrame(X)
         else:
             raise TypeError(f"X must be a DataFrame, got {type(X)}")
-    
+
     # nump = cfg.numeric_predictors or df.select_dtypes(include=np.number).columns.tolist()
-    # catp = cfg.categorical_predictors or [c for c in df.select_dtypes(exclude=np.number).columns.tolist() if df[c].nunique(dropna=True) <= 50]
+    # catp = cfg.categorical_predictors or [c for c in df.select_dtypes(exclude=np.number).columns.tolist() if
+    # df[c].nunique(dropna=True) <= 50]
     # textp = cfg.text_cols or []
     nump = X.select_dtypes(include=np.number).columns.tolist()
     catp = []
-    if useTransformer == 'Yes':
-        catp=transformer_cols
-    textp=[]
+    if useTransformer == "Yes":
+        catp = transformer_cols
+    textp = []
 
     indicator_cols = nump + catp + textp
     # Ensure we're selecting columns from a DataFrame, not a dict
@@ -169,24 +186,32 @@ def run_clustering(model, model_name,
         # Filter to only existing columns
         existing_cols = [col for col in indicator_cols if col in train_data.columns]
         if not existing_cols:
-            raise ValueError(f"None of the indicator columns {indicator_cols} exist in train_data. Available columns: {list(train_data.columns)}")
+            raise ValueError(
+                f"None of the indicator columns {indicator_cols} exist in train_data. Available columns: "
+                f"{list(train_data.columns)}"
+            )
         # Use .loc to ensure we get a DataFrame, not a Series or dict
         if len(existing_cols) == 1:
             # Single column - still return as DataFrame
             ddf = train_data.loc[:, existing_cols].dropna().copy()
         else:
             ddf = train_data[existing_cols].dropna().copy()
-        
+
         # Double-check ddf is a DataFrame
         if not isinstance(ddf, pd.DataFrame):
             # If somehow it's not a DataFrame, force conversion
-            ddf = pd.DataFrame(ddf) if hasattr(ddf, '__array__') or isinstance(ddf, (dict, list)) else pd.DataFrame([ddf])
+            ddf = (
+                pd.DataFrame(ddf) if hasattr(ddf, "__array__") or isinstance(ddf, (dict, list)) else pd.DataFrame([ddf])
+            )
     else:
         raise TypeError(f"train_data must be a DataFrame after type check, got {type(train_data)}")
-    
+
     # Ensure ddf is a DataFrame
     if not isinstance(ddf, pd.DataFrame):
-        raise TypeError(f"ddf must be a DataFrame after column selection, got {type(ddf)}. indicator_cols={indicator_cols}, existing_cols={existing_cols}")
+        raise TypeError(
+            f"ddf must be a DataFrame after column selection, got {type(ddf)}. indicator_cols={indicator_cols}, "
+            f"existing_cols={existing_cols}"
+        )
 
     # Optional split to assess generalization/stability
     DO_SPLIT = True
@@ -194,9 +219,11 @@ def run_clustering(model, model_name,
         X_train_raw, X_test_raw = train_test_split(ddf, test_size=test_size, random_state=seed)
         # Ensure both are DataFrames
         if not isinstance(X_train_raw, pd.DataFrame):
-            X_train_raw = pd.DataFrame(X_train_raw) if hasattr(X_train_raw, '__array__') else pd.DataFrame([X_train_raw])
+            X_train_raw = (
+                pd.DataFrame(X_train_raw) if hasattr(X_train_raw, "__array__") else pd.DataFrame([X_train_raw])
+            )
         if not isinstance(X_test_raw, pd.DataFrame):
-            X_test_raw = pd.DataFrame(X_test_raw) if hasattr(X_test_raw, '__array__') else pd.DataFrame([X_test_raw])
+            X_test_raw = pd.DataFrame(X_test_raw) if hasattr(X_test_raw, "__array__") else pd.DataFrame([X_test_raw])
     else:
         X_train_raw = ddf.copy()
         X_test_raw = ddf.iloc[0:0].copy() if isinstance(ddf, pd.DataFrame) else pd.DataFrame(columns=existing_cols)
@@ -219,14 +246,20 @@ def run_clustering(model, model_name,
     # Scale X only
     # Ensure X_test_t is a DataFrame before scaling
     if not isinstance(X_test_t, pd.DataFrame):
-        X_test_t = pd.DataFrame(X_test_t) if X_test_t is not None else pd.DataFrame(columns=X_train_t.columns, dtype=X_train_t.dtypes)
+        X_test_t = (
+            pd.DataFrame(X_test_t)
+            if X_test_t is not None
+            else pd.DataFrame(columns=X_train_t.columns, dtype=X_train_t.dtypes)
+        )
     X_train_s, X_test_s, _, _, X_scaler, _ = _scale_pairs(X_train_t, X_test_t, None, None, X_scaler_type, "none")
 
     # Outlier handling on X only; clustering has no target, so this is the whole step.
     outlier_info = None
-    if outlier_method and outlier_method != 'none':
+    if outlier_method and outlier_method != "none":
         if progress_tracker:
-            progress_tracker.update_stage('outlier_handling', 'running', 0, f'Detecting outliers using {outlier_method}...')
+            progress_tracker.update_stage(
+                "outlier_handling", "running", 0, f"Detecting outliers using {outlier_method}..."
+            )
         train_index_before = X_train_s.index
         X_train_s, X_test_s, outlier_mask = apply_outlier_handling(
             X_train_s, X_test_s, None, outlier_method, outlier_action, seed=seed
@@ -234,28 +267,45 @@ def run_clustering(model, model_name,
         outlier_mask = np.asarray(outlier_mask, dtype=bool)
         n_outliers = int((~outlier_mask).sum())
         outlier_info = {
-            'method': outlier_method,
-            'action': outlier_action,
-            'n_outliers': n_outliers,
-            'original_samples': int(len(outlier_mask)),
-            'remaining_samples': int(outlier_mask.sum()),
+            "method": outlier_method,
+            "action": outlier_action,
+            "n_outliers": n_outliers,
+            "original_samples": int(len(outlier_mask)),
+            "remaining_samples": int(outlier_mask.sum()),
         }
-        if outlier_action == 'remove' and n_outliers > 0:
-            outlier_info['removed_row_indices'] = train_index_before[~outlier_mask].tolist()
+        if outlier_action == "remove" and n_outliers > 0:
+            outlier_info["removed_row_indices"] = train_index_before[~outlier_mask].tolist()
         if progress_tracker:
-            progress_tracker.update_stage('outlier_handling', 'completed', 100,
-                                          f'Outlier handling complete ({n_outliers} outliers {"removed" if outlier_action == "remove" else "capped"})')
+            progress_tracker.update_stage(
+                "outlier_handling",
+                "completed",
+                100,
+                f"Outlier handling complete ({n_outliers} outliers "
+                f"{'removed' if outlier_action == 'remove' else 'capped'})",
+            )
         if len(X_train_s) < 2:
-            raise ValueError("Outlier removal left fewer than 2 training rows; choose a less aggressive method or 'cap'.")
+            raise ValueError(
+                "Outlier removal left fewer than 2 training rows; choose a less aggressive method or 'cap'."
+            )
 
     if progress_tracker:
-        progress_tracker.update_stage('model_training', 'running', 30, f'Fitting {model_name}...')
+        progress_tracker.update_stage("model_training", "running", 30, f"Fitting {model_name}...")
 
     # Choose k & fit
     sil_scores = {}
     centers = None
     # Models that don't follow the standard kmeans/gmm/agglo pattern
-    special_models = {"dbscan", "birch", "spectral", "hdbscan", "affinity_propagation", "meanshift", "optics", "minibatch_kmeans", "bisecting_kmeans"}
+    special_models = {
+        "dbscan",
+        "birch",
+        "spectral",
+        "hdbscan",
+        "affinity_propagation",
+        "meanshift",
+        "optics",
+        "minibatch_kmeans",
+        "bisecting_kmeans",
+    }
     if model_name in special_models:
         logger.debug(f"Using clustering model: {model_name}")
         logger.debug(f"Model parameters: {model}")
@@ -316,7 +366,8 @@ def run_clustering(model, model_name,
         if best_k != suggested_k:
             logger.info(
                 "Silhouette sweep suggested k=%s; model was fit with k=%s and is reported as such.",
-                suggested_k, best_k,
+                suggested_k,
+                best_k,
             )
 
     logger.debug("Computing cluster labels for test set")
@@ -326,7 +377,7 @@ def run_clustering(model, model_name,
             X_test_s = pd.DataFrame(X_test_s)
         else:
             X_test_s = pd.DataFrame(columns=X_train_s.columns, dtype=X_train_s.dtypes)
-    
+
     if len(X_test_s) > 0:
         if predict_fn is not None:
             labels_test = predict_fn(X_test_s.values)
@@ -337,23 +388,25 @@ def run_clustering(model, model_name,
     else:
         labels_test = np.array([], dtype=int)
     logger.debug("Computing cluster scores")
+
     # Scores
     def _cluster_scores(Xa, labels):
-        if Xa is None or len(labels)==0 or len(np.unique(labels))<2:
+        if Xa is None or len(labels) == 0 or len(np.unique(labels)) < 2:
             return {}
         return {
             "silhouette": silhouette_score(Xa, labels),
             "calinski_harabasz": calinski_harabasz_score(Xa, labels),
-            "davies_bouldin": davies_bouldin_score(Xa, labels)
+            "davies_bouldin": davies_bouldin_score(Xa, labels),
         }
+
     clusters = {
-            "labels_train": labels_train,
-            "labels_test": labels_test,
-            "centers": centers,
-            "best_k": best_k,
-            "silhouette_grid": sil_scores
-            }
-    
+        "labels_train": labels_train,
+        "labels_test": labels_test,
+        "centers": centers,
+        "best_k": best_k,
+        "silhouette_grid": sil_scores,
+    }
+
     def _ensure_scores(scores):
         if scores:
             return scores
@@ -371,7 +424,7 @@ def run_clustering(model, model_name,
         test_scores = _ensure_scores({})
     logger.debug("Cluster scores computed")
 
-    art= {
+    art = {
         "type": "cluster",
         "preprocessor": preproc,
         "X_scaler": X_scaler,
@@ -383,21 +436,20 @@ def run_clustering(model, model_name,
             "labels_test": labels_test,
             "centers": centers,
             "best_k": best_k,
-            "silhouette_grid": sil_scores
+            "silhouette_grid": sil_scores,
         },
-        "metrics": {"train": train_scores, "test": test_scores}
+        "metrics": {"train": train_scores, "test": test_scores},
     }
 
     pdf_pages = PdfPages(VIS_DIR / "visualizations.pdf")
-    export_plots(
-       art, pdf_pages)
-    
+    export_plots(art, pdf_pages)
+
     pdf_pages.close()
     logger.info("Clustering pipeline completed")
     logger.debug(f"Train scores: {train_scores}")
     logger.debug(f"Test scores: {test_scores}")
-    
-    quantileBinResults = ''
+
+    quantileBinResults = ""
     try:
         model._digiterra_problem_type = "cluster"
         model._digiterra_preprocessor = preproc
@@ -407,7 +459,17 @@ def run_clustering(model, model_name,
     except Exception:
         logger.debug("Could not attach inference artifacts to clustering model", exc_info=True)
 
-    return train_scores, test_scores, model.get_params(), {
-                'X_train': X_train_s.shape,
-                'X_test': X_test_s.shape
-            }, model, X_scaler, quantileBinResults, X_train_raw.columns.tolist(), clusters['best_k'], clusters['centers'], clusters['silhouette_grid'], outlier_info
+    return (
+        train_scores,
+        test_scores,
+        model.get_params(),
+        {"X_train": X_train_s.shape, "X_test": X_test_s.shape},
+        model,
+        X_scaler,
+        quantileBinResults,
+        X_train_raw.columns.tolist(),
+        clusters["best_k"],
+        clusters["centers"],
+        clusters["silhouette_grid"],
+        outlier_info,
+    )

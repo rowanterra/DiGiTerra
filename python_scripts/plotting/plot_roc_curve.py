@@ -10,7 +10,7 @@ import re
 import matplotlib
 import numpy as np
 
-matplotlib.use('Agg')  # Use non-interactive backend
+matplotlib.use("Agg")  # Use non-interactive backend
 import matplotlib.pyplot as plt
 from sklearn.metrics import RocCurveDisplay, roc_auc_score
 
@@ -52,13 +52,25 @@ def _finalize_roc_figure(disp, default_legend_name: str):
         disp.figure_.subplots_adjust(left=0.16, bottom=0.14)
 
 
-def plot_roc_curve(y_true, y_score, model_name, pdf_pages=None,
-                  sample_weight=None, drop_intermediate=True, pos_label=None,
-                  name=None, ax=None, plot_chance_level=False, despine=False,
-                  file_suffix='', label_suffix='', **kwargs):
+def plot_roc_curve(
+    y_true,
+    y_score,
+    model_name,
+    pdf_pages=None,
+    sample_weight=None,
+    drop_intermediate=True,
+    pos_label=None,
+    name=None,
+    ax=None,
+    plot_chance_level=False,
+    despine=False,
+    file_suffix="",
+    label_suffix="",
+    **kwargs,
+):
     """
     Plot ROC curve using scikit-learn's RocCurveDisplay.from_predictions.
-    
+
     Args:
         y_true: True binary labels
         y_score: Target scores (probability estimates or decision function output)
@@ -74,7 +86,7 @@ def plot_roc_curve(y_true, y_score, model_name, pdf_pages=None,
         file_suffix: Suffix for filename
         label_suffix: Suffix for plot title
         **kwargs: Additional keyword arguments passed to matplotlib plot function
-        
+
     Returns:
         RocCurveDisplay object
     """
@@ -83,10 +95,11 @@ def plot_roc_curve(y_true, y_score, model_name, pdf_pages=None,
         roc_auc = roc_auc_score(y_true, y_score, sample_weight=sample_weight, pos_label=pos_label)
     except Exception:
         roc_auc = None
-    
+
     # Create display from predictions
     disp = RocCurveDisplay.from_predictions(
-        y_true, y_score,
+        y_true,
+        y_score,
         sample_weight=sample_weight,
         drop_intermediate=drop_intermediate,
         pos_label=pos_label,
@@ -94,9 +107,9 @@ def plot_roc_curve(y_true, y_score, model_name, pdf_pages=None,
         ax=ax,
         plot_chance_level=plot_chance_level,
         despine=despine,
-        **kwargs
+        **kwargs,
     )
-    
+
     # Add title (NaN is not None — only show AUC when finite)
     title_base = f"{model_name} | ROC Curve"
     if _finite_metric(roc_auc):
@@ -106,35 +119,47 @@ def plot_roc_curve(y_true, y_score, model_name, pdf_pages=None,
     title_with_label = f"{title_base} {label_suffix}" if label_suffix else title_base
     if disp.ax_ is not None:
         disp.ax_.set_title(title_with_label, fontsize=14, pad=20)
-    
+
     _finalize_roc_figure(disp, name or model_name)
-    
+
     # Save to file
     plot_filename = f"roc_curve{file_suffix}.png"
     plot_path = VIS_DIR / plot_filename
     if disp.figure_ is not None:
-        disp.figure_.savefig(plot_path, dpi=150, bbox_inches='tight', facecolor='white')
+        disp.figure_.savefig(plot_path, dpi=150, bbox_inches="tight", facecolor="white")
         logger.debug("ROC curve plot saved to %s", plot_path)
-        
+
         # Save to PDF if provided
         if pdf_pages is not None:
-            pdf_pages.savefig(disp.figure_, bbox_inches='tight', facecolor='white')
+            pdf_pages.savefig(disp.figure_, bbox_inches="tight", facecolor="white")
         # Avoid leaking figures into later plots (e.g. SHAP) when we own the figure
         if ax is None:
             plt.close(disp.figure_)
-    
+
     return disp
 
 
-def plot_roc_curve_from_estimator(estimator, X, y, model_name, pdf_pages=None,
-                                  sample_weight=None, drop_intermediate=True,
-                                  response_method='auto', pos_label=None,
-                                  name=None, ax=None, plot_chance_level=False,
-                                  despine=False, file_suffix='', label_suffix='',
-                                  **kwargs):
+def plot_roc_curve_from_estimator(
+    estimator,
+    X,
+    y,
+    model_name,
+    pdf_pages=None,
+    sample_weight=None,
+    drop_intermediate=True,
+    response_method="auto",
+    pos_label=None,
+    name=None,
+    ax=None,
+    plot_chance_level=False,
+    despine=False,
+    file_suffix="",
+    label_suffix="",
+    **kwargs,
+):
     """
     Plot ROC curve from an estimator using scikit-learn's RocCurveDisplay.from_estimator.
-    
+
     Args:
         estimator: Fitted classifier
         X: Input values
@@ -152,13 +177,15 @@ def plot_roc_curve_from_estimator(estimator, X, y, model_name, pdf_pages=None,
         file_suffix: Suffix for filename
         label_suffix: Suffix for plot title
         **kwargs: Additional keyword arguments passed to matplotlib plot function
-        
+
     Returns:
         RocCurveDisplay object
     """
     # Create display from estimator
     disp = RocCurveDisplay.from_estimator(
-        estimator, X, y,
+        estimator,
+        X,
+        y,
         sample_weight=sample_weight,
         drop_intermediate=drop_intermediate,
         response_method=response_method,
@@ -167,9 +194,9 @@ def plot_roc_curve_from_estimator(estimator, X, y, model_name, pdf_pages=None,
         ax=ax,
         plot_chance_level=plot_chance_level,
         despine=despine,
-        **kwargs
+        **kwargs,
     )
-    
+
     # Add title (disp.roc_auc can be NaN — np.nan is not None)
     title_base = f"{model_name} | ROC Curve"
     if _finite_metric(getattr(disp, "roc_auc", None)):
@@ -179,20 +206,20 @@ def plot_roc_curve_from_estimator(estimator, X, y, model_name, pdf_pages=None,
     title_with_label = f"{title_base} {label_suffix}" if label_suffix else title_base
     if disp.ax_ is not None:
         disp.ax_.set_title(title_with_label, fontsize=14, pad=20)
-    
+
     _finalize_roc_figure(disp, name or model_name)
-    
+
     # Save to file
     plot_filename = f"roc_curve{file_suffix}.png"
     plot_path = VIS_DIR / plot_filename
     if disp.figure_ is not None:
-        disp.figure_.savefig(plot_path, dpi=150, bbox_inches='tight', facecolor='white')
+        disp.figure_.savefig(plot_path, dpi=150, bbox_inches="tight", facecolor="white")
         logger.debug("ROC curve plot saved to %s", plot_path)
-        
+
         # Save to PDF if provided
         if pdf_pages is not None:
-            pdf_pages.savefig(disp.figure_, bbox_inches='tight', facecolor='white')
+            pdf_pages.savefig(disp.figure_, bbox_inches="tight", facecolor="white")
         if ax is None:
             plt.close(disp.figure_)
-    
+
     return disp

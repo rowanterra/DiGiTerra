@@ -14,6 +14,7 @@ dev: install
 lint:
 	npm run lint
 	$(PYTHON) -m ruff check .
+	$(PYTHON) -m ruff format --check .
 
 test:
 	MPLBACKEND=Agg $(PYTHON) -m pytest tests/ -q

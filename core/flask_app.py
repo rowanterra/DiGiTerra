@@ -33,6 +33,7 @@ def _configure_logging():
     try:
         LOG_DIR.mkdir(parents=True, exist_ok=True)
         from datetime import datetime
+
         log_file = LOG_DIR / f"digiterra_{datetime.now().strftime('%Y-%m-%d')}.log"
         fh = logging.FileHandler(log_file, encoding="utf-8")
         fh.setLevel(level)
@@ -45,9 +46,9 @@ def _configure_logging():
 
 logger = _configure_logging()
 
-from core.errors import register_error_handlers
-from core.state import SESSION_COOKIE_NAME
-from routes import register_blueprints
+from core.errors import register_error_handlers  # noqa: E402  logging must be configured before the routes import
+from core.state import SESSION_COOKIE_NAME  # noqa: E402  logging must be configured before the routes import
+from routes import register_blueprints  # noqa: E402  logging must be configured before the routes import
 
 app = Flask(
     __name__,
@@ -91,7 +92,12 @@ def _clear_session_scope(exc=None):
 def _set_session_cookie(response):
     new_id = getattr(g, "new_session_id", None)
     if new_id:
-        secure = request.is_secure or os.environ.get("DIGITERRA_COOKIE_SECURE", "").strip().lower() in {"1", "true", "yes", "on"}
+        secure = request.is_secure or os.environ.get("DIGITERRA_COOKIE_SECURE", "").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
         response.set_cookie(SESSION_COOKIE_NAME, new_id, httponly=True, samesite="Lax", secure=secure)
     return response
 
@@ -100,6 +106,7 @@ register_blueprints(app)
 register_error_handlers(app)
 
 if URL_PREFIX:
+
     @app.route(f"{URL_PREFIX}/static/<path:filename>")
     def prefixed_static(filename):
         return send_from_directory(app.static_folder, filename)

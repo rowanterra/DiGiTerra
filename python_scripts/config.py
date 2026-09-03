@@ -1,4 +1,8 @@
-"""Shared configuration and paths for DiGiTerra. Single source of truth for BASE_DIR, APP_SUPPORT_DIR, UPLOAD_DIR, LOG_DIR, VIS_DIR, URL_PREFIX."""
+"""Shared configuration and paths for DiGiTerra.
+
+Single source of truth for BASE_DIR, APP_SUPPORT_DIR, UPLOAD_DIR, LOG_DIR, VIS_DIR, and URL_PREFIX.
+"""
+
 import os
 import platform
 from contextvars import ContextVar

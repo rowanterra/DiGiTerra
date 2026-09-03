@@ -2,6 +2,7 @@
 Shared helpers for preprocessing, prediction, and Excel export. VIS_DIR (from config)
 is the directory for predictions.csv and similar output. Paths are set in python_scripts/config.py.
 """
+
 import logging
 from pathlib import Path
 
@@ -30,7 +31,8 @@ logger = logging.getLogger(__name__)
 def unpack_classification_result(result_tuple):
     """
     Split a classification result tuple into named parts, accepting the older shorter tuple.
-    Handles old format (8 or 9 values) and new format (11 values with additional_metrics, feature_selection_info, outlier_info).
+    Handles old format (8 or 9 values) and new format (11 values with additional_metrics, feature_selection_info,
+    outlier_info).
 
     Returns:
         tuple: (report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order,
@@ -49,14 +51,14 @@ def preprocess_data(
     df,
     target_cols=None,
     indicator_cols=None,
-    drop_missing='all',  # 'all', 'indicator', 'target' should be a check box or something maybe?
+    drop_missing="all",  # 'all', 'indicator', 'target' should be a check box or something maybe?
     impute_strategy=None,  # None, 'mean', 'median', 'knn', or 0 or 0.01
-    drop_zero='all',
-    zero_handle='drop',  # 'none', 'drop', 'mean', 'median', or numeric constant for replacement
+    drop_zero="all",
+    zero_handle="drop",  # 'none', 'drop', 'mean', 'median', or numeric constant for replacement
     zero_replace_values=None,  # list of exact values to convert to 0
     zero_replace_patterns=None,  # list of lambda or callable to match patterns (e.g., lambda x: str(x).startswith('<'))
     fill_values=None,  # {column: value} to reuse instead of recomputing (inference reuses training fills)
-    fill_values_out=None  # mutable dict the function writes the fills it used into
+    fill_values_out=None,  # mutable dict the function writes the fills it used into
 ):
     df_clean = df.copy()
     indicator_cols = list(indicator_cols or [])
@@ -64,43 +66,43 @@ def preprocess_data(
 
     # No supervised targets (e.g. clustering): target-only scopes are invalid; downgrade safely.
     if not target_cols:
-        if drop_missing == 'target':
-            drop_missing = 'none'
-        elif drop_missing == 'indicatorAndTarget':
-            drop_missing = 'indicator'
-        if drop_zero == 'target':
-            drop_zero = 'none'
-        elif drop_zero == 'indicatorAndTarget':
-            drop_zero = 'indicator'
+        if drop_missing == "target":
+            drop_missing = "none"
+        elif drop_missing == "indicatorAndTarget":
+            drop_missing = "indicator"
+        if drop_zero == "target":
+            drop_zero = "none"
+        elif drop_zero == "indicatorAndTarget":
+            drop_zero = "indicator"
 
-    if drop_zero == 'none' or (isinstance(zero_handle, str) and str(zero_handle).lower() == 'none'):
-        zero_handle_norm = 'none'
+    if drop_zero == "none" or (isinstance(zero_handle, str) and str(zero_handle).lower() == "none"):
+        zero_handle_norm = "none"
     else:
-        zero_handle_norm = zero_handle if zero_handle is not None else 'drop'
+        zero_handle_norm = zero_handle if zero_handle is not None else "drop"
 
-# no impute strategy: drop the rows the user selected    
-    if impute_strategy=='none':
-        if drop_missing == 'all':
+    # no impute strategy: drop the rows the user selected
+    if impute_strategy == "none":
+        if drop_missing == "all":
             df_clean.dropna(inplace=True)
-        elif drop_missing == 'indicator':
+        elif drop_missing == "indicator":
             # one missing indicator drops the row
-            df_clean.dropna(subset=indicator_cols, how='any', inplace=True)
-        elif drop_missing == 'target' and target_cols:
+            df_clean.dropna(subset=indicator_cols, how="any", inplace=True)
+        elif drop_missing == "target" and target_cols:
             # one missing target drops the row
-            df_clean.dropna(subset=target_cols, inplace=True, how='any')
-        elif drop_missing == 'indicatorAndTarget':
+            df_clean.dropna(subset=target_cols, inplace=True, how="any")
+        elif drop_missing == "indicatorAndTarget":
             subset = indicator_cols + target_cols
-            df_clean.dropna(subset=subset, inplace=True, how='any')
+            df_clean.dropna(subset=subset, inplace=True, how="any")
 
-# impute strategy: replace missing values
+    # impute strategy: replace missing values
     else:
-        if drop_missing == 'all':
+        if drop_missing == "all":
             impute_scope = list(df_clean.select_dtypes(include=[np.number]).columns)
-        elif drop_missing == 'indicator':
+        elif drop_missing == "indicator":
             impute_scope = list(df_clean[indicator_cols].select_dtypes(include=[np.number]).columns)
-        elif drop_missing == 'target' and target_cols:
+        elif drop_missing == "target" and target_cols:
             impute_scope = list(df_clean[target_cols].select_dtypes(include=[np.number]).columns)
-        elif drop_missing == 'indicatorAndTarget':
+        elif drop_missing == "indicatorAndTarget":
             subset_cols = indicator_cols + target_cols
             impute_scope = list(df_clean[subset_cols].select_dtypes(include=[np.number]).columns)
         else:
@@ -110,9 +112,9 @@ def preprocess_data(
         for col in impute_scope:
             if col in supplied:
                 fill = supplied[col]
-            elif impute_strategy == 'mean':
+            elif impute_strategy == "mean":
                 fill = df_clean[col].mean()
-            elif impute_strategy == 'median':
+            elif impute_strategy == "median":
                 fill = df_clean[col].median()
             elif isinstance(impute_strategy, (int, float)):
                 fill = impute_strategy
@@ -127,33 +129,36 @@ def preprocess_data(
                 fill_values_out[col] = float(fill)
 
     def _numeric_columns_for_zero_scope(frame):
-        if drop_zero == 'all':
+        if drop_zero == "all":
             return list(frame.select_dtypes(include=[np.number]).columns)
-        if drop_zero == 'indicator':
+        if drop_zero == "indicator":
             cols = [c for c in indicator_cols if c in frame.columns]
             return list(frame[cols].select_dtypes(include=[np.number]).columns) if cols else []
-        if drop_zero == 'target':
+        if drop_zero == "target":
             if not target_cols:
                 return []
             cols = [c for c in target_cols if c in frame.columns]
             return list(frame[cols].select_dtypes(include=[np.number]).columns) if cols else []
-        if drop_zero == 'indicatorAndTarget':
-            cols = list(dict.fromkeys([c for c in indicator_cols if c in frame.columns]
-                                      + [c for c in target_cols if c in frame.columns]))
+        if drop_zero == "indicatorAndTarget":
+            cols = list(
+                dict.fromkeys(
+                    [c for c in indicator_cols if c in frame.columns] + [c for c in target_cols if c in frame.columns]
+                )
+            )
             return list(frame[cols].select_dtypes(include=[np.number]).columns) if cols else []
         return []
 
     # Zeros: either drop rows (legacy) or replace zeros in scoped numeric columns
-    if zero_handle_norm == 'none':
+    if zero_handle_norm == "none":
         pass
-    elif zero_handle_norm == 'drop':
-        if drop_zero == 'all':
+    elif zero_handle_norm == "drop":
+        if drop_zero == "all":
             df_clean = df_clean[(df_clean != 0).any(axis=1)]
-        elif drop_zero == 'indicator':
+        elif drop_zero == "indicator":
             df_clean = df_clean[~(df_clean[indicator_cols].eq(0).all(axis=1))]
-        elif drop_zero == 'target' and target_cols:
+        elif drop_zero == "target" and target_cols:
             df_clean = df_clean[~(df_clean[target_cols].eq(0).all(axis=1))]
-        elif drop_zero == 'indicatorAndTarget':
+        elif drop_zero == "indicatorAndTarget":
             subset = indicator_cols + target_cols
             df_clean = df_clean[~(df_clean[subset].eq(0).all(axis=1))]
     else:
@@ -165,9 +170,9 @@ def preprocess_data(
             if not mask.any():
                 continue
             non_zero = df_clean.loc[~mask, col]
-            if zero_handle_norm == 'mean':
+            if zero_handle_norm == "mean":
                 repl = non_zero.mean()
-            elif zero_handle_norm == 'median':
+            elif zero_handle_norm == "median":
                 repl = non_zero.median()
             elif isinstance(zero_handle_norm, (int, float, np.floating, np.integer)):
                 repl = float(zero_handle_norm)
@@ -190,196 +195,236 @@ def preprocess_data(
     return df_clean
 
 
-def write_to_excelRegression(data, indicator_names, predictor_names, stratify_name, modelName, params, units, trainOverall, testOverall, train_results, test_results, scaler, seed, shapes, quantileBin_results, cross_validation_summary=None, feature_selection_info=None, outlier_info=None):
-        workbook = xlsxwriter.Workbook(str(VIS_DIR / "model_performance.xlsx"), {'nan_inf_to_errors': True})
-        worksheet = workbook.add_worksheet('Preprocessing')
-        worksheet.write('A1', 'Filename')
-        worksheet.write('B1', data['filename'])
-        worksheet.write('A2', 'Indicators')
-        indicator_list = indicator_names.tolist() if hasattr(indicator_names, 'tolist') else list(indicator_names)
-        worksheet.write('B2', f'{[str(i)[:10] for i in indicator_list]}')
-        worksheet.write('A3', 'Predictors')
-        predictor_list = predictor_names.tolist() if hasattr(predictor_names, 'tolist') else list(predictor_names)
-        worksheet.write('B3', f'{[str(p)[:10] for p in predictor_list]}')
-        worksheet.write('A4', 'Stratify Variable')
-        worksheet.write('B4', stratify_name)
-        worksheet.write('A5', 'Scaling')
-        worksheet.write('B5', scaler)
-        worksheet.write('A6', 'Seed')
-        worksheet.write('B6', seed)
+def write_to_excelRegression(
+    data,
+    indicator_names,
+    predictor_names,
+    stratify_name,
+    modelName,
+    params,
+    units,
+    trainOverall,
+    testOverall,
+    train_results,
+    test_results,
+    scaler,
+    seed,
+    shapes,
+    quantileBin_results,
+    cross_validation_summary=None,
+    feature_selection_info=None,
+    outlier_info=None,
+):
+    workbook = xlsxwriter.Workbook(str(VIS_DIR / "model_performance.xlsx"), {"nan_inf_to_errors": True})
+    worksheet = workbook.add_worksheet("Preprocessing")
+    worksheet.write("A1", "Filename")
+    worksheet.write("B1", data["filename"])
+    worksheet.write("A2", "Indicators")
+    indicator_list = indicator_names.tolist() if hasattr(indicator_names, "tolist") else list(indicator_names)
+    worksheet.write("B2", f"{[str(i)[:10] for i in indicator_list]}")
+    worksheet.write("A3", "Predictors")
+    predictor_list = predictor_names.tolist() if hasattr(predictor_names, "tolist") else list(predictor_names)
+    worksheet.write("B3", f"{[str(p)[:10] for p in predictor_list]}")
+    worksheet.write("A4", "Stratify Variable")
+    worksheet.write("B4", stratify_name)
+    worksheet.write("A5", "Scaling")
+    worksheet.write("B5", scaler)
+    worksheet.write("A6", "Seed")
+    worksheet.write("B6", seed)
 
-        worksheet.write('A7', 'X_train shape:')
-        worksheet.write('B7', str(shapes['X_train']))
-        worksheet.write('A8', 'X_test shape:')
-        worksheet.write('B8', str(shapes['X_test']))
-        worksheet.write('A9', 'y_train shape:')
-        worksheet.write('B9', str(shapes['y_train']))
-        worksheet.write('A10', 'y_test shape:')
-        worksheet.write('B10', str(shapes['y_test']))
-        worksheet.write('A11', 'train_groups')
-        # train_groups.to_frame()
-        # with pd.ExcelWriter('static/performance.xlsx', engine='xlsxwriter') as writer:
-        #     train_groups.to_excel(writer, sheet_name='quantileBins', startrow=11, index=True, header=True)
-        
+    worksheet.write("A7", "X_train shape:")
+    worksheet.write("B7", str(shapes["X_train"]))
+    worksheet.write("A8", "X_test shape:")
+    worksheet.write("B8", str(shapes["X_test"]))
+    worksheet.write("A9", "y_train shape:")
+    worksheet.write("B9", str(shapes["y_train"]))
+    worksheet.write("A10", "y_test shape:")
+    worksheet.write("B10", str(shapes["y_test"]))
+    worksheet.write("A11", "train_groups")
+    # train_groups.to_frame()
+    # with pd.ExcelWriter('static/performance.xlsx', engine='xlsxwriter') as writer:
+    #     train_groups.to_excel(writer, sheet_name='quantileBins', startrow=11, index=True, header=True)
 
-        worksheet2 = workbook.add_worksheet('Model Selection')
-        worksheet2.write('A1', 'Model')
-        worksheet2.write('B1', f'{modelName}')
-        worksheet2.write('A2', 'Hyperparameters')
-        
-        row = 3  # B2 means row 1 (0-indexed) and column 1 (also 0-indexed)
-        col = 1  # Column B
+    worksheet2 = workbook.add_worksheet("Model Selection")
+    worksheet2.write("A1", "Model")
+    worksheet2.write("B1", f"{modelName}")
+    worksheet2.write("A2", "Hyperparameters")
 
-        worksheet2.write(row - 1, col, "Parameter")  # Header
-        worksheet2.write(row - 1, col + 1, "Value")  # Header
+    row = 3  # B2 means row 1 (0-indexed) and column 1 (also 0-indexed)
+    col = 1  # Column B
 
-        for key, value in params.items():
-            worksheet2.write(row, col, key)
-            worksheet2.write(row, col + 1, str(value))  # Convert to string just in case
-            row += 1
+    worksheet2.write(row - 1, col, "Parameter")  # Header
+    worksheet2.write(row - 1, col + 1, "Value")  # Header
 
-        worksheet3 = workbook.add_worksheet('Overall Performance')
+    for key, value in params.items():
+        worksheet2.write(row, col, key)
+        worksheet2.write(row, col + 1, str(value))  # Convert to string just in case
+        row += 1
 
-        header_format = workbook.add_format({'bold': True, 'bg_color': '#D7E4BC'})
-        worksheet3.write(0, 0, 'Units:', header_format)
-        worksheet3.write(0, 1, units)
+    worksheet3 = workbook.add_worksheet("Overall Performance")
 
-        worksheet3.write('A2', 'Training Score')
-        worksheet3.write('B2', trainOverall['R²'])
-        worksheet3.write('A3', 'Validation Score')
-        worksheet3.write('B3', testOverall['R²'])
+    header_format = workbook.add_format({"bold": True, "bg_color": "#D7E4BC"})
+    worksheet3.write(0, 0, "Units:", header_format)
+    worksheet3.write(0, 1, units)
 
-        worksheet3.write('A4', 'Training RMSE')
-        worksheet3.write('B4', trainOverall['RMSE'])
-        worksheet3.write('A5', 'Validation RMSE')
-        worksheet3.write('B5', testOverall['RMSE'])
+    worksheet3.write("A2", "Training Score")
+    worksheet3.write("B2", trainOverall["R²"])
+    worksheet3.write("A3", "Validation Score")
+    worksheet3.write("B3", testOverall["R²"])
 
-        worksheet3.write('A6', 'Training MAE')
-        worksheet3.write('B6', trainOverall['MAE'])
-        worksheet3.write('A7', 'Validation MAE')
-        worksheet3.write('B7', testOverall['MAE'])
-        
-        # Add additional regression metrics if available
-        row = 8
-        if 'Explained Variance' in trainOverall.index:
-            worksheet3.write(f'A{row}', 'Training Explained Variance')
-            worksheet3.write(f'B{row}', trainOverall['Explained Variance'])
-            row += 1
-            worksheet3.write(f'A{row}', 'Validation Explained Variance')
-            worksheet3.write(f'B{row}', testOverall['Explained Variance'])
-            row += 1
-        
-        if 'Median AE' in trainOverall.index:
-            worksheet3.write(f'A{row}', 'Training Median AE')
-            worksheet3.write(f'B{row}', trainOverall['Median AE'])
-            row += 1
-            worksheet3.write(f'A{row}', 'Validation Median AE')
-            worksheet3.write(f'B{row}', testOverall['Median AE'])
-            row += 1
-        
-        if 'Max Error' in trainOverall.index:
-            worksheet3.write(f'A{row}', 'Training Max Error')
-            worksheet3.write(f'B{row}', trainOverall['Max Error'])
-            row += 1
-            worksheet3.write(f'A{row}', 'Validation Max Error')
-            worksheet3.write(f'B{row}', testOverall['Max Error'])
-            row += 1
-        
-        if 'MAPE' in trainOverall.index:
-            worksheet3.write(f'A{row}', 'Training MAPE')
-            worksheet3.write(f'B{row}', trainOverall['MAPE'])
-            row += 1
-            worksheet3.write(f'A{row}', 'Validation MAPE')
-            worksheet3.write(f'B{row}', testOverall['MAPE'])
-        
-        workbook.close()
-        file_path = VIS_DIR / "model_performance.xlsx"
+    worksheet3.write("A4", "Training RMSE")
+    worksheet3.write("B4", trainOverall["RMSE"])
+    worksheet3.write("A5", "Validation RMSE")
+    worksheet3.write("B5", testOverall["RMSE"])
 
-        with pd.ExcelWriter(file_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-            train_results.to_excel(writer, sheet_name='Train Results', index=False)
-            test_results.to_excel(writer, sheet_name='Test Results', index=False)
+    worksheet3.write("A6", "Training MAE")
+    worksheet3.write("B6", trainOverall["MAE"])
+    worksheet3.write("A7", "Validation MAE")
+    worksheet3.write("B7", testOverall["MAE"])
 
-            if (isinstance(quantileBin_results, pd.DataFrame)):
-                logger.debug(f"Quantile bin results:\n{quantileBin_results}")
-                quantileBin_results.to_excel(writer, sheet_name='quantile Bin Results', index=False)
-            
-            # Add Cross Validation sheet if available
-            if cross_validation_summary and len(cross_validation_summary) > 0:
-                cv_df = pd.DataFrame(cross_validation_summary)
-                cv_df.to_excel(writer, sheet_name='Cross Validation', index=False)
-            
-            # Add Feature Selection sheet if available
-            if feature_selection_info:
-                fs_data = {
-                    'Property': ['Method', 'K Requested', 'Original Features', 'Selected Features', 'Selected Feature Names'],
-                    'Value': [
-                        feature_selection_info.get('method', 'N/A'),
-                        feature_selection_info.get('k_requested', 'N/A'),
-                        feature_selection_info.get('original_count', 'N/A'),
-                        feature_selection_info.get('selected_count', 'N/A'),
-                        ', '.join(feature_selection_info.get('selected_features', [])) if feature_selection_info.get('selected_features') else 'N/A'
-                    ]
-                }
-                fs_df = pd.DataFrame(fs_data)
-                fs_df.to_excel(writer, sheet_name='Feature Selection', index=False)
-            
-            # Add Outlier Handling sheet if available
-            if outlier_info:
-                oi_data = {
-                    'Property': ['Method', 'Action', 'Outliers Detected', 'Original Samples', 'Remaining Samples'],
-                    'Value': [
-                        outlier_info.get('method', 'N/A'),
-                        outlier_info.get('action', 'N/A'),
-                        outlier_info.get('n_outliers', 0),
-                        outlier_info.get('original_samples', 'N/A'),
-                        outlier_info.get('remaining_samples', 'N/A')
-                    ]
-                }
-                oi_df = pd.DataFrame(oi_data)
-                oi_df.to_excel(writer, sheet_name='Outlier Handling', index=False)
-                # If any training rows were removed as outliers, list their indices on a separate sheet
-                removed = outlier_info.get('removed_row_indices')
-                if removed and isinstance(removed, list) and len(removed) > 0:
-                    removed_df = pd.DataFrame({'Removed sample index': removed})
-                    removed_df.to_excel(writer, sheet_name='Outlier Samples Removed', index=False)
+    # Add additional regression metrics if available
+    row = 8
+    if "Explained Variance" in trainOverall.index:
+        worksheet3.write(f"A{row}", "Training Explained Variance")
+        worksheet3.write(f"B{row}", trainOverall["Explained Variance"])
+        row += 1
+        worksheet3.write(f"A{row}", "Validation Explained Variance")
+        worksheet3.write(f"B{row}", testOverall["Explained Variance"])
+        row += 1
+
+    if "Median AE" in trainOverall.index:
+        worksheet3.write(f"A{row}", "Training Median AE")
+        worksheet3.write(f"B{row}", trainOverall["Median AE"])
+        row += 1
+        worksheet3.write(f"A{row}", "Validation Median AE")
+        worksheet3.write(f"B{row}", testOverall["Median AE"])
+        row += 1
+
+    if "Max Error" in trainOverall.index:
+        worksheet3.write(f"A{row}", "Training Max Error")
+        worksheet3.write(f"B{row}", trainOverall["Max Error"])
+        row += 1
+        worksheet3.write(f"A{row}", "Validation Max Error")
+        worksheet3.write(f"B{row}", testOverall["Max Error"])
+        row += 1
+
+    if "MAPE" in trainOverall.index:
+        worksheet3.write(f"A{row}", "Training MAPE")
+        worksheet3.write(f"B{row}", trainOverall["MAPE"])
+        row += 1
+        worksheet3.write(f"A{row}", "Validation MAPE")
+        worksheet3.write(f"B{row}", testOverall["MAPE"])
+
+    workbook.close()
+    file_path = VIS_DIR / "model_performance.xlsx"
+
+    with pd.ExcelWriter(file_path, mode="a", engine="openpyxl", if_sheet_exists="replace") as writer:
+        train_results.to_excel(writer, sheet_name="Train Results", index=False)
+        test_results.to_excel(writer, sheet_name="Test Results", index=False)
+
+        if isinstance(quantileBin_results, pd.DataFrame):
+            logger.debug(f"Quantile bin results:\n{quantileBin_results}")
+            quantileBin_results.to_excel(writer, sheet_name="quantile Bin Results", index=False)
+
+        # Add Cross Validation sheet if available
+        if cross_validation_summary and len(cross_validation_summary) > 0:
+            cv_df = pd.DataFrame(cross_validation_summary)
+            cv_df.to_excel(writer, sheet_name="Cross Validation", index=False)
+
+        # Add Feature Selection sheet if available
+        if feature_selection_info:
+            fs_data = {
+                "Property": [
+                    "Method",
+                    "K Requested",
+                    "Original Features",
+                    "Selected Features",
+                    "Selected Feature Names",
+                ],
+                "Value": [
+                    feature_selection_info.get("method", "N/A"),
+                    feature_selection_info.get("k_requested", "N/A"),
+                    feature_selection_info.get("original_count", "N/A"),
+                    feature_selection_info.get("selected_count", "N/A"),
+                    ", ".join(feature_selection_info.get("selected_features", []))
+                    if feature_selection_info.get("selected_features")
+                    else "N/A",
+                ],
+            }
+            fs_df = pd.DataFrame(fs_data)
+            fs_df.to_excel(writer, sheet_name="Feature Selection", index=False)
+
+        # Add Outlier Handling sheet if available
+        if outlier_info:
+            oi_data = {
+                "Property": ["Method", "Action", "Outliers Detected", "Original Samples", "Remaining Samples"],
+                "Value": [
+                    outlier_info.get("method", "N/A"),
+                    outlier_info.get("action", "N/A"),
+                    outlier_info.get("n_outliers", 0),
+                    outlier_info.get("original_samples", "N/A"),
+                    outlier_info.get("remaining_samples", "N/A"),
+                ],
+            }
+            oi_df = pd.DataFrame(oi_data)
+            oi_df.to_excel(writer, sheet_name="Outlier Handling", index=False)
+            # If any training rows were removed as outliers, list their indices on a separate sheet
+            removed = outlier_info.get("removed_row_indices")
+            if removed and isinstance(removed, list) and len(removed) > 0:
+                removed_df = pd.DataFrame({"Removed sample index": removed})
+                removed_df.to_excel(writer, sheet_name="Outlier Samples Removed", index=False)
 
 
 # Backward compatibility: base name no longer assumed to mean regression
 write_to_excel = write_to_excelRegression
 
 
-def write_to_excelClassifier(data, indicator_names, predictor_names, stratify_name, scaler, seed, modelName, params, units, report, cm, additional_metrics=None, outlier_info=None):
+def write_to_excelClassifier(
+    data,
+    indicator_names,
+    predictor_names,
+    stratify_name,
+    scaler,
+    seed,
+    modelName,
+    params,
+    units,
+    report,
+    cm,
+    additional_metrics=None,
+    outlier_info=None,
+):
     """
     Write classification results and metrics to Excel.
-    
+
     Args:
         additional_metrics: Dictionary with additional metrics like ROC AUC, Average Precision, etc.
                           from calculate_classification_metrics()
         outlier_info: Optional dict with method, action, n_outliers, original_samples, remaining_samples,
                       and optionally removed_row_indices (list of training row indices removed as outliers).
     """
-    workbook = xlsxwriter.Workbook(str(VIS_DIR / "model_performance.xlsx"), {'nan_inf_to_errors': True})
-    worksheet = workbook.add_worksheet('Preprocessing')
-    worksheet.write('A1', 'Filename')
-    worksheet.write('B1', data['filename'])
-    worksheet.write('A2', 'Indicators')
-    indicator_list = indicator_names.tolist() if hasattr(indicator_names, 'tolist') else list(indicator_names)
-    worksheet.write('B2', f'{[str(i)[:10] for i in indicator_list]}')
-    worksheet.write('A3', 'Predictors')
-    predictor_list = predictor_names.tolist() if hasattr(predictor_names, 'tolist') else list(predictor_names)
-    worksheet.write('B3', f'{[str(p)[:10] for p in predictor_list]}')
-    worksheet.write('A4', 'Stratify Variable')
-    worksheet.write('B4', stratify_name)
-    worksheet.write('A5', 'Scaling')
-    worksheet.write('B5', scaler)
-    worksheet.write('A6', 'Seed')
-    worksheet.write('B6', seed)
+    workbook = xlsxwriter.Workbook(str(VIS_DIR / "model_performance.xlsx"), {"nan_inf_to_errors": True})
+    worksheet = workbook.add_worksheet("Preprocessing")
+    worksheet.write("A1", "Filename")
+    worksheet.write("B1", data["filename"])
+    worksheet.write("A2", "Indicators")
+    indicator_list = indicator_names.tolist() if hasattr(indicator_names, "tolist") else list(indicator_names)
+    worksheet.write("B2", f"{[str(i)[:10] for i in indicator_list]}")
+    worksheet.write("A3", "Predictors")
+    predictor_list = predictor_names.tolist() if hasattr(predictor_names, "tolist") else list(predictor_names)
+    worksheet.write("B3", f"{[str(p)[:10] for p in predictor_list]}")
+    worksheet.write("A4", "Stratify Variable")
+    worksheet.write("B4", stratify_name)
+    worksheet.write("A5", "Scaling")
+    worksheet.write("B5", scaler)
+    worksheet.write("A6", "Seed")
+    worksheet.write("B6", seed)
 
-    worksheet2 = workbook.add_worksheet('Model Selection')
-    worksheet2.write('A1', 'Model')
-    worksheet2.write('B1', f'{modelName}')
-    worksheet2.write('A2', 'Hyperparameters')
-    
+    worksheet2 = workbook.add_worksheet("Model Selection")
+    worksheet2.write("A1", "Model")
+    worksheet2.write("B1", f"{modelName}")
+    worksheet2.write("A2", "Hyperparameters")
+
     row = 3
     col = 1
 
@@ -391,9 +436,9 @@ def write_to_excelClassifier(data, indicator_names, predictor_names, stratify_na
         worksheet2.write(row, col + 1, str(value))
         row += 1
 
-    worksheet3 = workbook.add_worksheet('Overall Performance')
-    header_format = workbook.add_format({'bold': True, 'bg_color': '#D7E4BC'})
-    worksheet3.write(0, 0, 'Units:', header_format)
+    worksheet3 = workbook.add_worksheet("Overall Performance")
+    header_format = workbook.add_format({"bold": True, "bg_color": "#D7E4BC"})
+    worksheet3.write(0, 0, "Units:", header_format)
     worksheet3.write(0, 1, units)
 
     row = 1
@@ -401,159 +446,173 @@ def write_to_excelClassifier(data, indicator_names, predictor_names, stratify_na
     logger.debug("Writing classification results to Excel")
     for key, value in report.items():
         worksheet3.write(row, col, key)
-        if key=='accuracy':
-            worksheet3.write(row, col+1, value)
+        if key == "accuracy":
+            worksheet3.write(row, col + 1, value)
         else:
-            for key2,value2 in value.items():
-                worksheet3.write(row, col+1, key2)
-                worksheet3.write(row, col+2, value2)
-                row+=1
+            for key2, value2 in value.items():
+                worksheet3.write(row, col + 1, key2)
+                worksheet3.write(row, col + 2, value2)
+                row += 1
         row += 1
 
     # Add confusion matrix
-    col=1
-    worksheet3.write(row,0, 'Confusion Matrix')
-    for i in range(cm.shape[0]):      
-        for j in range(cm.shape[1]):  
-            worksheet3.write(row+i+1, col+j, cm[i, j])
-    
+    col = 1
+    worksheet3.write(row, 0, "Confusion Matrix")
+    for i in range(cm.shape[0]):
+        for j in range(cm.shape[1]):
+            worksheet3.write(row + i + 1, col + j, cm[i, j])
+
     row += cm.shape[0] + 2
 
     # Add additional metrics if provided
     if additional_metrics:
-        worksheet3.write(row, 0, 'Additional Metrics')
+        worksheet3.write(row, 0, "Additional Metrics")
         row += 1
-        
+
         # Basic metrics
-        if 'accuracy' in additional_metrics:
-            worksheet3.write(row, 0, 'Accuracy')
-            worksheet3.write(row, 1, additional_metrics['accuracy'])
+        if "accuracy" in additional_metrics:
+            worksheet3.write(row, 0, "Accuracy")
+            worksheet3.write(row, 1, additional_metrics["accuracy"])
             row += 1
-        
+
         # Precision, Recall, F1 (macro, micro, weighted)
-        for metric_type in ['precision', 'recall', 'f1']:
-            for avg_type in ['macro', 'micro', 'weighted']:
-                key = f'{metric_type}_{avg_type}'
+        for metric_type in ["precision", "recall", "f1"]:
+            for avg_type in ["macro", "micro", "weighted"]:
+                key = f"{metric_type}_{avg_type}"
                 if key in additional_metrics:
-                    worksheet3.write(row, 0, f'{metric_type.capitalize()} ({avg_type})')
+                    worksheet3.write(row, 0, f"{metric_type.capitalize()} ({avg_type})")
                     worksheet3.write(row, 1, additional_metrics[key])
                     row += 1
-        
+
         # ROC AUC
-        if 'roc_auc' in additional_metrics:
-            worksheet3.write(row, 0, 'ROC AUC')
-            worksheet3.write(row, 1, additional_metrics['roc_auc'])
+        if "roc_auc" in additional_metrics:
+            worksheet3.write(row, 0, "ROC AUC")
+            worksheet3.write(row, 1, additional_metrics["roc_auc"])
             row += 1
-        for avg_type in ['macro', 'micro', 'weighted']:
-            key = f'roc_auc_{avg_type}'
+        for avg_type in ["macro", "micro", "weighted"]:
+            key = f"roc_auc_{avg_type}"
             if key in additional_metrics:
-                worksheet3.write(row, 0, f'ROC AUC ({avg_type})')
+                worksheet3.write(row, 0, f"ROC AUC ({avg_type})")
                 worksheet3.write(row, 1, additional_metrics[key])
                 row += 1
-        
+
         # Average Precision
-        if 'average_precision' in additional_metrics:
-            worksheet3.write(row, 0, 'Average Precision')
-            worksheet3.write(row, 1, additional_metrics['average_precision'])
+        if "average_precision" in additional_metrics:
+            worksheet3.write(row, 0, "Average Precision")
+            worksheet3.write(row, 1, additional_metrics["average_precision"])
             row += 1
-        for avg_type in ['macro', 'micro', 'weighted']:
-            key = f'average_precision_{avg_type}'
+        for avg_type in ["macro", "micro", "weighted"]:
+            key = f"average_precision_{avg_type}"
             if key in additional_metrics:
-                worksheet3.write(row, 0, f'Average Precision ({avg_type})')
+                worksheet3.write(row, 0, f"Average Precision ({avg_type})")
                 worksheet3.write(row, 1, additional_metrics[key])
                 row += 1
 
     workbook.close()
     file_path = VIS_DIR / "model_performance.xlsx"
-    
+
     # Use openpyxl to add additional sheets with detailed metrics
-    with pd.ExcelWriter(file_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
+    with pd.ExcelWriter(file_path, mode="a", engine="openpyxl", if_sheet_exists="replace") as writer:
         # Classification Report as DataFrame
         if isinstance(report, dict):
             report_data = []
             for key, value in report.items():
-                if key == 'accuracy':
-                    report_data.append({'Metric': 'accuracy', 'Value': value})
+                if key == "accuracy":
+                    report_data.append({"Metric": "accuracy", "Value": value})
                 else:
                     for key2, value2 in value.items():
-                        report_data.append({'Metric': f'{key}_{key2}', 'Value': value2})
+                        report_data.append({"Metric": f"{key}_{key2}", "Value": value2})
             if report_data:
                 report_df = pd.DataFrame(report_data)
-                report_df.to_excel(writer, sheet_name='Classification Report', index=False)
-        
+                report_df.to_excel(writer, sheet_name="Classification Report", index=False)
+
         # Confusion Matrix as DataFrame
         cm_df = pd.DataFrame(cm)
-        cm_df.to_excel(writer, sheet_name='Confusion Matrix', index=False)
-        
+        cm_df.to_excel(writer, sheet_name="Confusion Matrix", index=False)
+
         # Additional Metrics as DataFrame
         if additional_metrics:
             metrics_data = []
             # Basic metrics
-            for key in ['accuracy', 'precision_macro', 'precision_micro', 'precision_weighted',
-                       'recall_macro', 'recall_micro', 'recall_weighted',
-                       'f1_macro', 'f1_micro', 'f1_weighted']:
+            for key in [
+                "accuracy",
+                "precision_macro",
+                "precision_micro",
+                "precision_weighted",
+                "recall_macro",
+                "recall_micro",
+                "recall_weighted",
+                "f1_macro",
+                "f1_micro",
+                "f1_weighted",
+            ]:
                 if key in additional_metrics:
-                    metrics_data.append({'Metric': key.replace('_', ' ').title(), 'Value': additional_metrics[key]})
-            
+                    metrics_data.append({"Metric": key.replace("_", " ").title(), "Value": additional_metrics[key]})
+
             # ROC AUC metrics
-            for key in ['roc_auc', 'roc_auc_macro', 'roc_auc_micro', 'roc_auc_weighted']:
+            for key in ["roc_auc", "roc_auc_macro", "roc_auc_micro", "roc_auc_weighted"]:
                 if key in additional_metrics:
-                    metrics_data.append({'Metric': key.replace('_', ' ').upper(), 'Value': additional_metrics[key]})
-            
+                    metrics_data.append({"Metric": key.replace("_", " ").upper(), "Value": additional_metrics[key]})
+
             # Average Precision metrics
-            for key in ['average_precision', 'average_precision_macro', 'average_precision_micro', 'average_precision_weighted']:
+            for key in [
+                "average_precision",
+                "average_precision_macro",
+                "average_precision_micro",
+                "average_precision_weighted",
+            ]:
                 if key in additional_metrics:
-                    metrics_data.append({'Metric': key.replace('_', ' ').title(), 'Value': additional_metrics[key]})
-            
+                    metrics_data.append({"Metric": key.replace("_", " ").title(), "Value": additional_metrics[key]})
+
             if metrics_data:
                 metrics_df = pd.DataFrame(metrics_data)
-                metrics_df.to_excel(writer, sheet_name='Additional Metrics', index=False)
-            
+                metrics_df.to_excel(writer, sheet_name="Additional Metrics", index=False)
+
             # Per-class metrics
-            if 'per_class' in additional_metrics:
+            if "per_class" in additional_metrics:
                 per_class_data = []
-                for key, value in additional_metrics['per_class'].items():
-                    per_class_data.append({'Metric': key.replace('_', ' ').title(), 'Value': value})
+                for key, value in additional_metrics["per_class"].items():
+                    per_class_data.append({"Metric": key.replace("_", " ").title(), "Value": value})
                 if per_class_data:
                     per_class_df = pd.DataFrame(per_class_data)
-                    per_class_df.to_excel(writer, sheet_name='Per-Class Metrics', index=False)
-            
-            if 'per_class_roc_auc' in additional_metrics:
+                    per_class_df.to_excel(writer, sheet_name="Per-Class Metrics", index=False)
+
+            if "per_class_roc_auc" in additional_metrics:
                 roc_auc_data = []
-                for key, value in additional_metrics['per_class_roc_auc'].items():
-                    roc_auc_data.append({'Metric': key.replace('_', ' ').upper(), 'Value': value})
+                for key, value in additional_metrics["per_class_roc_auc"].items():
+                    roc_auc_data.append({"Metric": key.replace("_", " ").upper(), "Value": value})
                 if roc_auc_data:
                     roc_auc_df = pd.DataFrame(roc_auc_data)
-                    roc_auc_df.to_excel(writer, sheet_name='Per-Class ROC AUC', index=False)
-            
-            if 'per_class_ap' in additional_metrics:
+                    roc_auc_df.to_excel(writer, sheet_name="Per-Class ROC AUC", index=False)
+
+            if "per_class_ap" in additional_metrics:
                 ap_data = []
-                for key, value in additional_metrics['per_class_ap'].items():
-                    ap_data.append({'Metric': key.replace('_', ' ').title(), 'Value': value})
+                for key, value in additional_metrics["per_class_ap"].items():
+                    ap_data.append({"Metric": key.replace("_", " ").title(), "Value": value})
                 if ap_data:
                     ap_df = pd.DataFrame(ap_data)
-                    ap_df.to_excel(writer, sheet_name='Per-Class Average Precision', index=False)
+                    ap_df.to_excel(writer, sheet_name="Per-Class Average Precision", index=False)
 
         # Outlier Handling sheet (same as regression)
         if outlier_info:
             oi_data = {
-                'Property': ['Method', 'Action', 'Outliers Detected', 'Original Samples', 'Remaining Samples'],
-                'Value': [
-                    outlier_info.get('method', 'N/A'),
-                    outlier_info.get('action', 'N/A'),
-                    outlier_info.get('n_outliers', 0),
-                    outlier_info.get('original_samples', 'N/A'),
-                    outlier_info.get('remaining_samples', 'N/A')
-                ]
+                "Property": ["Method", "Action", "Outliers Detected", "Original Samples", "Remaining Samples"],
+                "Value": [
+                    outlier_info.get("method", "N/A"),
+                    outlier_info.get("action", "N/A"),
+                    outlier_info.get("n_outliers", 0),
+                    outlier_info.get("original_samples", "N/A"),
+                    outlier_info.get("remaining_samples", "N/A"),
+                ],
             }
             oi_df = pd.DataFrame(oi_data)
-            oi_df.to_excel(writer, sheet_name='Outlier Handling', index=False)
-            removed = outlier_info.get('removed_row_indices')
+            oi_df.to_excel(writer, sheet_name="Outlier Handling", index=False)
+            removed = outlier_info.get("removed_row_indices")
             if removed and isinstance(removed, list) and len(removed) > 0:
-                removed_df = pd.DataFrame({'Removed sample index': removed})
-                removed_df.to_excel(writer, sheet_name='Outlier Samples Removed', index=False)
+                removed_df = pd.DataFrame({"Removed sample index": removed})
+                removed_df.to_excel(writer, sheet_name="Outlier Samples Removed", index=False)
 
-    
+
 def _xlsx_safe_metric(value):
     """xlsxwriter with nan_inf_to_errors can raise on NaN/Inf; use a safe cell value."""
     try:
@@ -567,30 +626,47 @@ def _xlsx_safe_metric(value):
         return value
 
 
-def write_to_excelCluster(data, indicator_names, stratify_name, scaler, seed, modelName, params, units, train_silhouette, train_calinski_harabasz, train_davies_bouldin, test_silhouette, test_calinski_harabasz, test_davies_bouldin, best_k, centers, silhouette_grid):
-    
+def write_to_excelCluster(
+    data,
+    indicator_names,
+    stratify_name,
+    scaler,
+    seed,
+    modelName,
+    params,
+    units,
+    train_silhouette,
+    train_calinski_harabasz,
+    train_davies_bouldin,
+    test_silhouette,
+    test_calinski_harabasz,
+    test_davies_bouldin,
+    best_k,
+    centers,
+    silhouette_grid,
+):
+
     logger.debug(f"Cluster centers:\n{centers}")
     logger.debug(f"Silhouette grid:\n{silhouette_grid}")
-    workbook = xlsxwriter.Workbook(str(VIS_DIR / "model_performance.xlsx"), {'nan_inf_to_errors': True})
-    worksheet = workbook.add_worksheet('Preprocessing')
-    worksheet.write('A1', 'Filename')
-    worksheet.write('B1', data['filename'])
-    worksheet.write('A2', 'Indicators')
-    indicator_list = indicator_names.tolist() if hasattr(indicator_names, 'tolist') else list(indicator_names)
-    worksheet.write('B2', f'{[str(i)[:10] for i in indicator_list]}')
-    worksheet.write('A3', 'Stratify Variable')
-    worksheet.write('B3', stratify_name)
-    worksheet.write('A4', 'Scaling')
-    worksheet.write('B4', scaler)
-    worksheet.write('A5', 'Seed')
-    worksheet.write('B5', seed)
+    workbook = xlsxwriter.Workbook(str(VIS_DIR / "model_performance.xlsx"), {"nan_inf_to_errors": True})
+    worksheet = workbook.add_worksheet("Preprocessing")
+    worksheet.write("A1", "Filename")
+    worksheet.write("B1", data["filename"])
+    worksheet.write("A2", "Indicators")
+    indicator_list = indicator_names.tolist() if hasattr(indicator_names, "tolist") else list(indicator_names)
+    worksheet.write("B2", f"{[str(i)[:10] for i in indicator_list]}")
+    worksheet.write("A3", "Stratify Variable")
+    worksheet.write("B3", stratify_name)
+    worksheet.write("A4", "Scaling")
+    worksheet.write("B4", scaler)
+    worksheet.write("A5", "Seed")
+    worksheet.write("B5", seed)
 
+    worksheet2 = workbook.add_worksheet("Model Selection")
+    worksheet2.write("A1", "Model")
+    worksheet2.write("B1", f"{modelName}")
+    worksheet2.write("A2", "Hyperparameters")
 
-    worksheet2 = workbook.add_worksheet('Model Selection')
-    worksheet2.write('A1', 'Model')
-    worksheet2.write('B1', f'{modelName}')
-    worksheet2.write('A2', 'Hyperparameters')
-    
     row = 3  # B2 means row 1 (0-indexed) and column 1 (also 0-indexed)
     col = 1  # Column B
 
@@ -602,50 +678,50 @@ def write_to_excelCluster(data, indicator_names, stratify_name, scaler, seed, mo
         worksheet2.write(row, col + 1, str(value))  # Convert to string just in case
         row += 1
 
-    worksheet3 = workbook.add_worksheet('Overall Performance')
-    header_format = workbook.add_format({'bold': True, 'bg_color': '#D7E4BC'})
-    worksheet3.write(0, 0, 'Units:', header_format)
+    worksheet3 = workbook.add_worksheet("Overall Performance")
+    header_format = workbook.add_format({"bold": True, "bg_color": "#D7E4BC"})
+    worksheet3.write(0, 0, "Units:", header_format)
     worksheet3.write(0, 1, units)
 
-    worksheet3.write('A2', 'Train Silhouette')
-    worksheet3.write('B2', _xlsx_safe_metric(train_silhouette))
-    worksheet3.write('A3', 'Train Calinski Harabasz')
-    worksheet3.write('B3', _xlsx_safe_metric(train_calinski_harabasz))
-    worksheet3.write('A4', 'Train Davies Bouldin')
-    worksheet3.write('B4', _xlsx_safe_metric(train_davies_bouldin))
+    worksheet3.write("A2", "Train Silhouette")
+    worksheet3.write("B2", _xlsx_safe_metric(train_silhouette))
+    worksheet3.write("A3", "Train Calinski Harabasz")
+    worksheet3.write("B3", _xlsx_safe_metric(train_calinski_harabasz))
+    worksheet3.write("A4", "Train Davies Bouldin")
+    worksheet3.write("B4", _xlsx_safe_metric(train_davies_bouldin))
 
-    worksheet3.write('A5', 'Test Silhouette')
-    worksheet3.write('B5', _xlsx_safe_metric(test_silhouette))
-    worksheet3.write('A6', 'Test Calinski Harabasz')
-    worksheet3.write('B6', _xlsx_safe_metric(test_calinski_harabasz))
-    worksheet3.write('A7', 'Test Davies Bouldin')
-    worksheet3.write('B7', _xlsx_safe_metric(test_davies_bouldin))
+    worksheet3.write("A5", "Test Silhouette")
+    worksheet3.write("B5", _xlsx_safe_metric(test_silhouette))
+    worksheet3.write("A6", "Test Calinski Harabasz")
+    worksheet3.write("B6", _xlsx_safe_metric(test_calinski_harabasz))
+    worksheet3.write("A7", "Test Davies Bouldin")
+    worksheet3.write("B7", _xlsx_safe_metric(test_davies_bouldin))
 
-    worksheet3.write('A8', 'Best K')
-    worksheet3.write('B8', int(best_k) if best_k is not None else "N/A")
+    worksheet3.write("A8", "Best K")
+    worksheet3.write("B8", int(best_k) if best_k is not None else "N/A")
 
-    centersrow=8
-    centerscol=1
-    worksheet3.write('A9', 'Centers')
+    centersrow = 8
+    centerscol = 1
+    worksheet3.write("A9", "Centers")
     if centers is not None and hasattr(centers, "shape"):
-        for i in range(centers.shape[0]):      
-            for j in range(centers.shape[1]):  
-                worksheet3.write(centersrow+i, centerscol+j, _xlsx_safe_metric(centers[i, j]))
-        gridrow=centersrow+i+1
+        for i in range(centers.shape[0]):
+            for j in range(centers.shape[1]):
+                worksheet3.write(centersrow + i, centerscol + j, _xlsx_safe_metric(centers[i, j]))
+        gridrow = centersrow + i + 1
     else:
         worksheet3.write(centersrow, centerscol, "N/A")
-        gridrow=centersrow+1
+        gridrow = centersrow + 1
 
-    gridcol=1
-    worksheet3.write(gridrow,0,'Silhouette Grid')
-    gridrow+=1
+    gridcol = 1
+    worksheet3.write(gridrow, 0, "Silhouette Grid")
+    gridrow += 1
     for key, value in silhouette_grid.items():
         worksheet3.write(gridrow, gridcol, key)
         worksheet3.write(gridrow, gridcol + 1, str(value))  # Convert to string just in case
         gridrow += 1
 
     workbook.close()
-    file_path = VIS_DIR / "model_performance.xlsx"
+    VIS_DIR / "model_performance.xlsx"
 
 
 def _build_cv_summary(results: dict, scoring: dict | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -670,16 +746,20 @@ def _build_cv_summary(results: dict, scoring: dict | None = None) -> tuple[pd.Da
         if metric_name.startswith("neg_"):
             metric_name = metric_name.replace("neg_", "")
             metric_values = -metric_values
-        summary_rows.append({
-            "Metric": metric_name,
-            "Mean": float(np.mean(metric_values)),
-            "Std": float(np.std(metric_values)),
-        })
+        summary_rows.append(
+            {
+                "Metric": metric_name,
+                "Mean": float(np.mean(metric_values)),
+                "Std": float(np.std(metric_values)),
+            }
+        )
     summary_df = pd.DataFrame(summary_rows)
     return summary_df, fold_df
 
 
-def write_cross_validation_results(summary_df: pd.DataFrame, fold_df: pd.DataFrame, cv_type: str, cv_folds: int) -> Path:
+def write_cross_validation_results(
+    summary_df: pd.DataFrame, fold_df: pd.DataFrame, cv_type: str, cv_folds: int
+) -> Path:
     file_path = VIS_DIR / "cross_validation.xlsx"
     with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
         summary_df.to_excel(writer, sheet_name="Summary", index=False)
@@ -775,14 +855,17 @@ def _model_for_inference_attrs(model):
     """Return the model that has _digiterra_* attributes (wrapper or best_estimator_)."""
     if hasattr(model, "best_estimator_"):
         inner = model.best_estimator_
-        if getattr(inner, "_digiterra_raw_features", None) is not None or getattr(inner, "_digiterra_preprocessor", None) is not None:
+        if (
+            getattr(inner, "_digiterra_raw_features", None) is not None
+            or getattr(inner, "_digiterra_preprocessor", None) is not None
+        ):
             return inner
     return model
 
 
 def prediction(df_clean, best_model, training_features, X_scaler, y_scaler, feature_order, target_names=None):
 
-    logger.info('Starting prediction function')
+    logger.info("Starting prediction function")
 
     # Use the object that actually has inference attributes (e.g. best_estimator_ when model is GridSearchCV)
     model_for_attrs = _model_for_inference_attrs(best_model)
@@ -825,16 +908,16 @@ def prediction(df_clean, best_model, training_features, X_scaler, y_scaler, feat
                 columns=scaler_features,
             )
         else:
-            X_scaled_full = pd.DataFrame(
-                X_scaler.transform(X_new), index=X_new.index, columns=X_new.columns
-            )
+            X_scaled_full = pd.DataFrame(X_scaler.transform(X_new), index=X_new.index, columns=X_new.columns)
     else:
         X_scaled_full = X_new
 
     if model_feature_order:
         missing_model_features = sorted(set(model_feature_order) - set(X_scaled_full.columns))
         if missing_model_features:
-            raise ValueError(f"Prediction preprocessing mismatch. Missing transformed features: {missing_model_features}")
+            raise ValueError(
+                f"Prediction preprocessing mismatch. Missing transformed features: {missing_model_features}"
+            )
         X_new_scaled = X_scaled_full[model_feature_order].values
     elif feature_order and set(feature_order).issubset(set(X_scaled_full.columns)):
         X_new_scaled = X_scaled_full[feature_order].values
@@ -857,7 +940,6 @@ def prediction(df_clean, best_model, training_features, X_scaler, y_scaler, feat
 
     # --- 5. Ensure 2D shape for inverse_transform ---
     y_pred = np.asarray(y_pred)
-    original_shape = y_pred.shape
     if y_pred.ndim == 1:
         y_pred = y_pred.reshape(-1, 1)
 
@@ -872,26 +954,24 @@ def prediction(df_clean, best_model, training_features, X_scaler, y_scaler, feat
 
     # --- 7. Handle single vs multiple targets ---
     num_targets = y_pred.shape[1] if y_pred.ndim > 1 else 1
-    
+
     if num_targets > 1:
         # Multiple targets: create a column for each target
         if target_names is None:
-            target_names = [f'Target_{i+1}' for i in range(num_targets)]
+            target_names = [f"Target_{i + 1}" for i in range(num_targets)]
         elif len(target_names) != num_targets:
             # Fallback if target_names count doesn't match
-            target_names = [f'Target_{i+1}' for i in range(num_targets)]
-        
+            target_names = [f"Target_{i + 1}" for i in range(num_targets)]
+
         for i, target_name in enumerate(target_names):
-            pred_col = f'Predicted_{target_name}'
+            pred_col = f"Predicted_{target_name}"
             df_clean[pred_col] = y_pred[:, i]
     else:
         # Single target: maintain backward compatibility
         y_pred_flat = y_pred.ravel()
-        df_clean['Predicted_Target'] = y_pred_flat
+        df_clean["Predicted_Target"] = y_pred_flat
 
     # --- 8. Save ---
     df_clean.to_csv(VIS_DIR / "predictions.csv", index=False)
 
     logger.info("Predictions complete. Saved to predictions.csv")
-
-    

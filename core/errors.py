@@ -8,6 +8,7 @@ response.
 
 Adapted from the errors module of the July restructure.
 """
+
 from __future__ import annotations
 
 import logging

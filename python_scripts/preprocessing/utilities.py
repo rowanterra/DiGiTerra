@@ -8,16 +8,16 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
-logger = logging.getLogger(__name__)
-
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import FunctionTransformer, Pipeline
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder, QuantileTransformer, RobustScaler, StandardScaler
 
+logger = logging.getLogger(__name__)
+
 # -------------------------
 # Utilities
 # -------------------------
+
 
 def sort_class_labels_numeric_bins(labels: Sequence[Any]) -> list[Any]:
     """
@@ -70,9 +70,9 @@ def sort_class_labels_numeric_bins(labels: Sequence[Any]) -> list[Any]:
     return sorted(labels, key=sort_key)
 
 
-def choose_columns_from_df(df: pd.DataFrame,
-                           target_col: str | None,
-                           max_ohe_cardinality: int = 50) -> tuple[list[str], list[str], list[str]]:
+def choose_columns_from_df(
+    df: pd.DataFrame, target_col: str | None, max_ohe_cardinality: int = 50
+) -> tuple[list[str], list[str], list[str]]:
     """
     If predictors are not specified, infer numeric vs categorical. Text cols left empty by default.
     Returns (numeric_predictors, categorical_predictors, text_cols).
@@ -80,7 +80,9 @@ def choose_columns_from_df(df: pd.DataFrame,
     num_cols = df.select_dtypes(include=np.number).columns.tolist()
     obj_cols = df.select_dtypes(exclude=np.number).columns.tolist()
     numeric_predictors = [c for c in num_cols if c != target_col]
-    categorical_predictors = [c for c in obj_cols if c != target_col and df[c].nunique(dropna=True) <= max_ohe_cardinality]
+    categorical_predictors = [
+        c for c in obj_cols if c != target_col and df[c].nunique(dropna=True) <= max_ohe_cardinality
+    ]
     text_cols: list[str] = []
     return numeric_predictors, categorical_predictors, text_cols
 
@@ -93,43 +95,52 @@ def resolve_predictors(df: pd.DataFrame, numeric_predictors, categorical_predict
 
     need_infer_num = numeric_predictors is None
     need_infer_cat = categorical_predictors is None
-    #need_infer_txt = text_cols is None
+    # need_infer_txt = text_cols is None
 
     inf_num, inf_cat, inf_txt = ([], [], [])
-    if need_infer_num or need_infer_cat: #or need_infer_txt:
+    if need_infer_num or need_infer_cat:  # or need_infer_txt:
         inf_num, inf_cat, inf_txt = choose_columns_from_df(df, target_col)
 
     nump = numeric_predictors if not need_infer_num else inf_num
     catp = categorical_predictors if not need_infer_cat else inf_cat
-    #textp = text_cols if not need_infer_txt else inf_txt
-    return nump, catp#, textp
-
+    # textp = text_cols if not need_infer_txt else inf_txt
+    return nump, catp  # , textp
 
 
 def _get_scaler(kind: str):
     kind = (kind or "none").lower()
-    if kind == "standard": return StandardScaler()
-    if kind == "robust":   return RobustScaler()
-    if kind == "quantile": return QuantileTransformer()
-    if kind == "minmax":   return MinMaxScaler()
-    if kind == "none":     return None
+    if kind == "standard":
+        return StandardScaler()
+    if kind == "robust":
+        return RobustScaler()
+    if kind == "quantile":
+        return QuantileTransformer()
+    if kind == "minmax":
+        return MinMaxScaler()
+    if kind == "none":
+        return None
     raise ValueError("Unknown scaler kind")
 
 
 def _group_by_map(series: pd.Series, mapping: dict[str, str], regex: bool = True) -> pd.Series:
     def _map_one(s: str):
-        if pd.isna(s): return s
+        if pd.isna(s):
+            return s
         for pat, label in mapping.items():
-            if (re.search(pat, s) if regex else pat == s):
+            if re.search(pat, s) if regex else pat == s:
                 return label
         return s
+
     return series.astype(str).apply(_map_one)
 
 
-def make_preprocessor(numeric_cols: list[str],
-                      categorical_cols: list[str] | None = None,
-                      *, cat_mode: str = "onehot",
-                      group_maps: dict[str, dict[str, str]] | None = None) -> Pipeline:
+def make_preprocessor(
+    numeric_cols: list[str],
+    categorical_cols: list[str] | None = None,
+    *,
+    cat_mode: str = "onehot",
+    group_maps: dict[str, dict[str, str]] | None = None,
+) -> Pipeline:
     def apply_group_map(Xdf: pd.DataFrame):
         Xdf = Xdf.copy()
         if group_maps:
@@ -153,8 +164,7 @@ def make_preprocessor(numeric_cols: list[str],
         raise ValueError("No columns were provided to the preprocessor. The predictor lists are empty.")
 
     coltx = ColumnTransformer(transformers, remainder="drop", sparse_threshold=0.3)
-    return Pipeline(steps=[("group_map", FunctionTransformer(apply_group_map)),
-                          ("columns", coltx)])
+    return Pipeline(steps=[("group_map", FunctionTransformer(apply_group_map)), ("columns", coltx)])
 
 
 def get_feature_names(preprocessor: Pipeline, input_df: pd.DataFrame) -> list[str]:
@@ -177,15 +187,19 @@ def get_feature_names(preprocessor: Pipeline, input_df: pd.DataFrame) -> list[st
                 names.append(cols)
     return names
 
-#Rowan 10/13
-def make_strat_labels_robust(ddf: pd.DataFrame,
-                              target_col: str,
-                              problem_type: str,
-                              test_size: float = 0.2,
-                              max_bins: int | Sequence[float] = 5,
-                              min_bins: int = 2) -> tuple[pd.DataFrame, bool, dict]:
+
+# Rowan 10/13
+def make_strat_labels_robust(
+    ddf: pd.DataFrame,
+    target_col: str,
+    problem_type: str,
+    test_size: float = 0.2,
+    max_bins: int | Sequence[float] = 5,
+    min_bins: int = 2,
+) -> tuple[pd.DataFrame, bool, dict]:
     """
-    Creates quantile stratification column for train/test splitting. Returns (df_with_stratify_col, use_stratified_split, counts).
+    Creates quantile stratification column for train/test splitting. Returns (df_with_stratify_col,
+    use_stratified_split, counts).
     Regression: quantile bins with decreasing bin count until valid; falls back to no stratify.
     Classification: uses label strings if each class has >=2 samples and at least one test sample.
     """
@@ -249,9 +263,14 @@ def make_strat_labels_robust(ddf: pd.DataFrame,
         raise ValueError("problem_type must be 'regression' or 'classification' or 'cluster'")
 
 
-def _scale_pairs(X_train: pd.DataFrame, X_test: pd.DataFrame,
-                 y_train: pd.DataFrame | None, y_test: pd.DataFrame | None,
-                 scale_X: str, scale_y: str):
+def _scale_pairs(
+    X_train: pd.DataFrame,
+    X_test: pd.DataFrame,
+    y_train: pd.DataFrame | None,
+    y_test: pd.DataFrame | None,
+    scale_X: str,
+    scale_y: str,
+):
     X_scaler = _get_scaler(scale_X)
     y_scaler = _get_scaler(scale_y) if y_train is not None else None
 
@@ -267,12 +286,20 @@ def _scale_pairs(X_train: pd.DataFrame, X_test: pd.DataFrame,
             X_test_s = pd.DataFrame(columns=X_train.columns, dtype=X_train.dtypes)
     else:
         X_train_s = X_train.copy()
-        X_test_s = X_test.copy() if X_test is not None and len(X_test) > 0 else pd.DataFrame(columns=X_train.columns, dtype=X_train.dtypes)
+        X_test_s = (
+            X_test.copy()
+            if X_test is not None and len(X_test) > 0
+            else pd.DataFrame(columns=X_train.columns, dtype=X_train.dtypes)
+        )
 
     if y_train is not None:
         if y_scaler:
             y_train_s = pd.DataFrame(y_scaler.fit_transform(y_train), columns=y_train.columns, index=y_train.index)
-            y_test_s  = pd.DataFrame(y_scaler.transform(y_test),      columns=y_test.columns,  index=y_test.index) if y_test is not None else None
+            y_test_s = (
+                pd.DataFrame(y_scaler.transform(y_test), columns=y_test.columns, index=y_test.index)
+                if y_test is not None
+                else None
+            )
         else:
             y_train_s, y_test_s = y_train.copy(), (y_test.copy() if y_test is not None else None)
     else:
@@ -286,31 +313,38 @@ def regression_report(y_true, y_pred, target_names=None, sigfig=3) -> pd.DataFra
     Compute regression metrics through calculate_all_metrics.
     """
     from python_scripts.preprocessing.calculate_all_metrics import calculate_regression_metrics
+
     return calculate_regression_metrics(y_true, y_pred, target_names=target_names, sigfig=sigfig)
 
 
-def visualize_regression(y_train: pd.DataFrame, y_train_pred: pd.DataFrame,
-                         y_test: pd.DataFrame, y_test_pred: pd.DataFrame, units: str = ""):
+def visualize_regression(
+    y_train: pd.DataFrame, y_train_pred: pd.DataFrame, y_test: pd.DataFrame, y_test_pred: pd.DataFrame, units: str = ""
+):
     tname = y_test.columns[0] if isinstance(y_test, pd.DataFrame) else "y"
     yt = y_test[tname] if isinstance(y_test, pd.DataFrame) else pd.Series(np.ravel(y_test), name="y")
     yp = y_test_pred[tname] if isinstance(y_test_pred, pd.DataFrame) else pd.Series(np.ravel(y_test_pred), name="ŷ")
 
     # Pred vs Actual
-    plt.figure(figsize=(6,6))
+    plt.figure(figsize=(6, 6))
     plt.scatter(yt, yp, alpha=0.6, edgecolors="k")
     lo, hi = float(min(yt.min(), yp.min())), float(max(yt.max(), yp.max()))
     plt.plot([lo, hi], [lo, hi], linestyle="--")
-    plt.xlabel(f"Actual {units}".strip()); plt.ylabel(f"Predicted {units}".strip())
+    plt.xlabel(f"Actual {units}".strip())
+    plt.ylabel(f"Predicted {units}".strip())
     plt.title(f"Predicted vs Actual: {tname}")
-    plt.tight_layout(); plt.show()
+    plt.tight_layout()
+    plt.show()
 
     # Residuals
     res = yt.values - yp.values
-    plt.figure(figsize=(6,4))
+    plt.figure(figsize=(6, 4))
     plt.hist(res, bins=30, edgecolor="black")
     plt.axvline(0, linestyle="--")
-    plt.xlabel("Residual (y - ŷ)"); plt.ylabel("Count"); plt.title(f"Residuals: {tname}")
-    plt.tight_layout(); plt.show()
+    plt.xlabel("Residual (y - ŷ)")
+    plt.ylabel("Count")
+    plt.title(f"Residuals: {tname}")
+    plt.tight_layout()
+    plt.show()
 
 
 def _ensure_numeric_series(s: pd.Series) -> pd.Series:

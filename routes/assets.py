@@ -1,4 +1,5 @@
 """User visualizations, download, and additional info."""
+
 import uuid
 
 import pandas as pd

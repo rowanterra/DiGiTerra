@@ -73,11 +73,18 @@ def run_predict(
         return ({"error": "No trained model found. Train a model first."}, 400)
     if "feature_order" not in store or not store["feature_order"]:
         return ({"error": "No feature_order found. Train a model first."}, 400)
-    # Cluster models: only some support assigning new points to clusters (e.g. KMeans, GMM). Spectral, DBSCAN, OPTICS, etc. do not.
+    # Cluster models: only some support assigning new points to clusters (e.g. KMeans, GMM). Spectral, DBSCAN, OPTICS,
+    # etc. do not.
     if store.get("model_type") == "cluster":
         m = store["model"]
         if not (hasattr(m, "predict") and callable(getattr(m, "predict", None))):
-            return ({"error": "This cluster model (Spectral, DBSCAN, or OPTICS) has no predict method. KMeans and GMM assign new rows to clusters."}, 400)
+            return (
+                {
+                    "error": "This cluster model (Spectral, DBSCAN, or OPTICS) has no predict method. KMeans and GMM "
+                    "assign new rows to clusters."
+                },
+                400,
+            )
     infer_cfg = store.get("inference_config", {})
     indicator_names = infer_cfg.get("indicator_names")
     drop_missing = normalize_preprocess_mode_fn(infer_cfg.get("drop_missing", "none"))
@@ -85,11 +92,11 @@ def run_predict(
     drop_zero = normalize_preprocess_mode_fn(infer_cfg.get("drop_zero", "none"))
     zero_handle = infer_cfg.get("zero_handle")
     if zero_handle is None:
-        zero_handle = 'drop' if drop_zero != 'none' else 'none'
+        zero_handle = "drop" if drop_zero != "none" else "none"
     elif isinstance(zero_handle, str) and zero_handle in {"0", "0.01"}:
         zero_handle = float(zero_handle)
-    if drop_zero == 'none':
-        zero_handle = 'none'
+    if drop_zero == "none":
+        zero_handle = "none"
     if impute_strategy in {"0", "0.01"}:
         impute_strategy = float(impute_strategy)
     preprocess_indicator_cols = None
@@ -138,26 +145,30 @@ def run_predict(
                     s = pred_df[col]
                     if pd.api.types.is_numeric_dtype(s):
                         q = s.quantile([0.25, 0.5, 0.75]).tolist()
-                        summary.append({
-                            "column": col,
-                            "n": int(s.count()),
-                            "min": float(s.min()) if s.count() else None,
-                            "max": float(s.max()) if s.count() else None,
-                            "mean": float(s.mean()) if s.count() else None,
-                            "std": float(s.std()) if s.count() and len(s) > 1 else None,
-                            "25": float(q[0]) if len(q) > 0 else None,
-                            "50": float(q[1]) if len(q) > 1 else None,
-                            "75": float(q[2]) if len(q) > 2 else None,
-                            "100": float(s.max()) if s.count() else None,
-                        })
+                        summary.append(
+                            {
+                                "column": col,
+                                "n": int(s.count()),
+                                "min": float(s.min()) if s.count() else None,
+                                "max": float(s.max()) if s.count() else None,
+                                "mean": float(s.mean()) if s.count() else None,
+                                "std": float(s.std()) if s.count() and len(s) > 1 else None,
+                                "25": float(q[0]) if len(q) > 0 else None,
+                                "50": float(q[1]) if len(q) > 1 else None,
+                                "75": float(q[2]) if len(q) > 2 else None,
+                                "100": float(s.max()) if s.count() else None,
+                            }
+                        )
                         predictions_preview[col] = s.dropna().head(200).tolist()
                     else:
                         vc = s.value_counts()
-                        summary.append({
-                            "column": col,
-                            "n": int(s.count()),
-                            "value_counts": [{"value": str(k), "count": int(v)} for k, v in vc.items()],
-                        })
+                        summary.append(
+                            {
+                                "column": col,
+                                "n": int(s.count()),
+                                "value_counts": [{"value": str(k), "count": int(v)} for k, v in vc.items()],
+                            }
+                        )
                         predictions_preview[col] = s.dropna().head(200).tolist()
             except Exception as e:
                 logger.warning("Could not build prediction summary: %s", e)
@@ -176,7 +187,12 @@ def run_predict(
             logger.debug("Could not read training target summary: %s", e)
         inference_visualization = None
         inference_visualization_version = None
-        if model_type == "regression" and pred_df is not None and pred_cols and (user_vis_dir / "training_plot_data.json").exists():
+        if (
+            model_type == "regression"
+            and pred_df is not None
+            and pred_cols
+            and (user_vis_dir / "training_plot_data.json").exists()
+        ):
             try:
                 with open(user_vis_dir / "training_plot_data.json") as f:
                     plot_data = json.load(f)
@@ -184,13 +200,18 @@ def run_predict(
                 inference_pred = pred_df[first_col].dropna().values.ravel()
                 if len(inference_pred) > 0:
                     from python_scripts.plotting.visualize_predictions import plot_inference_pred_vs_actual
+
                     out_path = user_vis_dir / "inference_pred_vs_actual_1.png"
                     plot_inference_pred_vs_actual(
-                        plot_data["y_train_actual"], plot_data["y_train_pred"],
-                        plot_data["y_test_actual"], plot_data["y_test_pred"],
+                        plot_data["y_train_actual"],
+                        plot_data["y_train_pred"],
+                        plot_data["y_test_actual"],
+                        plot_data["y_test_pred"],
                         inference_pred,
-                        plot_data["target_name"], plot_data.get("units", ""),
-                        plot_data.get("model_name", "Model"), out_path,
+                        plot_data["target_name"],
+                        plot_data.get("units", ""),
+                        plot_data.get("model_name", "Model"),
+                        out_path,
                     )
                     inference_visualization = "inference_pred_vs_actual_1.png"
                     inference_visualization_version = str(int(__import__("time").time() * 1000))

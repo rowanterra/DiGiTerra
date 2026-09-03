@@ -4,6 +4,7 @@ Each test drives the same function the /process route calls, with a dict in
 place of session storage, on the example CSVs. Models are the cheapest in each
 family (Linear, LogisticRegression, KMeans) so the file stays quick.
 """
+
 import warnings
 
 import numpy as np
@@ -17,12 +18,23 @@ from python_scripts.preprocessing.progress_tracker import get_result, get_tracke
 warnings.filterwarnings("ignore")
 
 BASE = dict(
-    hyperparameters={}, nonreq=False, scaler="standard", units="", sigfig=3,
-    seedValue=42, testSize="0.20", stratifyBool=False, dropMissing="none",
-    imputeStrategy="none", dropZero="none",
+    hyperparameters={},
+    nonreq=False,
+    scaler="standard",
+    units="",
+    sigfig=3,
+    seedValue=42,
+    testSize="0.20",
+    stratifyBool=False,
+    dropMissing="none",
+    imputeStrategy="none",
+    dropZero="none",
     quantileBinDict={"quantile": 0, "bin": 0, "binsLabel": ""},
-    useTransformer="No", transformerCols=[], filename="test.csv",
-    crossValidationType="None", modelingMode="simple",
+    useTransformer="No",
+    transformerCols=[],
+    filename="test.csv",
+    crossValidationType="None",
+    modelingMode="simple",
 )
 
 _counter = [0]
@@ -53,15 +65,22 @@ def test_cv_summary_error_metrics_are_positive():
     }
     scoring = {"RMSE": "neg_root_mean_squared_error", "MAE": "neg_mean_absolute_error", "R2": "r2"}
     summary, _ = _build_cv_summary(results, scoring)
-    means = dict(zip(summary["Metric"], summary["Mean"]))
+    means = dict(zip(summary["Metric"], summary["Mean"], strict=True))
     assert means["RMSE"] > 0 and means["MAE"] > 0
     assert means["RMSE"] == pytest.approx(2.5)
 
 
 def test_regression_cv_summary_rmse_positive():
     store = {}
-    result, stages = _train(store, "examples/synthetic_regression.csv", list(range(10)), [10], "Linear",
-                            crossValidationType="KFold", crossValidationFolds=3)
+    result, stages = _train(
+        store,
+        "examples/synthetic_regression.csv",
+        list(range(10)),
+        [10],
+        "Linear",
+        crossValidationType="KFold",
+        crossValidationFolds=3,
+    )
     summary = result["cross_validation_summary"]
     assert summary, "cross_validation_summary missing"
     rmse = [row for row in summary if str(row.get("Metric", "")).upper() == "RMSE"]
@@ -71,8 +90,16 @@ def test_regression_cv_summary_rmse_positive():
 
 def test_feature_selection_names_match_model_and_predict_works():
     store = {}
-    result, _ = _train(store, "examples/synthetic_regression.csv", list(range(10)), [10], "Linear",
-                       featureSelectionMethod="SelectKBest", featureSelectionK=4, modelingMode="advanced")
+    result, _ = _train(
+        store,
+        "examples/synthetic_regression.csv",
+        list(range(10)),
+        [10],
+        "Linear",
+        featureSelectionMethod="SelectKBest",
+        featureSelectionK=4,
+        modelingMode="advanced",
+    )
     model = store["model"]
     names = getattr(model, "_digiterra_model_features", None) or store["feature_order"]
     assert model.n_features_in_ == 4
@@ -83,8 +110,7 @@ def test_feature_selection_names_match_model_and_predict_works():
     # Predict on new rows the way the inference route does: scale first, then subset.
     X_new = store["data"].iloc[:5, :10]
     scaler = store["X_scaler"]
-    scaled = pd.DataFrame(scaler.transform(X_new[list(scaler.feature_names_in_)]),
-                          columns=scaler.feature_names_in_)
+    scaled = pd.DataFrame(scaler.transform(X_new[list(scaler.feature_names_in_)]), columns=scaler.feature_names_in_)
     preds = model.predict(scaled[names].to_numpy())
     assert preds.shape == (5,) or preds.shape == (5, 1)
     assert np.all(np.isfinite(preds))
@@ -103,10 +129,26 @@ def test_classification_with_integer_target_has_string_report_keys():
 
     from python_scripts.helpers import unpack_classification_result
     from python_scripts.preprocessing.run_classification_pipeline import run_classification
+
     target = iris.columns[-1]
-    out = run_classification(LogisticRegression(max_iter=200), "Logistic_classifier", iris, [target], False,
-                             iris.iloc[:, :4], iris[[target]], "", "", "standard", 42, 3,
-                             dict(BASE["quantileBinDict"]), "No", [], 0.2)
+    out = run_classification(
+        LogisticRegression(max_iter=200),
+        "Logistic_classifier",
+        iris,
+        [target],
+        False,
+        iris.iloc[:, :4],
+        iris[[target]],
+        "",
+        "",
+        "standard",
+        42,
+        3,
+        dict(BASE["quantileBinDict"]),
+        "No",
+        [],
+        0.2,
+    )
     report = unpack_classification_result(out)[0]
     class_keys = [k for k in report if k not in ("accuracy", "macro avg", "weighted avg")]
     assert class_keys and all(isinstance(k, str) for k in class_keys)
@@ -115,16 +157,32 @@ def test_classification_with_integer_target_has_string_report_keys():
 
 def test_clustering_best_k_matches_labels_and_agglo_centers_finite():
     store = {}
-    result, _ = _train(store, "examples/iris_clustering.csv", [0, 1, 2, 3], [], "kmeans",
-                       hyperparameters={"n_clusters": 3})
+    result, _ = _train(
+        store, "examples/iris_clustering.csv", [0, 1, 2, 3], [], "kmeans", hyperparameters={"n_clusters": 3}
+    )
     assert result["best_k"] == len(np.unique(store["model"].labels_))
 
     from sklearn.cluster import AgglomerativeClustering
 
     from python_scripts.preprocessing.run_clustering_pipeline import run_clustering
+
     df = pd.read_csv("examples/iris_clustering.csv")
-    out = run_clustering(AgglomerativeClustering(n_clusters=3), "agglo", df, df, "", "standard",
-                         42, 3, dict(BASE["quantileBinDict"]), "No", [], 0.2, 2, 8)
+    out = run_clustering(
+        AgglomerativeClustering(n_clusters=3),
+        "agglo",
+        df,
+        df,
+        "",
+        "standard",
+        42,
+        3,
+        dict(BASE["quantileBinDict"]),
+        "No",
+        [],
+        0.2,
+        2,
+        8,
+    )
     best_k, centers = out[8], out[9]
     assert best_k == len(np.unique(out[4].labels_))
     assert centers.shape[0] == best_k
@@ -133,10 +191,19 @@ def test_clustering_best_k_matches_labels_and_agglo_centers_finite():
 
 def test_clustering_passes_outlier_handling_and_skips_supervised_stages():
     store = {}
-    result, stages = _train(store, "examples/iris_clustering.csv", [0, 1, 2, 3], [], "kmeans",
-                            hyperparameters={"n_clusters": 3}, outlierMethod="IQR", outlierAction="remove",
-                            featureSelectionMethod="SelectKBest", featureSelectionK=2,
-                            crossValidationType="KFold")
+    result, stages = _train(
+        store,
+        "examples/iris_clustering.csv",
+        [0, 1, 2, 3],
+        [],
+        "kmeans",
+        hyperparameters={"n_clusters": 3},
+        outlierMethod="IQR",
+        outlierAction="remove",
+        featureSelectionMethod="SelectKBest",
+        featureSelectionK=2,
+        crossValidationType="KFold",
+    )
     info = result["outlier_info"]
     assert info and info["n_outliers"] >= 0 and info["method"] == "IQR"
     assert stages["outlier_handling"]["status"] == "completed"

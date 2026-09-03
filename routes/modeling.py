@@ -1,4 +1,5 @@
 """Model training (process) route."""
+
 import threading
 import uuid
 
@@ -35,7 +36,9 @@ def process_columns():
     req_indicators = request.json.get("indicators")
     req_predictors = request.json.get("predictors")
     if req_indicators != last_preprocess.get("indicators") or req_predictors != last_preprocess.get("predictors"):
-        return jsonify({"error": "Selections changed since preprocessing. Re-run Model Preprocessing before Modeling."}), HTTP_BAD_REQUEST
+        return jsonify(
+            {"error": "Selections changed since preprocessing. Re-run Model Preprocessing before Modeling."}
+        ), HTTP_BAD_REQUEST
 
     session_id = str(uuid.uuid4())
     storage_session_id = get_session_id()

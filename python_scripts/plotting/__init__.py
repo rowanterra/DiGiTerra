@@ -13,15 +13,15 @@ from python_scripts.plotting.plot_shap_summary_graphic import plot_shap_summary
 from python_scripts.plotting.quantile_boundary_graphic import quantile_boundary_graphic
 
 __all__ = [
-    'plot_confusion_matrix',
-    'plot_confusion_matrix_from_estimator',
-    'plot_roc_curve',
-    'plot_roc_curve_from_estimator',
-    'plot_precision_recall_curve',
-    'plot_precision_recall_curve_from_estimator',
-    'plot_partial_dependence',
-    'plot_decision_tree',
-    'plot_permutation_importance',
-    'plot_shap_summary',
-    'quantile_boundary_graphic',
+    "plot_confusion_matrix",
+    "plot_confusion_matrix_from_estimator",
+    "plot_roc_curve",
+    "plot_roc_curve_from_estimator",
+    "plot_precision_recall_curve",
+    "plot_precision_recall_curve_from_estimator",
+    "plot_partial_dependence",
+    "plot_decision_tree",
+    "plot_permutation_importance",
+    "plot_shap_summary",
+    "quantile_boundary_graphic",
 ]

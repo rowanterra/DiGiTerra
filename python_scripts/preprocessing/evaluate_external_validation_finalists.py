@@ -78,10 +78,7 @@ def parse_candidates_arg(arg_value: str) -> list[tuple[str, str]]:
     candidates: list[tuple[str, str]] = []
     for token in parse_list_arg(arg_value):
         if ":" not in token:
-            raise ValueError(
-                "Each candidate must be in 'Model:outlier_mode' format. "
-                f"Got: '{token}'"
-            )
+            raise ValueError(f"Each candidate must be in 'Model:outlier_mode' format. Got: '{token}'")
         model_name, outlier_mode = token.split(":", 1)
         candidates.append((model_name.strip(), outlier_mode.strip()))
     if not candidates:

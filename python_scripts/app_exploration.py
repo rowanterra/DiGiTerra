@@ -92,14 +92,16 @@ def handle_auto_detect_nan_zeros(store: dict, data: dict):
         numeric_cols = cols_df.select_dtypes(include=[np.number])
         needs_zero_handling = (numeric_cols == 0).any().any() if not numeric_cols.empty else False
         if not needs_missing_handling and not needs_zero_handling:
-            message = "No blanks or zeros in the selected columns. Both options can stay at \"Don't apply\"."
+            message = 'No blanks or zeros in the selected columns. Both options can stay at "Don\'t apply".'
         else:
             parts = []
             if needs_missing_handling:
                 parts.append("blanks (missing values)")
             if needs_zero_handling:
                 parts.append("zeros")
-            message = f"Found {' and '.join(parts)} in the selected columns. Select the columns to clean and the action."
+            message = (
+                f"Found {' and '.join(parts)} in the selected columns. Select the columns to clean and the action."
+            )
         return (
             {
                 "needs_missing_handling": bool(needs_missing_handling),
@@ -226,10 +228,23 @@ def handle_corr(
     descriptive_stats = []
     if selected_columns:
         stats_df = df_corr[selected_columns].describe(percentiles=[0.25, 0.5, 0.75, 1.0]).T
-        stats_df = stats_df.rename(columns={
-            "count": "n", "min": "min", "max": "max", "mean": "mean", "std": "std",
-            "25%": "25", "50%": "50", "75%": "75", "100%": "100",
-        }).reset_index().rename(columns={"index": "column"})
+        stats_df = (
+            stats_df.rename(
+                columns={
+                    "count": "n",
+                    "min": "min",
+                    "max": "max",
+                    "mean": "mean",
+                    "std": "std",
+                    "25%": "25",
+                    "50%": "50",
+                    "75%": "75",
+                    "100%": "100",
+                }
+            )
+            .reset_index()
+            .rename(columns={"index": "column"})
+        )
         stats_df["column"] = stats_df["column"].astype(str).str.slice(0, 10)
         stats_df = stats_df[["column", "n", "min", "max", "mean", "std", "25", "50", "75", "100"]].round(4)
         descriptive_stats = stats_df.to_dict(orient="records")

@@ -1,11 +1,17 @@
 """Shared constants for DiGiTerra Flask app and blueprints."""
+
 import os
 
 # File upload
 ALLOWED_EXTENSIONS = {"csv"}
 FILE_SIZE_WARNING_MB = float(os.environ.get("DIGITERRA_WARN_UPLOAD_MB", "1"))
 MAX_UPLOAD_MB = float(os.environ.get("DIGITERRA_MAX_UPLOAD_MB", "0"))
-ENFORCE_UPLOAD_LIMIT = os.environ.get("DIGITERRA_ENFORCE_UPLOAD_LIMIT", "false").strip().lower() in {"1", "true", "yes", "on"}
+ENFORCE_UPLOAD_LIMIT = os.environ.get("DIGITERRA_ENFORCE_UPLOAD_LIMIT", "false").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
 CELL_COUNT_WARNING_LARGE = 1_000_000
 CELL_COUNT_WARNING_MODERATE = 500_000
 BYTES_PER_MB = 1024 * 1024

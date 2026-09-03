@@ -1,4 +1,5 @@
 """File upload route."""
+
 import logging
 import os
 import uuid
@@ -28,7 +29,9 @@ logger = logging.getLogger(__name__)
 @bp.route("/upload", methods=["POST"])
 def upload_file():
     """Handle file upload and return column information."""
-    logger.info("Upload request received. Content-Type: %s, Files: %s", request.content_type, list(request.files.keys()))
+    logger.info(
+        "Upload request received. Content-Type: %s, Files: %s", request.content_type, list(request.files.keys())
+    )
     store = get_session_storage()
     if "file" not in request.files:
         logger.warning("No 'file' key in request.files")
@@ -57,7 +60,11 @@ def upload_file():
             logger.warning("Failed to remove oversized uploaded file: %s", filepath)
         return jsonify({"error": f"File exceeds maximum allowed size of {MAX_UPLOAD_MB:.1f} MB."}), HTTP_BAD_REQUEST
 
-    size_warning = f"Large file detected ({file_size_mb:.1f} MB). Processing may take longer." if file_size_mb > FILE_SIZE_WARNING_MB else None
+    size_warning = (
+        f"Large file detected ({file_size_mb:.1f} MB). Processing may take longer."
+        if file_size_mb > FILE_SIZE_WARNING_MB
+        else None
+    )
 
     try:
         data = pd.read_csv(filepath)
@@ -88,9 +95,14 @@ def upload_file():
 
     total_cells = len(data) * len(data.columns)
     if total_cells > CELL_COUNT_WARNING_LARGE:
-        cell_warning = f"Large dataset detected ({len(data):,} rows × {len(data.columns)} columns = {total_cells:,} cells). Processing may take longer."
+        cell_warning = (
+            f"Large dataset detected ({len(data):,} rows × {len(data.columns)} columns = {total_cells:,} cells). "
+            "Processing may take longer."
+        )
     elif total_cells > CELL_COUNT_WARNING_MODERATE:
-        cell_warning = f"Moderate dataset size ({len(data):,} rows × {len(data.columns)} columns = {total_cells:,} cells)."
+        cell_warning = (
+            f"Moderate dataset size ({len(data):,} rows × {len(data.columns)} columns = {total_cells:,} cells)."
+        )
     else:
         cell_warning = None
 

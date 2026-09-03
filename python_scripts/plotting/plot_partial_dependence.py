@@ -7,7 +7,7 @@ using scikit-learn's PartialDependenceDisplay.
 
 import matplotlib
 
-matplotlib.use('Agg')  # Use non-interactive backend
+matplotlib.use("Agg")  # Use non-interactive backend
 import matplotlib.pyplot as plt
 from sklearn.inspection import PartialDependenceDisplay
 
@@ -15,17 +15,34 @@ import python_scripts.plotting.plot_style  # noqa: F401
 from python_scripts.config import VIS_DIR
 
 
-def plot_partial_dependence(estimator, X, features, model_name, pdf_pages=None,
-                           sample_weight=None, categorical_features=None,
-                           feature_names=None, target=None, response_method='auto',
-                           n_cols=3, grid_resolution=100, percentiles=(0.05, 0.95),
-                           method='auto', n_jobs=None, verbose=0,
-                           kind='average', centered=False, subsample=1000,
-                           random_state=None, file_suffix='', label_suffix='',
-                           **kwargs):
+def plot_partial_dependence(
+    estimator,
+    X,
+    features,
+    model_name,
+    pdf_pages=None,
+    sample_weight=None,
+    categorical_features=None,
+    feature_names=None,
+    target=None,
+    response_method="auto",
+    n_cols=3,
+    grid_resolution=100,
+    percentiles=(0.05, 0.95),
+    method="auto",
+    n_jobs=None,
+    verbose=0,
+    kind="average",
+    centered=False,
+    subsample=1000,
+    random_state=None,
+    file_suffix="",
+    label_suffix="",
+    **kwargs,
+):
     """
     Plot partial dependence plots using scikit-learn's PartialDependenceDisplay.from_estimator.
-    
+
     Args:
         estimator: Fitted estimator object
         X: Input data (used to generate grid and complement features)
@@ -50,13 +67,15 @@ def plot_partial_dependence(estimator, X, features, model_name, pdf_pages=None,
         file_suffix: Suffix for filename
         label_suffix: Suffix for plot title
         **kwargs: Additional keyword arguments
-        
+
     Returns:
         PartialDependenceDisplay object
     """
     # Create display from estimator
     disp = PartialDependenceDisplay.from_estimator(
-        estimator, X, features,
+        estimator,
+        X,
+        features,
         sample_weight=sample_weight,
         categorical_features=categorical_features,
         feature_names=feature_names,
@@ -72,9 +91,9 @@ def plot_partial_dependence(estimator, X, features, model_name, pdf_pages=None,
         centered=centered,
         subsample=subsample,
         random_state=random_state,
-        **kwargs
+        **kwargs,
     )
-    
+
     # Add title
     title_base = f"{model_name} | Partial Dependence Plot"
     title_with_label = f"{title_base} {label_suffix}" if label_suffix else title_base
@@ -82,21 +101,22 @@ def plot_partial_dependence(estimator, X, features, model_name, pdf_pages=None,
         disp.bounding_ax_.set_title(title_with_label, fontsize=14, pad=20)
     elif disp.figure_ is not None:
         disp.figure_.suptitle(title_with_label, fontsize=14, y=1.02)
-    
+
     plt.tight_layout()
-    
+
     # Save to file
     plot_filename = f"partial_dependence{file_suffix}.png"
     plot_path = VIS_DIR / plot_filename
     if disp.figure_ is not None:
-        disp.figure_.savefig(plot_path, dpi=150, bbox_inches='tight', facecolor='white')
+        disp.figure_.savefig(plot_path, dpi=150, bbox_inches="tight", facecolor="white")
         import logging
+
         logger = logging.getLogger(__name__)
         logger.debug(f"Partial dependence plot saved to {plot_path}")
-        
+
         # Save to PDF if provided
         if pdf_pages is not None:
-            pdf_pages.savefig(disp.figure_, bbox_inches='tight', facecolor='white')
+            pdf_pages.savefig(disp.figure_, bbox_inches="tight", facecolor="white")
         plt.close(disp.figure_)
-    
+
     return disp

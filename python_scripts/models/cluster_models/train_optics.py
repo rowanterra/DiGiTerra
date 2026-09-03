@@ -4,8 +4,19 @@ from sklearn.cluster import OPTICS
 from python_scripts.preprocessing.run_clustering_pipeline import clustering_options, run_clustering
 
 
-def train_optics(train_data, X, units, X_scaler_type,
-                 seed, sigfig, quantileBinDict, useTransformer, categorical_cols, test_size, **kwargs):
+def train_optics(
+    train_data,
+    X,
+    units,
+    X_scaler_type,
+    seed,
+    sigfig,
+    quantileBinDict,
+    useTransformer,
+    categorical_cols,
+    test_size,
+    **kwargs,
+):
     model = OPTICS(
         min_samples=kwargs.get("min_samples", 5),
         max_eps=kwargs.get("max_eps", np.inf),
@@ -24,10 +35,19 @@ def train_optics(train_data, X, units, X_scaler_type,
     )
 
     return run_clustering(
-        model, "optics",
+        model,
+        "optics",
         train_data,
         X,
-        units, X_scaler_type,
-        seed, sigfig, quantileBinDict, useTransformer, categorical_cols, test_size,
-        k_min=2, k_max=8,
-        **clustering_options(kwargs))
+        units,
+        X_scaler_type,
+        seed,
+        sigfig,
+        quantileBinDict,
+        useTransformer,
+        categorical_cols,
+        test_size,
+        k_min=2,
+        k_max=8,
+        **clustering_options(kwargs),
+    )

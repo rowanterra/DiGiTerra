@@ -1,4 +1,5 @@
 """Main page and progress SSE."""
+
 import json
 import os
 import time
