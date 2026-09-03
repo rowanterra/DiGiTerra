@@ -52,6 +52,17 @@ The prebuilt application contains the Python interpreter and every dependency, s
 
 The `examples/` directory contains 9 CSV files: 3 classification (Iris, Wine, Breast cancer), 3 regression (Diabetes, Synthetic, Linnerud), and 3 feature-only clustering copies. `examples/README.md` lists the column setup for each file.
 
+## Verification
+
+`scripts/train_every_model.py` trains every registered estimator on the matching example
+dataset through the same function the `/process` route calls, with the defaults an empty
+hyperparameter form sends. `docs/every_model_sweep_2026-09-03.json` is the record of the
+run on 2026-09-03 with scikit-learn 1.9.0 on Python 3.11: 67 of 69 registry entries
+trained and 2 (Polynomial, Perceptron) are registered without a trainer and were skipped.
+`tests/integration/test_browser_advanced.py` drives the page in Chromium through Playwright
+and checks that values typed into Advanced-mode controls reach the training request; the
+test skips itself when Playwright or the browser is absent.
+
 ## Regression stability across seeds
 
 `python_scripts/preprocessing/evaluate_regression_robustness.py` repeats the train/test split and cross-validation over a range of seeds and records the spread:
