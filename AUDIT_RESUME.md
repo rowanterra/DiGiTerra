@@ -79,6 +79,28 @@ Frontend
   bundle with `no-undef` on. `npm run check-bundle` fails if the committed bundle
   has drifted.
 
+## Fourth pass, 2026-09-03 late (commit 8): the external review handoff
+
+A second reviewer left `audit_handoff_2026-09-03/` beside the repo with four
+findings and three patches. All three patches were sound and are applied,
+adapted to this tree: uploads are deleted once parsed (0001); testSize, CV
+folds, search folds and search iterations are bounded server-side, with the
+constants in core/constants.py and the UI inputs carrying the same ranges
+(0002); a progress stream answers only the browser session that started the
+run (0003). The two findings without a patch got code as well: a frame above
+DIGITERRA_MAX_CELLS cells is rejected before it is stored, the served default
+body limit is 64 MB with desktop_app.py raising it, and
+config.sweep_stale_outputs removes session directories and upload leftovers
+older than DIGITERRA_STALE_SESSION_HOURS. tests/unit/test_limits.py covers each
+item and caught one more defect on the way: reset_session_scope raised on the
+second teardown of a streamed response. DEPLOYMENT_OPTIONS.md is strategy (EDX
+and public deployments, values files not to be written until names are known)
+and needed no code beyond the escaping regression test it asked for.
+
+Not done from the handoff, by its own scoping: authentication, CSRF tokens,
+rate limiting, a job queue, a shared backing store. The residual-risk
+paragraph in FINDINGS.md still holds for an untrusted network deployment.
+
 ## Third pass, 2026-09-03 night (commits 3 to 5, unattended)
 
 Done: ruff 607 -> 0 with `ruff format` over the tree and the rest by hand; CI

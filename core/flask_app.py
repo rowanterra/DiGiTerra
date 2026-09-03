@@ -46,6 +46,7 @@ def _configure_logging():
 
 logger = _configure_logging()
 
+from core.constants import DEFAULT_MAX_UPLOAD_MB  # noqa: E402  logging must be configured before the routes import
 from core.errors import register_error_handlers  # noqa: E402  logging must be configured before the routes import
 from core.state import SESSION_COOKIE_NAME  # noqa: E402  logging must be configured before the routes import
 from routes import register_blueprints  # noqa: E402  logging must be configured before the routes import
@@ -59,7 +60,7 @@ app.config["UPLOAD_FOLDER"] = str(UPLOAD_DIR)
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 # Reject an oversized body before it is read into memory or written to disk.
 _max_mb = float(os.environ.get("DIGITERRA_MAX_UPLOAD_MB", "0") or 0)
-app.config["MAX_CONTENT_LENGTH"] = int(_max_mb * 1024 * 1024) if _max_mb > 0 else 256 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = int((_max_mb if _max_mb > 0 else DEFAULT_MAX_UPLOAD_MB) * 1024 * 1024)
 
 # Session ids this app issues are 32 hex characters.
 _VALID_SESSION_ID = re.compile(r"[0-9a-f]{32}")
@@ -77,6 +78,8 @@ def _ensure_session_cookie():
         new_id = uuid.uuid4().hex
         g.session_id = new_id
         g.new_session_id = new_id
+        # A new session is the moment to drop directories nobody will return to.
+        config.sweep_stale_outputs()
     # Generated files go to this session's own directory.
     g.vis_scope_token = config.set_session_scope(g.session_id)
 

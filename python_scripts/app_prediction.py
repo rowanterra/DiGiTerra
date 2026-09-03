@@ -55,6 +55,12 @@ def run_predict(
     except Exception as e:
         logger.error("Error reading CSV file: %s", e, exc_info=True)
         return ({"error": f"Error reading file: {str(e)}"}, 400)
+    finally:
+        # Read once into memory; the copy on disk has no further use.
+        try:
+            os.remove(filepath)
+        except OSError:
+            logger.debug("Temporary prediction upload already removed or unavailable: %s", filepath)
     if data.empty:
         return ({"error": "The uploaded file contains no data."}, 400)
     if data.columns.duplicated().any():

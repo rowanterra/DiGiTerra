@@ -8,11 +8,13 @@ Only `.csv` files are accepted. `allowed_file` in `core/helpers.py` checks the e
 
 Uploaded filenames pass through `werkzeug.utils.secure_filename` before the file is written under `UPLOAD_DIR`.
 
-`MAX_CONTENT_LENGTH` is set in `core/flask_app.py`. The limit is `DIGITERRA_MAX_UPLOAD_MB` when that variable is a positive number, and 256 MB otherwise. An oversized request body is rejected before the file is read, and the handler in `core/errors.py` answers with a JSON 413.
+`MAX_CONTENT_LENGTH` is set in `core/flask_app.py`. The limit is `DIGITERRA_MAX_UPLOAD_MB` when that variable is a positive number, and 64 MB otherwise. `desktop_app.py` sets 1024 MB before the application module is imported, since a local user's own machine is not an attack surface. An oversized request body is rejected before the file is read, and the handler in `core/errors.py` answers with a JSON 413.
+
+A parsed frame is kept in process memory for the session. `routes/upload.py` rejects a frame with more than `DIGITERRA_MAX_CELLS` cells (default 25,000,000; 0 disables the cap, and `desktop_app.py` sets 0) before it is stored. The upload file on disk is removed once it has been read, on every exit path, in both `routes/upload.py` and `python_scripts/app_prediction.py`.
 
 `routes/upload.py` also displays a warning for files larger than `FILE_SIZE_WARNING_MB` (`DIGITERRA_WARN_UPLOAD_MB`, default 1 MB) and for high cell counts. The warning does not block the upload. A second, application-level size check against `DIGITERRA_MAX_UPLOAD_MB` runs only when `DIGITERRA_ENFORCE_UPLOAD_LIMIT` is true (`core/constants.py`).
 
-The upload response returns the filename and the column names without HTML escaping, and the page inserts them with `innerHTML`. This is an open cross-site scripting issue for a shared deployment where one user can upload a file that another user views. The issue is not fixed on this branch.
+The upload response returns the filename after `secure_filename`, so it carries no markup. Column names are returned as data because the page posts them back for column selection; `escapeHtml` in `static/js/core.js` escapes `& < > " '` and every `innerHTML` sink that renders a column name or a server string passes through it. `tests/unit/test_limits.py` checks the filename, and `tests/integration/test_browser_advanced.py` loads the page in Chromium with no uncaught error.
 
 ## Downloads
 
@@ -24,11 +26,17 @@ Each browser session has a cookie named `digiterra_session` (`core/state.py`) wh
 
 Generated files are written under a per-session subdirectory. `config.set_session_scope` in `python_scripts/config.py` sets a context variable that the request and the training thread both use, so one session's `predictions.csv` does not overwrite another's.
 
-Session state is in process memory. `core/state.py` bounds the store to `DIGITERRA_MAX_SESSIONS` entries (default 32), evicts the oldest entry past that bound, and guards the store with a lock. Because the state is in one process, gunicorn must run with one worker.
+Session state is in process memory. `core/state.py` bounds the store to `DIGITERRA_MAX_SESSIONS` entries (default 32), evicts the oldest entry past that bound, and guards the store with a lock. Because the state is in one process, gunicorn must run with one worker. The bound is a count, not a byte total, so the worst case is the session count times the cell cap.
+
+Session output directories older than `DIGITERRA_STALE_SESSION_HOURS` (default 24; 0 disables) and stray upload files of the same age are removed by `config.sweep_stale_outputs`, which runs when a new session is issued and at most once per ten minutes.
 
 ## Progress streams
 
-`GET /progress/<id>` in `routes/main.py` returns 404 for an id that has no tracker. Trackers are capped at 256 (`MAX_TRACKED_SESSIONS` in `python_scripts/preprocessing/progress_tracker.py`). A stream for a valid id stays open for up to `PROGRESS_STREAM_TIMEOUT_SECONDS` (3600), which on a single synchronous worker blocks other requests for that time.
+`GET /progress/<id>` in `routes/main.py` returns 404 for an id that has no tracker and for an id that a different browser session started; each tracker records the session cookie that created it. Trackers are capped at 256 (`MAX_TRACKED_SESSIONS` in `python_scripts/preprocessing/progress_tracker.py`). A stream for a valid id stays open for up to `PROGRESS_STREAM_TIMEOUT_SECONDS` (3600), which on a single synchronous worker blocks other requests for that time.
+
+## Training request bounds
+
+Values in the training request that schedule work are bounded in `core/constants.py` and checked in `python_scripts/app_model_training.py` before any training starts: `testSize` in [`DIGITERRA_MIN_TEST_SIZE`, `DIGITERRA_MAX_TEST_SIZE`] (0.05 to 0.90), cross-validation folds 2 to `DIGITERRA_MAX_CV_FOLDS` (20), search folds 2 to `DIGITERRA_MAX_SEARCH_CV_FOLDS` (10), and search iterations 1 to `DIGITERRA_MAX_SEARCH_ITERATIONS` (100). A value outside its range ends the run with an error the client displays. The search and cross-validation paths use every core (`n_jobs=-1`), so these bounds cap what one request can schedule; they do not limit how many requests run at once.
 
 ## Error responses
 

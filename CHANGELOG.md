@@ -28,6 +28,11 @@ Model training and inference
 
 Web layer
 
+- Uploaded CSVs are removed from disk once parsed, in both the upload and prediction routes, and session output directories older than `DIGITERRA_STALE_SESSION_HOURS` (default 24) are swept when a new session is issued.
+- A frame above `DIGITERRA_MAX_CELLS` cells (default 25,000,000) is rejected before it is stored; the default request-body limit is 64 MB for a served deployment, and `desktop_app.py` raises both for local use.
+- `testSize`, cross-validation folds, search folds, and search iterations are bounded server-side (`core/constants.py`), and the UI inputs carry the same ranges. An out-of-range value ends the run with an error instead of scheduling unbounded work.
+- A progress stream answers only the browser session that started the run.
+- `reset_session_scope` tolerated a token reused by the second teardown of a streamed response; it now clears the scope instead of raising.
 - `GET /progress/<id>` created a tracker for any id and held an SSE stream for an hour. An unknown id now returns 404, and trackers are capped at 256.
 - A failed training deleted the stored error with the tracker, so the client waited at a spinner until the timeout. `ProgressTracker.fail()` moves progress to the terminal value and keeps the result.
 - Generated files had fixed names in one shared directory. Each session now writes to a subdirectory selected through `config.set_session_scope`, which the request and the training thread both set.

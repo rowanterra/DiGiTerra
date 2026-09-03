@@ -95,7 +95,7 @@ def set_fill_plan(plan: FillPlan | None):
 def reset_fill_plan(token) -> None:
     try:
         _ACTIVE.reset(token)
-    except ValueError:
+    except (ValueError, RuntimeError):
         _ACTIVE.set(None)
 
 

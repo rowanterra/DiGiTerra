@@ -7,8 +7,12 @@ import time
 class ProgressTracker:
     """Thread-safe progress tracker for model training."""
 
-    def __init__(self, session_id: str):
+    def __init__(self, session_id: str, owner_session_id: str | None = None):
         self.session_id = session_id
+        # The browser session that started the run. The progress route answers
+        # only that session, so a leaked training id does not expose another
+        # user's live progress or final result.
+        self.owner_session_id = owner_session_id
         self.lock = threading.Lock()
         self.stages = {
             "data_preprocessing": {"status": "pending", "progress": 0, "message": "Preparing data..."},
@@ -152,7 +156,7 @@ _results_lock = threading.Lock()
 MAX_TRACKED_SESSIONS = 256
 
 
-def get_tracker(session_id: str) -> ProgressTracker:
+def get_tracker(session_id: str, owner_session_id: str | None = None) -> ProgressTracker:
     """Get or create a progress tracker for a session."""
     with _tracker_lock:
         if session_id not in _progress_trackers:
@@ -161,7 +165,9 @@ def get_tracker(session_id: str) -> ProgressTracker:
                 del _progress_trackers[oldest]
                 with _results_lock:
                     _results.pop(oldest, None)
-            _progress_trackers[session_id] = ProgressTracker(session_id)
+            _progress_trackers[session_id] = ProgressTracker(session_id, owner_session_id=owner_session_id)
+        elif owner_session_id and _progress_trackers[session_id].owner_session_id is None:
+            _progress_trackers[session_id].owner_session_id = owner_session_id
         return _progress_trackers[session_id]
 
 

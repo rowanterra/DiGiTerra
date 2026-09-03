@@ -11,6 +11,7 @@ import time
 import numpy as np
 import pandas as pd
 
+from core.constants import MAX_CV_FOLDS, MAX_SEARCH_CV_FOLDS, MAX_SEARCH_ITERATIONS, MAX_TEST_SIZE, MIN_TEST_SIZE
 from python_scripts import config as _config
 from python_scripts.helpers import (
     preprocess_data,
@@ -27,6 +28,33 @@ from python_scripts.preprocessing.split_fill import FillPlan, reset_fill_plan, s
 DEFAULT_CV_FOLDS = 5
 DEFAULT_SEARCH_ITERATIONS = 50
 RANDOM_SEED_MAX = 1000
+
+
+def _int_in_range(raw_value, name: str, minimum: int, maximum: int, default: int) -> int:
+    """Parse a request integer and reject one outside [minimum, maximum]."""
+    if raw_value in (None, ""):
+        return default
+    try:
+        value = int(raw_value)
+    except (TypeError, ValueError):
+        raise ValueError(f"{name} must be a whole number between {minimum} and {maximum}.") from None
+    if value < minimum or value > maximum:
+        raise ValueError(f"{name} must be between {minimum} and {maximum}.")
+    return value
+
+
+def _float_in_range(raw_value, name: str, minimum: float, maximum: float, default: float) -> float:
+    """Parse a request number and reject one outside [minimum, maximum]."""
+    if raw_value in (None, ""):
+        return default
+    try:
+        value = float(raw_value)
+    except (TypeError, ValueError):
+        raise ValueError(f"{name} must be a number between {minimum:.2f} and {maximum:.2f}.") from None
+    if value < minimum or value > maximum:
+        raise ValueError(f"{name} must be between {minimum:.2f} and {maximum:.2f}.")
+    return value
+
 
 logger = logging.getLogger(__name__)
 
@@ -194,11 +222,7 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
         units = data["units"]
         sigfig = data["sigfig"]
         seed = data["seedValue"]
-        raw_test = data.get("testSize", "0.20")
-        try:
-            testSize = float(raw_test) if raw_test not in (None, "") else 0.2
-        except (TypeError, ValueError):
-            testSize = 0.2
+        testSize = _float_in_range(data.get("testSize", "0.20"), "testSize", MIN_TEST_SIZE, MAX_TEST_SIZE, 0.2)
         stratifyBool = data["stratifyBool"]
         drop_missing = data["dropMissing"]
         impute_strategy = data["imputeStrategy"]
@@ -215,12 +239,24 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
         useTransformer = data["useTransformer"]
         transformerCols = data["transformerCols"]
         cross_validation_type = data.get("crossValidationType", "None")
-        cross_validation_folds = int(data.get("crossValidationFolds", DEFAULT_CV_FOLDS) or DEFAULT_CV_FOLDS)
+        cross_validation_folds = _int_in_range(
+            data.get("crossValidationFolds", DEFAULT_CV_FOLDS),
+            "crossValidationFolds",
+            2,
+            MAX_CV_FOLDS,
+            DEFAULT_CV_FOLDS,
+        )
 
         # Advanced features parameters
         hyperparameter_search = data.get("hyperparameterSearch", "none")
-        search_cv_folds = int(data.get("searchCVFolds", 5) or 5)
-        search_n_iter = int(data.get("searchNIter", DEFAULT_SEARCH_ITERATIONS) or DEFAULT_SEARCH_ITERATIONS)
+        search_cv_folds = _int_in_range(data.get("searchCVFolds", 5), "searchCVFolds", 2, MAX_SEARCH_CV_FOLDS, 5)
+        search_n_iter = _int_in_range(
+            data.get("searchNIter", DEFAULT_SEARCH_ITERATIONS),
+            "searchNIter",
+            1,
+            MAX_SEARCH_ITERATIONS,
+            DEFAULT_SEARCH_ITERATIONS,
+        )
         feature_selection_method = data.get("featureSelectionMethod", "none")
         feature_selection_k = data.get("featureSelectionK")
         outlier_method = data.get("outlierMethod", "none")

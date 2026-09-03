@@ -42,7 +42,7 @@ def process_columns():
 
     session_id = str(uuid.uuid4())
     storage_session_id = get_session_id()
-    get_tracker(session_id)
+    get_tracker(session_id, storage_session_id)
     data = request.json
     threading.Thread(
         target=_run_model_training,

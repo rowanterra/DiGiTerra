@@ -14,6 +14,7 @@ from core.constants import (
     PROGRESS_UPDATE_INTERVAL_SECONDS,
 )
 from core.helpers import with_prefix
+from core.state import get_session_id
 from python_scripts import config
 from python_scripts.preprocessing.progress_tracker import get_result, peek_tracker, remove_tracker
 
@@ -39,6 +40,9 @@ def progress_stream(session_id):
     # than hold a connection open until the stream timeout.
     tracker = peek_tracker(session_id)
     if tracker is None:
+        return jsonify({"error": "Unknown training session."}), HTTP_NOT_FOUND
+    # A run answers only the browser session that started it.
+    if tracker.owner_session_id and tracker.owner_session_id != get_session_id():
         return jsonify({"error": "Unknown training session."}), HTTP_NOT_FOUND
 
     def generate():

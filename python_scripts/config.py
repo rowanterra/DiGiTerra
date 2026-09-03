@@ -5,6 +5,9 @@ Single source of truth for BASE_DIR, APP_SUPPORT_DIR, UPLOAD_DIR, LOG_DIR, VIS_D
 
 import os
 import platform
+import re
+import shutil
+import time
 from contextvars import ContextVar
 from pathlib import Path
 
@@ -59,10 +62,16 @@ def set_session_scope(session_id):
 
 
 def reset_session_scope(token):
-    """Undo a set_session_scope call."""
+    """Undo a set_session_scope call.
+
+    A streamed response keeps its request context alive, and Flask runs the
+    teardown once more when the stream closes, so the token can arrive here a
+    second time (RuntimeError) or from another context (ValueError). Either way
+    the scope is cleared.
+    """
     try:
         _session_scope.reset(token)
-    except ValueError:
+    except (ValueError, RuntimeError):
         _session_scope.set(None)
 
 
@@ -146,6 +155,46 @@ class _ScopedVisDir:
 
 VIS_DIR = _ScopedVisDir(_VIS_BASE)
 _VIS_BASE.mkdir(parents=True, exist_ok=True)
+
+
+# Stale-directory sweep. Session output directories and upload leftovers are
+# never removed by the session that made them, so a long-running server fills
+# its disk. The sweep runs from the request path at most once per interval and
+# removes only session directories (32 hex characters) older than the age limit.
+STALE_SESSION_HOURS = float(os.environ.get("DIGITERRA_STALE_SESSION_HOURS", "24") or 0)
+_SWEEP_INTERVAL_SECONDS = 600.0
+_last_sweep = [0.0]
+_SESSION_DIR_NAME = re.compile(r"[0-9a-f]{32}")
+
+
+def sweep_stale_outputs(now: float | None = None, force: bool = False) -> int:
+    """Remove session output directories and stray uploads older than the age limit.
+
+    Returns the number of entries removed. A zero age limit disables the sweep.
+    """
+    if STALE_SESSION_HOURS <= 0:
+        return 0
+    now = time.time() if now is None else now
+    if not force and now - _last_sweep[0] < _SWEEP_INTERVAL_SECONDS:
+        return 0
+    _last_sweep[0] = now
+    cutoff = now - STALE_SESSION_HOURS * 3600
+    removed = 0
+    try:
+        for child in _VIS_BASE.iterdir():
+            if child.is_dir() and _SESSION_DIR_NAME.fullmatch(child.name) and child.stat().st_mtime < cutoff:
+                shutil.rmtree(child, ignore_errors=True)
+                removed += 1
+    except OSError:
+        pass
+    try:
+        for child in UPLOAD_DIR.iterdir():
+            if child.is_file() and child.stat().st_mtime < cutoff:
+                child.unlink(missing_ok=True)
+                removed += 1
+    except OSError:
+        pass
+    return removed
 
 
 def update_vis_dir(new_path: Path):

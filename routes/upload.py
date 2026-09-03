@@ -17,6 +17,7 @@ from core.constants import (
     FILE_SIZE_WARNING_MB,
     FILENAME_DISPLAY_LENGTH,
     HTTP_BAD_REQUEST,
+    MAX_CELLS,
     MAX_UPLOAD_MB,
 )
 from core.helpers import allowed_file
@@ -51,34 +52,51 @@ def upload_file():
     stored_filename = f"{unique_prefix}_{safe_filename_val}"
     filepath = os.path.join(current_app.config["UPLOAD_FOLDER"], stored_filename)
     file.save(filepath)
+    # The file on disk is read once into a DataFrame and never opened again, so it
+    # is removed on every exit from this block. Left in place, uploads accumulate
+    # until the disk is full.
+    try:
+        file_size_mb = os.path.getsize(filepath) / BYTES_PER_MB
+        if ENFORCE_UPLOAD_LIMIT and MAX_UPLOAD_MB > 0 and file_size_mb > MAX_UPLOAD_MB:
+            return jsonify({"error": f"File exceeds maximum allowed size of {MAX_UPLOAD_MB:.1f} MB."}), HTTP_BAD_REQUEST
 
-    file_size_mb = os.path.getsize(filepath) / BYTES_PER_MB
-    if ENFORCE_UPLOAD_LIMIT and MAX_UPLOAD_MB > 0 and file_size_mb > MAX_UPLOAD_MB:
+        size_warning = (
+            f"Large file detected ({file_size_mb:.1f} MB). Processing may take longer."
+            if file_size_mb > FILE_SIZE_WARNING_MB
+            else None
+        )
+
+        try:
+            data = pd.read_csv(filepath)
+        except pd.errors.EmptyDataError:
+            return jsonify({"error": "The uploaded file is empty."}), HTTP_BAD_REQUEST
+        except pd.errors.ParserError as e:
+            logger.error("CSV parsing error: %s", e)
+            return jsonify({"error": f"Error parsing CSV file: {str(e)}"}), HTTP_BAD_REQUEST
+        except Exception as e:
+            logger.error("Error reading CSV file: %s", e, exc_info=True)
+            return jsonify({"error": f"Error reading file: {str(e)}"}), HTTP_BAD_REQUEST
+    finally:
         try:
             os.remove(filepath)
         except OSError:
-            logger.warning("Failed to remove oversized uploaded file: %s", filepath)
-        return jsonify({"error": f"File exceeds maximum allowed size of {MAX_UPLOAD_MB:.1f} MB."}), HTTP_BAD_REQUEST
-
-    size_warning = (
-        f"Large file detected ({file_size_mb:.1f} MB). Processing may take longer."
-        if file_size_mb > FILE_SIZE_WARNING_MB
-        else None
-    )
-
-    try:
-        data = pd.read_csv(filepath)
-    except pd.errors.EmptyDataError:
-        return jsonify({"error": "The uploaded file is empty."}), HTTP_BAD_REQUEST
-    except pd.errors.ParserError as e:
-        logger.error("CSV parsing error: %s", e)
-        return jsonify({"error": f"Error parsing CSV file: {str(e)}"}), HTTP_BAD_REQUEST
-    except Exception as e:
-        logger.error("Error reading CSV file: %s", e, exc_info=True)
-        return jsonify({"error": f"Error reading file: {str(e)}"}), HTTP_BAD_REQUEST
+            logger.debug("Temporary upload already removed or unavailable: %s", filepath)
 
     if data.empty:
         return jsonify({"error": "The uploaded file contains no data."}), HTTP_BAD_REQUEST
+
+    if MAX_CELLS and data.size > MAX_CELLS:
+        rows, cols = data.shape
+        del data
+        return (
+            jsonify(
+                {
+                    "error": f"The file has {rows:,} rows and {cols} columns ({rows * cols:,} cells); "
+                    f"the limit is {MAX_CELLS:,} cells."
+                }
+            ),
+            HTTP_BAD_REQUEST,
+        )
 
     if data.columns.duplicated().any():
         logger.warning("Duplicate column names detected in uploaded file. Renaming duplicates.")
