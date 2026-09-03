@@ -11,7 +11,8 @@ def apply_outlier_handling(
     X_test: pd.DataFrame,
     y_train: Optional[pd.Series] = None,
     method: str = 'none',
-    action: str = 'remove'
+    action: str = 'remove',
+    seed: int = 42
 ) -> Tuple[pd.DataFrame, pd.DataFrame, np.ndarray]:
     """
     Apply outlier detection and handling to training and test data.
@@ -52,7 +53,7 @@ def apply_outlier_handling(
         outlier_mask = (z_scores < 3).all(axis=1)
     
     elif method == 'IsolationForest':
-        iso_forest = IsolationForest(contamination=0.1, random_state=42)
+        iso_forest = IsolationForest(contamination=0.1, random_state=seed)
         outlier_labels = iso_forest.fit_predict(X_train)
         outlier_mask = outlier_labels == 1  # 1 = inlier, -1 = outlier
     

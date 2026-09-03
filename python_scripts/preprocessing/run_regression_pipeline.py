@@ -88,6 +88,10 @@ def run_regression(model, model_name,
             "Regression requires a numeric target. For binned categories (e.g. '<50', '50-150', '>500') use Modeling Task Type: Classification and set Stratify to Bins with your bin boundaries."
         )
     y = y_numeric
+    # ddf dropped rows with missing values in the modeling columns; y still holds
+    # every original row, and train_test_split rejects the length mismatch.
+    y = y.loc[y.index.intersection(ddf.index)]
+    ddf = ddf.loc[y.index]
 
     #Rowan 10/13
     # Strat labels
@@ -113,6 +117,7 @@ def run_regression(model, model_name,
 
     # Split
     strat = None
+    strat_col_used = None
     if use_strat:
         # Prefer a generic label created by make_strat_labels_robust (commonly "STRAT_LABEL"),
         candidate_cols = []
@@ -127,6 +132,7 @@ def run_regression(model, model_name,
             vc = s.value_counts(dropna=True)
             if len(vc) >= 2 and (vc.min() >= 2):
                 strat = s
+                strat_col_used = cand
                 break
 
     X = ddf[nump + catp + textp].copy()
@@ -192,7 +198,8 @@ def run_regression(model, model_name,
             baseline_model = apply_hyperparameter_search(
                 baseline_model, baseline_X_train_array, baseline_y_train_fit, hyperparameter_search,
                 param_grid=None, cv_folds=search_cv_folds, n_iter=search_n_iter, 
-                problem_type='regression', model_name=model_name, progress_tracker=None  # Don't track baseline training
+                problem_type='regression', model_name=model_name, progress_tracker=None,  # Don't track baseline training
+                seed=seed
             )
         else:
             baseline_model.fit(baseline_X_train_array, baseline_y_train_fit)
@@ -255,7 +262,7 @@ def run_regression(model, model_name,
                     baseline_shap_array = np.nan_to_num(baseline_shap_array, nan=0.0, posinf=0.0, neginf=0.0)
                 
                 plot_shap_summary(baseline_model, baseline_shap_array, baseline_feature_names, model_name, 
-                                baseline_pdf_pages, file_suffix='', label_suffix=f'({mode_label})')
+                                baseline_pdf_pages, file_suffix='', label_suffix=f'({mode_label})', seed=seed)
             except Exception as error:
                 logger.warning(f"Baseline SHAP summary failed: {error}", exc_info=True)
         
@@ -283,7 +290,7 @@ def run_regression(model, model_name,
         # For outlier detection, we don't need y_train, but pass None to be safe
         # (y_train is not used in apply_outlier_handling for detection)
         X_train_s, X_test_s, outlier_mask = apply_outlier_handling(
-            X_train_s, X_test_s, None, outlier_method, outlier_action
+            X_train_s, X_test_s, None, outlier_method, outlier_action, seed=seed
         )
         # Update y_train if outliers were removed
         if outlier_action == 'remove':
@@ -330,7 +337,8 @@ def run_regression(model, model_name,
             y_train_for_selection = pd.Series(y_train_fit[:, 0], index=X_train_s.index)
         
         X_train_s, X_test_s, feature_selector = apply_feature_selection(
-            X_train_s, X_test_s, y_train_for_selection, feature_selection_method, feature_selection_k, 'regression'
+            X_train_s, X_test_s, y_train_for_selection, feature_selection_method, feature_selection_k,
+            'regression', seed=seed
         )
         
         # Validate shapes after feature selection
@@ -444,12 +452,16 @@ def run_regression(model, model_name,
         model = apply_hyperparameter_search(
             model, X_train_array, y_train_fit, hyperparameter_search,
             param_grid=None, cv_folds=search_cv_folds, n_iter=search_n_iter, 
-            problem_type='regression', model_name=model_name, progress_tracker=progress_tracker
+            problem_type='regression', model_name=model_name, progress_tracker=progress_tracker,
+            seed=seed
         )
         if progress_tracker:
             progress_tracker.update_stage('hyperparameter_search', 'completed', 100, 'Hyperparameter search complete')
             progress_tracker.update_stage('model_training', 'running', 80, f'Training {model_name} with best parameters...')
-        model.fit(X_train_array, y_train_fit)
+        # GridSearchCV and RandomizedSearchCV refit the best estimator on the full
+        # training set already. Calling fit again would re-run the entire search.
+        if not hasattr(model, "best_estimator_"):
+            model.fit(X_train_array, y_train_fit)
         if progress_tracker:
             progress_tracker.update_stage('model_training', 'running', 90, 'Generating predictions...')
     else:
@@ -495,12 +507,14 @@ def run_regression(model, model_name,
         progress_tracker.update_stage('visualization', 'running', 0, 'Generating visualizations...')
     pdf_pages = PdfPages(VIS_DIR / "visualizations.pdf")
     quantileBin_results = ''
-    if use_strat:
-        test_metadata = train_data.loc[X_test.index][["QUANTILE_STRATIFY"]]
-        logger.debug("Evaluating by quantile")
+    if use_strat and strat_col_used and strat_col_used in train_data.columns:
+        # Bin stratification writes BIN_LABEL, quantile stratification writes
+        # QUANTILE_STRATIFY, and a user column keeps its own name.
+        test_metadata = train_data.loc[X_test.index][[strat_col_used]]
+        logger.debug("Evaluating by stratification column %s", strat_col_used)
         quantileBin_results = evaluate_by_quantile(
             model_name, y_test[target_variable], y_te_pred[target_variable],
-            test_metadata, target_variables, sigfig, pdf_pages, "QUANTILE_STRATIFY"
+            test_metadata, target_variables, sigfig, pdf_pages, strat_col_used
         )
 
 
@@ -517,12 +531,15 @@ def run_regression(model, model_name,
         mode_label = 'DiGiTerra Simple Modeling'
     
     art =  { "type": 'regression',
+        "seed": seed,
         "preprocessor": preproc,
         "X_scaler": X_scaler,
         "y_scaler": y_scaler,
         "model": model,
         "model_name": f"{model_name} ({mode_label})",
-        "feature_names": list(X_train_t.columns),
+        # The model was fit on X_train_s, which is what survives feature selection.
+        # Using the pre-selection names here mislabels every importance bar.
+        "feature_names": list(X_train_s.columns) if isinstance(X_train_s, pd.DataFrame) else list(X_train_t.columns),
         "splits": {
             "X_train": X_train_s, "X_test": X_test_s,
             "y_train": y_train,   "y_test": y_test
@@ -665,7 +682,7 @@ def run_regression(model, model_name,
                 raise ValueError("NaN values still present in SHAP input array after all processing")
             
             plot_shap_summary(model, shap_array, feature_names, model_name, pdf_pages,
-                            file_suffix=graphics_suffix, label_suffix=f'({mode_label})')
+                            file_suffix=graphics_suffix, label_suffix=f'({mode_label})', seed=seed)
         except Exception as error:
             logger.error(f"SHAP summary failed: {error}", exc_info=True)
             if shap_path.exists():
@@ -708,6 +725,7 @@ def run_regression(model, model_name,
 
     # Store fitted inference artifacts on the model so prediction can replay train-time transforms.
     try:
+        setattr(model, "_digiterra_problem_type", "regression")
         setattr(model, "_digiterra_preprocessor", preproc)
         setattr(model, "_digiterra_raw_features", X_train.columns.tolist())
         setattr(model, "_digiterra_feature_names", X_train_t.columns.tolist())

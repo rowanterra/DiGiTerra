@@ -1,6 +1,7 @@
 # DiGiTerra Flask app. Routes in routes/; session state in core.state. See docs/HANDOFF.md.
 
 import os
+import re
 import uuid
 import logging
 from pathlib import Path
@@ -45,6 +46,7 @@ def _configure_logging():
 logger = _configure_logging()
 
 from core.state import SESSION_COOKIE_NAME
+from core.errors import register_error_handlers
 from routes import register_blueprints
 
 app = Flask(
@@ -54,29 +56,48 @@ app = Flask(
 )
 app.config["UPLOAD_FOLDER"] = str(UPLOAD_DIR)
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+# Reject an oversized body before it is read into memory or written to disk.
+_max_mb = float(os.environ.get("DIGITERRA_MAX_UPLOAD_MB", "0") or 0)
+app.config["MAX_CONTENT_LENGTH"] = int(_max_mb * 1024 * 1024) if _max_mb > 0 else 256 * 1024 * 1024
+
+# Session ids this app issues are 32 hex characters.
+_VALID_SESSION_ID = re.compile(r"[0-9a-f]{32}")
 
 
 @app.before_request
 def _ensure_session_cookie():
     existing = request.cookies.get(SESSION_COOKIE_NAME)
-    if existing:
+    if existing and _VALID_SESSION_ID.fullmatch(existing):
         g.session_id = existing
         g.new_session_id = None
-        return
-    new_id = uuid.uuid4().hex
-    g.session_id = new_id
-    g.new_session_id = new_id
+    else:
+        # A cookie the server never issued gets replaced rather than trusted, so a
+        # crafted value cannot name another session's storage or output directory.
+        new_id = uuid.uuid4().hex
+        g.session_id = new_id
+        g.new_session_id = new_id
+    # Generated files go to this session's own directory.
+    g.vis_scope_token = config.set_session_scope(g.session_id)
+
+
+@app.teardown_request
+def _clear_session_scope(exc=None):
+    token = getattr(g, "vis_scope_token", None)
+    if token is not None:
+        config.reset_session_scope(token)
 
 
 @app.after_request
 def _set_session_cookie(response):
     new_id = getattr(g, "new_session_id", None)
     if new_id:
-        response.set_cookie(SESSION_COOKIE_NAME, new_id, httponly=True, samesite="Lax")
+        secure = request.is_secure or os.environ.get("DIGITERRA_COOKIE_SECURE", "").strip().lower() in {"1", "true", "yes", "on"}
+        response.set_cookie(SESSION_COOKIE_NAME, new_id, httponly=True, samesite="Lax", secure=secure)
     return response
 
 
 register_blueprints(app)
+register_error_handlers(app)
 
 if URL_PREFIX:
     @app.route(f"{URL_PREFIX}/static/<path:filename>")

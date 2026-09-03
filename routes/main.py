@@ -3,9 +3,10 @@ import json
 import os
 import time
 
-from flask import Blueprint, Response, render_template, stream_with_context
+from flask import Blueprint, Response, jsonify, render_template, stream_with_context
 
 from core.constants import (
+    HTTP_NOT_FOUND,
     PROGRESS_COMPLETE_THRESHOLD,
     PROGRESS_FINAL_UPDATE_DELAY_SECONDS,
     PROGRESS_STREAM_TIMEOUT_SECONDS,
@@ -13,7 +14,7 @@ from core.constants import (
 )
 from core.helpers import with_prefix
 from python_scripts import config
-from python_scripts.preprocessing.progress_tracker import get_result, get_tracker, remove_tracker
+from python_scripts.preprocessing.progress_tracker import get_result, peek_tracker, remove_tracker
 
 bp = Blueprint("main", __name__)
 
@@ -33,8 +34,13 @@ def index():
 @bp.route("/progress/<session_id>")
 def progress_stream(session_id):
     """Server-Sent Events endpoint for progress updates."""
+    # Resolve the tracker before opening the stream. An unknown id must 404 rather
+    # than hold a connection open until the stream timeout.
+    tracker = peek_tracker(session_id)
+    if tracker is None:
+        return jsonify({"error": "Unknown training session."}), HTTP_NOT_FOUND
+
     def generate():
-        tracker = get_tracker(session_id)
         start_time = time.time()
         while True:
             if time.time() - start_time > PROGRESS_STREAM_TIMEOUT_SECONDS:

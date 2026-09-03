@@ -1,7 +1,7 @@
 """Hyperparameter search utilities for DiGiTerra."""
 import logging
 from typing import Dict, Any, Optional
-from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
+from sklearn.model_selection import GridSearchCV, KFold, RandomizedSearchCV, StratifiedKFold
 from sklearn.multioutput import MultiOutputRegressor, MultiOutputClassifier
 import numpy as np
 import time
@@ -195,7 +195,8 @@ def apply_hyperparameter_search(
     scoring: Optional[str] = None,
     problem_type: str = 'regression',
     model_name: Optional[str] = None,
-    progress_tracker=None
+    progress_tracker=None,
+    seed: int = 42
 ):
     """
     Apply hyperparameter search to a model.
@@ -263,11 +264,18 @@ def apply_hyperparameter_search(
         else:
             scoring = 'neg_mean_squared_error'
     
+    # An integer cv builds unshuffled folds, so a file sorted by target gives folds
+    # whose target distributions barely overlap. Build the splitter explicitly.
+    if problem_type == 'classification':
+        cv = StratifiedKFold(n_splits=cv_folds, shuffle=True, random_state=seed)
+    else:
+        cv = KFold(n_splits=cv_folds, shuffle=True, random_state=seed)
+
     if search_type == 'grid':
         search_model = GridSearchCV(
             model,
             param_grid,
-            cv=cv_folds,
+            cv=cv,
             scoring=scoring,
             n_jobs=-1,
             verbose=1
@@ -277,11 +285,11 @@ def apply_hyperparameter_search(
             model,
             param_grid,
             n_iter=n_iter,
-            cv=cv_folds,
+            cv=cv,
             scoring=scoring,
             n_jobs=-1,
             verbose=1,
-            random_state=42
+            random_state=seed
         )
     elif search_type == 'bayesian':
         # Bayesian optimization requires scikit-optimize
@@ -291,11 +299,11 @@ def apply_hyperparameter_search(
                 model,
                 param_grid,
                 n_iter=n_iter,
-                cv=cv_folds,
+                cv=cv,
                 scoring=scoring,
                 n_jobs=-1,
                 verbose=1,
-                random_state=42
+                random_state=seed
             )
         except ImportError:
             logger.warning("scikit-optimize not installed. Falling back to randomized search.")
@@ -303,11 +311,11 @@ def apply_hyperparameter_search(
                 model,
                 param_grid,
                 n_iter=n_iter,
-                cv=cv_folds,
+                cv=cv,
                 scoring=scoring,
                 n_jobs=-1,
                 verbose=1,
-                random_state=42
+                random_state=seed
             )
     else:
         raise ValueError(f"Unknown search type: {search_type}")

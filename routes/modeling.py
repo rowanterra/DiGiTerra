@@ -6,6 +6,7 @@ from flask import Blueprint, jsonify, request
 
 from core.constants import HTTP_ACCEPTED, HTTP_BAD_REQUEST
 from core.state import get_session_id, get_session_storage
+from python_scripts import config
 from python_scripts.app_model_training import run_model_training
 from python_scripts.preprocessing.progress_tracker import get_tracker
 
@@ -13,7 +14,12 @@ bp = Blueprint("modeling", __name__)
 
 
 def _run_model_training(session_id: str, data: dict, storage_session_id: str):
-    """Run model training in a background thread."""
+    """Run model training in a background thread.
+
+    A new thread starts with default context variables, so the output scope has to
+    be set here or the run would write into the shared base directory.
+    """
+    config.set_session_scope(storage_session_id)
     run_model_training(session_id, data, storage_session_id, get_storage=get_session_storage)
 
 

@@ -379,61 +379,30 @@ function switchModelingMode(mode) {
     // No need to sync here since each mode has its own note element
 }
 
-// Ensure hyperparameter fields are available in the unified Advanced section
-function ensureAdvancedHyperparametersAvailable() {
-    // Find the hyperparameter card in unified Advanced section
-    const unifiedSection = document.getElementById('advancedModelingSection');
-    if (!unifiedSection) return;
-    
-    const hyperparamsCard = unifiedSection.querySelector('.preprocess-card h2');
-    if (!hyperparamsCard || hyperparamsCard.textContent !== 'Model Hyperparameters') return;
-    
-    const hyperparamsContainer = hyperparamsCard.closest('.preprocess-card');
-    if (!hyperparamsContainer) return;
-    
-    // Check if hyperparameter fields already exist (they should be copied)
-    const hasRidgeFields = document.getElementById('advancedRidgeFields');
-    if (hasRidgeFields && hasRidgeFields.closest('#advancedModelingSection')) {
-        // Fields already exist in unified section
-        return;
+
+/**
+ * Resolve a hyperparameter control for the modeling mode in use.
+ *
+ * The Simple and Advanced sections offer the same optional parameters. The
+ * Advanced copies carry an "advanced" prefix so the document has unique ids;
+ * this returns the Advanced node while Advanced or AutoML mode is selected and
+ * the plain node otherwise.
+ */
+function getModeScopedElement(id) {
+    const advanced = document.getElementById('advancedMode');
+    const automl = document.getElementById('automlMode');
+    const useAdvanced = (advanced && advanced.checked) || (automl && automl.checked);
+    if (useAdvanced) {
+        const scoped = document.getElementById('advanced' + id.charAt(0).toUpperCase() + id.slice(1));
+        if (scoped) return scoped;
     }
-    
-    // If fields don't exist, clone them from old container
-    const oldContainer = document.getElementById('advancedOptimization');
-    if (!oldContainer) return;
-    
-    // Temporarily show old container to access its content
-    const wasHidden = oldContainer.classList.contains('hidden');
-    if (wasHidden) oldContainer.classList.remove('hidden');
-    
-    // Find all hyperparameter field divs in old container
-    const oldHyperparamsCard = oldContainer.querySelector('.preprocess-card h2');
-    if (!oldHyperparamsCard || oldHyperparamsCard.textContent !== 'Model Hyperparameters') {
-        if (wasHidden) oldContainer.classList.add('hidden');
-        return;
-    }
-    
-    const oldHyperparamsContainer = oldHyperparamsCard.closest('.preprocess-card');
-    if (!oldHyperparamsContainer) {
-        if (wasHidden) oldContainer.classList.add('hidden');
-        return;
-    }
-    
-    // Clone all hyperparameter field divs (all divs with IDs containing "Fields")
-    const hyperparamFields = oldHyperparamsContainer.querySelectorAll('div[id*="Fields"]');
-    hyperparamFields.forEach(field => {
-        // Check if it already exists in unified section
-        const existing = document.getElementById(field.id);
-        if (!existing || !existing.closest('#advancedModelingSection')) {
-            // Clone and append to unified section's hyperparameter card
-            const cloned = field.cloneNode(true);
-            hyperparamsContainer.appendChild(cloned);
-        }
-    });
-    
-    // Re-hide old container if it was hidden
-    if (wasHidden) oldContainer.classList.add('hidden');
+    return document.getElementById(id);
 }
+window.getModeScopedElement = getModeScopedElement;
+
+// The Advanced section carries its own hyperparameter fields, so nothing is cloned
+// at runtime any more. Kept as a no-op because switchModelingMode still calls it.
+function ensureAdvancedHyperparametersAvailable() {}
 
 // Initialize modeling mode selector
 const modelingModeRadios = document.querySelectorAll('input[name="modelingMode"]');

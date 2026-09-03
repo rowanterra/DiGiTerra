@@ -39,14 +39,19 @@ from python_scripts.config import VIS_DIR
 import python_scripts.plotting.plot_style  # noqa: F401
 
 
-def _choose_k_silhouette(X: np.ndarray, k_min=2, k_max=10, algo="kmeans"):
+def _choose_k_silhouette(X: np.ndarray, k_min=2, k_max=10, algo="kmeans", seed=42):
+    """Silhouette score for each k in the range. Returns the best k and the full grid.
+
+    This is a suggestion shown next to the result. It does not change the model,
+    which is fit with the number of clusters the user chose.
+    """
     scores = {}
     for k in range(max(k_min, 2), max(k_max, 2) + 1):
         if algo == "kmeans":
-            mdl = KMeans(n_clusters=k, n_init=10, random_state=42).fit(X)
+            mdl = KMeans(n_clusters=k, n_init=10, random_state=seed).fit(X)
             labels = mdl.labels_
         elif algo == "gmm":
-            mdl = GaussianMixture(n_components=k, covariance_type="full", random_state=42).fit(X)
+            mdl = GaussianMixture(n_components=k, covariance_type="full", random_state=seed).fit(X)
             labels = mdl.predict(X)
         else:
             mdl = AgglomerativeClustering(n_clusters=k).fit(X)
@@ -75,7 +80,11 @@ def _fit_clusterer(model, algo, Xtr: np.ndarray, n_clusters):
         #mdl = AgglomerativeClustering(n_clusters=n_clusters).fit(Xtr)
         mdl = model.fit(Xtr)
         labels_tr = mdl.labels_
-        centers = np.vstack([Xtr[labels_tr==i].mean(axis=0) for i in range(n_clusters)])
+        # Build one centroid per cluster that actually exists. Ranging over a
+        # requested n_clusters instead averages empty slices into NaN rows when the
+        # fitted model has fewer clusters than the number passed in.
+        present = np.unique(labels_tr)
+        centers = np.vstack([Xtr[labels_tr == i].mean(axis=0) for i in present])
         def predict(Xv):
             try:
                 from scipy.spatial.distance import cdist
@@ -259,17 +268,19 @@ def run_clustering(model, model_name,
             best_k = getattr(model, "n_clusters", None) or len(np.unique(labels_train))
     else:
         # Handle standard models (kmeans, gmm, agglo)
-        if model_name == "gmm":
-            # GMM uses different parameter name (n_components instead of n_clusters)
-            best_k, sil_scores = _choose_k_silhouette(X_train_s.values, k_min, k_max, "gmm")
-            logger.debug(f"Using clustering model: {model_name}")
-            logger.debug(f"Model parameters: {model}")
-            model, predict_fn, labels_train, centers = _fit_clusterer(model, "gmm", X_train_s.values, best_k)
-        else:
-            best_k, sil_scores = _choose_k_silhouette(X_train_s.values, k_min, k_max, model_name)
-            logger.debug(f"Using clustering model: {model_name}")
-            logger.debug(f"Model parameters: {model}")
-            model, predict_fn, labels_train, centers = _fit_clusterer(model, model_name, X_train_s.values, best_k)
+        algo = "gmm" if model_name == "gmm" else model_name
+        suggested_k, sil_scores = _choose_k_silhouette(X_train_s.values, k_min, k_max, algo, seed)
+        logger.debug(f"Using clustering model: {model_name}")
+        logger.debug(f"Model parameters: {model}")
+        model, predict_fn, labels_train, centers = _fit_clusterer(model, algo, X_train_s.values, suggested_k)
+        # The sweep is advisory. What gets reported is the number of clusters the
+        # fitted model produced, which is what every downstream chart is drawn from.
+        best_k = int(len(np.unique(labels_train)))
+        if best_k != suggested_k:
+            logger.info(
+                "Silhouette sweep suggested k=%s; model was fit with k=%s and is reported as such.",
+                suggested_k, best_k,
+            )
 
     logger.debug("Computing cluster labels for test set")
     # Ensure X_test_s is a DataFrame before accessing .values
@@ -351,6 +362,7 @@ def run_clustering(model, model_name,
     
     quantileBinResults = ''
     try:
+        setattr(model, "_digiterra_problem_type", "cluster")
         setattr(model, "_digiterra_preprocessor", preproc)
         setattr(model, "_digiterra_raw_features", X_train_raw.columns.tolist())
         setattr(model, "_digiterra_feature_names", X_train_t.columns.tolist())
@@ -361,4 +373,4 @@ def run_clustering(model, model_name,
     return train_scores, test_scores, model.get_params(), {
                 'X_train': X_train_s.shape,
                 'X_test': X_test_s.shape
-            }, model, X_scaler, quantileBinResults, X_train_s.columns.tolist(), clusters['best_k'], clusters['centers'], clusters['silhouette_grid']
+            }, model, X_scaler, quantileBinResults, X_train_raw.columns.tolist(), clusters['best_k'], clusters['centers'], clusters['silhouette_grid']

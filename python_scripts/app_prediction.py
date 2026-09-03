@@ -105,6 +105,7 @@ def run_predict(
         impute_strategy=impute_strategy,
         drop_zero=drop_zero,
         zero_handle=zero_handle,
+        fill_values=store.get("impute_fill_values") or None,
     )
     try:
         required_features = list(store["feature_order"])

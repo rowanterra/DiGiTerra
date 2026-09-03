@@ -42,8 +42,17 @@ class DesktopApi:
 
         self._saving = True
         try:
-            source_path = self.output_dir / filename
-            if not source_path.exists():
+            # filename arrives from page JavaScript. Path's / operator discards the
+            # base when the right operand is absolute, so an unchecked value here
+            # would copy any file the user can read to wherever the dialog points.
+            base = Path(self.output_dir).resolve()
+            source_path = (base / filename).resolve()
+            try:
+                source_path.relative_to(base)
+            except ValueError:
+                logging.error("Refusing download outside the output directory: %s", filename)
+                return False
+            if not source_path.is_file():
                 logging.error("Download source not found: %s", source_path)
                 return False
 
@@ -94,13 +103,22 @@ class DesktopApi:
 
 
 def _configure_logging(debug: bool) -> None:
+    """Send desktop logs to LOG_FILE at the requested level.
+
+    core.flask_app calls basicConfig(force=True) when it is imported, which happens
+    above. Without force here, basicConfig sees handlers already attached and
+    returns without doing anything, so DIGITERRA_DEBUG=1 changes nothing and
+    LOG_FILE stays empty.
+    """
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(
         level=level,
         format="%(asctime)s %(levelname)s %(message)s",
-        handlers=[logging.FileHandler(LOG_FILE), logging.StreamHandler()],
+        handlers=[logging.FileHandler(LOG_FILE, encoding="utf-8"), logging.StreamHandler()],
+        force=True,
     )
+    logging.getLogger("shap").setLevel(logging.WARNING)
 
 
 def _log_exception(context: str, error: BaseException) -> None:

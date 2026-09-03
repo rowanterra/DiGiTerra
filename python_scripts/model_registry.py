@@ -235,7 +235,7 @@ def get_model_kwargs(
             }
         return {'alpha': h.get('alpha'), 'random_state': seed}
     if modelName == 'ElasticNet':
-        return {'alpha': h.get('alpha'), 'l1_ratio': h.get('l1_ratio')}
+        return {'alpha': h.get('alpha'), 'l1_ratio': h.get('l1_ratio'), 'random_state': seed}
     if modelName == 'SVM':
         kernel = h.get('kernel', 'rbf')
         base = {'C': h.get('C'), 'kernel': kernel, 'random_state': seed}
@@ -453,7 +453,7 @@ def get_model_kwargs(
                 'n_jobs': h.get('RFNJobs'), 'verbose': h.get('RFVerbose'),
                 'warm_start': _b(h, 'RFWarmStart'),
             }
-        return {'n_estimators': h.get('n_estimators')}
+        return {'n_estimators': h.get('n_estimators'), 'random_state': seed}
     if modelName == 'SVC_classifier':
         kernel = h.get('kernel', 'rbf')
         base = {'C': h.get('C'), 'kernel': kernel, 'random_state': seed}

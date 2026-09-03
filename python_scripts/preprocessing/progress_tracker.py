@@ -24,6 +24,8 @@ class ProgressTracker:
         self.current_stage = None
         self.start_time = None
         self.estimated_time_remaining = None
+        self.failed = False
+        self.error = None
         
     def start(self):
         """Mark the start of processing."""
@@ -100,6 +102,8 @@ class ProgressTracker:
         with self.lock:
             return {
                 'session_id': self.session_id,
+                'failed': self.failed,
+                'error': self.error,
                 'overall_progress': round(self.overall_progress, 1),
                 'current_stage': self.current_stage,
                 'stages': self.stages.copy(),
@@ -107,6 +111,23 @@ class ProgressTracker:
                 'elapsed_time': time.time() - self.start_time if self.start_time else 0
             }
             
+    def fail(self, message: str):
+        """Mark the run as failed and drive overall progress to the terminal value.
+
+        The progress stream ends only when overall progress reaches the completion
+        threshold. Leaving a failed run below it holds the stream open until its
+        one-hour timeout and the error never reaches the client.
+        """
+        with self.lock:
+            self.failed = True
+            self.error = message
+            stage = self.current_stage or 'model_training'
+            if stage in self.stages:
+                self.stages[stage]['status'] = 'failed'
+                self.stages[stage]['message'] = f'Error: {message}'
+            self.overall_progress = 100
+            self.estimated_time_remaining = 0
+
     def complete(self):
         """Mark all stages as complete."""
         with self.lock:
@@ -127,12 +148,32 @@ _results: Dict[str, Dict] = {}
 _results_lock = threading.Lock()
 
 
+# A run that is never polled would otherwise keep its tracker and result forever.
+MAX_TRACKED_SESSIONS = 256
+
+
 def get_tracker(session_id: str) -> ProgressTracker:
     """Get or create a progress tracker for a session."""
     with _tracker_lock:
         if session_id not in _progress_trackers:
+            while len(_progress_trackers) >= MAX_TRACKED_SESSIONS:
+                oldest = next(iter(_progress_trackers))
+                del _progress_trackers[oldest]
+                with _results_lock:
+                    _results.pop(oldest, None)
             _progress_trackers[session_id] = ProgressTracker(session_id)
         return _progress_trackers[session_id]
+
+
+def peek_tracker(session_id: str) -> Optional[ProgressTracker]:
+    """Return an existing tracker, or None. Never creates one.
+
+    The progress endpoint takes a session id from the URL. Creating a tracker on
+    demand there lets any request open a stream that runs until its timeout, which
+    on a single-worker server blocks every other request.
+    """
+    with _tracker_lock:
+        return _progress_trackers.get(session_id)
 
 
 def remove_tracker(session_id: str):

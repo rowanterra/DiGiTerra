@@ -255,10 +255,19 @@ def plot_regression_bundle(art: dict, units: str = ""):
     if ok:
         save_plot("regression_feature_importance.png")
     else:
+        # The model predicts in scaled target space when a y scaler was fit, so the
+        # scores have to be compared against the scaled targets, not the raw ones.
+        y_for_perm = yt.values if hasattr(yt, "values") else np.asarray(yt)
+        y_scaler = art.get("y_scaler")
+        if y_scaler is not None:
+            try:
+                y_for_perm = y_scaler.transform(np.asarray(y_for_perm).reshape(-1, 1)).ravel()
+            except Exception:
+                logger.debug("Could not scale targets for permutation importance", exc_info=True)
         ok_perm = _plot_permutation_importance(
             model,
             X_test.values,
-            yt.values if hasattr(yt, "values") else yt,
+            y_for_perm,
             feat_names,
             title="Permutation importance",
         )
@@ -415,7 +424,8 @@ def plot_classification_bundle(art: dict, svctrue: bool):
                 n_classes = y_score_flat.shape[1]
                 prec_list, rec_list = [], []
                 for i in range(n_classes):
-                    rec, prec, _ = precision_recall_curve(y_bin[:, i], y_score[:, i])
+                    # sklearn returns precision first, then recall.
+                    prec, rec, _ = precision_recall_curve(y_bin[:, i], y_score[:, i])
                     prec_list.append(prec)
                     rec_list.append(rec)
                 fig, ax = plt.subplots(figsize=(6, 5))
@@ -457,7 +467,8 @@ def plot_classification_bundle(art: dict, svctrue: bool):
         if shap_feat_names and len(X_train_art) > 0:
             plot_shap_summary(
                 effective_model, X_train_art, shap_feat_names,
-                art.get("model_name", "Model"), pdf_pages=None, file_suffix=""
+                art.get("model_name", "Model"), pdf_pages=None, file_suffix="",
+                seed=int(art.get("seed", 42)),
             )
     except Exception as e:
         logger.warning("Could not generate SHAP for classifier: %s", e)

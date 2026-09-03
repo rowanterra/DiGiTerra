@@ -16,7 +16,7 @@ import shap
 logger = logging.getLogger(__name__)
 
 
-def plot_shap_summary(model, X_train, feature_names, model_name, pdf_pages, file_suffix='', label_suffix=''):
+def plot_shap_summary(model, X_train, feature_names, model_name, pdf_pages, file_suffix='', label_suffix='', seed=42):
     """
     Generate SHAP summary plot with optimized background sampling.
 
@@ -39,15 +39,19 @@ def plot_shap_summary(model, X_train, feature_names, model_name, pdf_pages, file
     
     # Sample background data for faster computation (max 100 samples)
     # This reduces computation time significantly
+    # Background and subset sampling both draw at random; an explicit generator
+    # keeps the plot the same across two runs with the same seed.
+    rng = np.random.RandomState(seed)
     n_samples = min(100, len(X_train_array))
     if len(X_train_array) > n_samples:
         # Use k-means to summarize background data
         try:
+            np.random.seed(seed)
             background_data = shap.kmeans(X_train_array, n_samples)
             logger.debug(f"Using {n_samples} background samples (k-means summary) for SHAP computation")
         except Exception:
             # Fallback to random sampling if k-means fails
-            indices = np.random.choice(len(X_train_array), n_samples, replace=False)
+            indices = rng.choice(len(X_train_array), n_samples, replace=False)
             background_data = X_train_array[indices]
             logger.debug(f"Using {n_samples} background samples (random sample) for SHAP computation")
     else:
@@ -61,7 +65,7 @@ def plot_shap_summary(model, X_train, feature_names, model_name, pdf_pages, file
     # Limit to 200 samples for SHAP value computation to avoid long computation times
     max_shap_samples = min(200, len(X_train_array))
     if len(X_train_array) > max_shap_samples:
-        indices = np.random.choice(len(X_train_array), max_shap_samples, replace=False)
+        indices = rng.choice(len(X_train_array), max_shap_samples, replace=False)
         X_shap = X_train_array[indices]
         logger.debug(f"Computing SHAP values for {max_shap_samples} samples (random subset)")
     else:

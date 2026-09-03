@@ -142,7 +142,9 @@ def run_classification(model, model_name,
     # Ensure y is properly formatted - convert DataFrame to Series if single column
     if isinstance(y, pd.DataFrame):
         if y.shape[1] == 1:
-            y = y.iloc[:, 0]
+            # ddf dropped rows with missing values; y must follow or the split
+            # rejects the length mismatch.
+            y = y.iloc[:, 0].loc[ddf.index]
         # For multi-column DataFrame, keep as is but ensure index alignment
         else:
             y = y.loc[ddf.index]
@@ -193,7 +195,7 @@ def run_classification(model, model_name,
     if outlier_method != 'none':
         train_index_before = X_train_s.index  # capture so we can report which rows were removed
         X_train_s, X_test_s, outlier_mask = apply_outlier_handling(
-            X_train_s, X_test_s, y_train, outlier_method, outlier_action
+            X_train_s, X_test_s, y_train, outlier_method, outlier_action, seed=seed
         )
         # Update y_train if outliers were removed
         if outlier_action == 'remove':
@@ -218,7 +220,8 @@ def run_classification(model, model_name,
     original_feature_names = X_train_s.columns.tolist() if isinstance(X_train_s, pd.DataFrame) else []
     if feature_selection_method != 'none' and feature_selection_k:
         X_train_s, X_test_s, feature_selector = apply_feature_selection(
-            X_train_s, X_test_s, y_train_int if y_train_int is not None else y_train, feature_selection_method, feature_selection_k, 'classification'
+            X_train_s, X_test_s, y_train_int if y_train_int is not None else y_train,
+            feature_selection_method, feature_selection_k, 'classification', seed=seed
         )
         if feature_selector is not None and isinstance(X_train_s, pd.DataFrame):
             selected_features = X_train_s.columns.tolist()
@@ -244,7 +247,7 @@ def run_classification(model, model_name,
         model = apply_hyperparameter_search(
             model, X_train_s, fit_y, hyperparameter_search,
             param_grid=None, cv_folds=search_cv_folds, n_iter=search_n_iter, 
-            problem_type='classification', model_name=model_name
+            problem_type='classification', model_name=model_name, seed=seed
         )
     else:
         model.fit(X_train_s, fit_y)
@@ -255,7 +258,10 @@ def run_classification(model, model_name,
         # Map integer predictions back to original bin labels for report and display
         y_pred_1d = np.array([int_to_label[int(p)] for p in np.ravel(y_pred)])
         classes = ordinal_classes
-        y_test_1d = np.asarray(y_test).ravel()
+        # int_to_label holds the str(v) forms the vocabulary was built from, so a
+        # numeric target would leave y_test as ints against string predictions and
+        # classification_report would reject the mixed input.
+        y_test_1d = np.array([str(v) for v in np.ravel(y_test)])
     else:
         _norm = _normalize_classes(model)
         classes = _norm if _norm is not None else model.classes_
@@ -289,11 +295,13 @@ def run_classification(model, model_name,
     
     art = {
         "type": "classification",
+        "seed": seed,
         "preprocessor": preproc,
         "X_scaler": X_scaler,
         "model": model,
         "model_name": f"{model_name} ({mode_label})",
-        "feature_names": list(X_train_t.columns),
+        # X_train_s is what survives feature selection and is what the model saw.
+        "feature_names": list(X_train_s.columns) if isinstance(X_train_s, pd.DataFrame) else list(X_train_t.columns),
         "splits": {
             "X_train": X_train_s, "X_test": X_test_s,
             "y_train": y_train,   "y_test": y_test
@@ -335,6 +343,7 @@ def run_classification(model, model_name,
 
     # Store fitted inference artifacts on the model so prediction can replay train-time transforms.
     try:
+        setattr(model, "_digiterra_problem_type", "classification")
         setattr(model, "_digiterra_preprocessor", preproc)
         setattr(model, "_digiterra_raw_features", X_train.columns.tolist())
         setattr(model, "_digiterra_feature_names", X_train_t.columns.tolist())

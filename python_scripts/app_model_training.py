@@ -322,6 +322,7 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
 
         tracker.update_stage('data_preprocessing', 'running', 50, 'Cleaning and preprocessing data...')
     ## Preprocessing
+        impute_fills = {}
         df = preprocess_data(
             df=df,
             target_cols=predictor_names,
@@ -330,7 +331,11 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
             impute_strategy=impute_strategy,
             drop_zero=drop_zero,
             zero_handle=zero_handle,
+            fill_values_out=impute_fills,
         )
+        # A prediction file has its own column means. Reusing the training fills keeps
+        # inference on the same footing as the run the model was fit on.
+        store['impute_fill_values'] = impute_fills
         tracker.update_stage('data_preprocessing', 'completed', 100, 'Data preprocessing complete')
         
         # Update model training stage to indicate we're starting
@@ -619,6 +624,10 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
             store['y_scaler'] = y_scaler
 
 
+        # A y_scaler left over from an earlier regression run would inverse-transform
+        # the next run's cluster labels or class codes.
+        if problem_type != 'regression':
+            store['y_scaler'] = None
         store['model'] = storedModel #10/1 Rowan this is how the model is stored, it is returned from the train functions
         store['X_scaler'] = X_scaler
         store['feature_order'] = feature_order
@@ -660,6 +669,7 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
         logger.error(f"Error in model training: {e}", exc_info=True)
         error_result = {'error': str(e), 'session_id': session_id}
         set_result(session_id, error_result)
-        tracker.update_stage('model_training', 'completed', 0, f'Error: {str(e)}')
-        remove_tracker(session_id)
+        # fail() drives progress to the terminal value so the stream delivers this
+        # result. Removing the tracker here would delete the result with it.
+        tracker.fail(str(e))
 

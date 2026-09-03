@@ -12,7 +12,8 @@ def apply_feature_selection(
     y_train: pd.Series,
     method: str,
     k: Optional[int] = None,
-    problem_type: str = 'regression'
+    problem_type: str = 'regression',
+    seed: int = 42
 ) -> Tuple[pd.DataFrame, pd.DataFrame, Optional[object]]:
     """
     Apply feature selection to training and test data.
@@ -68,9 +69,9 @@ def apply_feature_selection(
         
         # Use a simple estimator for RFE
         if problem_type == 'regression':
-            estimator = RandomForestRegressor(n_estimators=50, random_state=42, n_jobs=-1)
+            estimator = RandomForestRegressor(n_estimators=50, random_state=seed, n_jobs=-1)
         else:  # classification
-            estimator = RandomForestClassifier(n_estimators=50, random_state=42, n_jobs=-1)
+            estimator = RandomForestClassifier(n_estimators=50, random_state=seed, n_jobs=-1)
         
         selector = RFE(estimator=estimator, n_features_to_select=min(k, X_train.shape[1]))
         X_train_selected = pd.DataFrame(
@@ -87,9 +88,9 @@ def apply_feature_selection(
     elif method == 'SelectFromModel':
         # Use model-based selection
         if problem_type == 'regression':
-            estimator = RandomForestRegressor(n_estimators=50, random_state=42, n_jobs=-1)
+            estimator = RandomForestRegressor(n_estimators=50, random_state=seed, n_jobs=-1)
         else:  # classification
-            estimator = RandomForestClassifier(n_estimators=50, random_state=42, n_jobs=-1)
+            estimator = RandomForestClassifier(n_estimators=50, random_state=seed, n_jobs=-1)
         
         selector = SelectFromModel(estimator=estimator)
         X_train_selected = pd.DataFrame(

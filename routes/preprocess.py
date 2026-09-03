@@ -58,18 +58,24 @@ def preprocess():
                 stratify_name = stratify_name.tolist()[0] if len(stratify_name) > 0 else str(stratify_name)
             else:
                 stratify_name = str(stratify_name)
-    except (KeyError, IndexError):
-        stratify_name = str(df.columns[stratify]) if stratify < len(df.columns) else ""
+    except (KeyError, IndexError, TypeError, ValueError):
+        # A stratify value that names no column is a client error, not a server fault.
+        return jsonify({
+            "error": f"Stratify selection {stratify!r} does not match a column in this file."
+        }), HTTP_BAD_REQUEST
 
     output_type = (data.get("outputType") or "").strip()
-    if output_type != "Cluster":
-        strat_idx = stratify if isinstance(stratify, (int, np.integer)) else None
-        if strat_idx is not None and selected_predictors is not None:
-            pred_list = selected_predictors if isinstance(selected_predictors, (list, tuple)) else [selected_predictors]
-            if strat_idx in pred_list:
-                return jsonify({
-                    "error": "Do not stratify by your target column. That would leak target information into the train/test split. Choose a different column to stratify by."
-                }), HTTP_BAD_REQUEST
+    # Clustering has no supervised target, so the guard applies to everything else.
+    # The client sends stratify as a bare index or a one-element list; both are checked.
+    if output_type != "Cluster" and selected_predictors is not None:
+        strat_list = stratify if isinstance(stratify, (list, tuple)) else [stratify]
+        strat_idx = {int(s) for s in strat_list if isinstance(s, (int, np.integer))}
+        pred_raw = selected_predictors if isinstance(selected_predictors, (list, tuple)) else [selected_predictors]
+        pred_list = {int(p) for p in pred_raw if isinstance(p, (int, np.integer))}
+        if strat_idx & pred_list:
+            return jsonify({
+                "error": "Do not stratify by your target column. That would leak target information into the train/test split. Choose a different column to stratify by."
+            }), HTTP_BAD_REQUEST
 
     store["last_preprocess_request"] = {
         "indicators": selected_indicators,

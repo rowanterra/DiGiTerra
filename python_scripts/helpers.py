@@ -58,7 +58,9 @@ def preprocess_data(
     drop_zero='all',
     zero_handle='drop',  # 'none', 'drop', 'mean', 'median', or numeric constant for replacement
     zero_replace_values=None,  # list of exact values to convert to 0
-    zero_replace_patterns=None  # list of lambda or callable to match patterns (e.g., lambda x: str(x).startswith('<'))
+    zero_replace_patterns=None,  # list of lambda or callable to match patterns (e.g., lambda x: str(x).startswith('<'))
+    fill_values=None,  # {column: value} to reuse instead of recomputing (inference reuses training fills)
+    fill_values_out=None  # mutable dict the function writes the fills it used into
 ):
     df_clean = df.copy()
     indicator_cols = list(indicator_cols or [])
@@ -94,44 +96,39 @@ def preprocess_data(
             subset = indicator_cols + target_cols
             df_clean.dropna(subset=subset, inplace=True, how='any')
 
-#if impute strategy -> replace missing values 
+#if impute strategy -> replace missing values
     else:
         if drop_missing == 'all':
-            for col in df_clean.select_dtypes(include=[np.number]).columns:
-                if impute_strategy == 'mean':
-                    df_clean[col].fillna(df_clean[col].mean(), inplace=True)
-                elif impute_strategy == 'median':
-                    df_clean[col].fillna(df_clean[col].median(), inplace=True)
-                elif isinstance(impute_strategy, (int, float)):
-                    df_clean[col].fillna(impute_strategy, inplace=True)
-
+            impute_scope = list(df_clean.select_dtypes(include=[np.number]).columns)
         elif drop_missing == 'indicator':
-            for col in df_clean[indicator_cols].select_dtypes(include=[np.number]).columns:
-                if impute_strategy == 'mean':
-                    df_clean[col].fillna(df_clean[col].mean(), inplace=True)
-                elif impute_strategy == 'median':
-                    df_clean[col].fillna(df_clean[col].median(), inplace=True)
-                elif isinstance(impute_strategy, (int, float)):
-                    df_clean[col].fillna(impute_strategy, inplace=True)
-
+            impute_scope = list(df_clean[indicator_cols].select_dtypes(include=[np.number]).columns)
         elif drop_missing == 'target' and target_cols:
-            for col in df_clean[target_cols].select_dtypes(include=[np.number]).columns:
-                if impute_strategy == 'mean':
-                    df_clean[col].fillna(df_clean[col].mean(), inplace=True)
-                elif impute_strategy == 'median':
-                    df_clean[col].fillna(df_clean[col].median(), inplace=True)
-                elif isinstance(impute_strategy, (int, float)):
-                    df_clean[col].fillna(impute_strategy, inplace=True)
-
+            impute_scope = list(df_clean[target_cols].select_dtypes(include=[np.number]).columns)
         elif drop_missing == 'indicatorAndTarget':
             subset_cols = indicator_cols + target_cols
-            for col in df_clean[subset_cols].select_dtypes(include=[np.number]).columns:
-                if impute_strategy == 'mean':
-                    df_clean[col].fillna(df_clean[col].mean(), inplace=True)
-                elif impute_strategy == 'median':
-                    df_clean[col].fillna(df_clean[col].median(), inplace=True)
-                elif isinstance(impute_strategy, (int, float)):
-                    df_clean[col].fillna(impute_strategy, inplace=True)
+            impute_scope = list(df_clean[subset_cols].select_dtypes(include=[np.number]).columns)
+        else:
+            impute_scope = []
+
+        supplied = dict(fill_values or {})
+        for col in impute_scope:
+            if col in supplied:
+                fill = supplied[col]
+            elif impute_strategy == 'mean':
+                fill = df_clean[col].mean()
+            elif impute_strategy == 'median':
+                fill = df_clean[col].median()
+            elif isinstance(impute_strategy, (int, float)):
+                fill = impute_strategy
+            else:
+                continue
+            if pd.isna(fill):
+                continue
+            # Direct assignment, not fillna(inplace=True) on a column selection:
+            # the latter is chained assignment and becomes a no-op under copy-on-write.
+            df_clean[col] = df_clean[col].fillna(fill)
+            if fill_values_out is not None:
+                fill_values_out[col] = float(fill)
 
     def _numeric_columns_for_zero_scope(frame):
         if drop_zero == 'all':
@@ -655,14 +652,25 @@ def write_to_excelCluster(data, indicator_names, stratify_name, scaler, seed, mo
     file_path = VIS_DIR / "model_performance.xlsx"
 
 
-def _build_cv_summary(results: dict) -> tuple[pd.DataFrame, pd.DataFrame]:
+def _build_cv_summary(results: dict, scoring: dict | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Summarize cross_validate output.
+
+    scoring maps the display name used as the cross_validate key to the sklearn
+    scorer string. sklearn returns error metrics negated under a neg_ scorer, and
+    the display name hides that prefix, so the scorer string decides the sign.
+    """
     fold_df = pd.DataFrame(results)
     summary_rows = []
+    scoring = scoring or {}
     for key, values in results.items():
         if not key.startswith("test_"):
             continue
         metric_name = key.replace("test_", "")
         metric_values = np.array(values, dtype=float)
+        scorer = scoring.get(metric_name, metric_name)
+        # A neg_ scorer returns negated error; flip it back for display.
+        if isinstance(scorer, str) and scorer.startswith("neg_"):
+            metric_values = -metric_values
         if metric_name.startswith("neg_"):
             metric_name = metric_name.replace("neg_", "")
             metric_values = -metric_values
@@ -761,7 +769,7 @@ def run_cross_validation(
 
     y_values = y_raw.iloc[:, 0] if isinstance(y_raw, pd.DataFrame) else y_raw
     results = cross_validate(pipeline, X_raw, y_values, scoring=scoring, cv=cv)
-    summary_df, fold_df = _build_cv_summary(results)
+    summary_df, fold_df = _build_cv_summary(results, scoring)
     file_path = write_cross_validation_results(summary_df, fold_df, cv_type, folds)
     # Return both file path and summary data for frontend display
     return file_path, summary_df
@@ -803,19 +811,39 @@ def prediction(df_clean, best_model, training_features, X_scaler, y_scaler, feat
     else:
         X_new = X_new_raw.copy()
 
+    # --- 2. Scale, then subset ------------------------------------------------
+    # Training order is scale -> feature selection, so the scaler was fit on the
+    # full transformed frame. Subsetting to the selected columns first would hand
+    # the scaler fewer columns than it was fit with.
+    scaler_features = list(getattr(X_scaler, "feature_names_in_", []) or [])
+    if X_scaler is not None:
+        if scaler_features:
+            missing_for_scaler = sorted(set(scaler_features) - set(X_new.columns))
+            if missing_for_scaler:
+                raise ValueError(
+                    f"Prediction preprocessing mismatch. Missing transformed features: {missing_for_scaler}"
+                )
+            X_scaled_full = pd.DataFrame(
+                X_scaler.transform(X_new[scaler_features]),
+                index=X_new.index,
+                columns=scaler_features,
+            )
+        else:
+            X_scaled_full = pd.DataFrame(
+                X_scaler.transform(X_new), index=X_new.index, columns=X_new.columns
+            )
+    else:
+        X_scaled_full = X_new
+
     if model_feature_order:
-        missing_model_features = sorted(set(model_feature_order) - set(X_new.columns))
+        missing_model_features = sorted(set(model_feature_order) - set(X_scaled_full.columns))
         if missing_model_features:
             raise ValueError(f"Prediction preprocessing mismatch. Missing transformed features: {missing_model_features}")
-        X_new = X_new[model_feature_order]
-    elif feature_order and set(feature_order).issubset(set(X_new.columns)):
-        X_new = X_new[feature_order]
-
-    # --- 2. Apply X scaling IF it was used in training ---
-    if X_scaler is not None:
-        X_new_scaled = X_scaler.transform(X_new)
+        X_new_scaled = X_scaled_full[model_feature_order].values
+    elif feature_order and set(feature_order).issubset(set(X_scaled_full.columns)):
+        X_new_scaled = X_scaled_full[feature_order].values
     else:
-        X_new_scaled = X_new.values
+        X_new_scaled = X_scaled_full.values
 
     # --- 3. Predict ---
     y_pred = best_model.predict(X_new_scaled)
@@ -837,9 +865,14 @@ def prediction(df_clean, best_model, training_features, X_scaler, y_scaler, feat
     if y_pred.ndim == 1:
         y_pred = y_pred.reshape(-1, 1)
 
-    # --- 6. Inverse-transform ONLY if y_scaler exists and predictions are numeric (regression) ---
-    if y_scaler is not None and (np.issubdtype(y_pred.dtype, np.floating) or np.issubdtype(y_pred.dtype, np.integer)):
-        y_pred = y_scaler.inverse_transform(y_pred)
+    # --- 6. Inverse-transform only for regression targets ---
+    # Cluster labels and encoded class indices are integers too, so a numeric dtype
+    # is not enough to identify a scaled regression target. The training run records
+    # its problem type on the model; anything else leaves the prediction alone.
+    problem_type = getattr(model_for_attrs, "_digiterra_problem_type", None)
+    if y_scaler is not None and problem_type in (None, "regression") and int_to_label is None:
+        if np.issubdtype(y_pred.dtype, np.floating) or np.issubdtype(y_pred.dtype, np.integer):
+            y_pred = y_scaler.inverse_transform(y_pred)
 
     # --- 7. Handle single vs multiple targets ---
     num_targets = y_pred.shape[1] if y_pred.ndim > 1 else 1

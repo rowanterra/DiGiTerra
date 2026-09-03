@@ -5,9 +5,8 @@ from python_scripts import config
 
 
 def ensure_user_vis_dir() -> Path:
-    """Ensure VIS_DIR exists and return it."""
-    config.VIS_DIR.mkdir(parents=True, exist_ok=True)
-    return config.VIS_DIR
+    """Return this session's output directory, creating it if needed."""
+    return config.VIS_DIR.current()
 
 
 def with_prefix(path: str) -> str:
