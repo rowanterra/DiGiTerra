@@ -94,9 +94,12 @@ values go to session storage and inference reuses them
 not the whole-file mean). Regression heading 33 -> 32 models. Helm
 image.repository is `required`. shap.summary_plot takes rng=seed.
 
-Still open: RadiusNeighborsRegressor returns NaN for a row with no training row
-inside the radius; the `n_estmators` id spelling is consistent across HTML and
-JS and was left.
+RadiusNeighbors: a row with no training row inside the radius took NaN from
+scikit-learn; it now takes the value of its nearest training row, and
+`n_fallback_` on the model counts how many rows that was.
+
+Still open: the `n_estmators` id spelling is consistent across HTML and JS and
+was left.
 
 ## Second pass, 2026-09-03 evening (commit 2)
 

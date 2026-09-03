@@ -4276,7 +4276,7 @@
                             </div>
                             <div id="advancedRadiusNeighborsFields" class="hidden">
                                 <h3>Radius Neighbors Regressor Settings</h3>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Predicts from the neighbors within a fixed radius.</p>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Predicts the mean of the training rows within the radius, measured on scaled features. A row with no training row inside the radius takes the value of its nearest training row.</p>
                                 <label for="advancedRadiusNeighborsRadius">Radius - Neighbor search radius (float >0):</label>
                                 <input type="number" value=1.0 placeholder=1.0 min="0.0000001" step="any" id="advancedRadiusNeighborsRadius" name="advancedRadiusNeighborsRadius">
                                 <div class="nonreqHyperparams">

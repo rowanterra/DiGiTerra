@@ -1,7 +1,37 @@
+import numpy as np
 import pandas as pd
-from sklearn.neighbors import RadiusNeighborsRegressor
+from sklearn.neighbors import KNeighborsRegressor, RadiusNeighborsRegressor
 
 from python_scripts.preprocessing.run_regression_pipeline import run_regression
+
+
+class RadiusNeighborsWithFallback(RadiusNeighborsRegressor):
+    """RadiusNeighborsRegressor that answers every row.
+
+    scikit-learn returns NaN for a query with no training row inside the radius.
+    On standardized features a radius of 1 leaves most rows without a neighbor,
+    and a NaN prediction breaks every metric and chart downstream. A row with an
+    empty neighborhood takes the value of its single nearest training row
+    instead, and n_fallback_ records how many rows that was on the last predict
+    call so the report can state it.
+    """
+
+    def fit(self, X, y):
+        super().fit(X, y)
+        self._nearest = KNeighborsRegressor(
+            n_neighbors=1, algorithm=self.algorithm, leaf_size=self.leaf_size, p=self.p, metric=self.metric
+        ).fit(X, y)
+        self.n_fallback_ = 0
+        return self
+
+    def predict(self, X):
+        pred = np.asarray(super().predict(X), dtype=float)
+        empty = np.isnan(pred) if pred.ndim == 1 else np.isnan(pred).any(axis=1)
+        self.n_fallback_ = int(empty.sum())
+        if self.n_fallback_:
+            Xa = np.asarray(X)
+            pred[empty] = self._nearest.predict(Xa[empty])
+        return pred
 
 
 def train_radius_neighbors_regressor(
@@ -44,7 +74,7 @@ def train_radius_neighbors_regressor(
         y = y.loc[common_idx]
         train_data = train_data.loc[common_idx]
 
-    model = RadiusNeighborsRegressor(
+    model = RadiusNeighborsWithFallback(
         radius=kwargs.get("radius", 1.0),
         weights=kwargs.get("weights", "uniform"),
         algorithm=kwargs.get("algorithm", "auto"),
