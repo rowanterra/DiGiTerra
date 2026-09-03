@@ -22,6 +22,7 @@ from python_scripts.helpers import (
 )
 from python_scripts.model_registry import CLUSTER_MODELS, MODEL_REGISTRY, get_model_kwargs
 from python_scripts.preprocessing.progress_tracker import get_tracker, set_result
+from python_scripts.preprocessing.split_fill import FillPlan, reset_fill_plan, set_fill_plan
 
 DEFAULT_CV_FOLDS = 5
 DEFAULT_SEARCH_ITERATIONS = 50
@@ -394,6 +395,10 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
         tracker.update_stage("data_preprocessing", "running", 50, "Cleaning and preprocessing data...")
         ## Preprocessing
         impute_fills = {}
+        # Mean and median fills are recorded in fill_plan and fitted by the pipeline on
+        # its training split, so test rows never inform a training value. Constant fills
+        # and row drops still happen here.
+        fill_plan = FillPlan()
         df = preprocess_data(
             df=df,
             target_cols=predictor_names,
@@ -403,10 +408,11 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
             drop_zero=drop_zero,
             zero_handle=zero_handle,
             fill_values_out=impute_fills,
+            fill_plan_out=fill_plan,
         )
-        # A prediction file has its own column means. Reusing the training fills keeps
-        # inference on the same footing as the run the model was fit on.
+        fill_plan_token = set_fill_plan(fill_plan)
         store["impute_fill_values"] = impute_fills
+        store["zero_fill_values"] = {}
         tracker.update_stage("data_preprocessing", "completed", 100, "Data preprocessing complete")
 
         # Update model training stage to indicate we're starting
@@ -519,6 +525,13 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
                     feature_selection_info,
                     outlier_info,
                 ) = result
+
+        # The pipeline fitted the plan on its training rows; inference reuses these values.
+        if fill_plan.fitted:
+            store["impute_fill_values"] = {**impute_fills, **fill_plan.nan_fills}
+            store["zero_fill_values"] = dict(fill_plan.zero_fills)
+        reset_fill_plan(fill_plan_token)
+        fill_plan_token = None
 
         fmt = f".{sigfig}f"
 
@@ -945,6 +958,8 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
         set_result(session_id, result)
 
     except Exception as e:
+        if locals().get("fill_plan_token") is not None:
+            reset_fill_plan(locals()["fill_plan_token"])
         # Ensure tracker is cleaned up on error
         logger.error(f"Error in model training: {e}", exc_info=True)
         error_result = {"error": str(e), "session_id": session_id}

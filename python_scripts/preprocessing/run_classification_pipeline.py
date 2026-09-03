@@ -19,6 +19,7 @@ from python_scripts.plotting.bundles import export_plots
 from python_scripts.preprocessing.feature_selection import apply_feature_selection
 from python_scripts.preprocessing.hyperparameter_search import apply_hyperparameter_search
 from python_scripts.preprocessing.outlier_handling import apply_outlier_handling
+from python_scripts.preprocessing.split_fill import apply_fill_plan_to_split, get_fill_plan
 from python_scripts.preprocessing.utilities import (
     _scale_pairs,
     get_feature_names,
@@ -108,7 +109,9 @@ def run_classification(
     textp = []
 
     use_cols = nump + catp + textp + list(target_variables)
-    ddf = train_data[use_cols].dropna().copy()
+    # A column the fill plan will impute keeps its NaN rows; every other NaN drops the row.
+    fill_plan = get_fill_plan()
+    ddf = train_data[use_cols].dropna(subset=fill_plan.dropna_subset(use_cols) if fill_plan else None).copy()
 
     # target_variables=target_variables[0]
     # Rowan 10/13
@@ -170,6 +173,12 @@ def run_classification(
         y = pd.Series(y, index=ddf.index) if len(ddf) == len(y) else y
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=testSize, stratify=strat, random_state=seed)
+    # Statistical fills are fitted on the training rows only and applied to both halves.
+    ddf, _plan = apply_fill_plan_to_split(ddf, X_train.index)
+    if _plan is not None:
+        feat_cols = nump + catp + textp
+        X_train = ddf.loc[X_train.index, feat_cols]
+        X_test = ddf.loc[X_test.index, feat_cols]
 
     # Ordinal encoding for pre-made bins: map labels to integers in numeric bin order
     # so the classifier fits ordered classes (<50, 50-150, 150-500, >500).

@@ -94,7 +94,7 @@ def plot_shap_summary(model, X_train, feature_names, model_name, pdf_pages, file
 
     try:
         # shap.summary_plot creates its own figure and axes
-        shap.summary_plot(shap_values, X_shap, feature_names=feature_names, show=False)
+        shap.summary_plot(shap_values, X_shap, feature_names=feature_names, show=False, rng=seed)
         plot_created = True
         # Get the current figure (created by shap.summary_plot)
         fig = plt.gcf()

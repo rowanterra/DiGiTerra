@@ -79,6 +79,25 @@ Frontend
   bundle with `no-undef` on. `npm run check-bundle` fails if the committed bundle
   has drifted.
 
+## Third pass, 2026-09-03 night (commits 3 to 5, unattended)
+
+Done: ruff 607 -> 0 with `ruff format` over the tree and the rest by hand; CI
+now fails on `ruff check` and `ruff format --check`. Two defects surfaced by
+the unused-variable cleanup: the regression pipeline returned "" in place of
+the per-bin evaluation table (the "quantile Bin Results" sheet never existed),
+and the user's bin labels were parsed and discarded. Imputation leakage is
+fixed: `preprocessing/split_fill.py` holds a FillPlan that preprocess_data
+records mean/median NaN and zero fills into; each pipeline fits the plan on its
+training rows after train_test_split and applies it to both halves; the fitted
+values go to session storage and inference reuses them
+(tests/unit/test_split_fill.py proves the stored fill is the train-split mean,
+not the whole-file mean). Regression heading 33 -> 32 models. Helm
+image.repository is `required`. shap.summary_plot takes rng=seed.
+
+Still open: RadiusNeighborsRegressor returns NaN for a row with no training row
+inside the radius; the `n_estmators` id spelling is consistent across HTML and
+JS and was left.
+
 ## Second pass, 2026-09-03 evening (commit 2)
 
 Done: XSS closed (escapeHtml escapes quotes; every innerHTML sink that takes

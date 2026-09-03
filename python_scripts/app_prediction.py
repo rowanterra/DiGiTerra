@@ -113,6 +113,7 @@ def run_predict(
         drop_zero=drop_zero,
         zero_handle=zero_handle,
         fill_values=store.get("impute_fill_values") or None,
+        zero_fill_values=store.get("zero_fill_values") or None,
     )
     try:
         required_features = list(store["feature_order"])

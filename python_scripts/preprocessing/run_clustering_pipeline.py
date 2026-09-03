@@ -19,6 +19,7 @@ import python_scripts.plotting.plot_style  # noqa: F401
 from python_scripts.config import VIS_DIR
 from python_scripts.plotting.bundles import export_plots
 from python_scripts.preprocessing.outlier_handling import apply_outlier_handling
+from python_scripts.preprocessing.split_fill import apply_fill_plan_to_split, get_fill_plan
 from python_scripts.preprocessing.utilities import _scale_pairs, get_feature_names, make_preprocessor
 
 logger = logging.getLogger(__name__)
@@ -191,11 +192,10 @@ def run_clustering(
                 f"{list(train_data.columns)}"
             )
         # Use .loc to ensure we get a DataFrame, not a Series or dict
-        if len(existing_cols) == 1:
-            # Single column - still return as DataFrame
-            ddf = train_data.loc[:, existing_cols].dropna().copy()
-        else:
-            ddf = train_data[existing_cols].dropna().copy()
+        # A column the fill plan will impute keeps its NaN rows; every other NaN drops the row.
+        fill_plan = get_fill_plan()
+        _subset = fill_plan.dropna_subset(existing_cols) if fill_plan else None
+        ddf = train_data.loc[:, existing_cols].dropna(subset=_subset).copy()
 
         # Double-check ddf is a DataFrame
         if not isinstance(ddf, pd.DataFrame):
@@ -217,6 +217,11 @@ def run_clustering(
     DO_SPLIT = True
     if DO_SPLIT:
         X_train_raw, X_test_raw = train_test_split(ddf, test_size=test_size, random_state=seed)
+        # Statistical fills are fitted on the training rows only and applied to both halves.
+        ddf, _plan = apply_fill_plan_to_split(ddf, X_train_raw.index)
+        if _plan is not None:
+            X_train_raw = ddf.loc[X_train_raw.index]
+            X_test_raw = ddf.loc[X_test_raw.index]
         # Ensure both are DataFrames
         if not isinstance(X_train_raw, pd.DataFrame):
             X_train_raw = (

@@ -21,6 +21,7 @@ from python_scripts.preprocessing.evaluate_by_quantile import evaluate_by_quanti
 from python_scripts.preprocessing.feature_selection import apply_feature_selection
 from python_scripts.preprocessing.hyperparameter_search import _estimate_param_combinations, apply_hyperparameter_search
 from python_scripts.preprocessing.outlier_handling import apply_outlier_handling
+from python_scripts.preprocessing.split_fill import apply_fill_plan_to_split, get_fill_plan
 from python_scripts.preprocessing.utilities import (
     _scale_pairs,
     get_feature_names,
@@ -81,7 +82,9 @@ def run_regression(
     textp = []
 
     use_cols = nump + catp + textp + list(target_variables)
-    ddf = train_data[use_cols].dropna().copy()
+    # A column the fill plan will impute keeps its NaN rows; every other NaN drops the row.
+    fill_plan = get_fill_plan()
+    ddf = train_data[use_cols].dropna(subset=fill_plan.dropna_subset(use_cols) if fill_plan else None).copy()
 
     if progress_tracker:
         progress_tracker.update_stage("model_training", "running", 10, "Splitting data into train/test sets...")
@@ -89,12 +92,14 @@ def run_regression(
     target_variable = target_variables[0]
     # Ensure numeric target; if target contains labels like ">500" or "<50", use Classification with Bins instead
     y_numeric = y.apply(pd.to_numeric, errors="coerce")
-    has_bad = y_numeric.isna().any().any() if isinstance(y_numeric, pd.DataFrame) else y_numeric.isna().any()
+    # A value that was present and did not parse is non-numeric; an original NaN is missing, not bad.
+    _bad = y_numeric.isna() & y.notna()
+    has_bad = _bad.any().any() if isinstance(y_numeric, pd.DataFrame) else _bad.any()
     if has_bad:
         if isinstance(y_numeric, pd.Series):
-            sample_bad = y.loc[y_numeric.isna()].iloc[0]
+            sample_bad = y.loc[_bad].iloc[0]
         else:
-            bad_mask = y_numeric.isna().any(axis=1)
+            bad_mask = _bad.any(axis=1)
             sample_bad = y.loc[bad_mask].iloc[0].loc[y_numeric.loc[bad_mask].iloc[0].isna()].iloc[0]
         raise ValueError(
             f"Target column contains non-numeric values such as '{sample_bad}'. "
@@ -157,7 +162,15 @@ def run_regression(
     X = ddf[nump + catp + textp].copy()
     # Rowan 10/13
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=testSize, stratify=strat, random_state=seed)
-    # if useTransformer == 'Yes':
+    # Statistical fills are fitted on the training rows only and applied to both halves.
+    ddf, _plan = apply_fill_plan_to_split(ddf, X_train.index)
+    if _plan is not None:
+        feat_cols = nump + catp + textp
+        X_train = ddf.loc[X_train.index, feat_cols]
+        X_test = ddf.loc[X_test.index, feat_cols]
+        y = ddf.loc[y.index, list(y.columns)].apply(pd.to_numeric, errors="coerce")
+        y_train = y.loc[y_train.index]
+        y_test = y.loc[y_test.index]
     # RAW splits for transformer
     X_train_raw = ddf.loc[X_train.index, nump + catp + textp].copy()
     X_test_raw = ddf.loc[X_test.index, nump + catp + textp].copy()

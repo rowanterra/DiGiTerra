@@ -59,6 +59,8 @@ def preprocess_data(
     zero_replace_patterns=None,  # list of lambda or callable to match patterns (e.g., lambda x: str(x).startswith('<'))
     fill_values=None,  # {column: value} to reuse instead of recomputing (inference reuses training fills)
     fill_values_out=None,  # mutable dict the function writes the fills it used into
+    zero_fill_values=None,  # {column: value} replacing zeros, reused at inference
+    fill_plan_out=None,  # a FillPlan; when given, mean/median fills are recorded here and deferred to the split
 ):
     df_clean = df.copy()
     indicator_cols = list(indicator_cols or [])
@@ -109,9 +111,16 @@ def preprocess_data(
             impute_scope = []
 
         supplied = dict(fill_values or {})
+        deferred = fill_plan_out is not None and impute_strategy in ("mean", "median")
+        if deferred:
+            # The pipeline fits these on its training split; see preprocessing/split_fill.py.
+            fill_plan_out.nan_strategy = impute_strategy
+            fill_plan_out.nan_columns = [c for c in impute_scope if c not in supplied]
         for col in impute_scope:
             if col in supplied:
                 fill = supplied[col]
+            elif deferred:
+                continue
             elif impute_strategy == "mean":
                 fill = df_clean[col].mean()
             elif impute_strategy == "median":
@@ -163,6 +172,13 @@ def preprocess_data(
             df_clean = df_clean[~(df_clean[subset].eq(0).all(axis=1))]
     else:
         zcols = _numeric_columns_for_zero_scope(df_clean)
+        zsupplied = dict(zero_fill_values or {})
+        zdeferred = fill_plan_out is not None and zero_handle_norm in ("mean", "median")
+        if zdeferred:
+            fill_plan_out.zero_strategy = zero_handle_norm
+            fill_plan_out.zero_columns = [
+                c for c in zcols if c not in zsupplied and pd.api.types.is_numeric_dtype(df_clean[c])
+            ]
         for col in zcols:
             if col not in df_clean.columns or not pd.api.types.is_numeric_dtype(df_clean[col]):
                 continue
@@ -170,7 +186,11 @@ def preprocess_data(
             if not mask.any():
                 continue
             non_zero = df_clean.loc[~mask, col]
-            if zero_handle_norm == "mean":
+            if col in zsupplied:
+                repl = zsupplied[col]
+            elif zdeferred:
+                continue
+            elif zero_handle_norm == "mean":
                 repl = non_zero.mean()
             elif zero_handle_norm == "median":
                 repl = non_zero.median()
