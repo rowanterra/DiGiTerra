@@ -1,6 +1,8 @@
 from sklearn.linear_model import PassiveAggressiveClassifier
 from sklearn.multioutput import MultiOutputClassifier
+
 from python_scripts.preprocessing.run_classification_pipeline import run_classification
+
 
 def train_passive_aggressive_classifier(train_data, target_variables, use_stratified_split,
                 X, y, stratifyColumn, units,

@@ -1,7 +1,9 @@
-from sklearn.svm import NuSVR
-from sklearn.multioutput import MultiOutputRegressor
 import numpy as np
+from sklearn.multioutput import MultiOutputRegressor
+from sklearn.svm import NuSVR
+
 from python_scripts.preprocessing.run_regression_pipeline import run_regression
+
 
 def train_nusvr(model_type, train_data, target_variables, use_stratified_split,
                 X, y, stratifyColumn, units,

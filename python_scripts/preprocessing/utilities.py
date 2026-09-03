@@ -1,44 +1,25 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import List, Optional, Dict, Tuple, Any, Sequence
-import re
-import math
 import logging
+import re
+from collections.abc import Sequence
+from typing import Any
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from python_scripts.plotting.plot_style import apply_plot_style
 
 logger = logging.getLogger(__name__)
 
-from sklearn.model_selection import train_test_split
 from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import OneHotEncoder, StandardScaler, RobustScaler, QuantileTransformer, MinMaxScaler
-from sklearn.pipeline import Pipeline, FunctionTransformer
-from sklearn.metrics import (
-    r2_score, mean_squared_error, mean_absolute_error,
-    classification_report, confusion_matrix, ConfusionMatrixDisplay,
-    silhouette_score, calinski_harabasz_score, davies_bouldin_score,
-    precision_recall_curve, average_precision_score, roc_curve, auc, roc_auc_score,
-    silhouette_samples
-)
-from sklearn.inspection import permutation_importance
-from python_scripts.plotting.plot_shap_summary_graphic import plot_shap_summary
-from python_scripts.plotting.plot_roc_curve import plot_roc_curve_from_estimator
-from python_scripts.plotting.plot_precision_recall_curve import plot_precision_recall_curve_from_estimator
-from python_scripts.plotting.plot_partial_dependence import plot_partial_dependence
-from python_scripts.config import VIS_DIR
-from python_scripts.plotting.bundles import export_plots
-
+from sklearn.pipeline import FunctionTransformer, Pipeline
+from sklearn.preprocessing import MinMaxScaler, OneHotEncoder, QuantileTransformer, RobustScaler, StandardScaler
 
 # -------------------------
 # Utilities
 # -------------------------
 
-def sort_class_labels_numeric_bins(labels: Sequence[Any]) -> List[Any]:
+def sort_class_labels_numeric_bins(labels: Sequence[Any]) -> list[Any]:
     """
     Sort class labels so numeric bins appear in numeric order (<50, 50-150, 150-500, >500).
     Labels that look like ranges or thresholds are ordered by their lower bound. When no number is
@@ -90,8 +71,8 @@ def sort_class_labels_numeric_bins(labels: Sequence[Any]) -> List[Any]:
 
 
 def choose_columns_from_df(df: pd.DataFrame,
-                           target_col: Optional[str],
-                           max_ohe_cardinality: int = 50) -> Tuple[List[str], List[str], List[str]]:
+                           target_col: str | None,
+                           max_ohe_cardinality: int = 50) -> tuple[list[str], list[str], list[str]]:
     """
     If predictors are not specified, infer numeric vs categorical. Text cols left empty by default.
     Returns (numeric_predictors, categorical_predictors, text_cols).
@@ -100,11 +81,11 @@ def choose_columns_from_df(df: pd.DataFrame,
     obj_cols = df.select_dtypes(exclude=np.number).columns.tolist()
     numeric_predictors = [c for c in num_cols if c != target_col]
     categorical_predictors = [c for c in obj_cols if c != target_col and df[c].nunique(dropna=True) <= max_ohe_cardinality]
-    text_cols: List[str] = []
+    text_cols: list[str] = []
     return numeric_predictors, categorical_predictors, text_cols
 
 
-def resolve_predictors(df: pd.DataFrame, numeric_predictors, categorical_predictors, target_col) -> Tuple[list, list]:
+def resolve_predictors(df: pd.DataFrame, numeric_predictors, categorical_predictors, target_col) -> tuple[list, list]:
     """
     Use user-specified predictor lists when provided; otherwise infer only the missing parts.
     Returns (numeric_predictors, categorical_predictors, text_cols).
@@ -135,7 +116,7 @@ def _get_scaler(kind: str):
     raise ValueError("Unknown scaler kind")
 
 
-def _group_by_map(series: pd.Series, mapping: Dict[str, str], regex: bool = True) -> pd.Series:
+def _group_by_map(series: pd.Series, mapping: dict[str, str], regex: bool = True) -> pd.Series:
     def _map_one(s: str):
         if pd.isna(s): return s
         for pat, label in mapping.items():
@@ -145,10 +126,10 @@ def _group_by_map(series: pd.Series, mapping: Dict[str, str], regex: bool = True
     return series.astype(str).apply(_map_one)
 
 
-def make_preprocessor(numeric_cols: List[str],
-                      categorical_cols: Optional[List[str]] = None,
+def make_preprocessor(numeric_cols: list[str],
+                      categorical_cols: list[str] | None = None,
                       *, cat_mode: str = "onehot",
-                      group_maps: Optional[Dict[str, Dict[str,str]]] = None) -> Pipeline:
+                      group_maps: dict[str, dict[str, str]] | None = None) -> Pipeline:
     def apply_group_map(Xdf: pd.DataFrame):
         Xdf = Xdf.copy()
         if group_maps:
@@ -176,8 +157,8 @@ def make_preprocessor(numeric_cols: List[str],
                           ("columns", coltx)])
 
 
-def get_feature_names(preprocessor: Pipeline, input_df: pd.DataFrame) -> List[str]:
-    names: List[str] = []
+def get_feature_names(preprocessor: Pipeline, input_df: pd.DataFrame) -> list[str]:
+    names: list[str] = []
     coltx = preprocessor.named_steps["columns"]
     for name, trans, cols in coltx.transformers_:
         if name == "remainder" and trans == "drop":
@@ -202,7 +183,7 @@ def make_strat_labels_robust(ddf: pd.DataFrame,
                               problem_type: str,
                               test_size: float = 0.2,
                               max_bins: int | Sequence[float] = 5,
-                              min_bins: int = 2) -> Tuple[pd.DataFrame, bool, Dict]:
+                              min_bins: int = 2) -> tuple[pd.DataFrame, bool, dict]:
     """
     Creates quantile stratification column for train/test splitting. Returns (df_with_stratify_col, use_stratified_split, counts).
     Regression: quantile bins with decreasing bin count until valid; falls back to no stratify.
@@ -269,7 +250,7 @@ def make_strat_labels_robust(ddf: pd.DataFrame,
 
 
 def _scale_pairs(X_train: pd.DataFrame, X_test: pd.DataFrame,
-                 y_train: Optional[pd.DataFrame], y_test: Optional[pd.DataFrame],
+                 y_train: pd.DataFrame | None, y_test: pd.DataFrame | None,
                  scale_X: str, scale_y: str):
     X_scaler = _get_scaler(scale_X)
     y_scaler = _get_scaler(scale_y) if y_train is not None else None

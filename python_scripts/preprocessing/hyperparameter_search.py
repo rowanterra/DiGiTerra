@@ -1,16 +1,13 @@
 """Hyperparameter search utilities for DiGiTerra."""
 import logging
-from typing import Dict, Any, Optional
+
 from sklearn.model_selection import GridSearchCV, KFold, RandomizedSearchCV, StratifiedKFold
-from sklearn.multioutput import MultiOutputRegressor, MultiOutputClassifier
-import numpy as np
-import time
-import threading
+from sklearn.multioutput import MultiOutputClassifier, MultiOutputRegressor
 
 logger = logging.getLogger(__name__)
 
 
-def get_param_grid(model_name: str, problem_type: str = 'regression') -> Dict[str, list]:
+def get_param_grid(model_name: str, problem_type: str = 'regression') -> dict[str, list]:
     """
     Get parameter grid for a given model.
     
@@ -189,12 +186,12 @@ def apply_hyperparameter_search(
     X_train,
     y_train,
     search_type: str,
-    param_grid: Optional[Dict[str, list]] = None,
+    param_grid: dict[str, list] | None = None,
     cv_folds: int = 5,
     n_iter: int = 50,
-    scoring: Optional[str] = None,
+    scoring: str | None = None,
     problem_type: str = 'regression',
-    model_name: Optional[str] = None,
+    model_name: str | None = None,
     progress_tracker=None,
     seed: int = 42
 ):
@@ -332,8 +329,8 @@ def apply_hyperparameter_search(
     # Update progress during hyperparameter search
     search_complete = None
     if progress_tracker:
-        import time
         import threading
+        import time
         
         start_time = time.time()
         search_complete = threading.Event()  # Event to signal when search is done

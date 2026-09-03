@@ -1,5 +1,7 @@
 from sklearn.ensemble import BaggingClassifier
+
 from python_scripts.preprocessing.run_classification_pipeline import run_classification
+
 
 def train_bagging_classifier(train_data, target_variables, use_stratified_split,
                 X, y, stratifyColumn, units,

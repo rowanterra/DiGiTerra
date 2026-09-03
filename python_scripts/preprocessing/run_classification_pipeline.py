@@ -1,41 +1,37 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Tuple, Any
 import json
-import os
 import logging
-from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 logger = logging.getLogger(__name__)
 
-from sklearn.model_selection import train_test_split
+from matplotlib.backends.backend_pdf import PdfPages
 from sklearn.metrics import (
-    r2_score, mean_squared_error, mean_absolute_error,
-    classification_report, confusion_matrix, ConfusionMatrixDisplay,
-    silhouette_score, calinski_harabasz_score, davies_bouldin_score,
-    precision_recall_curve, average_precision_score, roc_curve, auc, roc_auc_score
+    classification_report,
+    confusion_matrix,
+)
+from sklearn.model_selection import train_test_split
+
+import python_scripts.plotting.plot_style  # noqa: F401 - apply soft seaborn-like style
+from python_scripts.config import VIS_DIR
+from python_scripts.plotting.bundles import export_plots
+from python_scripts.preprocessing.feature_selection import apply_feature_selection
+from python_scripts.preprocessing.hyperparameter_search import apply_hyperparameter_search
+from python_scripts.preprocessing.outlier_handling import apply_outlier_handling
+from python_scripts.preprocessing.utilities import (
+    _scale_pairs,
+    get_feature_names,
+    make_preprocessor,
+    make_strat_labels_robust,
+    sort_class_labels_numeric_bins,
 )
 
-from matplotlib.backends.backend_pdf import PdfPages
-from python_scripts.preprocessing.utilities import make_strat_labels_robust, sort_class_labels_numeric_bins
-from python_scripts.preprocessing.utilities import make_preprocessor
-from python_scripts.preprocessing.utilities import get_feature_names
-from python_scripts.preprocessing.utilities import _scale_pairs
-from python_scripts.preprocessing.utilities import export_plots
-from python_scripts.preprocessing.feature_selection import apply_feature_selection
-from python_scripts.preprocessing.outlier_handling import apply_outlier_handling
-from python_scripts.preprocessing.hyperparameter_search import apply_hyperparameter_search
 
-from python_scripts.config import VIS_DIR
-import python_scripts.plotting.plot_style  # noqa: F401 - apply soft seaborn-like style
-
-
-def _encode_ordinal_target(y_part, label_to_int: Dict[str, int]) -> pd.Series:
+def _encode_ordinal_target(y_part, label_to_int: dict[str, int]) -> pd.Series:
     """
     Map raw class labels to integers. label_to_int keys are strings (from str(v) over train/test);
     pandas .map(dict) uses raw values as keys, so float 1.0 would miss key '1.0' and become NaN.
@@ -80,7 +76,7 @@ def run_classification(model, model_name,
                     feature_selection_method='none', feature_selection_k=None,
                     outlier_method='none', outlier_action='remove',
                     hyperparameter_search='none', search_cv_folds=5, search_n_iter=50,
-                    modeling_mode='simple', **kwargs) -> Dict[str, Any]:
+                    modeling_mode='simple', **kwargs) -> dict[str, Any]:
     # Extract modeling_mode from kwargs if provided there (for backward compatibility)
     if 'modeling_mode' in kwargs:
         modeling_mode = kwargs['modeling_mode']
@@ -343,13 +339,13 @@ def run_classification(model, model_name,
 
     # Store fitted inference artifacts on the model so prediction can replay train-time transforms.
     try:
-        setattr(model, "_digiterra_problem_type", "classification")
-        setattr(model, "_digiterra_preprocessor", preproc)
-        setattr(model, "_digiterra_raw_features", X_train.columns.tolist())
-        setattr(model, "_digiterra_feature_names", X_train_t.columns.tolist())
-        setattr(model, "_digiterra_model_features", X_train_s.columns.tolist())
+        model._digiterra_problem_type = "classification"
+        model._digiterra_preprocessor = preproc
+        model._digiterra_raw_features = X_train.columns.tolist()
+        model._digiterra_feature_names = X_train_t.columns.tolist()
+        model._digiterra_model_features = X_train_s.columns.tolist()
         if int_to_label is not None:
-            setattr(model, "_digiterra_int_to_label", int_to_label)
+            model._digiterra_int_to_label = int_to_label
     except Exception:
         logger.debug("Could not attach inference artifacts to classification model", exc_info=True)
 

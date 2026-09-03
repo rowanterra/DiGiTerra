@@ -1,7 +1,7 @@
 """File upload route."""
+import logging
 import os
 import uuid
-import logging
 
 import pandas as pd
 from flask import Blueprint, current_app, jsonify, request
@@ -13,8 +13,8 @@ from core.constants import (
     CELL_COUNT_WARNING_MODERATE,
     COLUMN_NAME_DISPLAY_LENGTH,
     ENFORCE_UPLOAD_LIMIT,
-    FILENAME_DISPLAY_LENGTH,
     FILE_SIZE_WARNING_MB,
+    FILENAME_DISPLAY_LENGTH,
     HTTP_BAD_REQUEST,
     MAX_UPLOAD_MB,
 )

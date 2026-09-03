@@ -1,8 +1,8 @@
 """Shared configuration and paths for DiGiTerra. Single source of truth for BASE_DIR, APP_SUPPORT_DIR, UPLOAD_DIR, LOG_DIR, VIS_DIR, URL_PREFIX."""
-from contextvars import ContextVar
-from pathlib import Path
 import os
 import platform
+from contextvars import ContextVar
+from pathlib import Path
 
 # Repo root (parent of python_scripts/)
 BASE_DIR = Path(os.environ.get("DIGITERRA_BASE_DIR", Path(__file__).resolve().parent.parent))

@@ -13,7 +13,7 @@ from pathlib import Path
 import pandas as pd
 from werkzeug.utils import secure_filename
 
-from python_scripts.helpers import preprocess_data, prediction
+from python_scripts.helpers import prediction, preprocess_data
 
 logger = logging.getLogger(__name__)
 

@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: {{ include "digiterra.name" . }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: "{{ required "image.repository is required; no public DiGiTerra image is published (see values.yaml)" .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http

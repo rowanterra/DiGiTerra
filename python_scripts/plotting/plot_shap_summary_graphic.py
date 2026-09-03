@@ -1,17 +1,16 @@
 #!/usr/bin/env python
-# coding: utf-8
 
 import logging
-import os
-from pathlib import Path
-import numpy as np
 
 import matplotlib
+import numpy as np
+
 matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
+import shap
+
 import python_scripts.plotting.plot_style  # noqa: F401 - apply soft seaborn-like style
 from python_scripts.config import VIS_DIR
-import shap
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +122,7 @@ def plot_shap_summary(model, X_train, feature_names, model_name, pdf_pages, file
             # Bug 2 Fix: Validate that mean_shap length matches feature_names length
             if len(mean_shap) == 0:
                 plt.close(fig)  # close the new figure
-                raise ValueError(f"No SHAP values to plot. Mean SHAP is empty.")
+                raise ValueError("No SHAP values to plot. Mean SHAP is empty.")
             if len(mean_shap) != len(feature_names):
                 plt.close(fig)  # close the new figure
                 raise ValueError(f"SHAP values shape mismatch: {len(mean_shap)} SHAP values but {len(feature_names)} feature names. "

@@ -3,8 +3,8 @@ replicaCount: 1
 image:
   # Required. No public image is published. Build one from deploy/docker/Dockerfile,
   # push it to a registry the cluster can pull from, and set the repository here or
-  # with --set image.repository=<registry>/<name>. With the value empty the pod
-  # image name is ":latest", which no registry serves, so the pod stays in ImagePullBackOff.
+  # with --set image.repository=<registry>/<name>. With the value empty, helm
+  # install stops with a message naming this setting.
   repository: ""
   pullPolicy: IfNotPresent
   tag: "latest"

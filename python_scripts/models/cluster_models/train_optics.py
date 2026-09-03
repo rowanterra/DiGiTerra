@@ -1,6 +1,8 @@
-from sklearn.cluster import OPTICS
 import numpy as np
-from python_scripts.preprocessing.run_clustering_pipeline import run_clustering, clustering_options
+from sklearn.cluster import OPTICS
+
+from python_scripts.preprocessing.run_clustering_pipeline import clustering_options, run_clustering
+
 
 def train_optics(train_data, X, units, X_scaler_type,
                  seed, sigfig, quantileBinDict, useTransformer, categorical_cols, test_size, **kwargs):

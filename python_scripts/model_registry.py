@@ -6,79 +6,92 @@ Polynomial has no train_*; it is registered with train_fn=None.
 """
 
 import ast
-from typing import Any, Callable, Dict, Optional, Tuple
+from collections.abc import Callable
+from typing import Any
 
-# Regression
-from python_scripts.models.regression_models.train_linear import train_linear
-from python_scripts.models.regression_models.train_lasso import train_lasso
-from python_scripts.models.regression_models.train_elasticnet import train_elasticnet
-from python_scripts.models.regression_models.train_gb import train_gb
-from python_scripts.models.regression_models.train_knn import train_knn
-from python_scripts.models.regression_models.train_mlp import train_mlp
-from python_scripts.models.regression_models.train_perceptron import train_perceptron
-from python_scripts.models.regression_models.train_rf import train_rf
-from python_scripts.models.regression_models.train_ridge import train_ridge
-from python_scripts.models.regression_models.train_svr import train_svr
-from python_scripts.models.regression_models.train_bayesian_ridge import train_bayesian_ridge
-from python_scripts.models.regression_models.train_ard_regression import train_ard_regression
-from python_scripts.models.regression_models.train_extra_trees import train_extra_trees
-from python_scripts.models.regression_models.train_adaboost_regressor import train_adaboost_regressor
-from python_scripts.models.regression_models.train_bagging_regressor import train_bagging_regressor
-from python_scripts.models.regression_models.train_decision_tree_regressor import train_decision_tree_regressor
-from python_scripts.models.regression_models.train_elasticnet_cv import train_elasticnet_cv
-from python_scripts.models.regression_models.train_hist_gradient_boosting_regressor import train_hist_gradient_boosting_regressor
-from python_scripts.models.regression_models.train_huber_regressor import train_huber_regressor
-from python_scripts.models.regression_models.train_lars import train_lars
-from python_scripts.models.regression_models.train_lars_cv import train_lars_cv
-from python_scripts.models.regression_models.train_lasso_cv import train_lasso_cv
-from python_scripts.models.regression_models.train_lassolars import train_lassolars
-from python_scripts.models.regression_models.train_linearsvr import train_linearsvr
-from python_scripts.models.regression_models.train_nusvr import train_nusvr
-from python_scripts.models.regression_models.train_orthogonal_matching_pursuit import train_orthogonal_matching_pursuit
-from python_scripts.models.regression_models.train_passive_aggressive_regressor import train_passive_aggressive_regressor
-from python_scripts.models.regression_models.train_quantile_regressor import train_quantile_regressor
-from python_scripts.models.regression_models.train_radius_neighbors_regressor import train_radius_neighbors_regressor
-from python_scripts.models.regression_models.train_ransac_regressor import train_ransac_regressor
-from python_scripts.models.regression_models.train_ridge_cv import train_ridge_cv
-from python_scripts.models.regression_models.train_sgd_regressor import train_sgd_regressor
-from python_scripts.models.regression_models.train_theilsen_regressor import train_theilsen_regressor
-# Classify
-from python_scripts.models.classify_models.train_logistic_classifier import train_logistic_classifier
-from python_scripts.models.classify_models.train_mlp_classifier import train_mlp_classifier
-from python_scripts.models.classify_models.train_rf_classifier import train_rf_classifier
-from python_scripts.models.classify_models.train_svc import train_svc
-from python_scripts.models.classify_models.train_extra_trees_classifier import train_extra_trees_classifier
-from python_scripts.models.classify_models.train_gaussian_nb import train_gaussian_nb
-from python_scripts.models.classify_models.train_sgd_classifier import train_sgd_classifier
 from python_scripts.models.classify_models.train_adaboost_classifier import train_adaboost_classifier
 from python_scripts.models.classify_models.train_bagging_classifier import train_bagging_classifier
 from python_scripts.models.classify_models.train_bernoulli_nb import train_bernoulli_nb
 from python_scripts.models.classify_models.train_categorical_nb import train_categorical_nb
 from python_scripts.models.classify_models.train_complement_nb import train_complement_nb
 from python_scripts.models.classify_models.train_decision_tree_classifier import train_decision_tree_classifier
+from python_scripts.models.classify_models.train_extra_trees_classifier import train_extra_trees_classifier
+from python_scripts.models.classify_models.train_gaussian_nb import train_gaussian_nb
 from python_scripts.models.classify_models.train_gradient_boosting_classifier import train_gradient_boosting_classifier
-from python_scripts.models.classify_models.train_hist_gradient_boosting_classifier import train_hist_gradient_boosting_classifier
+from python_scripts.models.classify_models.train_hist_gradient_boosting_classifier import (
+    train_hist_gradient_boosting_classifier,
+)
 from python_scripts.models.classify_models.train_kneighbors_classifier import train_kneighbors_classifier
 from python_scripts.models.classify_models.train_linear_discriminant_analysis import train_linear_discriminant_analysis
 from python_scripts.models.classify_models.train_linearsvc import train_linearsvc
+
+# Classify
+from python_scripts.models.classify_models.train_logistic_classifier import train_logistic_classifier
+from python_scripts.models.classify_models.train_mlp_classifier import train_mlp_classifier
 from python_scripts.models.classify_models.train_multinomial_nb import train_multinomial_nb
 from python_scripts.models.classify_models.train_nusvc import train_nusvc
-from python_scripts.models.classify_models.train_passive_aggressive_classifier import train_passive_aggressive_classifier
-from python_scripts.models.classify_models.train_quadratic_discriminant_analysis import train_quadratic_discriminant_analysis
+from python_scripts.models.classify_models.train_passive_aggressive_classifier import (
+    train_passive_aggressive_classifier,
+)
+from python_scripts.models.classify_models.train_quadratic_discriminant_analysis import (
+    train_quadratic_discriminant_analysis,
+)
+from python_scripts.models.classify_models.train_rf_classifier import train_rf_classifier
 from python_scripts.models.classify_models.train_ridge_classifier import train_ridge_classifier
+from python_scripts.models.classify_models.train_sgd_classifier import train_sgd_classifier
+from python_scripts.models.classify_models.train_svc import train_svc
+from python_scripts.models.cluster_models.train_affinity_propagation import train_affinity_propagation
+
 # Cluster
 from python_scripts.models.cluster_models.train_agglomerative import train_agglomerative
-from python_scripts.models.cluster_models.train_gmm import train_gmm
-from python_scripts.models.cluster_models.train_kmeans import train_kmeans
-from python_scripts.models.cluster_models.train_dbscan import train_dbscan
 from python_scripts.models.cluster_models.train_birch import train_birch
-from python_scripts.models.cluster_models.train_spectral import train_spectral
-from python_scripts.models.cluster_models.train_affinity_propagation import train_affinity_propagation
 from python_scripts.models.cluster_models.train_bisecting_kmeans import train_bisecting_kmeans
+from python_scripts.models.cluster_models.train_dbscan import train_dbscan
+from python_scripts.models.cluster_models.train_gmm import train_gmm
 from python_scripts.models.cluster_models.train_hdbscan import train_hdbscan
+from python_scripts.models.cluster_models.train_kmeans import train_kmeans
 from python_scripts.models.cluster_models.train_meanshift import train_meanshift
 from python_scripts.models.cluster_models.train_minibatch_kmeans import train_minibatch_kmeans
 from python_scripts.models.cluster_models.train_optics import train_optics
+from python_scripts.models.cluster_models.train_spectral import train_spectral
+from python_scripts.models.regression_models.train_adaboost_regressor import train_adaboost_regressor
+from python_scripts.models.regression_models.train_ard_regression import train_ard_regression
+from python_scripts.models.regression_models.train_bagging_regressor import train_bagging_regressor
+from python_scripts.models.regression_models.train_bayesian_ridge import train_bayesian_ridge
+from python_scripts.models.regression_models.train_decision_tree_regressor import train_decision_tree_regressor
+from python_scripts.models.regression_models.train_elasticnet import train_elasticnet
+from python_scripts.models.regression_models.train_elasticnet_cv import train_elasticnet_cv
+from python_scripts.models.regression_models.train_extra_trees import train_extra_trees
+from python_scripts.models.regression_models.train_gb import train_gb
+from python_scripts.models.regression_models.train_hist_gradient_boosting_regressor import (
+    train_hist_gradient_boosting_regressor,
+)
+from python_scripts.models.regression_models.train_huber_regressor import train_huber_regressor
+from python_scripts.models.regression_models.train_knn import train_knn
+from python_scripts.models.regression_models.train_lars import train_lars
+from python_scripts.models.regression_models.train_lars_cv import train_lars_cv
+from python_scripts.models.regression_models.train_lasso import train_lasso
+from python_scripts.models.regression_models.train_lasso_cv import train_lasso_cv
+from python_scripts.models.regression_models.train_lassolars import train_lassolars
+
+# Regression
+from python_scripts.models.regression_models.train_linear import train_linear
+from python_scripts.models.regression_models.train_linearsvr import train_linearsvr
+from python_scripts.models.regression_models.train_mlp import train_mlp
+from python_scripts.models.regression_models.train_nusvr import train_nusvr
+from python_scripts.models.regression_models.train_orthogonal_matching_pursuit import train_orthogonal_matching_pursuit
+from python_scripts.models.regression_models.train_passive_aggressive_regressor import (
+    train_passive_aggressive_regressor,
+)
+from python_scripts.models.regression_models.train_quantile_regressor import train_quantile_regressor
+from python_scripts.models.regression_models.train_radius_neighbors_regressor import train_radius_neighbors_regressor
+from python_scripts.models.regression_models.train_ransac_regressor import train_ransac_regressor
+from python_scripts.models.regression_models.train_rf import train_rf
+from python_scripts.models.regression_models.train_ridge import train_ridge
+from python_scripts.models.regression_models.train_ridge_cv import train_ridge_cv
+from python_scripts.models.regression_models.train_sgd_regressor import train_sgd_regressor
+from python_scripts.models.regression_models.train_svr import train_svr
+from python_scripts.models.regression_models.train_theilsen_regressor import train_theilsen_regressor
 
 
 def _b(h: dict, k: str, default: bool = True) -> bool:
@@ -102,7 +115,7 @@ def _n(h: dict, k: str, default: Any = None) -> Any:
         return default
 
 
-def _o(h: dict, k: str) -> Optional[Any]:
+def _o(h: dict, k: str) -> Any | None:
     """h[k] or None if missing/empty."""
     v = h.get(k)
     if v is None or v == '':
@@ -110,7 +123,7 @@ def _o(h: dict, k: str) -> Optional[Any]:
     return v
 
 
-MODEL_REGISTRY: Dict[str, Tuple[Optional[Callable], str]] = {
+MODEL_REGISTRY: dict[str, tuple[Callable | None, str]] = {
     # Regression
     "Linear": (train_linear, "regression"),
     "BayesianRidge": (train_bayesian_ridge, "regression"),
@@ -192,7 +205,7 @@ CLUSTER_MODELS: frozenset = frozenset(
 )
 
 
-def _hidden_layer_sizes_tuple(h: Dict[str, Any]) -> str:
+def _hidden_layer_sizes_tuple(h: dict[str, Any]) -> str:
     """Build the tuple literal for MLP hidden_layer_sizes from the three form fields.
 
     Empty fields are dropped; with no sizes at all the sklearn default (100,) is used,
@@ -211,10 +224,10 @@ def _hidden_layer_sizes_tuple(h: Dict[str, Any]) -> str:
 
 def get_model_kwargs(
     modelName: str,
-    hyperparameters: Dict[str, Any],
+    hyperparameters: dict[str, Any],
     nonreq: bool,
-    seed: Optional[int],
-) -> Dict[str, Any]:
+    seed: int | None,
+) -> dict[str, Any]:
     """Return model-specific kwargs (no feature_selection_method/outlier_method/progress_tracker/modeling_mode)."""
     h, n = hyperparameters, nonreq
 

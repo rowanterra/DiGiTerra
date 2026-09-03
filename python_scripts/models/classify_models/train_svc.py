@@ -1,6 +1,8 @@
-from sklearn.svm import SVC
 from sklearn.multioutput import MultiOutputClassifier
+from sklearn.svm import SVC
+
 from python_scripts.preprocessing.run_classification_pipeline import run_classification
+
 
 def train_svc(train_data, target_variables, use_stratified_split,
                 X, y, stratifyColumn, units,

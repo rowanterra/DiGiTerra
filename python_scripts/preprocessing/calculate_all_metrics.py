@@ -4,22 +4,30 @@ This module ensures all relevant scikit-learn statistics are calculated and avai
 """
 
 import logging
+
 import numpy as np
 import pandas as pd
-from typing import Dict, Any, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 from sklearn.metrics import (
+    accuracy_score,
+    average_precision_score,
+    calinski_harabasz_score,
+    davies_bouldin_score,
+    explained_variance_score,
+    f1_score,
+    max_error,
+    mean_absolute_error,
+    mean_absolute_percentage_error,
+    mean_squared_error,
+    median_absolute_error,
+    precision_score,
+    r2_score,
+    recall_score,
     # Classification
-    roc_auc_score, average_precision_score, roc_curve, precision_recall_curve,
-    accuracy_score, precision_score, recall_score, f1_score,
-    classification_report, confusion_matrix,
-    # Regression
-    mean_squared_error, mean_absolute_error, r2_score,
-    median_absolute_error, max_error, explained_variance_score,
-    mean_absolute_percentage_error, mean_pinball_loss,
-    # Clustering
-    silhouette_score, calinski_harabasz_score, davies_bouldin_score,
+    roc_auc_score,
+    roc_curve,
+    silhouette_score,
 )
 from sklearn.preprocessing import label_binarize
 

@@ -1,43 +1,29 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Tuple, Any
-import re
-import math
-import os
 import logging
-from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 logger = logging.getLogger(__name__)
 
+from matplotlib.backends.backend_pdf import PdfPages
+from sklearn.cluster import AgglomerativeClustering, KMeans
+from sklearn.metrics import (
+    calinski_harabasz_score,
+    davies_bouldin_score,
+    silhouette_score,
+)
+from sklearn.mixture import GaussianMixture
 from sklearn.model_selection import train_test_split
 
-from sklearn.metrics import (
-    r2_score, mean_squared_error, mean_absolute_error,
-    classification_report, confusion_matrix, ConfusionMatrixDisplay,
-    silhouette_score, calinski_harabasz_score, davies_bouldin_score,
-    precision_recall_curve, average_precision_score, roc_curve, auc, roc_auc_score
-)
-
-from sklearn.cluster import KMeans, AgglomerativeClustering
-from sklearn.mixture import GaussianMixture
-
-
-from matplotlib.backends.backend_pdf import PdfPages
-from python_scripts.plotting.plot_shap_summary_graphic import plot_shap_summary
-from python_scripts.preprocessing.utilities import make_preprocessor
-from python_scripts.preprocessing.utilities import get_feature_names
-from python_scripts.preprocessing.utilities import _scale_pairs
-from python_scripts.preprocessing.utilities import export_plots
-from python_scripts.preprocessing.outlier_handling import apply_outlier_handling
-
-from python_scripts.config import VIS_DIR
 import python_scripts.plotting.plot_style  # noqa: F401
+from python_scripts.config import VIS_DIR
+from python_scripts.plotting.bundles import export_plots
+from python_scripts.preprocessing.outlier_handling import apply_outlier_handling
+from python_scripts.preprocessing.utilities import _scale_pairs, get_feature_names, make_preprocessor
 
 
 def _choose_k_silhouette(X: np.ndarray, k_min=2, k_max=10, algo="kmeans", seed=42):
@@ -103,7 +89,7 @@ def _fit_clusterer(model, algo, Xtr: np.ndarray, n_clusters):
     return mdl, predict, labels_tr, centers
 
 
-def _assign_labels_by_centers(Xv: np.ndarray, centers: Optional[np.ndarray]) -> np.ndarray:
+def _assign_labels_by_centers(Xv: np.ndarray, centers: np.ndarray | None) -> np.ndarray:
     """Nearest cluster for each row when the estimator has no .predict (e.g. SpectralClustering)."""
     if centers is None or len(Xv) == 0:
         return np.array([], dtype=int)
@@ -125,7 +111,7 @@ def _assign_labels_by_centers(Xv: np.ndarray, centers: Optional[np.ndarray]) -> 
 CLUSTERING_OPTION_KEYS = ('outlier_method', 'outlier_action', 'progress_tracker', 'modeling_mode')
 
 
-def clustering_options(kwargs: Dict[str, Any]) -> Dict[str, Any]:
+def clustering_options(kwargs: dict[str, Any]) -> dict[str, Any]:
     """Pick the advanced options out of a train_* function's **kwargs.
 
     The remaining keys are estimator hyperparameters and stay with the caller.
@@ -139,7 +125,7 @@ def run_clustering(model, model_name,
                     units, X_scaler_type,
                     seed, sigfig, quantileBinDict, useTransformer, transformer_cols, test_size, k_min, k_max,
                     outlier_method='none', outlier_action='remove',
-                    progress_tracker=None, modeling_mode='simple', **kwargs) -> Tuple[Any, ...]:
+                    progress_tracker=None, modeling_mode='simple', **kwargs) -> tuple[Any, ...]:
     """Fit a clusterer and score it. quantileBinDict is accepted for call-site
     symmetry with the supervised pipelines; clustering has no target to bin.
 
@@ -413,11 +399,11 @@ def run_clustering(model, model_name,
     
     quantileBinResults = ''
     try:
-        setattr(model, "_digiterra_problem_type", "cluster")
-        setattr(model, "_digiterra_preprocessor", preproc)
-        setattr(model, "_digiterra_raw_features", X_train_raw.columns.tolist())
-        setattr(model, "_digiterra_feature_names", X_train_t.columns.tolist())
-        setattr(model, "_digiterra_model_features", X_train_s.columns.tolist())
+        model._digiterra_problem_type = "cluster"
+        model._digiterra_preprocessor = preproc
+        model._digiterra_raw_features = X_train_raw.columns.tolist()
+        model._digiterra_feature_names = X_train_t.columns.tolist()
+        model._digiterra_model_features = X_train_s.columns.tolist()
     except Exception:
         logger.debug("Could not attach inference artifacts to clustering model", exc_info=True)
 

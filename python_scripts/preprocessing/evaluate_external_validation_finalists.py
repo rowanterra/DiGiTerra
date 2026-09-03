@@ -15,7 +15,6 @@ from __future__ import annotations
 import argparse
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -25,11 +24,10 @@ from sklearn.impute import SimpleImputer
 from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import KFold, cross_val_score
-from sklearn.neural_network import MLPRegressor
 from sklearn.neighbors import KNeighborsRegressor
+from sklearn.neural_network import MLPRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-
 
 SCALING_MODELS = {"Ridge", "KNN", "MLP"}
 
@@ -41,8 +39,8 @@ class EvalConfig:
     test_sheet: str
     train_target: str
     test_target: str
-    features: List[str]
-    candidates: List[Tuple[str, str]]
+    features: list[str]
+    candidates: list[tuple[str, str]]
     cv_folds: int
     seed_start: int
     seed_count: int
@@ -72,12 +70,12 @@ class Winsorizer(TransformerMixin, BaseEstimator):
         return np.clip(arr, self.lower_, self.upper_)
 
 
-def parse_list_arg(arg_value: str) -> List[str]:
+def parse_list_arg(arg_value: str) -> list[str]:
     return [v.strip() for v in arg_value.split(",") if v.strip()]
 
 
-def parse_candidates_arg(arg_value: str) -> List[Tuple[str, str]]:
-    candidates: List[Tuple[str, str]] = []
+def parse_candidates_arg(arg_value: str) -> list[tuple[str, str]]:
+    candidates: list[tuple[str, str]] = []
     for token in parse_list_arg(arg_value):
         if ":" not in token:
             raise ValueError(
@@ -118,7 +116,7 @@ def get_model(model_name: str, seed: int) -> RegressorMixin:
 
 
 def make_pipeline(model_name: str, model: RegressorMixin, outlier_mode: str) -> Pipeline:
-    steps: List[Tuple[str, object]] = [("imputer", SimpleImputer(strategy="median"))]
+    steps: list[tuple[str, object]] = [("imputer", SimpleImputer(strategy="median"))]
     if outlier_mode == "winsorize_1_99":
         steps.append(("winsor", Winsorizer(0.01, 0.99)))
     elif outlier_mode != "none":
@@ -161,10 +159,10 @@ def evaluate_seed(
     y_train: pd.Series,
     X_test: pd.DataFrame,
     y_test: pd.Series,
-    candidates: List[Tuple[str, str]],
+    candidates: list[tuple[str, str]],
     cv_folds: int,
-) -> List[dict]:
-    rows: List[dict] = []
+) -> list[dict]:
+    rows: list[dict] = []
     cv = KFold(n_splits=cv_folds, shuffle=True, random_state=seed)
     for model_name, outlier_mode in candidates:
         model = get_model(model_name, seed=seed)
@@ -189,7 +187,7 @@ def evaluate_seed(
     return rows
 
 
-def run(cfg: EvalConfig) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def run(cfg: EvalConfig) -> tuple[pd.DataFrame, pd.DataFrame]:
     train_df = load_dataframe(cfg.input_path, cfg.train_sheet).copy()
     test_df = load_dataframe(cfg.input_path, cfg.test_sheet).copy()
 
@@ -219,7 +217,7 @@ def run(cfg: EvalConfig) -> Tuple[pd.DataFrame, pd.DataFrame]:
     if len(X_test) < 2:
         raise ValueError(f"Not enough external rows ({len(X_test)}) after filtering.")
 
-    all_rows: List[dict] = []
+    all_rows: list[dict] = []
     for seed in range(cfg.seed_start, cfg.seed_start + cfg.seed_count):
         all_rows.extend(
             evaluate_seed(

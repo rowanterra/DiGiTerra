@@ -1,5 +1,7 @@
 from sklearn.neural_network import MLPClassifier
+
 from python_scripts.preprocessing.run_classification_pipeline import run_classification
+
 
 def train_mlp_classifier(train_data, target_variables, use_stratified_split,
                 X, y, stratifyColumn, units,

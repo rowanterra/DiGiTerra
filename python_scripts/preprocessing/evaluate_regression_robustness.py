@@ -16,9 +16,9 @@ Outputs:
 from __future__ import annotations
 
 import argparse
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Sequence, Tuple
 
 import numpy as np
 import pandas as pd
@@ -37,7 +37,6 @@ from sklearn.neighbors import KNeighborsRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVR
-
 
 SCALING_MODELS = {
     "LinearRegression",
@@ -65,7 +64,7 @@ class EvalConfig:
     output_stem: str
 
 
-def parse_list_arg(arg_value: str) -> List[str]:
+def parse_list_arg(arg_value: str) -> list[str]:
     return [v.strip() for v in arg_value.split(",") if v.strip()]
 
 
@@ -89,12 +88,12 @@ def build_strat_labels(series: pd.Series) -> pd.Series:
     raise ValueError("Could not create stable stratification labels from the provided column.")
 
 
-def make_feature_sets(features: Sequence[str], keep_feature: str) -> Dict[str, List[str]]:
+def make_feature_sets(features: Sequence[str], keep_feature: str) -> dict[str, list[str]]:
     if keep_feature not in features:
         raise ValueError(f"keep_feature '{keep_feature}' is not in features list: {features}")
 
     all_set = list(features)
-    feature_sets: Dict[str, List[str]] = {"All_features": all_set}
+    feature_sets: dict[str, list[str]] = {"All_features": all_set}
     droppable = [f for f in all_set if f != keep_feature]
     for feat in droppable:
         keep = [f for f in all_set if f != feat]
@@ -102,7 +101,7 @@ def make_feature_sets(features: Sequence[str], keep_feature: str) -> Dict[str, L
     return feature_sets
 
 
-def get_models(seed: int) -> Dict[str, RegressorMixin]:
+def get_models(seed: int) -> dict[str, RegressorMixin]:
     return {
         "LinearRegression": LinearRegression(),
         "Ridge": Ridge(alpha=1.0, random_state=seed),
@@ -118,7 +117,7 @@ def get_models(seed: int) -> Dict[str, RegressorMixin]:
 
 
 def make_pipeline(model_name: str, model: RegressorMixin) -> Pipeline:
-    steps: List[Tuple[str, object]] = [("imputer", SimpleImputer(strategy="median"))]
+    steps: list[tuple[str, object]] = [("imputer", SimpleImputer(strategy="median"))]
     if model_name in SCALING_MODELS:
         steps.append(("scaler", StandardScaler()))
     steps.append(("model", model))
@@ -130,10 +129,10 @@ def evaluate_seed(
     X_full: pd.DataFrame,
     y_full: pd.Series,
     strat_labels: pd.Series,
-    feature_sets: Dict[str, List[str]],
+    feature_sets: dict[str, list[str]],
     cv_folds: int,
     test_size: float,
-) -> List[dict]:
+) -> list[dict]:
     idx = np.arange(len(X_full))
     idx_train, idx_test = train_test_split(
         idx,
@@ -145,7 +144,7 @@ def evaluate_seed(
     y_train = y_full.iloc[idx_train]
     y_test = y_full.iloc[idx_test]
 
-    results: List[dict] = []
+    results: list[dict] = []
     models = get_models(seed)
     cv = KFold(n_splits=cv_folds, shuffle=True, random_state=seed)
 
@@ -225,7 +224,7 @@ def build_config(args: argparse.Namespace) -> EvalConfig:
     )
 
 
-def run(cfg: EvalConfig) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def run(cfg: EvalConfig) -> tuple[pd.DataFrame, pd.DataFrame]:
     df = load_dataframe(cfg.input_path, cfg.sheet_name).copy()
 
     required = list(cfg.features) + [cfg.target, cfg.stratify_col]
@@ -247,7 +246,7 @@ def run(cfg: EvalConfig) -> Tuple[pd.DataFrame, pd.DataFrame]:
     strat_labels = build_strat_labels(strat_source)
     feature_sets = make_feature_sets(cfg.features, cfg.keep_feature)
 
-    all_rows: List[dict] = []
+    all_rows: list[dict] = []
     for seed in range(cfg.seed_start, cfg.seed_start + cfg.seed_count):
         rows = evaluate_seed(
             seed=seed,

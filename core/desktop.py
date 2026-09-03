@@ -4,18 +4,18 @@ Save-file dialogs via js_api (DesktopApi). See docs/documentation.md.
 """
 import logging
 import os
+import shutil
 import socket
 import sys
 import threading
 import time
 import traceback
 from pathlib import Path
-import shutil
 
 import webview
 
-from python_scripts import config
 from core.flask_app import create_app
+from python_scripts import config
 
 APP_SUPPORT_DIR = config.APP_SUPPORT_DIR
 LOG_DIR = config.LOG_DIR

@@ -1,5 +1,7 @@
-from python_scripts.preprocessing.run_clustering_pipeline import run_clustering, clustering_options
 from sklearn.mixture import GaussianMixture
+
+from python_scripts.preprocessing.run_clustering_pipeline import clustering_options, run_clustering
+
 
 def train_gmm(train_data,
                 X, units,

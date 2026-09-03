@@ -1,6 +1,8 @@
-from sklearn.naive_bayes import BernoulliNB
 from sklearn.multioutput import MultiOutputClassifier
+from sklearn.naive_bayes import BernoulliNB
+
 from python_scripts.preprocessing.run_classification_pipeline import run_classification
+
 
 def train_bernoulli_nb(train_data, target_variables, use_stratified_split,
                 X, y, stratifyColumn, units,

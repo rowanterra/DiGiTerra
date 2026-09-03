@@ -1,8 +1,9 @@
 """Generate quantile boundary visualization."""
-import pandas as pd
 import matplotlib.pyplot as plt
-import python_scripts.plotting.plot_style  # noqa: F401
+import pandas as pd
 from matplotlib.backends.backend_pdf import PdfPages
+
+import python_scripts.plotting.plot_style  # noqa: F401
 from python_scripts.config import VIS_DIR
 
 

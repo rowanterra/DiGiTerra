@@ -100,6 +100,7 @@ def test_classification_with_integer_target_has_string_report_keys():
 
     # The raw report, straight from the pipeline: class keys must be strings on both sides.
     from sklearn.linear_model import LogisticRegression
+
     from python_scripts.helpers import unpack_classification_result
     from python_scripts.preprocessing.run_classification_pipeline import run_classification
     target = iris.columns[-1]
@@ -119,6 +120,7 @@ def test_clustering_best_k_matches_labels_and_agglo_centers_finite():
     assert result["best_k"] == len(np.unique(store["model"].labels_))
 
     from sklearn.cluster import AgglomerativeClustering
+
     from python_scripts.preprocessing.run_clustering_pipeline import run_clustering
     df = pd.read_csv("examples/iris_clustering.csv")
     out = run_clustering(AgglomerativeClustering(n_clusters=3), "agglo", df, df, "", "standard",

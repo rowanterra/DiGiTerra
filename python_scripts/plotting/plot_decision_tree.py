@@ -1,16 +1,16 @@
 #!/usr/bin/env python
-# coding: utf-8
 
 """
 Decision Tree plotting using scikit-learn's plot_tree.
 """
 
-import numpy as np
 import matplotlib
+
 matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
-import python_scripts.plotting.plot_style  # noqa: F401
 from sklearn.tree import plot_tree
+
+import python_scripts.plotting.plot_style  # noqa: F401
 from python_scripts.config import VIS_DIR
 
 

@@ -1,6 +1,6 @@
 from sklearn.cluster import DBSCAN
 
-from python_scripts.preprocessing.run_clustering_pipeline import run_clustering, clustering_options
+from python_scripts.preprocessing.run_clustering_pipeline import clustering_options, run_clustering
 
 
 def train_dbscan(train_data, X, units, X_scaler_type,

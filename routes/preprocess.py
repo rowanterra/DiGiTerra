@@ -41,7 +41,7 @@ def preprocess():
             selected_indicators = [selected_indicators]
         predictor_names = df.columns.take(selected_predictors).tolist()
         indicator_names = df.columns.take(selected_indicators).tolist()
-    except (KeyError, IndexError, TypeError) as e:
+    except (KeyError, IndexError, TypeError):
         try:
             predictor_names = df.columns[selected_predictors].tolist()
             indicator_names = df.columns[selected_indicators].tolist()

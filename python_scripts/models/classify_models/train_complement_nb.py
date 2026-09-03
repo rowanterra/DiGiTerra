@@ -1,7 +1,9 @@
-from sklearn.naive_bayes import ComplementNB
-from sklearn.multioutput import MultiOutputClassifier
-from python_scripts.preprocessing.run_classification_pipeline import run_classification
 import logging
+
+from sklearn.multioutput import MultiOutputClassifier
+from sklearn.naive_bayes import ComplementNB
+
+from python_scripts.preprocessing.run_classification_pipeline import run_classification
 
 logger = logging.getLogger(__name__)
 

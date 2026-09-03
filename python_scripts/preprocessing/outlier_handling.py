@@ -1,7 +1,7 @@
 """Outlier detection and handling utilities for DiGiTerra."""
-from typing import Optional, Tuple
-import pandas as pd
+
 import numpy as np
+import pandas as pd
 from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
 
@@ -9,11 +9,11 @@ from sklearn.neighbors import LocalOutlierFactor
 def apply_outlier_handling(
     X_train: pd.DataFrame,
     X_test: pd.DataFrame,
-    y_train: Optional[pd.Series] = None,
+    y_train: pd.Series | None = None,
     method: str = 'none',
     action: str = 'remove',
     seed: int = 42
-) -> Tuple[pd.DataFrame, pd.DataFrame, np.ndarray]:
+) -> tuple[pd.DataFrame, pd.DataFrame, np.ndarray]:
     """
     Apply outlier detection and handling to training and test data.
     

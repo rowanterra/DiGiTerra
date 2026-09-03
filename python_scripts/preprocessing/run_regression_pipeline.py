@@ -1,41 +1,37 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Tuple, Any
+import copy
 import json
 import logging
-import math
-import os
-import re
 import shutil
 import time
-from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import copy
 
 logger = logging.getLogger(__name__)
 
+from matplotlib.backends.backend_pdf import PdfPages
 from sklearn.model_selection import train_test_split
 
-from matplotlib.backends.backend_pdf import PdfPages
-from python_scripts.plotting.visualize_predictions import visualize_predictions
+from python_scripts.config import VIS_DIR
+from python_scripts.plotting.bundles import export_plots
 from python_scripts.plotting.plot_shap_summary_graphic import plot_shap_summary
-from python_scripts.preprocessing.utilities import make_strat_labels_robust
-from python_scripts.preprocessing.utilities import make_preprocessor
-from python_scripts.preprocessing.utilities import get_feature_names
-from python_scripts.preprocessing.utilities import _scale_pairs
-from python_scripts.preprocessing.utilities import regression_report
-from python_scripts.preprocessing.utilities import export_plots
+from python_scripts.plotting.plot_style import apply_plot_style
+from python_scripts.plotting.visualize_predictions import visualize_predictions
 from python_scripts.preprocessing.evaluate_by_quantile import evaluate_by_quantile
 from python_scripts.preprocessing.feature_selection import apply_feature_selection
+from python_scripts.preprocessing.hyperparameter_search import _estimate_param_combinations, apply_hyperparameter_search
 from python_scripts.preprocessing.outlier_handling import apply_outlier_handling
-from python_scripts.preprocessing.hyperparameter_search import apply_hyperparameter_search, _estimate_param_combinations
+from python_scripts.preprocessing.utilities import (
+    _scale_pairs,
+    get_feature_names,
+    make_preprocessor,
+    make_strat_labels_robust,
+    regression_report,
+)
 
-from python_scripts.config import VIS_DIR
-from python_scripts.plotting.plot_style import apply_plot_style
 
 def run_regression(model, model_name,
                     train_data, target_variables, use_stratified_split,
@@ -45,7 +41,7 @@ def run_regression(model, model_name,
                     feature_selection_method='none', feature_selection_k=None,
                     outlier_method='none', outlier_action='remove',
                     hyperparameter_search='none', search_cv_folds=5, search_n_iter=50,
-                    progress_tracker=None, modeling_mode='simple', **kwargs) -> Dict[str, Any]:
+                    progress_tracker=None, modeling_mode='simple', **kwargs) -> dict[str, Any]:
     # Extract modeling_mode from kwargs if provided there (for backward compatibility with train functions)
     if 'modeling_mode' in kwargs:
         modeling_mode = kwargs['modeling_mode']
@@ -71,7 +67,7 @@ def run_regression(model, model_name,
     ddf = train_data[use_cols].dropna().copy()
     
     if progress_tracker:
-        progress_tracker.update_stage('model_training', 'running', 10, f'Splitting data into train/test sets...')
+        progress_tracker.update_stage('model_training', 'running', 10, 'Splitting data into train/test sets...')
 
     target_variable=target_variables[0]
     # Ensure numeric target; if target contains labels like ">500" or "<50", use Classification with Bins instead
@@ -724,11 +720,11 @@ def run_regression(model, model_name,
 
     # Store fitted inference artifacts on the model so prediction can replay train-time transforms.
     try:
-        setattr(model, "_digiterra_problem_type", "regression")
-        setattr(model, "_digiterra_preprocessor", preproc)
-        setattr(model, "_digiterra_raw_features", X_train.columns.tolist())
-        setattr(model, "_digiterra_feature_names", X_train_t.columns.tolist())
-        setattr(model, "_digiterra_model_features", X_train_s.columns.tolist())
+        model._digiterra_problem_type = "regression"
+        model._digiterra_preprocessor = preproc
+        model._digiterra_raw_features = X_train.columns.tolist()
+        model._digiterra_feature_names = X_train_t.columns.tolist()
+        model._digiterra_model_features = X_train_s.columns.tolist()
     except Exception:
         logger.debug("Could not attach inference artifacts to regression model", exc_info=True)
 

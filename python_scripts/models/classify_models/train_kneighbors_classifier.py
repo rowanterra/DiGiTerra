@@ -1,5 +1,7 @@
 from sklearn.neighbors import KNeighborsClassifier
+
 from python_scripts.preprocessing.run_classification_pipeline import run_classification
+
 
 def train_kneighbors_classifier(train_data, target_variables, use_stratified_split,
                 X, y, stratifyColumn, units,

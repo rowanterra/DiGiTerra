@@ -1,9 +1,9 @@
 # DiGiTerra Flask app. Routes in routes/; session state in core.state. See docs/documentation.md.
 
+import logging
 import os
 import re
 import uuid
-import logging
 from pathlib import Path
 
 from flask import Flask, g, request, send_from_directory
@@ -45,8 +45,8 @@ def _configure_logging():
 
 logger = _configure_logging()
 
-from core.state import SESSION_COOKIE_NAME
 from core.errors import register_error_handlers
+from core.state import SESSION_COOKIE_NAME
 from routes import register_blueprints
 
 app = Flask(

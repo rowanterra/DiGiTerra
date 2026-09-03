@@ -1,16 +1,16 @@
 #!/usr/bin/env python
-# coding: utf-8
 
 """
 Confusion Matrix plotting using scikit-learn's ConfusionMatrixDisplay.
 """
 
-import numpy as np
 import matplotlib
+
 matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
-import python_scripts.plotting.plot_style  # noqa: F401 - apply soft seaborn-like style
 from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
+
+import python_scripts.plotting.plot_style  # noqa: F401 - apply soft seaborn-like style
 from python_scripts.config import VIS_DIR
 
 

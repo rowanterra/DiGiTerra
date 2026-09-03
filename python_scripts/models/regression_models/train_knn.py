@@ -1,5 +1,7 @@
 from sklearn.neighbors import KNeighborsRegressor
+
 from python_scripts.preprocessing.run_regression_pipeline import run_regression
+
 
 def train_knn(model_type, train_data, target_variables, use_stratified_split,
                 X, y, stratifyColumn, units,

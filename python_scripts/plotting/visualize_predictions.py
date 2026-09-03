@@ -1,16 +1,13 @@
-import os
-from pathlib import Path
 
-import pandas as pd
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
+
 # import scipy.stats as stats
 import numpy as np
-
+import pandas as pd
 import seaborn as sns
 
-from python_scripts.plotting.plot_style import apply_plot_style
 from python_scripts.config import VIS_DIR
+from python_scripts.plotting.plot_style import apply_plot_style
 
 
 def visualize_predictions(model_name, 

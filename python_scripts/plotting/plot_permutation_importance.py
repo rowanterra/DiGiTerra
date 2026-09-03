@@ -1,17 +1,19 @@
 #!/usr/bin/env python
-# coding: utf-8
 
 """
 Permutation Importance plotting using scikit-learn's permutation_importance.
 """
 
 import logging
-import numpy as np
+
 import matplotlib
+import numpy as np
+
 matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
-import python_scripts.plotting.plot_style  # noqa: F401
 from sklearn.inspection import permutation_importance
+
+import python_scripts.plotting.plot_style  # noqa: F401
 from python_scripts.config import VIS_DIR
 
 logger = logging.getLogger(__name__)

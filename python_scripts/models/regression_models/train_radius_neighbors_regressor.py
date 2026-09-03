@@ -1,7 +1,8 @@
-from sklearn.neighbors import RadiusNeighborsRegressor
-from python_scripts.preprocessing.run_regression_pipeline import run_regression
 import pandas as pd
-import numpy as np
+from sklearn.neighbors import RadiusNeighborsRegressor
+
+from python_scripts.preprocessing.run_regression_pipeline import run_regression
+
 
 def train_radius_neighbors_regressor(model_type, train_data, target_variables, use_stratified_split,
                 X, y, stratifyColumn, units,

@@ -1,5 +1,4 @@
 """Unit tests for python_scripts.config (paths and update_vis_dir)."""
-import os
 import tempfile
 from pathlib import Path
 

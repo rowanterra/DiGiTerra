@@ -1,5 +1,7 @@
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
+
 from python_scripts.preprocessing.run_classification_pipeline import run_classification
+
 
 def train_quadratic_discriminant_analysis(train_data, target_variables, use_stratified_split,
                 X, y, stratifyColumn, units,

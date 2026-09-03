@@ -1,9 +1,8 @@
 """Feature selection utilities for DiGiTerra."""
-from typing import Optional, Tuple
+
 import pandas as pd
-import numpy as np
-from sklearn.feature_selection import SelectKBest, f_regression, f_classif, chi2, RFE, SelectFromModel
-from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.feature_selection import RFE, SelectFromModel, SelectKBest, f_classif, f_regression
 
 
 def apply_feature_selection(
@@ -11,10 +10,10 @@ def apply_feature_selection(
     X_test: pd.DataFrame,
     y_train: pd.Series,
     method: str,
-    k: Optional[int] = None,
+    k: int | None = None,
     problem_type: str = 'regression',
     seed: int = 42
-) -> Tuple[pd.DataFrame, pd.DataFrame, Optional[object]]:
+) -> tuple[pd.DataFrame, pd.DataFrame, object | None]:
     """
     Apply feature selection to training and test data.
     

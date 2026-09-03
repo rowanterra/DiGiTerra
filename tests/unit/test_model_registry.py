@@ -1,6 +1,5 @@
 """Unit tests for python_scripts.model_registry."""
-import pytest
-from python_scripts.model_registry import MODEL_REGISTRY, get_model_kwargs, CLUSTER_MODELS
+from python_scripts.model_registry import CLUSTER_MODELS, MODEL_REGISTRY, get_model_kwargs
 
 
 def test_registry_has_expected_models():

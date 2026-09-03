@@ -1,5 +1,6 @@
-from sklearn.naive_bayes import GaussianNB
 from sklearn.multioutput import MultiOutputClassifier
+from sklearn.naive_bayes import GaussianNB
+
 from python_scripts.preprocessing.run_classification_pipeline import run_classification
 
 

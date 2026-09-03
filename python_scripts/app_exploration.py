@@ -7,14 +7,14 @@ Invoked by app.py route handlers. Receives store and request data to avoid circu
 import logging
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import matplotlib.pyplot as plt
-import python_scripts.plotting.plot_style  # noqa: F401 - apply soft seaborn-like style
 from matplotlib.backends.backend_pdf import PdfPages
 from werkzeug.utils import secure_filename
 
+import python_scripts.plotting.plot_style  # noqa: F401 - apply soft seaborn-like style
 from python_scripts.helpers import preprocess_data
 
 logger = logging.getLogger(__name__)

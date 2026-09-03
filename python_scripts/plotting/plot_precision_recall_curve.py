@@ -1,17 +1,19 @@
 #!/usr/bin/env python
-# coding: utf-8
 
 """
 Precision-Recall Curve plotting using scikit-learn's PrecisionRecallDisplay.
 """
 
 import logging
-import numpy as np
+
 import matplotlib
+import numpy as np
+
 matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
+from sklearn.metrics import PrecisionRecallDisplay, average_precision_score
+
 import python_scripts.plotting.plot_style  # noqa: F401
-from sklearn.metrics import PrecisionRecallDisplay, precision_recall_curve, average_precision_score
 from python_scripts.config import VIS_DIR
 
 logger = logging.getLogger(__name__)

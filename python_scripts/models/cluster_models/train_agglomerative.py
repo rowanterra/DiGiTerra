@@ -1,5 +1,7 @@
-from python_scripts.preprocessing.run_clustering_pipeline import run_clustering, clustering_options
 from sklearn.cluster import AgglomerativeClustering
+
+from python_scripts.preprocessing.run_clustering_pipeline import clustering_options, run_clustering
+
 
 def train_agglomerative(train_data,
                 X, units,

@@ -1,6 +1,6 @@
 from sklearn.linear_model import LinearRegression
-from python_scripts.preprocessing.run_regression_pipeline import run_regression
 
+from python_scripts.preprocessing.run_regression_pipeline import run_regression
 
 
 def train_linear(model_type, train_data, target_variables, use_stratified_split,

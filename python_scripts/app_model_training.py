@@ -7,22 +7,21 @@ to avoid circular imports (app.py passes _get_session_storage).
 import logging
 import random
 import time
-from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
 from python_scripts import config as _config
-from python_scripts.preprocessing.progress_tracker import get_tracker, remove_tracker, set_result
 from python_scripts.helpers import (
     preprocess_data,
     run_cross_validation,
     unpack_classification_result,
-    write_to_excel,
     write_to_excelClassifier,
     write_to_excelCluster,
     write_to_excelRegression,
 )
-from python_scripts.model_registry import MODEL_REGISTRY, get_model_kwargs, CLUSTER_MODELS
+from python_scripts.model_registry import CLUSTER_MODELS, MODEL_REGISTRY, get_model_kwargs
+from python_scripts.preprocessing.progress_tracker import get_tracker, set_result
 
 DEFAULT_CV_FOLDS = 5
 DEFAULT_SEARCH_ITERATIONS = 50
@@ -278,7 +277,7 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
             # Use take() to select by position, then convert to list to avoid duplicate name issues
             predictor_names = df.columns.take(selected_predictors).tolist()
             indicator_names = df.columns.take(selected_indicators).tolist()
-        except (KeyError, IndexError) as e:
+        except (KeyError, IndexError):
             # Fallback to direct indexing if take() fails
             try:
                 predictor_names = df.columns[selected_predictors].tolist()

@@ -1,8 +1,10 @@
 #from sklearn.multioutput import SVR
+import numpy as np
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.svm import SVR
-import numpy as np
+
 from python_scripts.preprocessing.run_regression_pipeline import run_regression
+
 
 def train_svr(model_type, train_data, target_variables, use_stratified_split,
                 X, y, stratifyColumn, units,

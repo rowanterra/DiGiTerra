@@ -2,30 +2,27 @@
 Shared helpers for preprocessing, prediction, and Excel export. VIS_DIR (from config)
 is the directory for predictions.csv and similar output. Paths are set in python_scripts/config.py.
 """
-import os
 import logging
 from pathlib import Path
 
-import xlsxwriter
-import openpyxl
-import pandas as pd
 import numpy as np
+import pandas as pd
+import xlsxwriter
 from sklearn.base import clone
 from sklearn.compose import TransformedTargetRegressor
 from sklearn.model_selection import (
     KFold,
-    StratifiedKFold,
     RepeatedKFold,
     RepeatedStratifiedKFold,
     ShuffleSplit,
+    StratifiedKFold,
     StratifiedShuffleSplit,
     cross_validate,
 )
 from sklearn.pipeline import Pipeline
 
-from python_scripts.preprocessing.utilities import make_preprocessor, _get_scaler
-
 from python_scripts.config import VIS_DIR
+from python_scripts.preprocessing.utilities import _get_scaler, make_preprocessor
 
 logger = logging.getLogger(__name__)
 

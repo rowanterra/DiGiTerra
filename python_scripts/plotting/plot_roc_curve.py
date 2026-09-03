@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding: utf-8
 
 """
 ROC Curve plotting using scikit-learn's RocCurveDisplay.
@@ -7,12 +6,15 @@ ROC Curve plotting using scikit-learn's RocCurveDisplay.
 
 import logging
 import re
-import numpy as np
+
 import matplotlib
+import numpy as np
+
 matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
+from sklearn.metrics import RocCurveDisplay, roc_auc_score
+
 import python_scripts.plotting.plot_style  # noqa: F401
-from sklearn.metrics import RocCurveDisplay, roc_curve, roc_auc_score
 from python_scripts.config import VIS_DIR
 
 logger = logging.getLogger(__name__)

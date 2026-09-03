@@ -1,8 +1,6 @@
 """Progress tracking for model training pipeline."""
 import threading
 import time
-from typing import Dict, Optional
-from datetime import datetime
 
 
 class ProgressTracker:
@@ -97,7 +95,7 @@ class ProgressTracker:
         else:
             self.estimated_time_remaining = None
                 
-    def get_progress(self) -> Dict:
+    def get_progress(self) -> dict:
         """Get current progress state."""
         with self.lock:
             return {
@@ -140,11 +138,11 @@ class ProgressTracker:
 
 
 # Global progress trackers (session_id -> ProgressTracker)
-_progress_trackers: Dict[str, ProgressTracker] = {}
+_progress_trackers: dict[str, ProgressTracker] = {}
 _tracker_lock = threading.Lock()
 
 # Global results storage (session_id -> result dict)
-_results: Dict[str, Dict] = {}
+_results: dict[str, dict] = {}
 _results_lock = threading.Lock()
 
 
@@ -165,7 +163,7 @@ def get_tracker(session_id: str) -> ProgressTracker:
         return _progress_trackers[session_id]
 
 
-def peek_tracker(session_id: str) -> Optional[ProgressTracker]:
+def peek_tracker(session_id: str) -> ProgressTracker | None:
     """Return an existing tracker, or None. Never creates one.
 
     The progress endpoint takes a session id from the URL. Creating a tracker on
@@ -186,13 +184,13 @@ def remove_tracker(session_id: str):
             del _results[session_id]
 
 
-def set_result(session_id: str, result: Dict):
+def set_result(session_id: str, result: dict):
     """Store the final result for a session."""
     with _results_lock:
         _results[session_id] = result
 
 
-def get_result(session_id: str) -> Optional[Dict]:
+def get_result(session_id: str) -> dict | None:
     """Get the final result for a session."""
     with _results_lock:
         return _results.get(session_id)

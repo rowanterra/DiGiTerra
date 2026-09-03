@@ -1,6 +1,8 @@
-from sklearn.linear_model import LassoLars
 import numpy as np
+from sklearn.linear_model import LassoLars
+
 from python_scripts.preprocessing.run_regression_pipeline import run_regression
+
 
 def train_lassolars(model_type, train_data, target_variables, use_stratified_split,
                 X, y, stratifyColumn, units,

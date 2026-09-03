@@ -3,40 +3,35 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Optional
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
-
-from python_scripts.plotting.plot_style import apply_plot_style
-from python_scripts.config import VIS_DIR
-
+from sklearn.calibration import CalibrationDisplay
+from sklearn.decomposition import PCA
+from sklearn.inspection import permutation_importance
 from sklearn.metrics import (
-    confusion_matrix,
     ConfusionMatrixDisplay,
-    precision_recall_curve,
-    average_precision_score,
-    roc_curve,
+    confusion_matrix,
     roc_auc_score,
+    roc_curve,
     silhouette_samples,
 )
 from sklearn.preprocessing import label_binarize
-from sklearn.calibration import CalibrationDisplay
-from sklearn.inspection import permutation_importance
-from sklearn.decomposition import PCA
 
-from python_scripts.plotting.plot_roc_curve import plot_roc_curve_from_estimator
-from python_scripts.plotting.plot_precision_recall_curve import plot_precision_recall_curve_from_estimator
+from python_scripts.config import VIS_DIR
 from python_scripts.plotting.plot_partial_dependence import plot_partial_dependence
+from python_scripts.plotting.plot_precision_recall_curve import plot_precision_recall_curve_from_estimator
+from python_scripts.plotting.plot_roc_curve import plot_roc_curve_from_estimator
 from python_scripts.plotting.plot_shap_summary_graphic import plot_shap_summary
+from python_scripts.plotting.plot_style import apply_plot_style
 
 logger = logging.getLogger(__name__)
 
 
-def _y_test_aligned_with_classifier(y_test, int_to_label: Optional[dict]) -> pd.Series:
+def _y_test_aligned_with_classifier(y_test, int_to_label: dict | None) -> pd.Series:
     """
     Ordinal classification fits on integer codes. The splits can still contain the raw string labels.
     sklearn RocCurveDisplay / PrecisionRecallDisplay.from_estimator require y to match model.classes_.
@@ -124,8 +119,8 @@ def _plot_feature_importance(model, feature_names, title="Feature importance (mo
         vals = None
     if vals is None:
         return False
-    import numpy as np
     import matplotlib.pyplot as plt
+    import numpy as np
     try:
         import seaborn as sns
     except ImportError:
@@ -148,7 +143,6 @@ def _plot_permutation_importance(model, X, y, feature_names, title="Permutation 
         res = permutation_importance(model, X, y, n_repeats=n_repeats, random_state=random_state, n_jobs=None)
     except Exception:
         return False
-    import numpy as np
     import matplotlib.pyplot as plt
     try:
         import seaborn as sns
@@ -170,9 +164,9 @@ def _plot_permutation_importance(model, X, y, feature_names, title="Permutation 
 def plot_regression_bundle(art: dict, units: str = ""):
     apply_plot_style()
     # Pred vs Actual, Residuals hist, Residuals vs Fitted, 2D density
+    import matplotlib.pyplot as plt
     import numpy as np
     import pandas as pd
-    import matplotlib.pyplot as plt
     try:
         import seaborn as sns
     except ImportError:
@@ -330,7 +324,8 @@ def _plot_single_confusion_matrix(y_true, y_pred, classes, plot_path: Path, titl
 
 def plot_classification_bundle(art: dict, svctrue: bool):
     # Confusion matrix (train + test), ROC, PR, Calibration
-    import numpy as np, matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt
+    import numpy as np
     y_test = art["splits"]["y_test"]
     y_train = art["splits"]["y_train"]
     X_train = art["splits"]["X_train"]
@@ -417,7 +412,7 @@ def plot_classification_bundle(art: dict, svctrue: bool):
         except Exception as e:
             logger.warning(f"Could not generate PR curve using Display class: {e}")
             # Fallback: save micro-averaged PR curve to the expected filename
-            from sklearn.metrics import precision_recall_curve, average_precision_score
+            from sklearn.metrics import average_precision_score, precision_recall_curve
             try:
                 y_bin_flat = y_bin.ravel()
                 y_score_flat = y_score.reshape(y_bin.shape[0], -1)
@@ -511,9 +506,9 @@ def plot_classification_bundle(art: dict, svctrue: bool):
 def plot_clustering_bundle(art: dict):
     # Silhouette plot, PCA scatter (train/test), cluster size bar
     apply_plot_style()
+    import matplotlib.pyplot as plt
     import numpy as np
     import pandas as pd
-    import matplotlib.pyplot as plt
     try:
         import seaborn as sns
     except ImportError:
@@ -609,7 +604,7 @@ def plot_clustering_bundle(art: dict):
     plt.savefig(VIS_DIR / "cluster_sizes.png", dpi=150, bbox_inches="tight", facecolor="white")
     plt.close(fig)
 
-def export_plots(art: dict, pdf_pages, units: str = "", svctrue=False) -> Optional[str]:
+def export_plots(art: dict, pdf_pages, units: str = "", svctrue=False) -> str | None:
     """
     Auto-detects problem type from art['config'].problem_type and generates a bundle of plots.
     If out_pdf_path is provided, saves all current figures to that PDF and returns the path.
