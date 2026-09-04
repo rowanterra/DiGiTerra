@@ -295,8 +295,13 @@ function narrativeSetStages(progress) {
             const pct = state === 'running' ? ` ${Math.round(stage.progress || 0)}%` : '';
             return `<span class="narrative-stage is-${state}">${escapeHtml(label)}${pct}</span>`;
         });
-    host.innerHTML = chips.length ? chips.join('') : '';
-    host.hidden = !chips.length;
+    // The chips report a run in progress. Once every stage is done the strip's
+    // Results step says the same thing, so the row goes away.
+    const allDone = chips.length > 0 && Object.values(stages)
+        .filter((stage) => stage.status !== 'skipped')
+        .every((stage) => stage.status === 'completed');
+    host.innerHTML = chips.length && !allDone ? chips.join('') : '';
+    host.hidden = !chips.length || allDone;
 }
 
 /** Fill the data panel from what the page already knows about the upload. */

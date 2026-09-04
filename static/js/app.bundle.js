@@ -1643,6 +1643,56 @@ function initTutorialEntry() {
     });
 }
 
+/* The settings the tutorial tells a reader to enter, applied once for them.
+   A person who uploads their own file gets none of this: the values only make sense
+   for the columns penguins.csv has. Every field stays editable. */
+const EXAMPLE_PREFILL = {
+    outputType1: 'Classifier',
+    indicators: 'B-G',
+    predictors: 'A',
+    imputeStrategy: 'none',
+    useTransformer: 'Yes',
+    transformerColumn: 'B, G',
+    scalingYesNo: 'Yes',
+    specificVariableSelect: 'A',
+    seedValue: '33',
+    corrCols: 'C-F',
+};
+
+/* Set a value and tell the page, so a section that opens on change opens now. */
+function setExampleField(id, value) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.type === 'checkbox') el.checked = Boolean(value);
+    else el.value = value;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+/* Fill the preprocessing form with the tutorial's run.
+   The order matters: the select that reveals a section is set before the field
+   inside it, or the field is written into a section that is still closed. */
+function applyExamplePrefill() {
+    setExampleField('outputType1', EXAMPLE_PREFILL.outputType1);
+    setExampleField('indicators', EXAMPLE_PREFILL.indicators);
+    setExampleField('predictors', EXAMPLE_PREFILL.predictors);
+    setExampleField('corrCols', EXAMPLE_PREFILL.corrCols);
+
+    // Remove the rows with a blank: the scope first, then the action.
+    setExampleField('missScopeAll', true);
+    setExampleField('imputeStrategy', EXAMPLE_PREFILL.imputeStrategy);
+
+    // island and sex are text, so the transformer section has to open first.
+    setExampleField('useTransformer', EXAMPLE_PREFILL.useTransformer);
+    setExampleField('transformerColumn', EXAMPLE_PREFILL.transformerColumn);
+
+    // Stratify on the species column, which is what the tutorial's step 5 asks for.
+    setExampleField('scalingYesNo', EXAMPLE_PREFILL.scalingYesNo);
+    setExampleField('specificVariableSelect', EXAMPLE_PREFILL.specificVariableSelect);
+
+    setExampleField('seedValue', EXAMPLE_PREFILL.seedValue);
+}
+
 /* Load an example through the ordinary upload, so it meets the same parse, the same
    limits and the same data checks a chosen file meets. The file is fetched from the
    server and handed to the existing form rather than a second code path being built. */
@@ -1665,6 +1715,12 @@ function initTryExample() {
             transfer.items.add(new File([blob], name, { type: 'text/csv' }));
             input.files = transfer.files;
             if (typeof showTab === 'function') showTab('upload');
+            // The prefill runs on the upload's own response rather than on a timer,
+            // so the fields are set once the columns the app read are on the page.
+            const fill = (event) => {
+                if (!event || !event.detail || event.detail.ok !== false) applyExamplePrefill();
+            };
+            document.addEventListener('digiterra:upload-complete', fill, { once: true });
             form.requestSubmit();
         } catch (err) {
             console.error('Example not loaded:', err);
@@ -1746,6 +1802,8 @@ uploadForm.addEventListener('submit', async (e) => {
         columnSelection.dataset.ready = 'false';
         columnSelection.style.display = 'none';
         setActiveTab('processing');
+        // Anything that has to run once the columns are on the page listens for this.
+        document.dispatchEvent(new CustomEvent('digiterra:upload-complete', { detail: { ok: true } }));
 
         // getting names of the first and last columns and their letter index
         indicatorsSelect.innerHTML = '';
@@ -7695,8 +7753,13 @@ function narrativeSetStages(progress) {
             const pct = state === 'running' ? ` ${Math.round(stage.progress || 0)}%` : '';
             return `<span class="narrative-stage is-${state}">${escapeHtml(label)}${pct}</span>`;
         });
-    host.innerHTML = chips.length ? chips.join('') : '';
-    host.hidden = !chips.length;
+    // The chips report a run in progress. Once every stage is done the strip's
+    // Results step says the same thing, so the row goes away.
+    const allDone = chips.length > 0 && Object.values(stages)
+        .filter((stage) => stage.status !== 'skipped')
+        .every((stage) => stage.status === 'completed');
+    host.innerHTML = chips.length && !allDone ? chips.join('') : '';
+    host.hidden = !chips.length || allDone;
 }
 
 /** Fill the data panel from what the page already knows about the upload. */

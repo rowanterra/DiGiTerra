@@ -71,3 +71,14 @@ tutorial uses it.
 Eleven of the 344 rows have at least one missing value. Entering `B-G` as the
 indicators and `A` as the target exercises one-hot encoding, missing-value
 handling, a stratified split and three-class classification in one run.
+
+## penguins_new.csv
+
+A file for the Inference on New Data page, made by `make_penguins_new.py`. It
+has 22 rows and the six indicator columns of `penguins.csv` in the same order,
+with a `row_id` in front and no `species` column. No row is a real penguin. Each
+row is drawn from a normal distribution fitted to one species in `penguins.csv`
+(8 Adelie, 6 Chinstrap, 8 Gentoo), and `penguins_new_key.csv` records which
+species each `row_id` was drawn from, so a prediction can be checked against it.
+All three islands and both sexes appear. The generator is seeded, so running it
+again writes the same two files.

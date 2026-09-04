@@ -58,6 +58,8 @@ uploadForm.addEventListener('submit', async (e) => {
         columnSelection.dataset.ready = 'false';
         columnSelection.style.display = 'none';
         setActiveTab('processing');
+        // Anything that has to run once the columns are on the page listens for this.
+        document.dispatchEvent(new CustomEvent('digiterra:upload-complete', { detail: { ok: true } }));
 
         // getting names of the first and last columns and their letter index
         indicatorsSelect.innerHTML = '';

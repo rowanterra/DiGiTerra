@@ -4745,3 +4745,15 @@ label:has(input[type="radio"][name="modelingMode"]:checked) { background: none; 
 .model-stats-table td:not(:first-child) {
     white-space: nowrap;
 }
+
+/* The welcome screen sits inside the view column but is not a working view;
+   its two buttons keep their own size. */
+.welcome .welcomebutton,
+.welcome #startModelingButton,
+.welcome #tryExampleButton {
+    height: auto;
+    line-height: 1.3;
+    padding: 12px 22px;
+    font-size: 1.05rem;
+    font-weight: 600;
+}
