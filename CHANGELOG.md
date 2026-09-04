@@ -71,6 +71,7 @@ Frontend
 - A column selection that is not of the form `A-D` or `A-D,F,H` is refused in the browser with the offending value named; the server's fallback message states the file's column range in letters.
 - One bounded zip preflight (`core.helpers.preflight_zip`) serves both the workbook reader and the bundle loader: allowed member names, member count, per-member and total decoded caps, inflation ratio, all from the central directory. `read_zip_member_bounded` streams each member and enforces the cap again, since a directory can lie. A bundle is bounded before its signature can be checked, because the signature is over bytes that must first be read.
 - A fitted model is charged against the memory budget with `admit_model` after the fit; when it does not fit, the objects are dropped and the result says inference is unavailable rather than the run being discarded. The counting sink that measures the model lacked `tell`, so the previous release measured nothing.
+- The Documentation view is styled after the corrplotpy comparison page: an evergreen masthead over a contour map drawn from a fixed seed by `scripts/make_doc_banner.py`, warm off-white paper, a contents box, forest-green headings, plum links, Helvetica for text and Consolas for code, and journal-style tables. Every rule is scoped to the view, so the rest of the application is unchanged.
 - MIT license.
 - This changelog.
 - Makefile with `install`, `dev`, `lint`, `test`, `check`, and `build-bundle` targets.

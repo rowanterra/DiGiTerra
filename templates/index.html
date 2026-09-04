@@ -68,12 +68,28 @@
     </div>
 <!-- Documentation section (only visible when clicked in toolbar) -->
     <div id="documentation" class="documentation hidden">
-        <div class="section-header">
-            <h2>Documentation</h2>
-        </div>
+        <header class="doc-masthead" style="background-image: url('{{ static_root }}/doc_banner.jpg');">
+            <h1 class="doc-masthead-title">DiGiTerra</h1>
+            <p class="doc-masthead-tagline">A machine learning exploration tool for tabular scientific data</p>
+            <p class="doc-masthead-meta">Documentation</p>
+        </header>
+
+        <nav class="doc-toc" aria-label="Documentation contents">
+            <div class="doc-toc-box">
+                <p class="doc-toc-title">Contents</p>
+                <ul>
+                    <li><a href="#doc-about">About DiGiTerra</a></li>
+                    <li><a href="#doc-fileformat">File Format and Column Entry</a></li>
+                    <li><a href="#doc-workflow">Modeling Types</a></li>
+                    <li><a href="#doc-models">Modeling Approaches</a></li>
+                    <li><a href="#doc-validation">Core Concepts</a></li>
+                    <li><a href="#doc-options">Advanced Options</a></li>
+                </ul>
+            </div>
+        </nav>
         
         <!-- About Section -->
-        <div class="documentation-card doc-intro">
+        <div class="documentation-card doc-intro" id="doc-about">
             <div class="doc-header">
                 <h3>About DiGiTerra</h3>
             </div>
@@ -98,7 +114,7 @@
         </div>
 
         <!-- File Format Section -->
-        <div class="documentation-card doc-fileformat">
+        <div class="documentation-card doc-fileformat" id="doc-fileformat">
             <div class="doc-header">
                 <h3>File Format and Column Entry</h3>
             </div>
@@ -125,7 +141,7 @@
         </div>
 
         <!-- Modeling Types Section -->
-        <div class="documentation-card doc-modeling-types">
+        <div class="documentation-card doc-modeling-types" id="doc-workflow">
             <div class="doc-header">
                 <h3>Modeling Types</h3>
             </div>
@@ -188,7 +204,7 @@
         </div>
 
         <!-- Modeling Approaches Section -->
-        <div class="documentation-card doc-approaches">
+        <div class="documentation-card doc-approaches" id="doc-models">
             <div class="doc-header">
                 <h3>Modeling Approaches</h3>
             </div>
@@ -235,7 +251,7 @@
         </div>
 
         <!-- Core Concepts Section -->
-        <div class="documentation-card doc-concepts">
+        <div class="documentation-card doc-concepts" id="doc-validation">
             <div class="doc-header">
                 <h3>Core Concepts</h3>
             </div>
@@ -264,7 +280,7 @@
         </div>
 
         <!-- Advanced Options Section -->
-        <div class="documentation-card doc-advanced-options">
+        <div class="documentation-card doc-advanced-options" id="doc-options">
             <div class="doc-header">
                 <h3>Advanced Options</h3>
             </div>

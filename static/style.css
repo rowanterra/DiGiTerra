@@ -2712,9 +2712,13 @@ body:not(.dark-mode) #fileuploaddiv,
 body:not(.dark-mode) #columnsection,
 body:not(.dark-mode) #modelpreprocessing,
 body:not(.dark-mode) #modeling,
-body:not(.dark-mode) #historic,
-body:not(.dark-mode) #documentation {
+body:not(.dark-mode) #historic {
   background-color: #f4f4f9 !important;
+  position: relative;
+  z-index: 1;
+}
+/* The documentation view paints its own paper; see the corrplotpy block below. */
+body:not(.dark-mode) #documentation {
   position: relative;
   z-index: 1;
 }
@@ -2780,4 +2784,289 @@ body.dark-mode h4 {
 .run-note-block {
     border-left-color: #8a2a2a;
     background: #f8ecec;
+}
+
+/* ---------------------------------------------------------------------------
+   Documentation, in the style of the corrplotpy comparison page: an evergreen
+   masthead over a contour map, warm off-white paper, a forest green for
+   headings, a dusty plum for links, and Helvetica for text with Consolas for
+   code. Every rule is scoped to the documentation view, so the rest of the
+   application keeps its own appearance.
+
+   Colors are those of that page: paper #fbfaf7, ink #414a44, panel #f0f2ee,
+   rule #d7dbd4, masthead #122e24, heading #24503d, link #6a4a74.
+   -------------------------------------------------------------------------- */
+.documentation {
+    --doc-paper: #fbfaf7;
+    --doc-ink: #414a44;
+    --doc-panel: #f0f2ee;
+    --doc-rule: #d7dbd4;
+    --doc-evergreen: #122e24;
+    --doc-heading: #24503d;
+    --doc-link: #6a4a74;
+    --doc-muted: #6c7069;
+    --doc-code: #4a544d;
+    --doc-sans: Helvetica, "Helvetica Neue", "Nimbus Sans", Arial, "Liberation Sans", sans-serif;
+    --doc-mono: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+
+    background-color: var(--doc-paper) !important;
+    color: var(--doc-ink);
+    font-family: var(--doc-sans);
+    font-size: 16px;
+    line-height: 1.55;
+    padding: 0 0 4rem 0;
+    margin: 0;
+}
+
+.documentation a {
+    color: var(--doc-link);
+    text-decoration: none;
+}
+.documentation a:hover {
+    text-decoration: underline;
+}
+
+/* Masthead. The contour map is drawn by scripts/make_doc_banner.py from a
+   fixed seed, so it is reproducible and involves no third-party artwork. */
+.doc-masthead {
+    position: relative;
+    background-color: var(--doc-evergreen);
+    background-position: center 45%;
+    background-size: cover;
+    color: #f6f3ee;
+    text-align: center;
+    padding: 3.2rem 2rem 2.6rem;
+}
+/* The contour lines run behind the words, so a scrim carries the text. Without
+   it the tagline sits at the contrast of the lines themselves and disappears. */
+.doc-masthead::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(10, 26, 20, 0.86) 0%, rgba(10, 26, 20, 0.55) 55%, rgba(10, 26, 20, 0.25) 100%);
+}
+.doc-masthead > * {
+    position: relative;
+}
+.documentation .doc-masthead-title {
+    margin: 0 auto 0.4rem;
+    max-width: 46rem;
+    font-size: 2.2rem;
+    font-weight: normal;
+    line-height: 1.3;
+    color: #f6f3ee;
+}
+.documentation .doc-masthead-tagline {
+    margin: 0 auto 0.6rem;
+    max-width: 46rem;
+    font-size: 1.35rem;
+    font-weight: normal;
+    color: #e8e4da;
+}
+.documentation .doc-masthead-meta {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: normal;
+    color: #bcc9be;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+/* Contents box, above the cards, in the theme's panel color. */
+.doc-toc {
+    max-width: 64rem;
+    margin: 0 auto;
+    padding: 2rem 4rem 0;
+}
+.doc-toc-box {
+    padding: 1.25rem 1.5rem;
+    background-color: var(--doc-panel);
+    border: solid 1px var(--doc-rule);
+    border-radius: 0.3rem;
+}
+.documentation .doc-toc-title {
+    margin: 0 0 0.5rem;
+    text-align: center;
+    color: var(--doc-heading);
+    font-size: 1.05rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+.doc-toc-box ul {
+    margin: 0;
+    padding-left: 1.5rem;
+    columns: 2;
+    column-gap: 2rem;
+}
+.doc-toc-box li {
+    margin-bottom: 0.25rem;
+    break-inside: avoid;
+}
+
+/* Cards read as sections of one page rather than as panels on a dashboard. */
+.documentation .documentation-card {
+    max-width: 64rem;
+    margin: 0 auto;
+    padding: 2rem 4rem 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+.documentation .doc-header {
+    margin: 0 0 1rem 0;
+    padding: 0 0 0.4rem 0;
+    background: none;
+    border: 0;
+    border-bottom: 1px solid var(--doc-rule);
+}
+.documentation .doc-header h3,
+.documentation .doc-subsection-header {
+    margin: 0;
+    color: var(--doc-heading);
+    font-family: var(--doc-sans);
+    font-size: 1.5rem;
+    font-weight: normal;
+}
+.documentation h4,
+.documentation h5 {
+    color: var(--doc-heading);
+    font-weight: normal;
+}
+.documentation p {
+    margin-bottom: 1em;
+    color: var(--doc-ink);
+}
+.documentation strong {
+    color: var(--doc-ink);
+}
+.documentation code {
+    padding: 2px 4px;
+    font-family: var(--doc-mono);
+    font-size: 0.92em;
+    color: var(--doc-code);
+    background-color: var(--doc-panel);
+    border-radius: 0.3rem;
+}
+.documentation pre {
+    padding: 0.8rem;
+    font: 1rem var(--doc-mono);
+    color: var(--doc-code);
+    background-color: var(--doc-panel);
+    border: solid 1px var(--doc-rule);
+    border-radius: 0.3rem;
+    overflow: auto;
+}
+
+/* Journal-style tables: a solid header row, hairline rules, no vertical lines. */
+.documentation table {
+    width: 100%;
+    border-collapse: collapse;
+    border-spacing: 0;
+    margin: 1rem 0;
+}
+.documentation table th {
+    font-weight: bold;
+    background-color: var(--doc-heading);
+    color: #fff;
+}
+.documentation table th,
+.documentation table td {
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid #e2e4df;
+    text-align: left;
+}
+.documentation table tr:nth-child(odd) {
+    background-color: #f5f4f0;
+}
+
+/* The item grids keep their arrangement and take the paper palette. */
+.documentation .doc-tip-item,
+.documentation .doc-concept-item,
+.documentation .doc-modeling-type-card,
+.documentation .doc-approach-card,
+.documentation .doc-option-card {
+    background-color: var(--doc-panel);
+    border: solid 1px var(--doc-rule);
+    border-left: 3px solid var(--doc-heading);
+    border-radius: 0.3rem;
+    box-shadow: none;
+}
+.documentation .doc-tip-item strong,
+.documentation .doc-concept-item strong {
+    color: var(--doc-heading);
+}
+
+/* The five-step row reads as a sequence, not as buttons. */
+.documentation .doc-badge {
+    background-color: var(--doc-panel);
+    color: var(--doc-heading);
+    border: solid 1px var(--doc-rule);
+    border-radius: 0.3rem;
+    font-weight: normal;
+}
+.documentation .doc-workflow-arrow {
+    background: none;
+    border: 0;
+    color: var(--doc-muted);
+}
+
+/* The disclaimer keeps its warning color, in the warmer register of the page. */
+.documentation .doc-warning-content {
+    background-color: #fbf5e8 !important;
+    border-left: 3px solid #b07a1a !important;
+    border-radius: 0.3rem;
+}
+.documentation .doc-warning-content p {
+    color: #6b5316 !important;
+}
+
+/* The heading of the view is the masthead, so the old header row is gone. */
+.documentation > .section-header {
+    display: none;
+}
+
+@media screen and (max-width: 64em) {
+    .doc-toc,
+    .documentation .documentation-card {
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+}
+@media screen and (max-width: 42em) {
+    .doc-toc,
+    .documentation .documentation-card {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    .doc-masthead {
+        padding: 2rem 1rem;
+    }
+    .documentation .doc-masthead-title {
+        font-size: 1.75rem;
+    }
+    .doc-toc-box ul {
+        columns: 1;
+    }
+}
+
+/* Dark mode: the paper darkens, the masthead and the accents stay. */
+body.dark-mode .documentation {
+    --doc-paper: #1b1f1d;
+    --doc-ink: #ddd9d0;
+    --doc-panel: #232825;
+    --doc-rule: #39413c;
+    --doc-heading: #8fbfa3;
+    --doc-link: #c0a6c9;
+    --doc-muted: #9a9f97;
+    --doc-code: #cfd6d0;
+}
+body.dark-mode .documentation table tr:nth-child(odd) {
+    background-color: #20241f;
+}
+body.dark-mode .documentation .doc-warning-content {
+    background-color: #2b2418 !important;
+}
+body.dark-mode .documentation .doc-warning-content p {
+    color: #e2c98d !important;
 }
