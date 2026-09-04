@@ -31,6 +31,8 @@ bp = Blueprint("main", __name__)
 # taken from the request, so the route cannot be asked for anything else.
 EXAMPLE_FILES = {
     "penguins.csv",
+    "penguins_new.csv",
+    "penguins_new_key.csv",
     "iris.csv",
     "wine.csv",
     "breast_cancer.csv",

@@ -1697,8 +1697,60 @@ function initTryExample() {
     });
 }
 
+/* The example rows for the inference page.
+   Shown only for a session that loaded penguins.csv, because the file holds that
+   file's six indicator columns and nothing else would accept them. */
+function penguinsIsLoaded() {
+    return typeof uploadedFileName === 'string' && uploadedFileName === 'penguins.csv';
+}
+
+function updateExampleRowsVisibility() {
+    const button = document.getElementById('usePenguinRowsButton');
+    const note = document.getElementById('usePenguinRowsNote');
+    const show = penguinsIsLoaded();
+    if (button) button.classList.toggle('hidden', !show);
+    if (note) note.classList.toggle('hidden', !show);
+}
+
+function initUsePenguinRows() {
+    const button = document.getElementById('usePenguinRowsButton');
+    if (!button) return;
+    updateExampleRowsVisibility();
+    // The button appears with the view, and the view is revealed by a class change.
+    const host = document.getElementById('predictionDiv');
+    if (host) {
+        new MutationObserver(updateExampleRowsVisibility).observe(host, {
+            attributes: true,
+            attributeFilter: ['class'],
+        });
+    }
+    button.addEventListener('click', async () => {
+        const input = document.getElementById('predictFile');
+        const form = document.getElementById('uploadPredictDf');
+        if (!input || !form) return;
+        const original = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Loading the rows...';
+        try {
+            const response = await fetch(`${API_ROOT}/example-data/penguins_new.csv`);
+            if (!response.ok) throw new Error('status ' + response.status);
+            const blob = await response.blob();
+            const transfer = new DataTransfer();
+            transfer.items.add(new File([blob], 'penguins_new.csv', { type: 'text/csv' }));
+            input.files = transfer.files;
+            window.digiterraExampleRows = true;
+            form.requestSubmit();
+        } catch (err) {
+            console.error('Example rows not loaded:', err);
+            button.disabled = false;
+            button.textContent = original;
+        }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initDocContents();
     initTutorialEntry();
     initTryExample();
+    initUsePenguinRows();
 });

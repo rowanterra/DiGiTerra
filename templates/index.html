@@ -6206,7 +6206,9 @@
             <input type="file" name="predictFile" id="predictFile" accept=".csv,.xlsx,.xlsm,.parquet" required>
             <div id="uploadPredictDFButton">
                 <button type="submit">Upload</button>
+                <button type="button" id="usePenguinRowsButton" class="secondary-button hidden">Use the Example Rows</button>
             </div>
+            <p id="usePenguinRowsNote" class="field-note hidden">22 rows drawn from the three species, with no blanks. Nothing is uploaded from your computer.</p>
         </form>
 
         <div id="predictionResults" class="hidden">

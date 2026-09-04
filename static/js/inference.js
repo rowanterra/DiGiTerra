@@ -259,6 +259,13 @@ predictionForm.addEventListener('submit', async (e) => {
                     ${rightPanelHtml}
                 </div>
             `
+            // The example rows were drawn from a known species each, so the page can
+            // say how many came back the way they were drawn. Only for those rows:
+            // a person's own file has no key to compare against.
+            if (window.digiterraExampleRows) {
+                window.digiterraExampleRows = false
+                showExampleRowAgreement(preview)
+            }
             uploadPredictDf.classList.add('hidden')
         }
         else {
@@ -430,3 +437,35 @@ wireAdvancedOptimizationFormSubmit(document.getElementById('advancedOptimization
         }
     });
 })();
+
+
+/* How many of the example rows came back as the species they were drawn from.
+
+   penguins_new_key.csv holds one species per row_id, and predictions.csv keeps the
+   order of the file it scored, so the two line up row for row. The count is a
+   sanity check on the run rather than a score: the rows are synthetic. */
+async function showExampleRowAgreement(preview) {
+    try {
+        const predictedKey = Object.keys(preview).find((k) => k.startsWith('Predicted_'))
+        if (!predictedKey) return
+        const predicted = preview[predictedKey]
+        const response = await fetch(`${API_ROOT}/example-data/penguins_new_key.csv`)
+        if (!response.ok) return
+        const rows = (await response.text()).trim().split('\n').slice(1)
+        const expected = rows.map((line) => line.split(',')[1].trim())
+        if (!expected.length || expected.length !== predicted.length) return
+        let agree = 0
+        for (let i = 0; i < expected.length; i += 1) {
+            if (String(predicted[i]).trim() === expected[i]) agree += 1
+        }
+        const host = document.querySelector('.inference-summary-section')
+        if (!host) return
+        const line = document.createElement('p')
+        line.id = 'exampleRowAgreement'
+        line.className = 'field-note'
+        line.textContent = `${agree} of ${expected.length} rows match the species each row was drawn from.`
+        host.appendChild(line)
+    } catch (err) {
+        console.error('Could not compare the example rows with the key:', err)
+    }
+}
