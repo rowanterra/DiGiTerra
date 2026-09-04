@@ -2880,6 +2880,7 @@ body.dark-mode h4 {
     --doc-link: #6a4a74;
     --doc-muted: #6c7069;
     --doc-code: #4a544d;
+    --doc-stop: #6b2e2e;
     --doc-sans: Helvetica, "Helvetica Neue", "Nimbus Sans", Arial, "Liberation Sans", sans-serif;
     --doc-mono: Consolas, "Liberation Mono", Menlo, Courier, monospace;
 
@@ -3145,6 +3146,7 @@ body.dark-mode .documentation {
     --doc-link: #c0a6c9;
     --doc-muted: #9a9f97;
     --doc-code: #cfd6d0;
+    --doc-stop: #d99a9a;
 }
 body.dark-mode .documentation {
     background-color: var(--doc-paper) !important;
@@ -3881,4 +3883,138 @@ button[aria-disabled="true"] {
 .header-links .tab-button {
     border-radius: var(--app-radius-sm);
     font-weight: 600;
+}
+/* --- Documentation flow diagram -------------------------------------------
+   The diagram is inlined rather than loaded as an image so these rules reach
+   it, which is what lets it follow the light and dark palettes. Geometry lives
+   in the SVG; only colour and type live here. */
+
+.dg-flow {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: 900px;
+    margin: 16px auto 24px;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.dg-flow text {
+    fill: var(--doc-ink);
+    text-anchor: middle;
+    dominant-baseline: middle;
+}
+
+.dg-band { fill: var(--doc-panel); stroke: var(--doc-rule); stroke-width: 1; }
+.dg-band--upload  { fill: #f1f5f0; }
+.dg-band--explore { fill: #f6f2e8; }
+.dg-band--prep    { fill: #edf2f2; }
+.dg-band--model   { fill: #f3f0f4; }
+.dg-band--infer   { fill: #f6f0ef; }
+
+.dg-band-label { font-size: 11px; font-weight: 700; }
+.dg-lane       { font-size: 15px; font-weight: 700; }
+.dg-tag        { font-size: 12px; font-style: italic; }
+.dg-tag--stop  { fill: var(--doc-stop, #6b2e2e); }
+
+.dg-data,
+.dg-decision { fill: var(--doc-paper); stroke: var(--doc-ink); stroke-width: 1; }
+.dg-terminal { fill: var(--doc-paper); stroke: var(--doc-stop, #6b2e2e);
+               stroke-width: 1; stroke-dasharray: 5 4; }
+
+.dg-edge      { stroke: var(--doc-ink); stroke-width: 1; fill: none; }
+.dg-edge--stop { stroke: var(--doc-stop, #6b2e2e); }
+.dg-arrowhead       { fill: var(--doc-ink); }
+.dg-arrowhead--stop { fill: var(--doc-stop, #6b2e2e); }
+.dg-divider   { stroke: var(--doc-rule); stroke-width: 1; }
+
+/* A band tint that reads on paper is invisible on a dark ground, so the bands
+   become a faint lift of the panel colour and the labels carry the meaning. */
+body.dark-mode .dg-band,
+body.dark-mode .dg-band--upload,
+body.dark-mode .dg-band--explore,
+body.dark-mode .dg-band--prep,
+body.dark-mode .dg-band--model,
+body.dark-mode .dg-band--infer {
+    fill: var(--doc-panel);
+}
+
+body.dark-mode .dg-band--explore { fill: color-mix(in srgb, var(--doc-panel) 88%, #b08a2a); }
+body.dark-mode .dg-band--prep    { fill: color-mix(in srgb, var(--doc-panel) 88%, #3f8f92); }
+body.dark-mode .dg-band--model   { fill: color-mix(in srgb, var(--doc-panel) 88%, #8a6ba0); }
+body.dark-mode .dg-band--infer   { fill: color-mix(in srgb, var(--doc-panel) 88%, #a05a5a); }
+
+@media (max-width: 720px) {
+    .dg-flow { font-size: 15px; }
+}
+
+@media print {
+    .dg-flow { max-width: 100%; }
+}
+
+/* --- Documentation sections as disclosures -------------------------------- */
+
+/* corrplotpy folds its sections. The marker is removed so the chevron below can
+   replace it, which means <summary> has to carry its own focus ring: a keyboard
+   user has nothing else to see. */
+.doc-section > .doc-summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    list-style: none;
+    cursor: pointer;
+    padding: 4px 2px;
+    border-radius: var(--app-radius-sm);
+}
+.doc-section > .doc-summary::-webkit-details-marker {
+    display: none;
+}
+.doc-section > .doc-summary:focus-visible {
+    outline: 3px solid var(--doc-heading);
+    outline-offset: 3px;
+}
+.doc-section > .doc-summary h3 {
+    margin: 0;
+}
+.doc-section > .doc-summary:hover h3 {
+    text-decoration: underline;
+}
+
+/* The disclosure triangle, put back as a chevron that turns when the section opens. */
+.doc-chevron {
+    flex: 0 0 auto;
+    width: 9px;
+    height: 9px;
+    border-right: 2px solid var(--doc-heading);
+    border-bottom: 2px solid var(--doc-heading);
+    transform: rotate(-45deg);
+    transition: transform 140ms ease;
+}
+.doc-section[open] > .doc-summary .doc-chevron {
+    transform: rotate(45deg);
+}
+
+.doc-section-body {
+    padding-top: 8px;
+}
+
+/* An h4 subsection stays inside its parent section. */
+.doc-section-body h4 {
+    color: var(--doc-heading);
+}
+
+/* Tutorial: an instruction and what the reader should see after it. */
+.doc-step {
+    margin: 8px 0;
+    padding: 8px 12px;
+    background-color: var(--doc-panel);
+    border-left: 3px solid var(--doc-heading);
+    border-radius: var(--app-radius-sm);
+}
+.doc-tutorial .doc-note {
+    margin: 4px 0 14px 12px;
+    color: var(--doc-muted);
+    font-style: italic;
+    border-left: 0;
+    background: none;
+    padding: 0;
 }

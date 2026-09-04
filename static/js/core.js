@@ -1568,3 +1568,45 @@ window.predictionResultsDiv = document.getElementById('predictionResults');
 window.processButton = document.getElementById('processButton');
 window.showError = _showError;
 window.manageFocus = _manageFocus;
+
+
+/* An anchor into a closed <details> lands nowhere, because the target has no box.
+   Each Contents entry opens its section first, then scrolls to it. */
+function initDocContents() {
+    const toc = document.querySelector('.doc-toc');
+    if (!toc) return;
+    toc.addEventListener('click', (e) => {
+        const link = e.target.closest('a[href^="#"]');
+        if (!link) return;
+        const card = document.getElementById(link.getAttribute('href').slice(1));
+        if (!card) return;
+        e.preventDefault();
+        const section = card.querySelector('details.doc-section') || card.closest('details.doc-section');
+        if (section) section.open = true;
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Move the reading position as well as the viewport, so a keyboard or screen
+        // reader user arrives where the pointer user does.
+        const summary = section ? section.querySelector('summary') : null;
+        if (summary) summary.focus({ preventScroll: true });
+    });
+}
+
+/* The banner's Tutorial entry opens the documentation and goes to that section. */
+function initTutorialEntry() {
+    const button = document.getElementById('tutorialButton');
+    if (!button) return;
+    button.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (typeof showTab === 'function') showTab('documentation');
+        const card = document.getElementById('doc-tutorial');
+        if (!card) return;
+        const section = card.querySelector('details.doc-section');
+        if (section) section.open = true;
+        window.setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initDocContents();
+    initTutorialEntry();
+});

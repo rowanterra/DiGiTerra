@@ -1,0 +1,103 @@
+<svg class="dg-flow" viewBox="0 0 1080 1150" role="img" aria-labelledby="dgFlowTitle dgFlowDesc" xmlns="http://www.w3.org/2000/svg">
+  <title id="dgFlowTitle">How one DiGiTerra run moves through the application</title>
+  <desc id="dgFlowDesc">A two-lane flow chart. The left lane holds the steps a user takes and the right lane holds the steps the application takes. A shaded band behind each group of steps names the page they belong to: Upload, Data Exploration, Model Preprocessing, Modeling, and Inference on New Data. Rectangles are steps and diamonds are decisions. A blocking data check stops the run, a run with no free training slot is queued, and a prediction file whose columns do not match is refused.</desc>
+  <defs>
+    <marker id="dgArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path class="dg-arrowhead" d="M 0 0 L 10 5 L 0 10 z"/>
+    </marker>
+    <marker id="dgArrowStop" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path class="dg-arrowhead dg-arrowhead--stop" d="M 0 0 L 10 5 L 0 10 z"/>
+    </marker>
+  </defs>
+  <rect class="dg-band dg-band--upload" x="10" y="55" width="1060" height="282"/>
+  <text class="dg-band-label" x="55" y="196"><tspan x="55" dy="0">Upload</tspan></text>
+  <rect class="dg-band dg-band--explore" x="10" y="337" width="1060" height="72"/>
+  <text class="dg-band-label" x="55" y="366.5"><tspan x="55" dy="0">Data</tspan><tspan x="55" dy="13">Exploration</tspan></text>
+  <rect class="dg-band dg-band--prep" x="10" y="409" width="1060" height="144"/>
+  <text class="dg-band-label" x="55" y="474.5"><tspan x="55" dy="0">Model</tspan><tspan x="55" dy="13">Preprocessing</tspan></text>
+  <rect class="dg-band dg-band--model" x="10" y="553" width="1060" height="288"/>
+  <text class="dg-band-label" x="55" y="697"><tspan x="55" dy="0">Modeling</tspan></text>
+  <rect class="dg-band dg-band--infer" x="10" y="841" width="1060" height="284"/>
+  <text class="dg-band-label" x="55" y="976.5"><tspan x="55" dy="0">Inference on</tspan><tspan x="55" dy="13">New Data</tspan></text>
+  <line class="dg-divider" x1="505" y1="55" x2="505" y2="1125"/>
+  <line class="dg-divider" x1="92" y1="55" x2="92" y2="1125"/>
+  <text class="dg-lane" x="300" y="36">User</text>
+  <text class="dg-lane" x="670" y="36">DiGiTerra</text>
+  <rect class="dg-data" x="220" y="62" width="160" height="46" rx="23"/>
+  <text class="dg-label" x="300" y="85" font-size="13">Start</text>
+  <line class="dg-edge" x1="300" y1="108" x2="300" y2="134" marker-end="url(#dgArrow)"/>
+  <rect class="dg-data" x="155" y="134" width="290" height="46" rx="2"/>
+  <text class="dg-label" x="300" y="157" font-size="13">Upload a file (CSV, XLSX, Parquet)</text>
+  <line class="dg-edge" x1="300" y1="180" x2="300" y2="193"/>
+  <line class="dg-edge" x1="300" y1="193" x2="670" y2="193"/>
+  <line class="dg-edge" x1="670" y1="193" x2="670" y2="206" marker-end="url(#dgArrow)"/>
+  <rect class="dg-data" x="525" y="206" width="290" height="46" rx="2"/>
+  <text class="dg-label" x="670" y="229" font-size="12">Parse in an isolated process; run the data checks</text>
+  <line class="dg-edge" x1="670" y1="252" x2="670" y2="270" marker-end="url(#dgArrow)"/>
+  <polygon class="dg-decision" points="670,270 815,301 670,332 525,301"/>
+  <text class="dg-label" x="670" y="301" font-size="12">Blocking finding?</text>
+  <line class="dg-edge dg-edge--stop" x1="815" y1="301" x2="855" y2="301" marker-end="url(#dgArrowStop)"/>
+  <text class="dg-tag dg-tag--stop" x="833" y="293">Y</text>
+  <rect class="dg-terminal" x="855" y="278" width="210" height="46" rx="2"/>
+  <text class="dg-label" x="960" y="301" font-size="12">Run stops; reasons returned</text>
+  <line class="dg-edge" x1="670" y1="332" x2="670" y2="350" marker-end="url(#dgArrow)"/>
+  <text class="dg-tag" x="682" y="346">N</text>
+  <rect class="dg-data" x="525" y="350" width="290" height="46" rx="2"/>
+  <text class="dg-label" x="670" y="373" font-size="12">Compute statistics, correlations, pair plots</text>
+  <line class="dg-edge" x1="670" y1="396" x2="670" y2="409"/>
+  <line class="dg-edge" x1="670" y1="409" x2="300" y2="409"/>
+  <line class="dg-edge" x1="300" y1="409" x2="300" y2="422" marker-end="url(#dgArrow)"/>
+  <rect class="dg-data" x="155" y="422" width="290" height="46" rx="2"/>
+  <text class="dg-label" x="300" y="445" font-size="11">Choose predictors, target, encoding, scaling, holdout</text>
+  <line class="dg-edge" x1="300" y1="468" x2="300" y2="481"/>
+  <line class="dg-edge" x1="300" y1="481" x2="670" y2="481"/>
+  <line class="dg-edge" x1="670" y1="481" x2="670" y2="494" marker-end="url(#dgArrow)"/>
+  <rect class="dg-data" x="525" y="494" width="290" height="46" rx="2"/>
+  <text class="dg-label" x="670" y="517" font-size="13">Build the design matrix and split</text>
+  <line class="dg-edge" x1="670" y1="540" x2="670" y2="553"/>
+  <line class="dg-edge" x1="670" y1="553" x2="300" y2="553"/>
+  <line class="dg-edge" x1="300" y1="553" x2="300" y2="566" marker-end="url(#dgArrow)"/>
+  <rect class="dg-data" x="155" y="566" width="290" height="46" rx="2"/>
+  <text class="dg-label" x="300" y="589" font-size="11">Choose AutoML, Simple or Advanced; set the estimator</text>
+  <line class="dg-edge" x1="300" y1="612" x2="300" y2="621"/>
+  <line class="dg-edge" x1="300" y1="621" x2="670" y2="621"/>
+  <line class="dg-edge" x1="670" y1="621" x2="670" y2="630" marker-end="url(#dgArrow)"/>
+  <polygon class="dg-decision" points="670,630 815,661 670,692 525,661"/>
+  <text class="dg-label" x="670" y="661" font-size="12">Training slot free?</text>
+  <line class="dg-edge" x1="815" y1="661" x2="855" y2="661" marker-end="url(#dgArrow)"/>
+  <text class="dg-tag" x="833" y="653">N</text>
+  <rect class="dg-data" x="855" y="638" width="210" height="46" rx="2"/>
+  <text class="dg-label" x="960" y="661" font-size="12">Queued; position returned</text>
+  <line class="dg-edge" x1="960" y1="684" x2="960" y2="733"/>
+  <line class="dg-edge" x1="960" y1="733" x2="815" y2="733" marker-end="url(#dgArrow)"/>
+  <line class="dg-edge" x1="670" y1="692" x2="670" y2="710" marker-end="url(#dgArrow)"/>
+  <text class="dg-tag" x="640" y="706">Y</text>
+  <rect class="dg-data" x="525" y="710" width="290" height="46" rx="2"/>
+  <text class="dg-label" x="670" y="733" font-size="12">Fit the model and score against a baseline</text>
+  <line class="dg-edge" x1="670" y1="756" x2="670" y2="782" marker-end="url(#dgArrow)"/>
+  <rect class="dg-data" x="525" y="782" width="290" height="46" rx="2"/>
+  <text class="dg-label" x="670" y="805" font-size="12">Write the manifest, model card and signed bundle</text>
+  <line class="dg-edge" x1="670" y1="828" x2="670" y2="841"/>
+  <line class="dg-edge" x1="670" y1="841" x2="300" y2="841"/>
+  <line class="dg-edge" x1="300" y1="841" x2="300" y2="854" marker-end="url(#dgArrow)"/>
+  <rect class="dg-data" x="155" y="854" width="290" height="46" rx="2"/>
+  <text class="dg-label" x="300" y="877" font-size="13">Upload a second file</text>
+  <line class="dg-edge" x1="300" y1="900" x2="300" y2="909"/>
+  <line class="dg-edge" x1="300" y1="909" x2="670" y2="909"/>
+  <line class="dg-edge" x1="670" y1="909" x2="670" y2="918" marker-end="url(#dgArrow)"/>
+  <polygon class="dg-decision" points="670,918 815,949 670,980 525,949"/>
+  <text class="dg-label" x="670" y="949" font-size="12">Columns match?</text>
+  <line class="dg-edge dg-edge--stop" x1="815" y1="949" x2="855" y2="949" marker-end="url(#dgArrowStop)"/>
+  <text class="dg-tag dg-tag--stop" x="833" y="941">N</text>
+  <rect class="dg-terminal" x="855" y="926" width="210" height="46" rx="2"/>
+  <text class="dg-label" x="960" y="949" font-size="12">Prediction refused</text>
+  <line class="dg-edge" x1="670" y1="980" x2="670" y2="998" marker-end="url(#dgArrow)"/>
+  <text class="dg-tag" x="682" y="994">Y</text>
+  <rect class="dg-data" x="525" y="998" width="290" height="46" rx="2"/>
+  <text class="dg-label" x="670" y="1021" font-size="12">Write predictions (CSV, XLSX)</text>
+  <line class="dg-edge" x1="670" y1="1044" x2="670" y2="1057"/>
+  <line class="dg-edge" x1="670" y1="1057" x2="300" y2="1057"/>
+  <line class="dg-edge" x1="300" y1="1057" x2="300" y2="1070" marker-end="url(#dgArrow)"/>
+  <rect class="dg-data" x="220" y="1070" width="160" height="46" rx="23"/>
+  <text class="dg-label" x="300" y="1093" font-size="13">End</text>
+</svg>

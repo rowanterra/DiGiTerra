@@ -81,6 +81,7 @@
                 <p class="doc-toc-title">Contents</p>
                 <ul>
                     <li><a href="#doc-about">About DiGiTerra</a></li>
+                    <li><a href="#doc-tutorial">Tutorial</a></li>
                     <li><a href="#doc-fileformat">File Format and Column Entry</a></li>
                     <li><a href="#doc-workflow">Modeling Types</a></li>
                     <li><a href="#doc-models">Modeling Approaches</a></li>
@@ -92,10 +93,117 @@
         
         <!-- About Section -->
         <div class="documentation-card doc-intro" id="doc-about">
-            <div class="doc-header">
-                <h3>About DiGiTerra</h3>
-            </div>
+            <details class="doc-section" id="doc-about-details" open>
+                <summary class="doc-summary">
+                    <span class="doc-chevron" aria-hidden="true"></span>
+                    <h3>About DiGiTerra</h3>
+                </summary>
+                <div class="doc-section-body">
             <p>DiGiTerra is a browser tool for exploring a tabular dataset, training a model on the dataset, and reviewing the results.</p>
+                    <p>The interface says <em>Model</em> throughout. The documentation and the code say <em>estimator</em> in one place, and the two mean different things. An estimator is the registry entry a person selects. A model is what exists after that estimator is fitted to data.</p>
+                <svg class="dg-flow" viewBox="0 0 1080 1150" role="img" aria-labelledby="dgFlowTitle dgFlowDesc" xmlns="http://www.w3.org/2000/svg">
+                  <title id="dgFlowTitle">How one DiGiTerra run moves through the application</title>
+                  <desc id="dgFlowDesc">A two-lane flow chart. The left lane holds the steps a user takes and the right lane holds the steps the application takes. A shaded band behind each group of steps names the page they belong to: Upload, Data Exploration, Model Preprocessing, Modeling, and Inference on New Data. Rectangles are steps and diamonds are decisions. A blocking data check stops the run, a run with no free training slot is queued, and a prediction file whose columns do not match is refused.</desc>
+                  <defs>
+                    <marker id="dgArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                      <path class="dg-arrowhead" d="M 0 0 L 10 5 L 0 10 z"/>
+                    </marker>
+                    <marker id="dgArrowStop" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                      <path class="dg-arrowhead dg-arrowhead--stop" d="M 0 0 L 10 5 L 0 10 z"/>
+                    </marker>
+                  </defs>
+                  <rect class="dg-band dg-band--upload" x="10" y="55" width="1060" height="282"/>
+                  <text class="dg-band-label" x="55" y="196"><tspan x="55" dy="0">Upload</tspan></text>
+                  <rect class="dg-band dg-band--explore" x="10" y="337" width="1060" height="72"/>
+                  <text class="dg-band-label" x="55" y="366.5"><tspan x="55" dy="0">Data</tspan><tspan x="55" dy="13">Exploration</tspan></text>
+                  <rect class="dg-band dg-band--prep" x="10" y="409" width="1060" height="144"/>
+                  <text class="dg-band-label" x="55" y="474.5"><tspan x="55" dy="0">Model</tspan><tspan x="55" dy="13">Preprocessing</tspan></text>
+                  <rect class="dg-band dg-band--model" x="10" y="553" width="1060" height="288"/>
+                  <text class="dg-band-label" x="55" y="697"><tspan x="55" dy="0">Modeling</tspan></text>
+                  <rect class="dg-band dg-band--infer" x="10" y="841" width="1060" height="284"/>
+                  <text class="dg-band-label" x="55" y="976.5"><tspan x="55" dy="0">Inference on</tspan><tspan x="55" dy="13">New Data</tspan></text>
+                  <line class="dg-divider" x1="505" y1="55" x2="505" y2="1125"/>
+                  <line class="dg-divider" x1="92" y1="55" x2="92" y2="1125"/>
+                  <text class="dg-lane" x="300" y="36">User</text>
+                  <text class="dg-lane" x="670" y="36">DiGiTerra</text>
+                  <rect class="dg-data" x="220" y="62" width="160" height="46" rx="23"/>
+                  <text class="dg-label" x="300" y="85" font-size="13">Start</text>
+                  <line class="dg-edge" x1="300" y1="108" x2="300" y2="134" marker-end="url(#dgArrow)"/>
+                  <rect class="dg-data" x="155" y="134" width="290" height="46" rx="2"/>
+                  <text class="dg-label" x="300" y="157" font-size="13">Upload a file (CSV, XLSX, Parquet)</text>
+                  <line class="dg-edge" x1="300" y1="180" x2="300" y2="193"/>
+                  <line class="dg-edge" x1="300" y1="193" x2="670" y2="193"/>
+                  <line class="dg-edge" x1="670" y1="193" x2="670" y2="206" marker-end="url(#dgArrow)"/>
+                  <rect class="dg-data" x="525" y="206" width="290" height="46" rx="2"/>
+                  <text class="dg-label" x="670" y="229" font-size="12">Parse in an isolated process; run the data checks</text>
+                  <line class="dg-edge" x1="670" y1="252" x2="670" y2="270" marker-end="url(#dgArrow)"/>
+                  <polygon class="dg-decision" points="670,270 815,301 670,332 525,301"/>
+                  <text class="dg-label" x="670" y="301" font-size="12">Blocking finding?</text>
+                  <line class="dg-edge dg-edge--stop" x1="815" y1="301" x2="855" y2="301" marker-end="url(#dgArrowStop)"/>
+                  <text class="dg-tag dg-tag--stop" x="833" y="293">Y</text>
+                  <rect class="dg-terminal" x="855" y="278" width="210" height="46" rx="2"/>
+                  <text class="dg-label" x="960" y="301" font-size="12">Run stops; reasons returned</text>
+                  <line class="dg-edge" x1="670" y1="332" x2="670" y2="350" marker-end="url(#dgArrow)"/>
+                  <text class="dg-tag" x="682" y="346">N</text>
+                  <rect class="dg-data" x="525" y="350" width="290" height="46" rx="2"/>
+                  <text class="dg-label" x="670" y="373" font-size="12">Compute statistics, correlations, pair plots</text>
+                  <line class="dg-edge" x1="670" y1="396" x2="670" y2="409"/>
+                  <line class="dg-edge" x1="670" y1="409" x2="300" y2="409"/>
+                  <line class="dg-edge" x1="300" y1="409" x2="300" y2="422" marker-end="url(#dgArrow)"/>
+                  <rect class="dg-data" x="155" y="422" width="290" height="46" rx="2"/>
+                  <text class="dg-label" x="300" y="445" font-size="11">Choose predictors, target, encoding, scaling, holdout</text>
+                  <line class="dg-edge" x1="300" y1="468" x2="300" y2="481"/>
+                  <line class="dg-edge" x1="300" y1="481" x2="670" y2="481"/>
+                  <line class="dg-edge" x1="670" y1="481" x2="670" y2="494" marker-end="url(#dgArrow)"/>
+                  <rect class="dg-data" x="525" y="494" width="290" height="46" rx="2"/>
+                  <text class="dg-label" x="670" y="517" font-size="13">Build the design matrix and split</text>
+                  <line class="dg-edge" x1="670" y1="540" x2="670" y2="553"/>
+                  <line class="dg-edge" x1="670" y1="553" x2="300" y2="553"/>
+                  <line class="dg-edge" x1="300" y1="553" x2="300" y2="566" marker-end="url(#dgArrow)"/>
+                  <rect class="dg-data" x="155" y="566" width="290" height="46" rx="2"/>
+                  <text class="dg-label" x="300" y="589" font-size="11">Choose AutoML, Simple or Advanced; set the estimator</text>
+                  <line class="dg-edge" x1="300" y1="612" x2="300" y2="621"/>
+                  <line class="dg-edge" x1="300" y1="621" x2="670" y2="621"/>
+                  <line class="dg-edge" x1="670" y1="621" x2="670" y2="630" marker-end="url(#dgArrow)"/>
+                  <polygon class="dg-decision" points="670,630 815,661 670,692 525,661"/>
+                  <text class="dg-label" x="670" y="661" font-size="12">Training slot free?</text>
+                  <line class="dg-edge" x1="815" y1="661" x2="855" y2="661" marker-end="url(#dgArrow)"/>
+                  <text class="dg-tag" x="833" y="653">N</text>
+                  <rect class="dg-data" x="855" y="638" width="210" height="46" rx="2"/>
+                  <text class="dg-label" x="960" y="661" font-size="12">Queued; position returned</text>
+                  <line class="dg-edge" x1="960" y1="684" x2="960" y2="733"/>
+                  <line class="dg-edge" x1="960" y1="733" x2="815" y2="733" marker-end="url(#dgArrow)"/>
+                  <line class="dg-edge" x1="670" y1="692" x2="670" y2="710" marker-end="url(#dgArrow)"/>
+                  <text class="dg-tag" x="640" y="706">Y</text>
+                  <rect class="dg-data" x="525" y="710" width="290" height="46" rx="2"/>
+                  <text class="dg-label" x="670" y="733" font-size="12">Fit the model and score against a baseline</text>
+                  <line class="dg-edge" x1="670" y1="756" x2="670" y2="782" marker-end="url(#dgArrow)"/>
+                  <rect class="dg-data" x="525" y="782" width="290" height="46" rx="2"/>
+                  <text class="dg-label" x="670" y="805" font-size="12">Write the manifest, model card and signed bundle</text>
+                  <line class="dg-edge" x1="670" y1="828" x2="670" y2="841"/>
+                  <line class="dg-edge" x1="670" y1="841" x2="300" y2="841"/>
+                  <line class="dg-edge" x1="300" y1="841" x2="300" y2="854" marker-end="url(#dgArrow)"/>
+                  <rect class="dg-data" x="155" y="854" width="290" height="46" rx="2"/>
+                  <text class="dg-label" x="300" y="877" font-size="13">Upload a second file</text>
+                  <line class="dg-edge" x1="300" y1="900" x2="300" y2="909"/>
+                  <line class="dg-edge" x1="300" y1="909" x2="670" y2="909"/>
+                  <line class="dg-edge" x1="670" y1="909" x2="670" y2="918" marker-end="url(#dgArrow)"/>
+                  <polygon class="dg-decision" points="670,918 815,949 670,980 525,949"/>
+                  <text class="dg-label" x="670" y="949" font-size="12">Columns match?</text>
+                  <line class="dg-edge dg-edge--stop" x1="815" y1="949" x2="855" y2="949" marker-end="url(#dgArrowStop)"/>
+                  <text class="dg-tag dg-tag--stop" x="833" y="941">N</text>
+                  <rect class="dg-terminal" x="855" y="926" width="210" height="46" rx="2"/>
+                  <text class="dg-label" x="960" y="949" font-size="12">Prediction refused</text>
+                  <line class="dg-edge" x1="670" y1="980" x2="670" y2="998" marker-end="url(#dgArrow)"/>
+                  <text class="dg-tag" x="682" y="994">Y</text>
+                  <rect class="dg-data" x="525" y="998" width="290" height="46" rx="2"/>
+                  <text class="dg-label" x="670" y="1021" font-size="12">Write predictions (CSV, XLSX)</text>
+                  <line class="dg-edge" x1="670" y1="1044" x2="670" y2="1057"/>
+                  <line class="dg-edge" x1="670" y1="1057" x2="300" y2="1057"/>
+                  <line class="dg-edge" x1="300" y1="1057" x2="300" y2="1070" marker-end="url(#dgArrow)"/>
+                  <rect class="dg-data" x="220" y="1070" width="160" height="46" rx="23"/>
+                  <text class="dg-label" x="300" y="1093" font-size="13">End</text>
+                </svg>
             <p style="margin: 16px 0; color: #555;">The pipeline has five steps:</p>
             <div class="doc-workflow-badges">
                 <span class="doc-badge doc-workflow-step">1. Upload</span>
@@ -114,12 +222,60 @@
                 <p style="margin: 0; color: #856404;"><strong>Findings should be checked with a statistician</strong> for model assumptions, performance in context, and interpretation. The tool supports expert analysis and does not replace the analysis.</p>
             </div>
         </div>
+            </details>
+            </div>
+
+        <!-- Tutorial Section -->
+        <div class="documentation-card doc-tutorial" id="doc-tutorial">
+            <details class="doc-section" id="doc-tutorial-details">
+                <summary class="doc-summary">
+                    <span class="doc-chevron" aria-hidden="true"></span>
+                    <h3>Tutorial</h3>
+                </summary>
+                <div class="doc-section-body">
+                    <p>This tutorial trains one classifier on <code>examples/iris.csv</code>, a file that ships with DiGiTerra. It has 150 rows and 5 columns. Columns A to D are measurements. Column E is the species.</p>
+
+                    <h4>1. Load the file</h4>
+                    <p class="doc-step">Click <strong>Start Modeling</strong> on the welcome screen. Click <strong>Choose File</strong> and select <code>examples/iris.csv</code>. Click <strong>Upload</strong>.</p>
+                    <p class="doc-note">The page lists the five columns. The rail appears on the left. The Data panel names the file and reads <em>Tabular, 150 &times; 5</em>.</p>
+
+                    <h4>2. Look at the data</h4>
+                    <p class="doc-step">Click <strong>Data Exploration</strong> in the rail. Click <strong>Correlation Matrix</strong>.</p>
+                    <p class="doc-note">A heat map appears. The four measurement columns correlate with each other. Petal length and petal width correlate most.</p>
+
+                    <h4>3. Choose the columns</h4>
+                    <p class="doc-step">Click <strong>Model Preprocessing</strong> in the rail. Set <strong>Modeling Task Type</strong> to <em>Classification</em>. Enter <code>A-D</code> in <strong>Indicator Columns</strong>. Enter <code>E</code> in <strong>Target Columns</strong>.</p>
+                    <p class="doc-step">Click <strong>Process Configurations and Continue</strong>.</p>
+                    <p class="doc-note">The page opens Modeling. The Models panel in the rail now lists 23 classification estimators.</p>
+
+                    <h4>4. Train the model</h4>
+                    <p class="doc-step">Select <strong>Simple Modeling</strong>. Click <strong>Logistic Classifier</strong> in the Models panel.</p>
+                    <p class="doc-step">Click <strong>Run This Model</strong>.</p>
+                    <p class="doc-note">The five-step strip moves to Run and then to Results. The result gives an accuracy near 0.97 on the test rows, a confusion matrix, and a comparison with the baseline. The exact number moves with the seed.</p>
+
+                    <h4>5. Predict on new rows</h4>
+                    <p class="doc-step">Click <strong>Inference on New Data</strong> in the rail. Upload a file with the same four measurement columns.</p>
+                    <p class="doc-note">The page shows one predicted species for each row.</p>
+
+                    <h4>6. Watch a data check stop a run</h4>
+                    <p>A data check refuses a run whose result would mislead. This step causes one on purpose.</p>
+                    <p class="doc-step">Open <code>examples/iris.csv</code> in a spreadsheet. Copy column E into a new column beside it. Name the new column <code>leak</code>. Save the file under a new name.</p>
+                    <p class="doc-step">Upload the new file. Set the task type to <em>Classification</em>. Enter <code>A-E</code> in <strong>Indicator Columns</strong> and <code>F</code> in <strong>Target Columns</strong>. Continue, select a model, and run it.</p>
+                    <p class="doc-note">The run stops. The page reads: <em>DiGiTerra stopped the run. The data checks found a problem that makes the result misleading. 'leak' is identical to the target 'species'. Remove the column, then train again.</em></p>
+                    <p>The message is correct. A column that copies the target predicts it perfectly, and a score from that column says nothing about new data. Remove the column and run the model again.</p>
+                    <p class="doc-note">The desktop build allows a run past a data check. Open <strong>Advanced</strong>, then <strong>Data Checks</strong>, and give a reason. A served installation does not allow it unless the operator turns it on. A run that skips a check is recorded as not valid for decision use.</p>
+                </div>
+            </details>
+        </div>
 
         <!-- File Format Section -->
         <div class="documentation-card doc-fileformat" id="doc-fileformat">
-            <div class="doc-header">
-                <h3>File Format and Column Entry</h3>
-            </div>
+            <details class="doc-section" id="doc-fileformat-details">
+                <summary class="doc-summary">
+                    <span class="doc-chevron" aria-hidden="true"></span>
+                    <h3>File Format and Column Entry</h3>
+                </summary>
+                <div class="doc-section-body">
             <div class="doc-tips-list">
                 <div class="doc-tip-item">
                     <div>
@@ -141,12 +297,17 @@
                 </div>
             </div>
         </div>
+            </details>
+            </div>
 
         <!-- Modeling Types Section -->
         <div class="documentation-card doc-modeling-types" id="doc-workflow">
-            <div class="doc-header">
-                <h3>Modeling Types</h3>
-            </div>
+            <details class="doc-section" id="doc-workflow-details">
+                <summary class="doc-summary">
+                    <span class="doc-chevron" aria-hidden="true"></span>
+                    <h3>Modeling Types</h3>
+                </summary>
+                <div class="doc-section-body">
             <p class="doc-intro-text">DiGiTerra supports three task types.</p>
             <div class="doc-modeling-types-grid">
                 <div class="doc-modeling-type-card">
@@ -204,12 +365,18 @@
                 </ul>
             </div>
         </div>
+            </details>
+            </div>
 
         <!-- Modeling Approaches Section -->
         <div class="documentation-card doc-approaches" id="doc-models">
-            <div class="doc-header">
-                <h3>Modeling Approaches</h3>
-            </div>
+            <details class="doc-section" id="doc-models-details">
+                <summary class="doc-summary">
+                    <span class="doc-chevron" aria-hidden="true"></span>
+                    <h3>Modeling Approaches</h3>
+                </summary>
+                <div class="doc-section-body">
+                    <p>The registry holds 32 trainable regression estimators. The Simple and Advanced selects each offer 31 of them, which is the count the rail catalog shows. The estimator they omit is <code>LassoLars</code>.</p>
             <p class="doc-intro-text">Regression and classification offer three modeling modes after Model Preprocessing.</p>
             <div class="doc-approach-grid">
                 <div class="doc-approach-card doc-automl">
@@ -251,12 +418,17 @@
             </div>
             <p class="doc-note">The three modes are independent. Clustering has one interface with no mode selection.</p>
         </div>
+            </details>
+            </div>
 
         <!-- Core Concepts Section -->
         <div class="documentation-card doc-concepts" id="doc-validation">
-            <div class="doc-header">
-                <h3>Core Concepts</h3>
-            </div>
+            <details class="doc-section" id="doc-validation-details">
+                <summary class="doc-summary">
+                    <span class="doc-chevron" aria-hidden="true"></span>
+                    <h3>Core Concepts</h3>
+                </summary>
+                <div class="doc-section-body">
             <div class="doc-concepts-grid">
                 <div class="doc-concept-item">
                     <strong>Indicators</strong>
@@ -280,12 +452,17 @@
                 </div>
             </div>
         </div>
+            </details>
+            </div>
 
         <!-- Advanced Options Section -->
         <div class="documentation-card doc-advanced-options" id="doc-options">
-            <div class="doc-header">
-                <h3>Advanced Options</h3>
-            </div>
+            <details class="doc-section" id="doc-options-details">
+                <summary class="doc-summary">
+                    <span class="doc-chevron" aria-hidden="true"></span>
+                    <h3>Advanced Options</h3>
+                </summary>
+                <div class="doc-section-body">
             <p class="doc-intro-text">Advanced mode adds cross-validation, feature selection, outlier handling, and SHAP. Each option increases run time.</p>
             
             <div class="doc-advanced-features">
@@ -409,6 +586,8 @@
                 </div>
             </div>
         </div>
+            </details>
+            </div>
 
     </div>
 <!-- File upload when user clicks 'Start Modeling' -->
