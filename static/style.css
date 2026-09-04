@@ -4757,3 +4757,9 @@ label:has(input[type="radio"][name="modelingMode"]:checked) { background: none; 
     font-size: 1.05rem;
     font-weight: 600;
 }
+
+/* .hidden is a bare class and .narrative-panel sets display: flex further down the
+   file, so the panel won the tie on source order and stayed on screen. */
+.narrative-panel.hidden {
+    display: none;
+}

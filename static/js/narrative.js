@@ -305,6 +305,25 @@ function narrativeSetStages(progress) {
 }
 
 /** Fill the data panel from what the page already knows about the upload. */
+/** The letters a person typed, as a column range, and the name behind the first. */
+function narrativeColumnLine() {
+    const target = (document.getElementById('predictors') || {}).value || '';
+    const indicators = (document.getElementById('indicators') || {}).value || '';
+    if (!target && !indicators) return '';
+    const named = (letters) => {
+        const first = String(letters).trim().toUpperCase().match(/^[A-Z]+/);
+        if (!first || typeof columnToIndex !== 'function') return '';
+        const list = window.uploadedColumnNames;
+        if (!Array.isArray(list)) return '';
+        const name = list[columnToIndex(first[0])];
+        return name ? ` (${name})` : '';
+    };
+    const parts = [];
+    if (target) parts.push(`Target ${target.trim().toUpperCase()}${named(target)}`);
+    if (indicators) parts.push(`indicators ${indicators.trim().toUpperCase()}`);
+    return parts.join(', ');
+}
+
 function narrativeRefreshData() {
     const body = document.getElementById('narrativeDataBody');
     const count = document.getElementById('narrativeDataCount');
@@ -315,19 +334,20 @@ function narrativeRefreshData() {
         if (count) count.textContent = '0';
         return;
     }
-    const note = document.querySelector('.modeling-mode-section:not(.hidden) .modeling-selection-note');
-    const selection = note && note.textContent.trim() ? note.textContent.trim() : '';
     let shape = '';
     if (typeof uploadedShape === 'object' && uploadedShape && uploadedShape.rows) {
-        shape = `Tabular, ${Number(uploadedShape.rows).toLocaleString()} \u00d7 ${uploadedShape.columns}`;
+        shape = `${Number(uploadedShape.rows).toLocaleString()} \u00d7 ${uploadedShape.columns}`;
     }
+    // The sentence the modeling page writes says the same thing at length. The panel
+    // states the file, its shape, and which columns the run uses, once they are set.
+    const columns = narrativeColumnLine();
     body.innerHTML = `
         <div class="narrative-item narrative-item-data">
             <span class="narrative-tile">CSV</span>
             <div>
                 <strong>${escapeHtml(name)}</strong>
                 ${shape ? `<p>${escapeHtml(shape)}</p>` : ''}
-                ${selection ? `<p class="narrative-selection">${escapeHtml(selection)}</p>` : ''}
+                ${columns ? `<p class="narrative-selection">${escapeHtml(columns)}</p>` : ''}
             </div>
         </div>
     `;
@@ -401,9 +421,23 @@ function narrativeApplyLayout() {
     if (narrativeHasData()) page.dataset.railShown = 'true';
 }
 
+/* The catalog is for choosing a model and for reading which one is applied, so it
+   shows on Modeling and on Inference and nowhere else. Upload, Data Exploration and
+   Model Preprocessing have no use for it and it crowds the step they are on. */
+const CATALOG_VIEWS = new Set(['modeling', 'historic']);
+
+function narrativeApplyCatalogVisibility() {
+    const panel = document.getElementById('narrativeAppsPanel');
+    if (!panel) return;
+    const active = document.querySelector('#narrativeNav .tab-button.active');
+    const tab = active ? active.dataset.tab : '';
+    panel.classList.toggle('hidden', !CATALOG_VIEWS.has(tab));
+}
+
 /** Bring the rail's parts up to date with whatever the app now knows. */
 function narrativeSync() {
     narrativeApplyLayout();
+    narrativeApplyCatalogVisibility();
     narrativeGateNav();
     narrativeRefreshData();
     narrativeRefreshApps();
@@ -425,6 +459,11 @@ function narrativeWire() {
     }
     const search = document.getElementById('narrativeAppSearch');
     if (search) search.addEventListener('input', narrativeRefreshApps);
+
+    ['indicators', 'predictors'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', narrativeRefreshData);
+    });
 
     ['automlMode', 'simpleMode', 'advancedMode'].forEach((id) => {
         const radio = document.getElementById(id);
