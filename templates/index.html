@@ -5742,13 +5742,22 @@
 
                                 <h4 style="margin-top: 24px; margin-bottom: 12px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 1.1em; font-weight: 600; color: #000000;">Data Checks</h4>
                                 <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Before training, the columns are checked for a feature that duplicates the target, constant or identifier columns, heavy missingness, duplicate rows, class imbalance, and too few rows for the requested split. A blocking finding stops the run.</p>
+                                {% if allow_unsafe_override %}
                                 <div class="scaling-container">
                                     <label for="advancedAllowUnsafe">Run Despite Blocking Findings</label>
                                     <select name="advancedAllowUnsafe" id="advancedAllowUnsafe">
                                         <option value="no">No (stop the run)</option>
-                                        <option value="yes">Yes (train anyway and report the findings)</option>
+                                        <option value="yes">Yes (train anyway; the result is labeled not valid for decision use)</option>
                                     </select>
                                 </div>
+                                <div class="scaling-container">
+                                    <label for="advancedAllowUnsafeReason">Reason for Overriding</label>
+                                    <input type="text" id="advancedAllowUnsafeReason" name="advancedAllowUnsafeReason" placeholder="Ex: the flagged column is a known proxy kept for a sensitivity check" maxlength="500">
+                                    <p class="field-note" style="margin-top: 6px;">Required with the override. The reason is recorded in the result, the manifest, and the model card.</p>
+                                </div>
+                                {% else %}
+                                <p class="field-note">This deployment has no override; a blocking finding stops the run.</p>
+                                {% endif %}
 
                                 <h4 style="margin-top: 24px; margin-bottom: 12px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 1.1em; font-weight: 600; color: #000000;">Hyperparameter Search</h4>
                                 <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Searches hyperparameter values in place of the manual settings. Run time grows with the grid.</p>
@@ -6095,7 +6104,7 @@
 
         <form id="importBundleForm" enctype="multipart/form-data" class="hidden">
             <h3>Load a Saved Model Bundle</h3>
-            <p class="field-note">A bundle (.zip) exported from an earlier run replaces the model in this session. The prediction file then needs the same feature columns the bundle lists.</p>
+            <p class="field-note">A bundle (.zip) exported from an earlier run replaces the model in this session. Only bundles exported by this installation, or by one that shares its signing key, are accepted, because loading a bundle runs code from the file. The prediction file then needs the same feature columns the bundle lists.</p>
             <input type="file" name="bundle" id="bundleFile" accept=".zip" required>
             <div>
                 <button type="submit">Load Bundle</button>

@@ -11,6 +11,7 @@ import time
 import numpy as np
 import pandas as pd
 
+from core import constants as _constants
 from core.constants import MAX_CV_FOLDS, MAX_SEARCH_CV_FOLDS, MAX_SEARCH_ITERATIONS, MAX_TEST_SIZE, MIN_TEST_SIZE
 from python_scripts import config as _config
 from python_scripts.helpers import (
@@ -26,7 +27,7 @@ from python_scripts.preprocessing.guardrails import run_guardrails
 from python_scripts.preprocessing.progress_tracker import get_tracker, set_result
 from python_scripts.preprocessing.split_fill import FillPlan, reset_fill_plan, set_fill_plan
 from python_scripts.preprocessing.splitting import SplitPlan, reset_split_plan, set_split_plan
-from python_scripts.reporting.bundle import build_manifest, write_run_record
+from python_scripts.reporting.bundle import build_manifest, serialized_size, write_run_record
 
 DEFAULT_CV_FOLDS = 5
 DEFAULT_SEARCH_ITERATIONS = 50
@@ -67,6 +68,10 @@ REQUIRED_TRAINING_FIELDS = [
 ]
 
 
+def _truthy(value) -> bool:
+    return str(value if value is not None else "").strip().lower() in ("1", "true", "yes", "on")
+
+
 def validate_training_request(data: dict) -> None:
     """Check the cheap request fields. Raises ValueError with a message for the client.
 
@@ -76,6 +81,15 @@ def validate_training_request(data: dict) -> None:
     missing = [f for f in REQUIRED_TRAINING_FIELDS if f not in data]
     if missing:
         raise ValueError(f"Missing required fields: {', '.join(missing)}")
+    if _truthy(data.get("allowUnsafe")):
+        if not _constants.ALLOW_UNSAFE_OVERRIDE:
+            raise ValueError("The data-check override is not available on this deployment.")
+        reason = str(data.get("allowUnsafeReason") or "").strip()
+        if len(reason) < _constants.MIN_OVERRIDE_REASON_CHARS:
+            raise ValueError(
+                "allowUnsafeReason must state why the run should proceed past the blocking findings "
+                f"(at least {_constants.MIN_OVERRIDE_REASON_CHARS} characters)."
+            )
     model_name = data.get("models")
     if model_name is None or (isinstance(model_name, str) and not model_name.strip()):
         raise ValueError("No model selected. Choose a model from the list before running.")
@@ -527,7 +541,12 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
             )
             for finding in guardrail_report.findings:
                 logger.warning("data check %s (%s): %s", finding.code, finding.severity, finding.message)
-            allow_unsafe = str(data.get("allowUnsafe", "")).strip().lower() in ("1", "true", "yes", "on")
+            allow_unsafe = _truthy(data.get("allowUnsafe"))
+            override_reason = str(data.get("allowUnsafeReason") or "").strip()
+            if allow_unsafe and not _constants.ALLOW_UNSAFE_OVERRIDE:
+                raise ValueError("The data-check override is not available on this deployment.")
+            if allow_unsafe and len(override_reason) < _constants.MIN_OVERRIDE_REASON_CHARS:
+                raise ValueError("allowUnsafeReason must state why the run should proceed past the blocking findings.")
             if guardrail_report.blocking and not allow_unsafe:
                 raise ValueError(guardrail_report.block_message())
             X_data = _safe_select_columns(df, indicator_names)
@@ -1061,7 +1080,12 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
         tracker.complete()
         result["split_note"] = split_plan.note
         result["data_checks"] = guardrail_report.to_dict()
+        forced = bool(allow_unsafe and guardrail_report.blocking)
         result["data_checks"]["allow_unsafe"] = bool(allow_unsafe)
+        result["data_checks"]["forced"] = forced
+        result["data_checks"]["override_reason"] = override_reason if allow_unsafe else None
+        # A run trained past a blocking finding is labeled here and in the model card.
+        result["data_checks"]["decision_use"] = "not valid for decision use" if forced else "no blocking findings"
         result["baseline"] = baseline_info
         result["session_id"] = session_id  # Include session ID in response
 
@@ -1072,6 +1096,13 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
             store["last_training_request"] = dict(data)
             manifest = build_manifest(store, data, result, store["model_type"], modelName)
             write_run_record(_config.VIS_DIR.current(), manifest)
+            # The fitted objects count against the process budget beside the frame.
+            try:
+                from core.state import record_model_bytes
+
+                record_model_bytes(storage_session_id, serialized_size(store))
+            except Exception as size_err:
+                logger.debug("Model size not recorded: %s", size_err)
             result["model_card_url"] = "/user-visualizations/model_card.html"
             result["bundle_url"] = "/export-bundle"
         except Exception as record_err:

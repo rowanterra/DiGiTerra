@@ -180,3 +180,69 @@ def test_predictions_xlsx_export(client):
     book.close()
     assert rows[0] == ("c0", "c1", "prediction")
     assert len(rows) == 5
+
+
+def _zip_bomb_xlsx(tmp_path, inflated_mb: int):
+    """A real workbook whose sheet XML is padded with a highly compressible run."""
+    import zipfile
+
+    src = tmp_path / "small.xlsx"
+    _frame(5, 3).to_excel(src, index=False, engine="openpyxl")
+    out = tmp_path / "bomb.xlsx"
+    with zipfile.ZipFile(src) as zin, zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as zout:
+        for info in zin.infolist():
+            payload = zin.read(info.filename)
+            if info.filename.startswith("xl/worksheets/sheet"):
+                payload = payload.replace(b"</worksheet>", b"<!--" + b"A" * (inflated_mb << 20) + b"--></worksheet>")
+            zout.writestr(info.filename, payload)
+    return out
+
+
+def test_workbook_that_inflates_past_the_budget_is_refused_before_opening(tmp_path):
+    import tracemalloc
+
+    from core.helpers import FrameTooLarge, read_table_bounded
+
+    path = _zip_bomb_xlsx(tmp_path, inflated_mb=40)
+    assert path.stat().st_size < 1 << 20  # under a megabyte on disk
+    tracemalloc.start()
+    with pytest.raises(FrameTooLarge, match="inflates|inflated"):
+        read_table_bounded(path, max_cells=1_000_000, max_frame_mb=1)
+    _, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    # The 40 MB comment was never inflated.
+    assert peak < 8 << 20, f"peak {peak / 2**20:.1f} MB"
+
+
+def test_parquet_over_the_decoded_budget_is_refused_from_the_footer(tmp_path):
+    import tracemalloc
+
+    import numpy as np
+
+    from core.helpers import FrameTooLarge, estimate_decoded_bytes, read_table_bounded
+
+    rows = 600_000
+    df = pd.DataFrame({"a": np.arange(rows, dtype="int64"), "b": np.arange(rows, dtype="float64")})
+    path = tmp_path / "wide.parquet"
+    df.to_parquet(path, index=False, engine="pyarrow")
+    assert estimate_decoded_bytes(path) > 9 << 20
+    tracemalloc.start()
+    with pytest.raises(FrameTooLarge, match="decodes to"):
+        # 1 MB frame budget times the factor of 8 is below the 9.6 MB the file decodes to.
+        read_table_bounded(path, max_cells=0, max_frame_mb=1)
+    _, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    assert peak < 2 << 20, f"peak {peak / 2**20:.1f} MB"
+    # Within budget the same file reads in batches.
+    assert len(read_table_bounded(path, max_cells=0, max_frame_mb=64)) == rows
+
+
+def test_estimate_decoded_bytes_by_format(tmp_path):
+    from core.helpers import estimate_decoded_bytes
+
+    csv = tmp_path / "x.csv"
+    _frame(100, 3).to_csv(csv, index=False)
+    assert estimate_decoded_bytes(csv) == csv.stat().st_size
+    xlsx = tmp_path / "x.xlsx"
+    _frame(100, 3).to_excel(xlsx, index=False, engine="openpyxl")
+    assert estimate_decoded_bytes(xlsx) > xlsx.stat().st_size

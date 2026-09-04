@@ -43,6 +43,12 @@ MAX_CV_FOLDS = int(os.environ.get("DIGITERRA_MAX_CV_FOLDS", "20") or 20)
 MAX_SEARCH_CV_FOLDS = int(os.environ.get("DIGITERRA_MAX_SEARCH_CV_FOLDS", "10") or 10)
 MAX_SEARCH_ITERATIONS = int(os.environ.get("DIGITERRA_MAX_SEARCH_ITERATIONS", "100") or 100)
 
+# The data-check override trains past a blocking finding. It is a server-side
+# switch, off by default; the desktop launcher turns it on. A request that asks
+# for it must give a reason of at least this many characters.
+ALLOW_UNSAFE_OVERRIDE = os.environ.get("DIGITERRA_ALLOW_UNSAFE_OVERRIDE", "").strip().lower() in {"1", "true", "yes"}
+MIN_OVERRIDE_REASON_CHARS = 10
+
 # Progress (SSE)
 # An open stream occupies a worker thread. Training that runs longer than this
 # still finishes; the client reconnects to the same id and receives the result.

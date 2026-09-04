@@ -2149,6 +2149,7 @@ processForm.addEventListener('submit', async (e) => {
     let splitMethod = 'random';
     let splitColumn = '';
     let allowUnsafe = false;
+    let allowUnsafeReason = '';
     if (currentMode === 'advanced') {
         const splitMethodEl = document.getElementById('advancedSplitMethod');
         const splitColumnEl = document.getElementById('advancedSplitColumn');
@@ -2157,6 +2158,8 @@ processForm.addEventListener('submit', async (e) => {
         splitColumn = splitLetter !== '' ? columnToIndex(splitLetter.toUpperCase()) : '';
         const allowUnsafeEl = document.getElementById('advancedAllowUnsafe');
         allowUnsafe = allowUnsafeEl ? allowUnsafeEl.value === 'yes' : false;
+        const reasonEl = document.getElementById('advancedAllowUnsafeReason');
+        allowUnsafeReason = reasonEl ? reasonEl.value.trim() : '';
     }
 
     //sending all the data to the backend
@@ -2174,6 +2177,7 @@ processForm.addEventListener('submit', async (e) => {
         splitMethod: splitMethod,
         splitColumn: splitColumn,
         allowUnsafe: allowUnsafe,
+        allowUnsafeReason: allowUnsafeReason,
         stratifyBool: stratifyBool,
         seedValue: parseInt(seedValue),
         testSize: parseFloat(testSize),
@@ -2712,7 +2716,8 @@ function renderRunNotes(data) {
         const blocking = Array.isArray(checks.blocking) ? checks.blocking : [];
         const warnings = Array.isArray(checks.warnings) ? checks.warnings : [];
         if (blocking.length > 0) {
-            parts.push(`<p class="run-note run-note-block"><strong>Data checks blocked this run and allowUnsafe overrode them.</strong> ${escapeHtml(blocking.map(f => f.message).join(' '))}</p>`);
+            const reason = checks.override_reason ? ` Reason given: ${escapeHtml(checks.override_reason)}` : '';
+            parts.push(`<p class="run-note run-note-block"><strong>Not valid for decision use. Data checks blocked this run and the override trained it anyway.</strong> ${escapeHtml(blocking.map(f => f.message).join(' '))}${reason}</p>`);
         }
         if (warnings.length > 0) {
             parts.push(`<p class="run-note run-note-warn"><strong>Data checks.</strong> ${escapeHtml(warnings.map(f => f.message).join(' '))}</p>`);

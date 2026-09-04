@@ -10,6 +10,7 @@ from flask import Blueprint, Response, jsonify, render_template, stream_with_con
 
 from core import jobs
 from core.constants import (
+    ALLOW_UNSAFE_OVERRIDE,
     HTTP_NOT_FOUND,
     HTTP_TOO_MANY_REQUESTS,
     PROGRESS_COMPLETE_THRESHOLD,
@@ -36,6 +37,7 @@ def index():
         api_root=config.URL_PREFIX,
         static_root=with_prefix("/static"),
         use_js_bundle=use_js_bundle,
+        allow_unsafe_override=ALLOW_UNSAFE_OVERRIDE,
     )
 
 

@@ -80,8 +80,11 @@ def test_clustering_skips_target_checks():
 
 
 @pytest.mark.parametrize("allow_unsafe, expect_error", [(None, True), ("true", False)])
-def test_training_request_honors_the_block_and_the_override(allow_unsafe, expect_error):
+def test_training_request_honors_the_block_and_the_override(allow_unsafe, expect_error, monkeypatch):
+    from core import constants
     from python_scripts.app_model_training import run_model_training
+
+    monkeypatch.setattr(constants, "ALLOW_UNSAFE_OVERRIDE", True)
 
     df = pd.read_csv("examples/diabetes.csv")
     df["leak"] = df.iloc[:, -1]
@@ -91,6 +94,7 @@ def test_training_request_honors_the_block_and_the_override(allow_unsafe, expect
     payload = dict(BASE, indicators=[i for i in range(n) if i != target], predictors=[target], models="Linear")
     if allow_unsafe is not None:
         payload["allowUnsafe"] = allow_unsafe
+        payload["allowUnsafeReason"] = "leak column kept on purpose for a sensitivity check"
     sid = f"pytest-guardrails-{allow_unsafe}"
     run_model_training(sid, payload, "store", lambda _s: store)
     result = get_result(sid)
@@ -102,5 +106,44 @@ def test_training_request_honors_the_block_and_the_override(allow_unsafe, expect
     else:
         assert "error" not in result
         checks = result["data_checks"]
-        assert checks["allow_unsafe"] is True
+        assert checks["allow_unsafe"] is True and checks["forced"] is True
+        assert checks["decision_use"] == "not valid for decision use"
+        assert checks["override_reason"].startswith("leak column")
         assert any(f["code"] == "target_leakage" for f in checks["blocking"])
+
+
+def test_override_is_a_server_side_switch_and_needs_a_reason(monkeypatch):
+    from core import constants
+    from python_scripts.app_model_training import validate_training_request
+
+    base = dict(BASE, indicators=[0], predictors=[1], models="Linear", allowUnsafe="true")
+    monkeypatch.setattr(constants, "ALLOW_UNSAFE_OVERRIDE", False)
+    with pytest.raises(ValueError, match="not available on this deployment"):
+        validate_training_request(dict(base, allowUnsafeReason="a perfectly good reason"))
+    monkeypatch.setattr(constants, "ALLOW_UNSAFE_OVERRIDE", True)
+    with pytest.raises(ValueError, match="allowUnsafeReason"):
+        validate_training_request(dict(base, allowUnsafeReason="short"))
+    validate_training_request(dict(base, allowUnsafeReason="a perfectly good reason"))
+    # Without the flag the reason is irrelevant and the request is ordinary.
+    validate_training_request(dict(BASE, indicators=[0], predictors=[1], models="Linear"))
+
+
+def test_forced_run_is_labeled_in_the_model_card():
+    from python_scripts.reporting.bundle import BUNDLE_FORMAT, render_model_card
+
+    manifest = {
+        "format": BUNDLE_FORMAT,
+        "model": {"name": "Linear", "features": ["a"], "targets": ["b"]},
+        "data": {"filename": "x.csv"},
+        "metrics": {},
+        "environment": {"packages": {}},
+        "data_checks": {
+            "forced": True,
+            "override_reason": "known proxy kept for a sensitivity check",
+            "blocking": [{"code": "target_leakage", "message": "'a' is identical to the target 'b'."}],
+            "warnings": [],
+        },
+    }
+    card = render_model_card(manifest)
+    assert "not valid for decision use" in card
+    assert "known proxy kept" in card

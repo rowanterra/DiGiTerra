@@ -122,3 +122,38 @@ def test_cores_per_job_split_the_host(monkeypatch):
     assert jobs.job_n_jobs() == 1
     monkeypatch.setenv("DIGITERRA_JOB_CORES", "3")
     assert jobs.job_n_jobs() == 3
+
+
+def test_upload_is_refused_from_the_estimate_before_parsing(client, monkeypatch):
+    """An over-budget file is turned away on its metadata; the parser is never called."""
+    import io
+
+    import routes.upload as upload_route
+
+    calls = []
+    monkeypatch.setattr(
+        upload_route, "read_table_bounded", lambda *a, **k: calls.append(1) or upload_route.read_table_bounded
+    )
+    monkeypatch.setattr(state, "MAX_TOTAL_FRAME_MB", 0.0005)  # about 500 bytes
+    client.set_cookie("digiterra_session", "f" * 32)
+    csv = io.BytesIO(_frame(0.01).to_csv(index=False).encode())
+    r = client.post("/upload", data={"file": (csv, "big.csv")})
+    assert r.status_code == 429
+    assert calls == []
+
+
+def test_model_bytes_count_toward_the_budget(monkeypatch):
+    for sid in ("mb-1", "mb-2"):
+        state.clear_session_storage(sid)
+    monkeypatch.setattr(state, "MAX_TOTAL_FRAME_MB", 2.5)
+    state.admit_frame("mb-1", _frame(1))
+    state.record_model_bytes("mb-1", 1 << 20)
+    assert state.total_data_bytes() >= 2 << 20
+    monkeypatch.setattr(state, "_active_sessions_provider", lambda: {"mb-1"})
+    with pytest.raises(state.MemoryBudgetExceeded):
+        state.admit_frame("mb-2", _frame(1))
+    # A new frame in mb-1 drops its recorded model size.
+    state.admit_frame("mb-1", _frame(0.5))
+    assert state.total_data_bytes() < 1 << 20
+    for sid in ("mb-1", "mb-2"):
+        state.clear_session_storage(sid)

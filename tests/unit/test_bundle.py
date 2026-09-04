@@ -148,6 +148,53 @@ def test_altered_artifact_is_refused(client):
         load_bundle(out, force=True)
 
 
+def test_bundle_from_another_installation_is_refused(client, monkeypatch, tmp_path):
+    """A valid hash is not authenticity: a foreign key, or no signature, is refused before unpickling."""
+    import python_scripts.reporting.bundle as bundle_mod
+
+    sid = uuid.uuid4().hex
+    _train_in_session(sid)
+    client.set_cookie("digiterra_session", sid)
+    monkeypatch.setenv("DIGITERRA_BUNDLE_KEY", "attacker-key")
+    data = client.get("/export-bundle").data  # signed under the attacker's key with a matching hash
+    monkeypatch.setenv("DIGITERRA_BUNDLE_KEY", "victim-key")
+    with pytest.raises(BundleError, match="signature does not verify"):
+        load_bundle(io.BytesIO(data), force=True)
+    monkeypatch.setenv("DIGITERRA_ALLOW_BUNDLE_IMPORT", "1")
+    r = client.post("/import-bundle", data={"bundle": (io.BytesIO(data), "b.zip")})
+    assert r.status_code == 400 and "signature" in r.get_json()["error"]
+
+    # An unsigned bundle (signature stripped from the manifest) is refused as well.
+    src = zipfile.ZipFile(io.BytesIO(data))
+    manifest = json.loads(src.read("manifest.json"))
+    manifest["artifact"].pop("signature")
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w") as z:
+        for name in src.namelist():
+            z.writestr(name, json.dumps(manifest).encode() if name == "manifest.json" else src.read(name))
+    out.seek(0)
+    with pytest.raises(BundleError, match="signature does not verify"):
+        load_bundle(out, force=True)
+    # The explicit command-line escape loads it.
+    out.seek(0)
+    manifest2, objects = load_bundle(out, force=True, trust_unsigned=True)
+    assert objects["model"] is not None
+    assert bundle_mod.key_id(b"victim-key") != manifest2["artifact"]["key_id"]
+
+
+def test_signing_key_file_is_created_once(monkeypatch, tmp_path):
+    import python_scripts.reporting.bundle as bundle_mod
+
+    monkeypatch.delenv("DIGITERRA_BUNDLE_KEY", raising=False)
+    monkeypatch.setattr(bundle_mod, "_key_file", lambda: tmp_path / "bundle_signing.key")
+    k1 = bundle_mod.signing_key()
+    k2 = bundle_mod.signing_key()
+    assert k1 == k2 and len(k1) == 64
+    assert bundle_mod.signing_key(create=False) == k1
+    assert bundle_mod.signature_valid(b"abc", bundle_mod.sign_bytes(b"abc", k1), k1)
+    assert not bundle_mod.signature_valid(b"abc", bundle_mod.sign_bytes(b"abc", k1), b"other")
+
+
 def test_import_rejects_a_zip_without_a_manifest(client, monkeypatch):
     monkeypatch.setenv("DIGITERRA_ALLOW_BUNDLE_IMPORT", "1")
     client.set_cookie("digiterra_session", uuid.uuid4().hex)

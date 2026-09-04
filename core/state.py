@@ -23,6 +23,7 @@ MAX_SESSIONS = int(os.environ.get("DIGITERRA_MAX_SESSIONS", "32") or 32)
 # limit. 0 disables the budget. The desktop launcher runs with it disabled.
 MAX_TOTAL_FRAME_MB = float(os.environ.get("DIGITERRA_MAX_TOTAL_FRAME_MB", "1024") or 0)
 DATA_BYTES_KEY = "_data_bytes"
+MODEL_BYTES_KEY = "_model_bytes"
 
 _STORE: "OrderedDict[str, dict]" = OrderedDict()
 _LOCK = threading.RLock()
@@ -56,8 +57,49 @@ def frame_bytes(df) -> int:
 
 
 def total_data_bytes(exclude: str | None = None) -> int:
+    """Bytes held across sessions: frames plus the serialized size of fitted objects."""
     with _LOCK:
-        return sum(int(st.get(DATA_BYTES_KEY, 0) or 0) for sid, st in _STORE.items() if sid != exclude)
+        return sum(
+            int(st.get(DATA_BYTES_KEY, 0) or 0) + int(st.get(MODEL_BYTES_KEY, 0) or 0)
+            for sid, st in _STORE.items()
+            if sid != exclude
+        )
+
+
+def _budget_bytes() -> int:
+    return int(MAX_TOTAL_FRAME_MB * 1024 * 1024) if MAX_TOTAL_FRAME_MB > 0 else 0
+
+
+def _make_room(session_id: str, nbytes: int) -> None:
+    """Evict idle sessions until nbytes fits beside the rest, or raise."""
+    budget = _budget_bytes()
+    if not budget:
+        return
+    protect = _active() | {session_id}
+    while total_data_bytes(exclude=session_id) + nbytes > budget:
+        if not _evict_one(protect):
+            raise MemoryBudgetExceeded(
+                f"The server is holding its maximum of {MAX_TOTAL_FRAME_MB:.0f} MB of uploaded data. Try again shortly."
+            )
+
+
+def reserve_frame(session_id: str, estimated_bytes: int) -> None:
+    """Check the budget against an estimate before a file is parsed.
+
+    The estimate comes from file or container metadata (core.helpers.
+    estimate_decoded_bytes), so an upload that cannot fit is refused before the
+    parse allocates anything. admit_frame then records the measured size.
+    """
+    with _LOCK:
+        get_session_storage(session_id)
+        _make_room(session_id, int(estimated_bytes))
+
+
+def record_model_bytes(session_id: str, nbytes: int) -> None:
+    with _LOCK:
+        store = _STORE.get(session_id)
+        if store is not None:
+            store[MODEL_BYTES_KEY] = int(nbytes)
 
 
 def _evict_one(protect: set) -> bool:
@@ -78,17 +120,11 @@ def admit_frame(session_id: str, df) -> int:
     the budget.
     """
     nbytes = frame_bytes(df)
-    budget = int(MAX_TOTAL_FRAME_MB * 1024 * 1024) if MAX_TOTAL_FRAME_MB > 0 else 0
     with _LOCK:
         store = get_session_storage(session_id)
-        if budget:
-            protect = _active() | {session_id}
-            while total_data_bytes(exclude=session_id) + nbytes > budget:
-                if not _evict_one(protect):
-                    raise MemoryBudgetExceeded(
-                        f"The server is holding its maximum of {MAX_TOTAL_FRAME_MB:.0f} MB of uploaded data. "
-                        "Try again shortly."
-                    )
+        # A new frame replaces this session's model as well.
+        store.pop(MODEL_BYTES_KEY, None)
+        _make_room(session_id, nbytes)
         store["data"] = df
         store[DATA_BYTES_KEY] = nbytes
         return nbytes

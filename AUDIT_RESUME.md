@@ -6,7 +6,7 @@ Branch `audit-fixes`, off `147d313` (ADA Boost, 2026-03-25).
 
 Verification scripts live in /tmp (regenerate if the container was recycled):
 `verify_ml.py` (11 unit checks, all pass) and `e2e.py` (upload → preprocess →
-train → predict through the Flask test client). `pytest tests/` is 97 green as of the sixth pass,
+train → predict through the Flask test client). `pytest tests/` is 106 green as of the seventh pass,
 `npm run lint` is clean.
 
 ML correctness
@@ -78,6 +78,21 @@ Frontend
   clean. `npm run lint` now builds the bundle, lints the split files, and lints the
   bundle with `no-undef` on. `npm run check-bundle` fails if the committed bundle
   has drifted.
+
+## Seventh pass, 2026-09-04: the implementation re-audit at bfaca2a
+
+`IMPLEMENTATION_RE_AUDIT_2026-09-04.md` had four findings, all sound, two of them
+high. Bundle import in the desktop build was arbitrary code execution from a shared
+zip, because a hash in the manifest says nothing about who wrote the file: bundles are
+now signed with HMAC-SHA256 under a per-installation key and import verifies before
+unpickling. Excel and Parquet inflated before any cap applied, and the desktop build
+turned the caps off: the zip directory and the Parquet footer are checked against a
+decoded-size budget before anything is opened, Parquet reads in batches, and the
+desktop limits are large rather than absent. The session budget now runs against a
+metadata estimate before the parse and counts fitted objects after a run. The
+data-check override is a server-side switch that requires a reason and labels the run
+not valid for decision use. Not done from that review: a pickle-free model format and
+parsing or training in an isolated worker. `pytest tests/` is 106 green.
 
 ## Sixth pass, 2026-09-04 (commits 10 to 13): the market-gap items and the implementation review
 

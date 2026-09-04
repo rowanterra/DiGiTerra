@@ -1,12 +1,14 @@
 """Score new rows with a DiGiTerra model bundle, without the web app.
 
-The bundle's fitted objects are unpickled, so run this only on bundles from a
-source you trust. The script applies the training-time preprocessing recorded in
+The bundle's fitted objects are unpickled. The signature is checked under this
+installation's key (DIGITERRA_BUNDLE_KEY or the key file in the app support
+directory); --trust-unsigned skips that check and is for a file whose origin you
+have verified another way. The script applies the training-time preprocessing recorded in
 the manifest (drop or fill rules, transformer, scaler, feature order) and writes
 one Predicted_<target> column per target.
 
 Usage:
-    .venv/bin/python scripts/score_bundle.py BUNDLE.zip NEW_ROWS.csv [--out predictions.csv]
+    .venv/bin/python scripts/score_bundle.py BUNDLE.zip NEW_ROWS.csv [--out predictions.csv] [--trust-unsigned]
     .venv/bin/python scripts/score_bundle.py BUNDLE.zip --show    # print the manifest only
 
 Input: a csv, xlsx, xlsm, or parquet file with the feature columns the manifest
@@ -36,8 +38,8 @@ from python_scripts.helpers import prediction, preprocess_data  # noqa: E402
 from python_scripts.reporting.bundle import load_bundle, package_drift, read_manifest  # noqa: E402
 
 
-def score(bundle_path: str, rows_path: str) -> pd.DataFrame:
-    manifest, objects = load_bundle(bundle_path, force=True)
+def score(bundle_path: str, rows_path: str, trust_unsigned: bool = False) -> pd.DataFrame:
+    manifest, objects = load_bundle(bundle_path, force=True, trust_unsigned=trust_unsigned)
     drift = package_drift(manifest)
     if drift:
         print(f"note: installed versions differ from the bundle for {', '.join(drift)}", file=sys.stderr)
@@ -93,11 +95,12 @@ def main() -> int:
     ap.add_argument("rows", nargs="?")
     ap.add_argument("--out", default="predictions.csv")
     ap.add_argument("--show", action="store_true", help="print the manifest and exit")
+    ap.add_argument("--trust-unsigned", action="store_true", help="load without checking the signature")
     args = ap.parse_args()
     if args.show or not args.rows:
         print(json.dumps(read_manifest(args.bundle), indent=2))
         return 0
-    frame = score(args.bundle, args.rows)
+    frame = score(args.bundle, args.rows, trust_unsigned=args.trust_unsigned)
     frame.to_csv(args.out, index=False)
     print(f"wrote {len(frame)} rows to {args.out}")
     return 0

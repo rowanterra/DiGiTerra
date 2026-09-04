@@ -7,20 +7,28 @@ record as a page. The bundle is a zip of manifest, model card, and the fitted
 objects, readable by scripts/score_bundle.py without the web app.
 
 Loading a bundle unpickles the fitted objects with joblib. Unpickling runs code
-from the file, so import is off unless DIGITERRA_ALLOW_BUNDLE_IMPORT is set;
-the desktop launcher sets it, the server images do not.
+from the file, and a hash in the manifest proves nothing about who wrote the
+file, so every exported artifact is signed with HMAC-SHA256 under a key that
+belongs to the installation (DIGITERRA_BUNDLE_KEY, or a key file generated once
+in the app support directory). Import verifies the signature before anything is
+unpickled: a bundle from another installation, or one altered after export, is
+refused. Two installations that share a key can exchange bundles. Import is also
+off unless DIGITERRA_ALLOW_BUNDLE_IMPORT is set; the desktop launcher sets it,
+the server images do not.
 """
 
 from __future__ import annotations
 
 import datetime as _dt
 import hashlib
+import hmac
 import html
 import io
 import json
 import logging
 import os
 import platform
+import secrets
 import zipfile
 from importlib import metadata
 from pathlib import Path
@@ -57,6 +65,62 @@ def sha256_file(path: str | Path) -> str:
 
 def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+# ---------------------------------------------------------------------------
+# Signing. The key never leaves the machine unless the user copies it.
+KEY_FILE_NAME = "bundle_signing.key"
+
+
+def _key_file() -> Path:
+    from python_scripts import config
+
+    return Path(config.APP_SUPPORT_DIR) / KEY_FILE_NAME
+
+
+def signing_key(create: bool = True) -> bytes | None:
+    """The installation's signing key: DIGITERRA_BUNDLE_KEY, else the key file.
+
+    With create=True a missing key file is written with 32 random bytes (hex) and
+    owner-only permissions. Returns None when there is no key and create=False.
+    """
+    env = os.environ.get("DIGITERRA_BUNDLE_KEY", "").strip()
+    if env:
+        return env.encode("utf-8")
+    path = _key_file()
+    try:
+        if path.is_file():
+            data = path.read_text(encoding="utf-8").strip()
+            if data:
+                return data.encode("utf-8")
+        if not create:
+            return None
+        path.parent.mkdir(parents=True, exist_ok=True)
+        token = secrets.token_hex(32)
+        path.write_text(token, encoding="utf-8")
+        try:
+            os.chmod(path, 0o600)
+        except OSError:
+            pass
+        return token.encode("utf-8")
+    except OSError as e:
+        logger.warning("Bundle signing key unavailable: %s", e)
+        return None
+
+
+def key_id(key: bytes) -> str:
+    """A short public identifier for a key, so a mismatch can be explained."""
+    return hashlib.sha256(b"digiterra-key-id:" + key).hexdigest()[:16]
+
+
+def sign_bytes(data: bytes, key: bytes) -> str:
+    return hmac.new(key, data, hashlib.sha256).hexdigest()
+
+
+def signature_valid(data: bytes, signature: str | None, key: bytes | None) -> bool:
+    if not signature or key is None:
+        return False
+    return hmac.compare_digest(sign_bytes(data, key), signature)
 
 
 def package_versions() -> dict[str, str | None]:
@@ -226,12 +290,18 @@ def render_model_card(manifest: dict) -> str:
     env = (m.get("environment") or {}).get("packages", {}) or {}
 
     title = f"{model.get('name', 'model')} on {data.get('filename', 'uploaded data')}"
+    if checks.get("forced"):
+        title += " (not valid for decision use)"
     findings_html = ""
     blocking = checks.get("blocking") or []
     warnings = checks.get("warnings") or []
     if blocking:
-        findings_html += "<p class='block'><strong>Blocking findings (run forced with allowUnsafe).</strong> "
-        findings_html += html.escape(" ".join(f["message"] for f in blocking)) + "</p>"
+        findings_html += "<p class='block'><strong>Not valid for decision use.</strong> Data checks blocked this run "
+        findings_html += "and the override trained it anyway. "
+        findings_html += html.escape(" ".join(f["message"] for f in blocking))
+        if checks.get("override_reason"):
+            findings_html += " Reason given: " + html.escape(str(checks["override_reason"]))
+        findings_html += "</p>"
     if warnings:
         findings_html += "<p class='warn'><strong>Warnings.</strong> " + html.escape(
             " ".join(f["message"] for f in warnings)
@@ -404,6 +474,27 @@ def fitted_objects(store: dict) -> dict:
     return {k: store.get(k) for k in STORE_KEYS}
 
 
+class _CountingSink:
+    """A write-only file object that records the byte count and keeps nothing."""
+
+    def __init__(self):
+        self.n = 0
+
+    def write(self, b) -> int:
+        self.n += len(b)
+        return len(b)
+
+    def flush(self) -> None:
+        pass
+
+
+def serialized_size(store: dict) -> int:
+    """Bytes the session's fitted objects take when serialized, without holding them."""
+    sink = _CountingSink()
+    joblib.dump(fitted_objects(store), sink)
+    return sink.n
+
+
 def write_bundle(store: dict, vis_dir: Path, extra_files: list[str] | None = None) -> Path:
     """Zip manifest, model card, fitted objects, and any listed session files."""
     vis_dir = Path(vis_dir)
@@ -418,11 +509,15 @@ def write_bundle(store: dict, vis_dir: Path, extra_files: list[str] | None = Non
     model_bytes = buf.getvalue()
 
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    key = signing_key(create=True)
     manifest["artifact"] = {
         "file": MODEL_NAME,
         "sha256": sha256_bytes(model_bytes),
         "bytes": len(model_bytes),
         "serializer": f"joblib {metadata.version('joblib')}",
+        "signature": sign_bytes(model_bytes, key) if key else None,
+        "signature_algorithm": "HMAC-SHA256" if key else None,
+        "key_id": key_id(key) if key else None,
     }
     manifest_path.write_text(json.dumps(manifest, indent=2, default=str), encoding="utf-8")
     (vis_dir / CARD_JSON_NAME).write_text(json.dumps(manifest, indent=2, default=str), encoding="utf-8")
@@ -456,11 +551,14 @@ def read_manifest(bundle_path: str | Path) -> dict:
     return manifest
 
 
-def load_bundle(bundle_path: str | Path, *, force: bool = False) -> tuple[dict, dict]:
-    """Return (manifest, fitted objects) after checking the artifact hash.
+def load_bundle(bundle_path: str | Path, *, force: bool = False, trust_unsigned: bool = False) -> tuple[dict, dict]:
+    """Return (manifest, fitted objects) after checking the signature.
 
-    Refuses unless DIGITERRA_ALLOW_BUNDLE_IMPORT is set or force is True, because
-    joblib.load executes code from the file.
+    The artifact is unpickled only when its HMAC-SHA256 signature verifies under
+    this installation's key. `force` skips the DIGITERRA_ALLOW_BUNDLE_IMPORT
+    deployment switch (command-line tools); `trust_unsigned` skips the signature
+    check and exists for the command line only, where the person running it has
+    chosen to trust the file.
     """
     if not (force or import_allowed()):
         raise BundleError(
@@ -473,10 +571,22 @@ def load_bundle(bundle_path: str | Path, *, force: bool = False) -> tuple[dict, 
             model_bytes = z.read(MODEL_NAME)
         except KeyError as e:
             raise BundleError("The bundle has no model.joblib.") from e
-    expected = (manifest.get("artifact") or {}).get("sha256")
+    artifact = manifest.get("artifact") or {}
+    expected = artifact.get("sha256")
     actual = sha256_bytes(model_bytes)
     if expected and expected != actual:
         raise BundleError("model.joblib does not match the hash in the manifest; the bundle was altered.")
+    if not trust_unsigned:
+        key = signing_key(create=False)
+        if not signature_valid(model_bytes, artifact.get("signature"), key):
+            theirs = artifact.get("key_id") or "none"
+            mine = key_id(key) if key else "none"
+            raise BundleError(
+                "The bundle's signature does not verify under this installation's key "
+                f"(bundle key {theirs}, this key {mine}). Loading it would run code from the file. "
+                "Only bundles exported by this installation, or by one that shares its DIGITERRA_BUNDLE_KEY, "
+                "can be loaded."
+            )
     objects = joblib.load(io.BytesIO(model_bytes))
     if not isinstance(objects, dict) or "model" not in objects:
         raise BundleError("model.joblib is not a DiGiTerra fitted-objects record.")

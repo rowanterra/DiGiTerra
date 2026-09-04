@@ -23,8 +23,8 @@ from core.constants import (
     MAX_FRAME_MB,
     MAX_UPLOAD_MB,
 )
-from core.helpers import FrameTooLarge, allowed_file, read_table_bounded
-from core.state import MemoryBudgetExceeded, admit_frame, get_session_id, get_session_storage
+from core.helpers import FrameTooLarge, allowed_file, estimate_decoded_bytes, read_table_bounded
+from core.state import MemoryBudgetExceeded, admit_frame, get_session_id, get_session_storage, reserve_frame
 from python_scripts.reporting.bundle import sha256_file
 
 bp = Blueprint("upload", __name__)
@@ -76,6 +76,14 @@ def upload_file():
         # the run manifest can name the exact file that was modeled.
         file_bytes = os.path.getsize(filepath)
         file_sha256 = sha256_file(filepath)
+        # The budget is checked against the decoded size from metadata before the
+        # parse, so a file that cannot fit costs a directory read, not a parse.
+        try:
+            reserve_frame(get_session_id(), estimate_decoded_bytes(filepath))
+        except MemoryBudgetExceeded as e:
+            return jsonify({"error": str(e)}), HTTP_TOO_MANY_REQUESTS
+        except Exception as e:  # unreadable container; the parser gives the specific message
+            logger.debug("Decoded-size estimate unavailable for %s: %s", stored_filename, e)
         try:
             data = read_table_bounded(filepath, max_cells=MAX_CELLS, max_frame_mb=MAX_FRAME_MB)
         except FrameTooLarge as e:
