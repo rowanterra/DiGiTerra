@@ -188,7 +188,16 @@ processForm.addEventListener('submit', async (e) => {
         stratifyBool = false
     }
 
-    if (stratifyBool && selectedOutputType !== 'Cluster' && predictorCols.indexOf(stratifyColumnNumber) !== -1) {
+    // Classification stratifies on the class labels, which is what train_test_split's
+    // own stratify argument takes, so naming the target there is correct. The guard is
+    // for regression, where the target is cut into bins that would carry it into the
+    // split. The route and the training path make the same exception.
+    if (
+        stratifyBool &&
+        selectedOutputType !== 'Cluster' &&
+        selectedOutputType !== 'Classifier' &&
+        predictorCols.indexOf(stratifyColumnNumber) !== -1
+    ) {
         showError(NumericResultDiv, 'Stratifying by the target column leaks target information into the train/test split, so a different stratify column is required.', false);
         const processButton = getCachedElement('processButton');
         if (processButton) processButton.disabled = false;

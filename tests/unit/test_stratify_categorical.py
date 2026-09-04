@@ -98,7 +98,6 @@ def test_a_categorical_stratify_column_runs_end_to_end():
         indicators=[2, 3, 4, 5],
         predictors=[0],
         models="Logistic_classifier",
-        outputType="Classifier",
     )
     run_model_training(sid, payload, "store", lambda _s: store)
     result = get_result(sid)
@@ -150,11 +149,12 @@ def test_the_split_receives_the_target_as_the_stratify_series(monkeypatch):
         indicators=[2, 3, 4, 5],
         predictors=[0],
         models="Logistic_classifier",
-        outputType="Classifier",
     )
     run_model_training(sid, payload, "store", lambda _s: {"data": frame.copy()})
     remove_tracker(sid)
 
+    # The page's payload has no outputType key, so this one does not either: the
+    # task has to be read from the registry entry for the chosen model.
     strat = seen.get("stratify")
     assert strat is not None, "train_test_split was called without a stratify series"
     captured = pd.Series(strat).reset_index(drop=True)

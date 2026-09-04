@@ -460,7 +460,12 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
             # train_test_split's own stratify argument takes, so naming the target
             # there is correct. The guard is for regression, where the target is cut
             # into bins and those bins would carry it into the split.
-            is_classification = (data.get("outputType") or "").strip() == "Classifier"
+            #
+            # The task comes from the registry entry for the chosen model. The page's
+            # /process payload carries no outputType, so reading that key made this
+            # exemption fire in a test that passed one and never in the application.
+            registry_entry = MODEL_REGISTRY.get(modelName)
+            is_classification = bool(registry_entry) and registry_entry[1] == "classification"
             if (
                 modelName not in cluster_models
                 and not is_classification
