@@ -15,6 +15,7 @@ from sklearn.metrics import (
 import python_scripts.plotting.plot_style  # noqa: F401 - apply soft seaborn-like style
 from python_scripts.config import VIS_DIR
 from python_scripts.plotting.bundles import export_plots
+from python_scripts.preprocessing.applicability import record_applicability
 from python_scripts.preprocessing.baseline import classification_baseline
 from python_scripts.preprocessing.feature_selection import apply_feature_selection
 from python_scripts.preprocessing.hyperparameter_search import apply_hyperparameter_search
@@ -229,6 +230,8 @@ def run_classification(
 
     # Scale X only
     X_train_s, X_test_s, _, _, X_scaler, _ = _scale_pairs(X_train_t, X_test_t, None, None, X_scaler_type, "none")
+    # What the training rows looked like, for measuring a new row against them later.
+    record_applicability(X_train_s, seed)
 
     # Apply outlier handling (before feature selection)
     outlier_info = None

@@ -34,6 +34,7 @@ OWN_TRUSTED_TYPES = (
     "python_scripts.models.regression_models.train_radius_neighbors_regressor.RadiusNeighborsWithFallback",
     "numpy.dtype",
     "numpy.ufunc",
+    "python_scripts.preprocessing.applicability.Applicability",
 )
 
 # Type names from these modules are the estimators, transformers, and arrays a run

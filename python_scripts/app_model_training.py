@@ -24,6 +24,7 @@ from python_scripts.helpers import (
     write_to_excelRegression,
 )
 from python_scripts.model_registry import CLUSTER_MODELS, MODEL_REGISTRY, get_model_kwargs
+from python_scripts.preprocessing.applicability import get_applicability
 from python_scripts.preprocessing.guardrails import run_guardrails
 from python_scripts.preprocessing.progress_tracker import get_tracker, set_result
 from python_scripts.preprocessing.split_fill import FillPlan, reset_fill_plan, set_fill_plan
@@ -1062,6 +1063,9 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
         )
         store["X_scaler"] = X_scaler
         store["feature_order"] = feature_order
+        # How far a new row sits from the training rows. Fitted by the pipeline while
+        # the training matrix was in scope; None when it could not be measured.
+        store["applicability"] = get_applicability()
         # Store predictor names for use in prediction (handles multi-target regression)
         store["predictor_names"] = predictor_names
         # Store model type and training visualization for inference results page

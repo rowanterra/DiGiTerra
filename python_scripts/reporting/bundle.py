@@ -239,6 +239,26 @@ _METRIC_LABELS = {
 }
 
 
+def _applicability_record(store: dict) -> dict | None:
+    """What the run recorded about the rows it was trained on.
+
+    A reader of the card needs the detector, the threshold a new row is read
+    against, and the range of each feature, since those are what decide whether a
+    later prediction is reported as resting on data the model has seen.
+    """
+    app = store.get("applicability")
+    if app is None:
+        return None
+    return {
+        "detector": type(app.detector).__name__,
+        "threshold": float(app.threshold),
+        "percentile": float(app.percentile),
+        "n_train": int(app.n_train),
+        "feature_min": {k: float(v) for k, v in app.feature_min.items()},
+        "feature_max": {k: float(v) for k, v in app.feature_max.items()},
+    }
+
+
 def build_manifest(store: dict, request: dict, result: dict, problem_type: str, model_name: str) -> dict:
     """Assemble the run record from the session store, the request, and the result."""
     metrics = {k: result.get(k) for k in _METRIC_KEYS.get(problem_type, []) if k in result}
@@ -270,6 +290,7 @@ def build_manifest(store: dict, request: dict, result: dict, problem_type: str, 
             "feature_selection": result.get("feature_selection_info"),
             "outliers": result.get("outlier_info"),
         },
+        "applicability": _applicability_record(store),
         "metrics": metrics,
         "cross_validation": cv,
         "baseline": result.get("baseline"),
@@ -302,6 +323,31 @@ def render_model_card(manifest: dict) -> str:
     checks = m.get("data_checks") or {}
     baseline = m.get("baseline") or {}
     env = (m.get("environment") or {}).get("packages", {}) or {}
+
+    applicability = m.get("applicability") or {}
+    if applicability:
+        ranges = ", ".join(
+            f"{html.escape(str(k))} {applicability['feature_min'][k]:.4g} to {applicability['feature_max'][k]:.4g}"
+            for k in list(applicability.get("feature_min", {}))[:12]
+        )
+        more = (
+            "" if len(applicability.get("feature_min", {})) <= 12 else " Further features are listed in the manifest."
+        )
+        applicability_html = (
+            f"<p>An {html.escape(applicability['detector'])} was fitted on the "
+            f"{applicability['n_train']} training rows, on the same features the model reads. "
+            f"A prediction row scores below {applicability['threshold']:.4f}, the "
+            f"{applicability['percentile']:.0f}th percentile of the training rows' own scores, is reported as "
+            "unlike the training data. The threshold is recorded here and is not recomputed from a new file, "
+            "because a file of unusual rows would otherwise look ordinary against itself.</p>"
+            f"<p>Each prediction also lists the features whose value falls outside the training range. "
+            f"Those ranges are: {ranges}.{more}</p>"
+        )
+    else:
+        applicability_html = (
+            "<p>This run recorded no applicability measure, so a prediction carries no statement of how far "
+            "its row sits from the training rows.</p>"
+        )
 
     title = f"{model.get('name', 'model')} on {data.get('filename', 'uploaded data')}"
     if checks.get("forced"):
@@ -435,6 +481,9 @@ scikit-learn {html.escape(str(env.get("scikit-learn")))}, Python {html.escape(st
 {baseline_html}
 {cv_html}
 
+<h2>Applicability</h2>
+{applicability_html}
+
 <h2>Intended use and limits</h2>
 <p>{intended}</p>
 
@@ -481,6 +530,7 @@ STORE_KEYS = (
     "y_train_mean",
     "y_train_std",
     "training_visualization",
+    "applicability",
 )
 
 

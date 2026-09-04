@@ -164,8 +164,10 @@ def run_predict(
             y_scaler=y_scaler,
             feature_order=required_features,
             target_names=target_names,
+            applicability=store.get("applicability"),
         )
         pred_path = user_vis_dir / "predictions.csv"
+        applicability_summary = None
         summary = []
         predictions_preview = {}
         pred_df = None
@@ -173,6 +175,18 @@ def run_predict(
         if pred_path.exists():
             try:
                 pred_df = pd.read_csv(pred_path)
+                # How many of these predictions rest on data the model has seen.
+                if "novel_row" in pred_df.columns:
+                    out_of_range = pred_df.get("out_of_range_columns")
+                    applicability_summary = {
+                        "rows": int(len(pred_df)),
+                        "novel": int(pred_df["novel_row"].fillna(False).astype(bool).sum()),
+                        "out_of_range": (
+                            int(out_of_range.fillna("").astype(str).str.len().gt(0).sum())
+                            if out_of_range is not None
+                            else 0
+                        ),
+                    }
                 pred_cols = [c for c in pred_df.columns if c.startswith("Predicted_")]
                 for col in pred_cols:
                     s = pred_df[col]
@@ -258,6 +272,7 @@ def run_predict(
                 "results": with_prefix_fn("/download/predictions.csv"),
                 "filename": filename,
                 "summary": summary,
+                "applicability_summary": applicability_summary,
                 "predictions_preview": predictions_preview,
                 "model_type": model_type,
                 "training_visualization": training_visualization,

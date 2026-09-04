@@ -883,7 +883,16 @@ def _model_for_inference_attrs(model):
     return model
 
 
-def prediction(df_clean, best_model, training_features, X_scaler, y_scaler, feature_order, target_names=None):
+def prediction(
+    df_clean,
+    best_model,
+    training_features,
+    X_scaler,
+    y_scaler,
+    feature_order,
+    target_names=None,
+    applicability=None,
+):
 
     logger.info("Starting prediction function")
 
@@ -993,7 +1002,25 @@ def prediction(df_clean, best_model, training_features, X_scaler, y_scaler, feat
         y_pred_flat = y_pred.ravel()
         df_clean["Predicted_Target"] = y_pred_flat
 
-    # --- 8. Save ---
+    # --- 8. How far each row sits from the rows the model was trained on ---
+    #
+    # A model returns a prediction for any row whose columns parse. These three
+    # columns say which of those predictions rest on data the model has seen.
+    # novelty_score is higher for a row more like the training rows; novel_row is
+    # true below the threshold recorded at training time, which is not recomputed
+    # from the new file because a file of unusual rows would then look ordinary.
+    if applicability is not None:
+        try:
+            from python_scripts.preprocessing.applicability import score_rows
+
+            scored = score_rows(applicability, pd.DataFrame(X_new_scaled, columns=applicability.feature_order))
+            df_clean["novelty_score"] = scored["novelty_score"]
+            df_clean["novel_row"] = scored["novel_row"]
+            df_clean["out_of_range_columns"] = scored["out_of_range_columns"]
+        except Exception as e:
+            logger.warning("Novelty not scored: %s", e)
+
+    # --- 9. Save ---
     df_clean.to_csv(VIS_DIR / "predictions.csv", index=False)
 
     logger.info("Predictions complete. Saved to predictions.csv")

@@ -8581,6 +8581,7 @@ predictionForm.addEventListener('submit', async (e) => {
                     ${rightPanelHtml}
                 </div>
             `
+            showApplicabilityLine(data.applicability_summary)
             // The example rows were drawn from a known species each, so the page can
             // say how many came back the way they were drawn. Only for those rows:
             // a person's own file has no key to compare against.
@@ -8790,6 +8791,26 @@ async function showExampleRowAgreement(preview) {
     } catch (err) {
         console.error('Could not compare the example rows with the key:', err)
     }
+}
+
+
+/* One line saying how many of these predictions rest on data the model has seen.
+   A model answers for any row whose columns parse, and nothing else on the page
+   separates a prediction on familiar data from one on a row nothing like it. */
+function showApplicabilityLine(summary) {
+    if (!summary || !summary.rows) return
+    const host = document.querySelector('.inference-summary-section')
+    if (!host) return
+    const line = document.createElement('p')
+    line.id = 'applicabilitySummary'
+    line.className = 'field-note'
+    const outOfRange = summary.out_of_range === 1
+        ? '1 row has a value outside the training range.'
+        : `${summary.out_of_range} rows have a value outside the training range.`
+    line.textContent = summary.novel === 0
+        ? `No row scores as unlike the training data. ${outOfRange}`
+        : `${summary.novel} of ${summary.rows} rows score as unlike the training data. ${outOfRange}`
+    host.appendChild(line)
 }
 
 

@@ -18,6 +18,7 @@ from sklearn.model_selection import train_test_split
 import python_scripts.plotting.plot_style  # noqa: F401
 from python_scripts.config import VIS_DIR
 from python_scripts.plotting.bundles import export_plots
+from python_scripts.preprocessing.applicability import record_applicability
 from python_scripts.preprocessing.outlier_handling import apply_outlier_handling
 from python_scripts.preprocessing.split_fill import apply_fill_plan_to_split, get_fill_plan
 from python_scripts.preprocessing.utilities import _scale_pairs, get_feature_names, make_preprocessor
@@ -257,6 +258,8 @@ def run_clustering(
             else pd.DataFrame(columns=X_train_t.columns, dtype=X_train_t.dtypes)
         )
     X_train_s, X_test_s, _, _, X_scaler, _ = _scale_pairs(X_train_t, X_test_t, None, None, X_scaler_type, "none")
+    # What the training rows looked like, for measuring a new row against them later.
+    record_applicability(X_train_s, seed)
 
     # Outlier handling on X only; clustering has no target, so this is the whole step.
     outlier_info = None

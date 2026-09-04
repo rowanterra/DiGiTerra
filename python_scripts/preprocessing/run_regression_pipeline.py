@@ -16,6 +16,7 @@ from python_scripts.plotting.bundles import export_plots
 from python_scripts.plotting.plot_shap_summary_graphic import plot_shap_summary
 from python_scripts.plotting.plot_style import apply_plot_style
 from python_scripts.plotting.visualize_predictions import visualize_predictions
+from python_scripts.preprocessing.applicability import record_applicability
 from python_scripts.preprocessing.baseline import regression_baseline
 from python_scripts.preprocessing.evaluate_by_quantile import evaluate_by_quantile
 from python_scripts.preprocessing.feature_selection import apply_feature_selection
@@ -206,6 +207,8 @@ def run_regression(
     X_train_s, X_test_s, y_train_s, y_test_s, X_scaler, y_scaler = _scale_pairs(
         X_train_t, X_test_t, y_train, y_test, X_scaler_type, y_scaler_type
     )
+    # What the training rows looked like, for measuring a new row against them later.
+    record_applicability(X_train_s, seed)
 
     # Save baseline state (before advanced options) for baseline graphics
     has_advanced_options = (feature_selection_method != "none" and feature_selection_k) or outlier_method != "none"
