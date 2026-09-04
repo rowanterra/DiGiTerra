@@ -2760,3 +2760,24 @@ body.dark-mode h4 {
 #transformerOptionWrapper.autodetect-greyed select {
   cursor: not-allowed;
 }
+
+/* Run notes above a result: data checks, split method, baseline comparison. */
+.run-notes {
+    margin: 0 0 14px 0;
+}
+.run-note {
+    margin: 0 0 8px 0;
+    padding: 8px 12px;
+    border-left: 3px solid #b8b8b8;
+    background: #f7f7f5;
+    font-size: 0.95em;
+    line-height: 1.45;
+}
+.run-note-warn {
+    border-left-color: #b07a1a;
+    background: #fbf5e8;
+}
+.run-note-block {
+    border-left-color: #8a2a2a;
+    background: #f8ecec;
+}

@@ -22,6 +22,7 @@ from python_scripts.helpers import (
     write_to_excelRegression,
 )
 from python_scripts.model_registry import CLUSTER_MODELS, MODEL_REGISTRY, get_model_kwargs
+from python_scripts.preprocessing.guardrails import run_guardrails
 from python_scripts.preprocessing.progress_tracker import get_tracker, set_result
 from python_scripts.preprocessing.split_fill import FillPlan, reset_fill_plan, set_fill_plan
 from python_scripts.preprocessing.splitting import SplitPlan, reset_split_plan, set_split_plan
@@ -513,6 +514,21 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
             )
         else:
             train_fn, problem_type = MODEL_REGISTRY[modelName]
+            # Data checks run on the cleaned frame with the columns the model will see.
+            # A blocking finding stops the run unless the request set allowUnsafe.
+            guardrail_report = run_guardrails(
+                df,
+                indicator_names,
+                predictor_names,
+                problem_type,
+                test_size=testSize,
+                cv_folds=cross_validation_folds if cv_enabled else None,
+            )
+            for finding in guardrail_report.findings:
+                logger.warning("data check %s (%s): %s", finding.code, finding.severity, finding.message)
+            allow_unsafe = str(data.get("allowUnsafe", "")).strip().lower() in ("1", "true", "yes", "on")
+            if guardrail_report.blocking and not allow_unsafe:
+                raise ValueError(guardrail_report.block_message())
             X_data = _safe_select_columns(df, indicator_names)
             y_data = _safe_select_columns(df, predictor_names)
             base = dict(
@@ -567,6 +583,8 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
                 result = train_fn(modelName, **base, **kwargs)
             else:
                 result = train_fn(**base, **kwargs)
+            # Pipelines append a baseline comparison as their last element.
+            baseline_info = result[11] if problem_type != "cluster" and len(result) > 11 else None
             if problem_type == "classification":
                 (
                     report,
@@ -610,7 +628,7 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
                     feature_order,
                     feature_selection_info,
                     outlier_info,
-                ) = result
+                ) = result[:11]
 
         # The pipeline fitted the plan on its training rows; inference reuses these values.
         if fill_plan.fitted:
@@ -1041,6 +1059,9 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
         # Mark all stages complete
         tracker.complete()
         result["split_note"] = split_plan.note
+        result["data_checks"] = guardrail_report.to_dict()
+        result["data_checks"]["allow_unsafe"] = bool(allow_unsafe)
+        result["baseline"] = baseline_info
         result["session_id"] = session_id  # Include session ID in response
 
         # Store result for SSE endpoint

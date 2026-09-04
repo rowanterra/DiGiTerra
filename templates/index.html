@@ -5740,6 +5740,16 @@
                                     <p class="field-note" style="margin-top: 6px;">Column letter of the date column for a time-ordered holdout, or of the site, well, or sample id for a grouped holdout. Stratification is not applied by these two methods.</p>
                                 </div>
 
+                                <h4 style="margin-top: 24px; margin-bottom: 12px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 1.1em; font-weight: 600; color: #000000;">Data Checks</h4>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Before training, the columns are checked for a feature that duplicates the target, constant or identifier columns, heavy missingness, duplicate rows, class imbalance, and too few rows for the requested split. A blocking finding stops the run.</p>
+                                <div class="scaling-container">
+                                    <label for="advancedAllowUnsafe">Run Despite Blocking Findings</label>
+                                    <select name="advancedAllowUnsafe" id="advancedAllowUnsafe">
+                                        <option value="no">No (stop the run)</option>
+                                        <option value="yes">Yes (train anyway and report the findings)</option>
+                                    </select>
+                                </div>
+
                                 <h4 style="margin-top: 24px; margin-bottom: 12px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 1.1em; font-weight: 600; color: #000000;">Hyperparameter Search</h4>
                                 <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Searches hyperparameter values in place of the manual settings. Run time grows with the grid.</p>
                                 <div class="scaling-container">

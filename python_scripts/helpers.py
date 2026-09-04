@@ -40,7 +40,7 @@ def unpack_classification_result(result_tuple):
     """
     n = len(result_tuple)
     if n >= 11:
-        return result_tuple[:11]
+        return tuple(result_tuple[:11])
     if n >= 9:
         return result_tuple[:9] + (None,) * (11 - 9)
     # Old format - pad with None

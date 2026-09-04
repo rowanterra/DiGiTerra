@@ -16,6 +16,7 @@ from python_scripts.plotting.bundles import export_plots
 from python_scripts.plotting.plot_shap_summary_graphic import plot_shap_summary
 from python_scripts.plotting.plot_style import apply_plot_style
 from python_scripts.plotting.visualize_predictions import visualize_predictions
+from python_scripts.preprocessing.baseline import regression_baseline
 from python_scripts.preprocessing.evaluate_by_quantile import evaluate_by_quantile
 from python_scripts.preprocessing.feature_selection import apply_feature_selection
 from python_scripts.preprocessing.hyperparameter_search import _estimate_param_combinations, apply_hyperparameter_search
@@ -653,6 +654,15 @@ def run_regression(
     # Metrics
     metrics_train = regression_report(y_train_actual, y_tr_pred, target_names=list(y.columns))
     metrics_test = regression_report(y_test, y_te_pred, target_names=list(y.columns))
+    # The mean of the training rows the model saw, scored on the same validation rows.
+    try:
+        from sklearn.metrics import r2_score as _r2
+
+        _model_r2 = float(_r2(np.asarray(y_test, dtype=float), np.asarray(y_te_pred, dtype=float)))
+        baseline_info = regression_baseline(y_train_actual, y_test, _model_r2)
+    except Exception as e:  # a baseline failure must not stop a run
+        logger.debug("Could not score the mean baseline: %s", e)
+        baseline_info = None
 
     if progress_tracker:
         progress_tracker.update_stage("model_training", "completed", 100, "Model training complete")
@@ -969,4 +979,5 @@ def run_regression(
         X_train.columns.tolist(),
         feature_selection_info,
         outlier_info,
+        baseline_info,
     )

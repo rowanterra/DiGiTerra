@@ -15,6 +15,7 @@ from sklearn.metrics import (
 import python_scripts.plotting.plot_style  # noqa: F401 - apply soft seaborn-like style
 from python_scripts.config import VIS_DIR
 from python_scripts.plotting.bundles import export_plots
+from python_scripts.preprocessing.baseline import classification_baseline
 from python_scripts.preprocessing.feature_selection import apply_feature_selection
 from python_scripts.preprocessing.hyperparameter_search import apply_hyperparameter_search
 from python_scripts.preprocessing.outlier_handling import apply_outlier_handling
@@ -313,6 +314,12 @@ def run_classification(
         y_pred_1d = np.asarray(y_pred).ravel()
     report = classification_report(y_test_1d, y_pred_1d, output_dict=True)
     cm = confusion_matrix(y_test_1d, y_pred_1d, labels=classes)
+    # The most common training class, scored on the same validation rows.
+    try:
+        baseline_info = classification_baseline(y_train, y_test_1d, report.get("accuracy"))
+    except Exception as e:  # a baseline failure must not stop a run
+        logger.debug("Could not score the majority baseline: %s", e)
+        baseline_info = None
 
     # compute additional metrics
     from python_scripts.preprocessing.calculate_all_metrics import calculate_classification_metrics
@@ -435,4 +442,5 @@ def run_classification(
         additional_metrics,
         feature_selection_info,
         outlier_info,
+        baseline_info,
     )

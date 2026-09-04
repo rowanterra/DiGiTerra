@@ -5747,12 +5747,15 @@ processForm.addEventListener('submit', async (e) => {
     // resolves the name.
     let splitMethod = 'random';
     let splitColumn = '';
+    let allowUnsafe = false;
     if (currentMode === 'advanced') {
         const splitMethodEl = document.getElementById('advancedSplitMethod');
         const splitColumnEl = document.getElementById('advancedSplitColumn');
         splitMethod = splitMethodEl ? splitMethodEl.value : 'random';
         const splitLetter = splitColumnEl ? splitColumnEl.value.trim() : '';
         splitColumn = splitLetter !== '' ? columnToIndex(splitLetter.toUpperCase()) : '';
+        const allowUnsafeEl = document.getElementById('advancedAllowUnsafe');
+        allowUnsafe = allowUnsafeEl ? allowUnsafeEl.value === 'yes' : false;
     }
 
     //sending all the data to the backend
@@ -5769,6 +5772,7 @@ processForm.addEventListener('submit', async (e) => {
         stratifyColumn: stratifyColumnNumber,
         splitMethod: splitMethod,
         splitColumn: splitColumn,
+        allowUnsafe: allowUnsafe,
         stratifyBool: stratifyBool,
         seedValue: parseInt(seedValue),
         testSize: parseFloat(testSize),
@@ -6297,6 +6301,40 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Extract result processing into a separate function
+// Run notes shown above every result: data checks from the server, the split
+// method, and the comparison against a baseline that predicts the training mean
+// or the most common class on the same split.
+function renderRunNotes(data) {
+    const parts = [];
+    const checks = data && data.data_checks;
+    if (checks) {
+        const blocking = Array.isArray(checks.blocking) ? checks.blocking : [];
+        const warnings = Array.isArray(checks.warnings) ? checks.warnings : [];
+        if (blocking.length > 0) {
+            parts.push(`<p class="run-note run-note-block"><strong>Data checks blocked this run and allowUnsafe overrode them.</strong> ${escapeHtml(blocking.map(f => f.message).join(' '))}</p>`);
+        }
+        if (warnings.length > 0) {
+            parts.push(`<p class="run-note run-note-warn"><strong>Data checks.</strong> ${escapeHtml(warnings.map(f => f.message).join(' '))}</p>`);
+        }
+        if (blocking.length === 0 && warnings.length === 0) {
+            parts.push(`<p class="run-note field-note">Data checks passed on ${escapeHtml(String(checks.n_rows))} rows and ${escapeHtml(String(checks.n_features))} features.</p>`);
+        }
+    }
+    if (data && data.split_note) {
+        parts.push(`<p class="run-note field-note">${escapeHtml(String(data.split_note))}</p>`);
+    }
+    const base = data && data.baseline;
+    if (base && base.metric) {
+        const better = base.model_beats_baseline;
+        const verdict = better === true ? 'The model beats the baseline.' : (better === false ? 'The model does not beat the baseline; the result carries no information beyond the target distribution.' : '');
+        parts.push(`<p class="run-note ${better === false ? 'run-note-warn' : 'field-note'}"><strong>Baseline.</strong> ${escapeHtml(base.description)} scores ${escapeHtml(String(base.baseline_value))} ${escapeHtml(base.metric)} on the validation split against ${escapeHtml(String(base.model_value))} for the model. ${verdict}</p>`);
+    }
+    if (data && Array.isArray(data.cards) === false && data.model_card_url) {
+        parts.push(`<p class="run-note field-note"><a href="${escapeHtml(data.model_card_url)}" target="_blank" rel="noopener">Model card</a> and <a href="${escapeHtml(data.bundle_url)}">model bundle (.zip)</a> for this run.</p>`);
+    }
+    return parts.length ? `<div class="run-notes">${parts.join('')}</div>` : '';
+}
+
 function processModelResult(data, unitStr = '', predictorCols = [], hyperparameters = {}) {
     console.log('processModelResult called with data:', data);
     try {
@@ -6502,6 +6540,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                         </div>` : '<p>No outlier handling data available</p>';
                     
                     NumericResultDiv.innerHTML = `
+                    ${renderRunNotes(data)}
                     <div class="resultValues">
                         <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start;">
                             <div style="flex: 1; min-width: 300px;">
@@ -6763,7 +6802,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                         </div>` : '<p>No outlier handling data available</p>';
                     
                     NumericResultDiv.innerHTML = `
-                
+                ${renderRunNotes(data)}
                 <div class="resultValues">
                     <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start;">
                         <div style="flex: 1; min-width: 300px;">
@@ -6976,6 +7015,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                 const _hasAdvancedOptions = data.feature_selection_info || data.outlier_info;
                 
                 ClassifierResultDiv.innerHTML = ` 
+                ${renderRunNotes(data)}
                 <div class="resultValues">
                     <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start;">
                         <div style="flex: 1; min-width: 300px;">
@@ -7135,6 +7175,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                     </table>` : '<p>No hyperparameters to display</p>';
                 
                 if (ClusterResultDiv) ClusterResultDiv.innerHTML = ` 
+                    ${renderRunNotes(data)}
                     <div class="resultValues">
                         <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start;">
                             <div style="flex: 1; min-width: 300px;">
