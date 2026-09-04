@@ -79,6 +79,7 @@ Frontend
 - `core/worker.py` runs a step in a child process under `RLIMIT_AS` and a wall clock, which is the control a budget measured inside the allocating process cannot be. Parsing goes through it under the server profile.
 - A failed Excel export lost a completed classification run, because that call was the only one of the three not wrapped. It is wrapped now, as the regression and clustering exports already were.
 - Session contents live behind a backend: in memory as before, or one directory per session on disk, written atomically, which lets more than one worker serve a deployment and lets a session outlive a restart. The mapping records that it has changed and is written at the end of a request and at the end of a run.
+- A training queue in SQLite (`core/queue.py`): where runs wait for each other, a full slot answers 202 with a position instead of 429, `GET /queue/<id>` says where a run stands, a freed slot starts the oldest waiting run, and a job whose worker stopped returns to the queue rather than sitting as running.
 - MIT license.
 - This changelog.
 - Makefile with `install`, `dev`, `lint`, `test`, `check`, and `build-bundle` targets.

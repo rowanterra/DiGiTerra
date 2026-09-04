@@ -70,6 +70,14 @@ A 32 MB request body says little about an Excel or Parquet file, which can infla
 
 The desktop launcher no longer disables the limits; it sets them at the scale of one machine (1 GB body, 200 million cells, 4 GB frame).
 
+## Waiting runs
+
+Admission control refuses a run when the slots are full. On a desktop that is right, because the person can wait and try again. On a shared installation it loses the request: nothing remembers that someone asked. `core/queue.py` records it instead, in SQLite under the application support directory, which gives the atomic claim a queue needs in one statement and survives the process that wrote it. A deployment across several machines would need a server rather than a file, and this is not that.
+
+A job holds the request, not the data; the frame is in the session store, which is where a worker in another process reads it. `POST /process` answers 202 with `status: queued` and a position when the slots are full and `DIGITERRA_QUEUE` is on, and 429 as before when it is not. `GET /queue/<id>` tells a page where its run stands, and answers only the session that started it. A slot coming free starts the oldest waiting run. A job whose worker stopped without finishing is returned to the queue after `DIGITERRA_QUEUE_STALE_SECONDS` (7200), which is what makes a restart recoverable rather than a loss, and `DIGITERRA_MAX_QUEUE_DEPTH` (50) bounds how many may wait.
+
+`tests/unit/test_queue.py` races eight threads for one job and requires exactly one winner, stops and restarts the queue in a separate interpreter, and drives the route to see a full slot produce a queued run rather than a refusal.
+
 ## Where a session lives
 
 `core/session_store.py` puts session contents behind two backends. `memory`, the desktop default, is the dictionary this application has always used. `disk`, the server default, writes one directory per session under the application support directory: the frame as parquet, the fitted objects through the artifact format, everything else as JSON, each written to a temporary file and renamed into place so a reader sees one version or the other and never half of either. A session id that is not the 32 hex characters this application issues is refused rather than used to build a path. `DIGITERRA_SESSION_BACKEND` overrides the profile.
@@ -119,5 +127,6 @@ There is no rate limiting, so a client can still send requests that are rejected
 - Build an account system with its own sessions, so that identity is per person rather than per browser and a proxy is not the only place a name can come from.
 - Move the rate-limit buckets to the session store, so a limit means the same thing behind more than one worker.
 - Run parsing and training in a worker with memory and wall-time limits, and put a durable queue in front of it, so a refused run is deferred rather than dropped.
-- Run training in the isolated worker as parsing already is, which means moving the fitted objects across the process boundary through the artifact format.
+- Run training in the isolated worker as parsing already is, which means moving the fitted objects across the process boundary through the artifact format and the session store, both of which now exist.
+- Give the queue a worker process of its own, so a waiting run starts without a request arriving to notice the free slot.
 - Put the app behind HTTPS and a reverse proxy for any network deployment.
