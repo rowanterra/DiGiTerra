@@ -4,11 +4,14 @@ import json
 import logging
 import os
 import time
+import uuid
 
 from flask import Blueprint, Response, jsonify, render_template, stream_with_context
 
+from core import jobs
 from core.constants import (
     HTTP_NOT_FOUND,
+    HTTP_TOO_MANY_REQUESTS,
     PROGRESS_COMPLETE_THRESHOLD,
     PROGRESS_FINAL_UPDATE_DELAY_SECONDS,
     PROGRESS_STREAM_TIMEOUT_SECONDS,
@@ -48,35 +51,57 @@ def progress_stream(session_id):
     if tracker.owner_session_id and tracker.owner_session_id != get_session_id():
         return jsonify({"error": "Unknown training session."}), HTTP_NOT_FOUND
 
+    # One stream per run and a fixed number across the process, so streams cannot
+    # hold every request thread. The slot is released when the generator ends or
+    # the response is closed, whichever happens; a never-started generator is
+    # covered by call_on_close.
+    stream_token = uuid.uuid4().hex
+    try:
+        jobs.stream_acquire(session_id, stream_token)
+    except jobs.SlotUnavailable as e:
+        return jsonify({"error": e.reason}), HTTP_TOO_MANY_REQUESTS
+
+    def release():
+        jobs.stream_release(session_id, stream_token)
+
     def generate():
         start_time = time.time()
-        while True:
-            if time.time() - start_time > PROGRESS_STREAM_TIMEOUT_SECONDS:
-                # End the stream without an error payload. EventSource reconnects on
-                # its own, the tracker is still there, and the run continues. This
-                # keeps one long run from holding a worker thread indefinitely.
-                logger.info("Progress stream for %s reached its time limit; the client may reconnect.", session_id)
-                break
-            try:
-                progress = tracker.get_progress()
-                yield f"data: {json.dumps(progress)}\n\n"
-                if progress["overall_progress"] >= PROGRESS_COMPLETE_THRESHOLD:
-                    time.sleep(PROGRESS_FINAL_UPDATE_DELAY_SECONDS)
-                    result = get_result(session_id)
-                    for _ in range(3):
-                        if result is not None:
-                            break
-                        time.sleep(0.5)
-                        result = get_result(session_id)
-                    if result is not None:
-                        yield f"data: {json.dumps({'type': 'result', 'data': result})}\n\n"
-                    else:
-                        yield f"data: {json.dumps({'error': 'Result not available after training completed'})}\n\n"
-                    remove_tracker(session_id)
-                    break
-            except Exception as e:
-                yield f"data: {json.dumps({'error': str(e)})}\n\n"
-                break
-            time.sleep(PROGRESS_UPDATE_INTERVAL_SECONDS)
+        try:
+            yield from _progress_events(tracker, session_id, start_time)
+        finally:
+            release()
 
-    return Response(stream_with_context(generate()), mimetype="text/event-stream")
+    response = Response(stream_with_context(generate()), mimetype="text/event-stream")
+    response.call_on_close(release)
+    return response
+
+
+def _progress_events(tracker, session_id, start_time):
+    while True:
+        if time.time() - start_time > PROGRESS_STREAM_TIMEOUT_SECONDS:
+            # End the stream without an error payload. EventSource reconnects on
+            # its own, the tracker is still there, and the run continues. This
+            # keeps one long run from holding a worker thread indefinitely.
+            logger.info("Progress stream for %s reached its time limit; the client may reconnect.", session_id)
+            break
+        try:
+            progress = tracker.get_progress()
+            yield f"data: {json.dumps(progress)}\n\n"
+            if progress["overall_progress"] >= PROGRESS_COMPLETE_THRESHOLD:
+                time.sleep(PROGRESS_FINAL_UPDATE_DELAY_SECONDS)
+                result = get_result(session_id)
+                for _ in range(3):
+                    if result is not None:
+                        break
+                    time.sleep(0.5)
+                    result = get_result(session_id)
+                if result is not None:
+                    yield f"data: {json.dumps({'type': 'result', 'data': result})}\n\n"
+                else:
+                    yield f"data: {json.dumps({'error': 'Result not available after training completed'})}\n\n"
+                remove_tracker(session_id)
+                break
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+            break
+        time.sleep(PROGRESS_UPDATE_INTERVAL_SECONDS)

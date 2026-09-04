@@ -6,29 +6,49 @@ in each, holds its progress stream open, and times an unrelated GET of the index
 page. Recorded on 2026-09-03 in the audit container: the synchronous worker did
 not answer within ten seconds, the threaded worker answered in 0.01 s.
 
-Run from the repository root with the virtualenv that has gunicorn installed:
+Run with any interpreter that has the project and gunicorn installed; the
+repository root is found from this file and the ports are allocated free:
 
-    .venv/bin/python scripts/check_stream_starvation.py
+    python scripts/check_stream_starvation.py [--threshold 5.0]
+
+Exit code 0 when the threaded worker answers within the threshold and 1
+otherwise, so the script can run as a CI check.
 """
 
+import argparse
 import http.cookiejar
 import json
 import os
+import socket
 import subprocess
+import sys
+import tempfile
 import threading
 import time
 import urllib.request
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def free_port() -> int:
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
 
 
 def start(worker_class, port):
+    work = Path(tempfile.mkdtemp(prefix=f"starve_{worker_class}_"))
     env = dict(
         os.environ,
         MPLBACKEND="Agg",
-        DIGITERRA_APP_SUPPORT_DIR=f"/tmp/starve_{worker_class}",
-        DIGITERRA_OUTPUT_DIR=f"/tmp/starve_{worker_class}/vis",
+        DIGITERRA_APP_SUPPORT_DIR=str(work),
+        DIGITERRA_OUTPUT_DIR=str(work / "vis"),
     )
     args = [
-        ".venv/bin/gunicorn",
+        sys.executable,
+        "-m",
+        "gunicorn",
         "--bind",
         f"127.0.0.1:{port}",
         "--workers",
@@ -40,9 +60,7 @@ def start(worker_class, port):
     ]
     if worker_class == "gthread":
         args += ["--worker-class", "gthread", "--threads", "8"]
-    p = subprocess.Popen(
-        args + ["app:app"], env=env, cwd="/root/DiGiTerra", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-    )
+    p = subprocess.Popen(args + ["app:app"], env=env, cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     for _ in range(60):
         try:
             urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=1).read()
@@ -141,10 +159,23 @@ def run(worker_class, port):
         server.wait(timeout=20)
 
 
-sync_dt, sync_code = run("sync", 5301)
-gt_dt, gt_code = run("gthread", 5302)
-print()
-print("sync worker  :", "blocked" if isinstance(sync_code, str) or sync_dt > 5 else f"served in {sync_dt:.2f}s")
-print("gthread      :", "blocked" if isinstance(gt_code, str) or gt_dt > 5 else f"served in {gt_dt:.2f}s")
-assert gt_code == 200 and gt_dt < 5, "gthread did not serve the unrelated request"
-print("\nPASS: with gthread an open stream no longer blocks other requests.")
+def main() -> int:
+    ap = argparse.ArgumentParser(description="Measure whether an open progress stream blocks other requests.")
+    ap.add_argument("--threshold", type=float, default=5.0, help="seconds the unrelated request may take")
+    args = ap.parse_args()
+    sync_dt, sync_code = run("sync", free_port())
+    gt_dt, gt_code = run("gthread", free_port())
+    print()
+    blocked = isinstance(sync_code, str) or sync_dt > args.threshold
+    print("sync worker  :", "blocked" if blocked else f"served in {sync_dt:.2f}s")
+    gt_blocked = isinstance(gt_code, str) or gt_dt > args.threshold
+    print("gthread      :", "blocked" if gt_blocked else f"served in {gt_dt:.2f}s")
+    if gt_code != 200 or gt_dt >= args.threshold:
+        print("FAIL: gthread did not serve the unrelated request", file=sys.stderr)
+        return 1
+    print("\nPASS: with gthread an open stream does not block other requests.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

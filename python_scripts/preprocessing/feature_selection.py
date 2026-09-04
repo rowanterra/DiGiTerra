@@ -4,6 +4,8 @@ import pandas as pd
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.feature_selection import RFE, SelectFromModel, SelectKBest, f_classif, f_regression
 
+from core.jobs import job_n_jobs
+
 
 def apply_feature_selection(
     X_train: pd.DataFrame,
@@ -66,9 +68,9 @@ def apply_feature_selection(
 
         # Use a simple estimator for RFE
         if problem_type == "regression":
-            estimator = RandomForestRegressor(n_estimators=50, random_state=seed, n_jobs=-1)
+            estimator = RandomForestRegressor(n_estimators=50, random_state=seed, n_jobs=job_n_jobs())
         else:  # classification
-            estimator = RandomForestClassifier(n_estimators=50, random_state=seed, n_jobs=-1)
+            estimator = RandomForestClassifier(n_estimators=50, random_state=seed, n_jobs=job_n_jobs())
 
         selector = RFE(estimator=estimator, n_features_to_select=min(k, X_train.shape[1]))
         X_train_selected = pd.DataFrame(
@@ -83,9 +85,9 @@ def apply_feature_selection(
     elif method == "SelectFromModel":
         # Use model-based selection
         if problem_type == "regression":
-            estimator = RandomForestRegressor(n_estimators=50, random_state=seed, n_jobs=-1)
+            estimator = RandomForestRegressor(n_estimators=50, random_state=seed, n_jobs=job_n_jobs())
         else:  # classification
-            estimator = RandomForestClassifier(n_estimators=50, random_state=seed, n_jobs=-1)
+            estimator = RandomForestClassifier(n_estimators=50, random_state=seed, n_jobs=job_n_jobs())
 
         selector = SelectFromModel(estimator=estimator)
         X_train_selected = pd.DataFrame(

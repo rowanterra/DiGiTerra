@@ -18,12 +18,13 @@ from core.constants import (
     FILE_SIZE_WARNING_MB,
     FILENAME_DISPLAY_LENGTH,
     HTTP_BAD_REQUEST,
+    HTTP_TOO_MANY_REQUESTS,
     MAX_CELLS,
     MAX_FRAME_MB,
     MAX_UPLOAD_MB,
 )
 from core.helpers import FrameTooLarge, allowed_file, read_table_bounded
-from core.state import get_session_storage
+from core.state import MemoryBudgetExceeded, admit_frame, get_session_id, get_session_storage
 from python_scripts.reporting.bundle import sha256_file
 
 bp = Blueprint("upload", __name__)
@@ -122,7 +123,10 @@ def upload_file():
     else:
         cell_warning = None
 
-    store["data"] = data
+    try:
+        admit_frame(get_session_id(), data)
+    except MemoryBudgetExceeded as e:
+        return jsonify({"error": str(e)}), HTTP_TOO_MANY_REQUESTS
     store["data_fingerprint"] = {
         "filename": safe_filename_val,
         "sha256": file_sha256,

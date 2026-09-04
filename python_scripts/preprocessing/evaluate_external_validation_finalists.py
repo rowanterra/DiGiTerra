@@ -29,6 +29,8 @@ from sklearn.neural_network import MLPRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
+from core.jobs import job_n_jobs
+
 SCALING_MODELS = {"Ridge", "KNN", "MLP"}
 
 
@@ -96,7 +98,7 @@ def get_model(model_name: str, seed: int) -> RegressorMixin:
     if model_name == "Ridge":
         return Ridge(alpha=1.0, random_state=seed)
     if model_name == "ExtraTrees":
-        return ExtraTreesRegressor(n_estimators=500, random_state=seed, n_jobs=-1)
+        return ExtraTreesRegressor(n_estimators=500, random_state=seed, n_jobs=job_n_jobs())
     if model_name == "KNN":
         return KNeighborsRegressor(n_neighbors=7, weights="distance")
     if model_name == "MLP":
@@ -164,7 +166,7 @@ def evaluate_seed(
     for model_name, outlier_mode in candidates:
         model = get_model(model_name, seed=seed)
         pipe = make_pipeline(model_name, model, outlier_mode=outlier_mode)
-        cv_scores = cross_val_score(pipe, X_train, y_train, cv=cv, scoring="r2", n_jobs=-1)
+        cv_scores = cross_val_score(pipe, X_train, y_train, cv=cv, scoring="r2", n_jobs=job_n_jobs())
         pipe.fit(X_train, y_train)
         pred = pipe.predict(X_test)
         rows.append(

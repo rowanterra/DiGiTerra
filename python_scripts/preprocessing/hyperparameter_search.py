@@ -5,6 +5,8 @@ import logging
 from sklearn.model_selection import GridSearchCV, KFold, RandomizedSearchCV, StratifiedKFold
 from sklearn.multioutput import MultiOutputClassifier, MultiOutputRegressor
 
+from core.jobs import job_n_jobs
+
 logger = logging.getLogger(__name__)
 
 
@@ -245,10 +247,10 @@ def apply_hyperparameter_search(
         cv = KFold(n_splits=cv_folds, shuffle=True, random_state=seed)
 
     if search_type == "grid":
-        search_model = GridSearchCV(model, param_grid, cv=cv, scoring=scoring, n_jobs=-1, verbose=1)
+        search_model = GridSearchCV(model, param_grid, cv=cv, scoring=scoring, n_jobs=job_n_jobs(), verbose=1)
     elif search_type == "randomized":
         search_model = RandomizedSearchCV(
-            model, param_grid, n_iter=n_iter, cv=cv, scoring=scoring, n_jobs=-1, verbose=1, random_state=seed
+            model, param_grid, n_iter=n_iter, cv=cv, scoring=scoring, n_jobs=job_n_jobs(), verbose=1, random_state=seed
         )
     elif search_type == "bayesian":
         # Bayesian optimization requires scikit-optimize
@@ -256,12 +258,26 @@ def apply_hyperparameter_search(
             from skopt import BayesSearchCV
 
             search_model = BayesSearchCV(
-                model, param_grid, n_iter=n_iter, cv=cv, scoring=scoring, n_jobs=-1, verbose=1, random_state=seed
+                model,
+                param_grid,
+                n_iter=n_iter,
+                cv=cv,
+                scoring=scoring,
+                n_jobs=job_n_jobs(),
+                verbose=1,
+                random_state=seed,
             )
         except ImportError:
             logger.warning("scikit-optimize not installed. Falling back to randomized search.")
             search_model = RandomizedSearchCV(
-                model, param_grid, n_iter=n_iter, cv=cv, scoring=scoring, n_jobs=-1, verbose=1, random_state=seed
+                model,
+                param_grid,
+                n_iter=n_iter,
+                cv=cv,
+                scoring=scoring,
+                n_jobs=job_n_jobs(),
+                verbose=1,
+                random_state=seed,
             )
     else:
         raise ValueError(f"Unknown search type: {search_type}")
