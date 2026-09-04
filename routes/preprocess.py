@@ -13,6 +13,15 @@ bp = Blueprint("preprocess", __name__)
 logger = logging.getLogger(__name__)
 
 
+def _column_letter(index: int) -> str:
+    """0 -> A, 25 -> Z, 26 -> AA."""
+    letters = ""
+    while index >= 0:
+        letters = chr(index % 26 + 65) + letters
+        index = index // 26 - 1
+    return letters
+
+
 @bp.route("/preprocess", methods=["POST"])
 def preprocess():
     """Preprocess data and return selected column names."""
@@ -48,8 +57,14 @@ def preprocess():
             indicator_names = df.columns[selected_indicators].tolist()
         except Exception as e2:
             logger.error("Error in preprocess: %s", e2, exc_info=True)
+            n_cols = len(df.columns)
             return jsonify(
-                {"error": f"Invalid column indices, possibly from duplicate column names in the CSV: {str(e2)}"}
+                {
+                    "error": (
+                        f"A selected column is outside the file, which has {n_cols} columns "
+                        f"(A to {_column_letter(n_cols - 1)}). Column letters are written like A-D or A-D,F,H."
+                    )
+                }
             ), HTTP_BAD_REQUEST
 
     try:

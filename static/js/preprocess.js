@@ -108,6 +108,12 @@ async function handlePreprocessFormSubmit(e) {
         });
 
         stratErrorDiv.innerHTML = '';
+        const badSpec = [indicators, predictors].find(v => v && !isValidColumnSpec(v));
+        if (badSpec !== undefined) {
+            const target = stratErrorDiv || errorDiv;
+            if (target) showError(target, `Column letters are written like A-D or A-D,F,H. "${badSpec}" is not a valid column selection.`, false);
+            return;
+        }
         const predictorCols = getColumnIndices((predictors || '').toUpperCase().replace(/\s/g, ''));
         const indicatorCols = getColumnIndices((indicators || '').toUpperCase().replace(/\s/g, ''));
         stratifyColumnNumber = columnToIndex((stratifyColumn || '').toUpperCase());

@@ -807,9 +807,24 @@ function getColumnLetter(index) {
         }
         return column;
     }
+// Column letters: single letters or ranges joined by a hyphen, separated by commas.
+// Any other character (a colon, a digit, a space inside a letter) is refused here
+// so the server never receives an index computed from the wrong character.
+const COLUMN_SPEC = /^[A-Z]+(-[A-Z]+)?(,[A-Z]+(-[A-Z]+)?)*$/;
+
+/* eslint-disable-next-line no-unused-vars */
+function isValidColumnSpec(input) {
+    return COLUMN_SPEC.test((input || '').toUpperCase().replace(/\s/g, ''));
+}
+
 /* eslint-disable-next-line no-unused-vars */
 function getColumnIndices(input) {
     const columns = [];
+    // An invalid selection yields no columns rather than an index computed from
+    // the wrong character; the submit handlers check isValidColumnSpec first.
+    if (!COLUMN_SPEC.test(input)) {
+        return columns;
+    }
     input.split(',').forEach(part => {
         if (part.includes('-')) {
             const [start, end] = part.split('-').map(c => columnToIndex(c.trim()));
@@ -2091,6 +2106,12 @@ async function handlePreprocessFormSubmit(e) {
         });
 
         stratErrorDiv.innerHTML = '';
+        const badSpec = [indicators, predictors].find(v => v && !isValidColumnSpec(v));
+        if (badSpec !== undefined) {
+            const target = stratErrorDiv || errorDiv;
+            if (target) showError(target, `Column letters are written like A-D or A-D,F,H. "${badSpec}" is not a valid column selection.`, false);
+            return;
+        }
         const predictorCols = getColumnIndices((predictors || '').toUpperCase().replace(/\s/g, ''));
         const indicatorCols = getColumnIndices((indicators || '').toUpperCase().replace(/\s/g, ''));
         stratifyColumnNumber = columnToIndex((stratifyColumn || '').toUpperCase());
