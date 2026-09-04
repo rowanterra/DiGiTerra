@@ -68,6 +68,34 @@ The page is then at `http://127.0.0.1:5000/digiterra/` and at `http://127.0.0.1:
 
 Other environment variables: `DIGITERRA_BASE_DIR`, `DIGITERRA_APP_SUPPORT_DIR`, `DIGITERRA_OUTPUT_DIR` (paths), `LOG_LEVEL`, `DIGITERRA_MAX_UPLOAD_MB`, `DIGITERRA_WARN_UPLOAD_MB`, `DIGITERRA_ENFORCE_UPLOAD_LIMIT`, `DIGITERRA_MAX_SESSIONS`, `DIGITERRA_MAX_CELLS`, `DIGITERRA_MAX_FRAME_MB`, `DIGITERRA_MAX_TOTAL_FRAME_MB`, `DIGITERRA_MAX_CONCURRENT_TRAINING`, `DIGITERRA_MAX_CONCURRENT_STREAMS`, `DIGITERRA_JOB_CORES`, `DIGITERRA_DEFAULT_MAX_UPLOAD_MB`, `DIGITERRA_ALLOW_BUNDLE_IMPORT`, `DIGITERRA_BUNDLE_KEY`, `DIGITERRA_MAX_BUNDLE_MEMBER_MB`, `DIGITERRA_MAX_BUNDLE_TOTAL_MB`, `DIGITERRA_ALLOW_UNSAFE_OVERRIDE`, `DIGITERRA_PROFILE`, `DIGITERRA_REQUIRE_AUTH`, `DIGITERRA_REQUIRE_CSRF`, `DIGITERRA_RATE_LIMIT`, `DIGITERRA_RATE_PER_MINUTE`, `DIGITERRA_RATE_BURST`, `DIGITERRA_AUTH_HEADER`, `DIGITERRA_TRUSTED_PROXIES`, `DIGITERRA_SHARED_SECRET`, `DIGITERRA_ISOLATE_WORK`, `DIGITERRA_WORKER_MEMORY_MB`, `DIGITERRA_WORKER_BASE_MB`, `DIGITERRA_WORKER_TIMEOUT_SECONDS`, `DIGITERRA_PARSE_TIMEOUT_SECONDS`, `DIGITERRA_ALLOW_LEGACY_PICKLE`, `DIGITERRA_SESSION_BACKEND`, `DIGITERRA_QUEUE`, `DIGITERRA_QUEUE_PATH`, `DIGITERRA_MAX_QUEUE_DEPTH`, `DIGITERRA_QUEUE_STALE_SECONDS`, `DIGITERRA_PROGRESS_TIMEOUT_SECONDS`, `DIGITERRA_STALE_SESSION_HOURS`, `DIGITERRA_MIN_TEST_SIZE`, `DIGITERRA_MAX_TEST_SIZE`, `DIGITERRA_MAX_CV_FOLDS`, `DIGITERRA_MAX_SEARCH_CV_FOLDS`, `DIGITERRA_MAX_SEARCH_ITERATIONS`, and `DIGITERRA_COOKIE_SECURE`. `docs/SECURITY_REVIEW.md` describes what each limit does.
 
+## How far the new rows are from the training data
+
+A model returns a prediction for any row whose columns parse, including a row nothing
+like the data it was trained on. Two sets of columns in `predictions.csv` say which of
+those a prediction is.
+
+`novelty_score` comes from an IsolationForest fitted on the training rows, on the same
+features the model reads. A higher score means a row more like the training rows.
+`novel_row` is true when the score falls below the first percentile of the training
+rows' own scores. That threshold is recorded when the model is trained and is not
+recomputed from the new file, because a file of unusual rows would otherwise look
+ordinary against itself. `out_of_range_columns` lists the numeric columns whose value
+for that row falls outside the range seen in training, and is empty when none do.
+
+A regression run also writes `lower_90` and `upper_90`, a 90 percent interval from
+split conformal. The half-width is the quantile of the absolute residuals on the
+validation rows, in the units of the target. The interval holds for at least nine rows
+in ten, provided the new rows are exchangeable with the validation rows. Where they are
+not, it does not hold, and the novelty score is the check on that: a row reported as
+unlike the training data is a row whose interval should not be relied on.
+
+A classification run writes one `probability_` column per class and `max_probability`.
+An estimator with no probability of its own writes neither, and the model card records
+that it could not.
+
+The model card carries the detector, the threshold, the training ranges, alpha and the
+validation size, so a reader of a run sees the same numbers without the file.
+
 ## Accessibility
 
 ### ARIA attributes
