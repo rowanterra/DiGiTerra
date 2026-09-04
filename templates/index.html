@@ -571,7 +571,6 @@
                                 <label for ="corrCols">Columns to explore</label>
                                 <input type="text" id="corrCols" name="corrCols" placeholder="Ex: A-D, Y, Z">
                             </div>
-                            <p class="field-note">Non-numeric columns are ignored in data exploration.</p>
                             <details class="app-details">
                                 <summary>Blanks and zeros</summary>
                                 <p class="field-note">Cleaned before the correlation or pairplot.</p>
@@ -867,7 +866,7 @@
         <!-- Model Selection in Header (will be moved into each mode section) -->
         <div class="preprocess-card" style="margin: 20px 0; max-width: 600px; display: none;" id="headerModelSelection">
             <h3 style="margin-top: 0; margin-bottom: 12px;">Select Model</h3>
-            <p class="field-note" style="margin-bottom: 16px;">Model for the selected output type.</p>
+            
             
             <!-- Simple Mode Model Selection -->
             <div id="headerNumericModels" class="hidden">
@@ -1193,7 +1192,7 @@
             <!-- Model Selection -->
             <div class="preprocess-card" style="margin-bottom: 20px;">
                 <h3 style="margin-top: 0; margin-bottom: 12px;">Select Model</h3>
-                <p class="field-note" style="margin-bottom: 16px;">Model for the selected output type.</p>
+                
                 
                 <!-- Simple Mode Model Selection -->
                 <div id="simpleNumericModels" class="hidden">
@@ -1306,7 +1305,6 @@
 
             <!-- Regression Hyperparameters -->
             <div id="ridgeFields" class="hidden">
-                <h3>Ridge Model Settings</h3>
                 <label for="RidgeAlpha">Alpha - regularization strength (float >=0):</label>
                 <input type="number" value=1.0 placeholder=1 min=0 id="RidgeAlpha" name="alpha">
                 
@@ -1372,7 +1370,6 @@
             </div>
             
             <div id="lassoFields" class="hidden">
-                <h3>Lasso Model Settings</h3>
                 <label for="LassoAlpha">Alpha - regularization strength (float >=0):</label>
                 <input type="number" value=1 min=0 placeholder=1 id="LassoAlpha" name="alpha" >
                 
@@ -1438,7 +1435,6 @@
             </div>
 
             <div id="logisticFields" class="hidden">
-                <h3>Logistic Model Settings</h3>
 
                 <div class="nonreqHyperparams">
                     <div class="toggle-container">
@@ -1521,13 +1517,11 @@
             </div>
 
             <div id="polynomialFields" class="hidden">
-                <h3>Polynomial Model Settings</h3>
                 <label for="degree_specificity">Degree Specificity (integer >=1):</label>
                 <input type="number" step=1 value=2 placeholder=2 min=1 id="degree_specificity" name="degree_specificity">
             </div>
 
             <div id="elasticNetFields" class="hidden">
-                <h3>Elastic Net Model Settings</h3>
                 <label for="ENAlpha">Alpha - regularization strength (float >=0):</label>
                 <input type="number" value=1 placeholder=1 min=0 id="ENAlpha" name="alpha" >
                 <div><br></div>
@@ -1536,7 +1530,6 @@
             </div>
 
             <div id="SVMFields" class="hidden">
-                <h3>SVM Model Settings</h3>
                 <label for="C">C - Regularization (float >0):</label>
                 <input type="number" value=1 placeholder=1 min="0.0000001" step="any" placeholder=1.0 id="C" name="C">
                 <div><br></div>
@@ -1622,7 +1615,6 @@
             </div>
 
             <div id="RFFields" class="hidden">
-                <h3>Random Forest Model Settings</h3>
                 <label for="RFn_estmators">N Estimators - # of trees (integer >=1):</label>
                 <input type="number" step=1 value=100 placeholder="100" min=1 id="RFn_estmators" name="RFn_estmators">
                 
@@ -1691,7 +1683,6 @@
             </div>
 
             <div id="PerceptronFields" class="hidden">
-                <h3>Perceptron Model Settings</h3>
                 <label for="PercMax_iter">Max Iter - max # of iterations (integer):</label>
                 <input type="number" step=1 value=1000 placeholder=1000 id="PercMax_iter" name="max_iter">
                 <div><br></div>
@@ -1766,7 +1757,6 @@
             </div>
 
             <div id="MLPFields" class="hidden">
-                <h3>MLP Model Settings</h3>
                 <label for="hidden_layer_sizes1">Hidden Layer Sizes - neurons in each hidden layer (ints):</label>
                 <br>
                 <input type="number" id="hidden_layer_sizes1" step=1 value="100" name="hidden_layer_sizes1">
@@ -1877,7 +1867,6 @@
             </div>
 
             <div id="K-NearestFields" class="hidden">
-                <h3>K-Nearest Neighbors Model Settings</h3>
                 <label for="n_neighbors">N Neighbors - # of neighbors (int):</label>
                 <input type="number" step=1 value=5 placeholder=5 id="n_neighbors" name="n_neighbors">
                 
@@ -1929,7 +1918,6 @@
             </div>
 
             <div id="GradientBoostingFields" class="hidden">
-                <h3>Gradient Boosting Model Settings</h3>
                 <label for="GBn_estimators">N Estimators - Trees (integer >=1):</label>
                 <input type="number" step=1 value=100 placeholder=100 min=1 id="GBn_estimators" name="GBn_estimators">
                 <div><br></div>
@@ -2007,7 +1995,6 @@
 
              <!-- Classifier Hyperparameters -->
             <div id="Logistic_classifierFields" class="hidden">
-                <h3>Logistic Classifier Model Settings</h3>
                 <div class="nonreqHyperparams">
                     <div class="toggle-container">
                         <span class="optional-param-label">More options</span>
@@ -2088,8 +2075,7 @@
                 </div>
             </div>
 
-            <div id="MLP_classifierFields" class="hidden"> 
-                <h3>MLP Classifier Model Settings</h3>
+            <div id="MLP_classifierFields" class="hidden">
                 <label for="Class_hidden_layer_sizes1">Hidden Layer Sizes - neurons in each hidden layer (ints):</label>
                 <br>
                 <input type="number" id="Class_hidden_layer_sizes1" step=1 value="100" name="Class_hidden_layer_sizes1">
@@ -2200,7 +2186,6 @@
             </div>
 
             <div id="RF_classifierFields" class="hidden">
-                <h3>Random Forest Classifier Model Settings</h3>
 
                 <label for="Class_RFn_estmators">N Estimators - # of trees (integer >=1):</label>
                 <input type="number" step=1 value=100 placeholder="100" min=1 id="Class_RFn_estmators" name="Class_RFn_estmators">
@@ -2269,7 +2254,6 @@
             </div>
 
             <div id="SVC_classifierFields" class="hidden">
-                <h3>SVC Classifier Model Settings</h3>
 
 
                 <label for="SVC_C">C - Regularization (float >0):</label>
@@ -2357,7 +2341,6 @@
 
             <!-- Cluster Hyperparameters -->
             <div id="AgglomerativeFields" class="hidden">
-                <h3>Agglomerative Model Settings</h3>
                 <label for="Agg_n_clusters">Number of Clusters (int or blank for None):</label>
                 <input type="number" value=2 placeholder=2 step=1 id="Agg_n_clusters" name="Agg_n_clusters">
                 
@@ -2411,8 +2394,6 @@
             </div>
 
             <div id="GaussianFields" class="hidden">
-
-                <h3>Gaussian Mixture Model Settings</h3>
                 <label for="Gaun_components">Number of components:</label>
                 <input type="number" value=1.0 placeholder=1 min=0 id="Gaun_components" name="Gaun_components">
                 
@@ -2481,7 +2462,6 @@
             </div>
 
             <div id="KmeansFields" class="hidden">
-                <h3>K Means Model Settings</h3>
                 <label for="Kmeansn_clusters">Number of Clusters:</label>
                 <input type="number" value=8 placeholder=8 step=1 id="Kmeansn_clusters" name="Kmeansn_clusters">
                 
@@ -2532,26 +2512,19 @@
 
 
             
-            <div class="toggle-container">
-                <h3>Does Output Have Units?</h3>
-                <label class="switch">
-                    <input type="checkbox" id="unitToggle">
-                    <span class="slider"></span>
-                </label>
-                <div id="units" class="hidden">
-                    <label for="unitName">Enter Unit (u* for µ):</label>
-                        <input type="text" id='unitName' name="unitName"> 
-                    
+            <!-- The toggle guarded one optional text field, so the field stands on its
+                 own. #unitToggle stays for the handlers that read it and is not drawn. -->
+            <input type="checkbox" id="unitToggle" class="hidden" checked>
+            <div id="units" class="model-run-row">
+                <div class="scaling-container">
+                    <label for="unitName">Units (optional, u* for &micro;)</label>
+                    <input type="text" id='unitName' name="unitName" placeholder="Ex: mm">
+                </div>
+                <div class="scaling-container">
+                    <label for="sigfig">Significant figures</label>
+                    <input type="number" id="sigfig" name="sigfig" value=3 placeholder="3">
                 </div>
             </div>
-            <div><br></div>
-            
-
-            <div class="scaling-container">
-                <label for="sigfig">Select Number of Significant Figures</label>
-                <input type="number" id="sigfig" name="sigfig" value=3 placeholder="3">
-            </div>
-            <br>
 
             <!-- Run My Model button -->
             <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px;">
@@ -2711,7 +2684,6 @@
                                 
                             <!-- Ridge Hyperparameters -->
                             <div id="advancedRidgeFields" class="hidden">
-                                <h3>Ridge Model Settings</h3>
                                 <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Ridge adds an L2 penalty. Alpha scales the penalty.</p>
                                 <label for="advancedRidgeAlpha">Alpha - regularization strength (float >=0):</label>
                                 <input type="number" value=1.0 placeholder=1 min=0 id="advancedRidgeAlpha" name="advancedRidgeAlpha">
@@ -2770,7 +2742,6 @@
                             
                             <!-- Lasso Hyperparameters -->
                             <div id="advancedLassoFields" class="hidden">
-                                <h3>Lasso Model Settings</h3>
                                 <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Lasso adds an L1 penalty, which can set coefficients to zero.</p>
                                 <label for="advancedLassoAlpha">Alpha - regularization strength (float >=0):</label>
                                 <input type="number" value=1 min=0 placeholder=1 id="advancedLassoAlpha" name="advancedLassoAlpha">
@@ -2905,7 +2876,6 @@
                             
                             <!-- SVM Hyperparameters -->
                             <div id="advancedSVMFields" class="hidden">
-                                <h3>SVM Model Settings</h3>
                                 <label for="advancedC">C - Regularization (float >0):</label>
                                 <input type="number" value=1 placeholder=1 min="0.0000001" step="any" id="advancedC" name="advancedC">
                                 <div><br></div>
@@ -2985,7 +2955,6 @@
                             
                             <!-- Random Forest Hyperparameters -->
                             <div id="advancedRFFields" class="hidden">
-                                <h3>Random Forest Model Settings</h3>
                                 <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Random Forest averages decision trees fit on bootstrap samples. Run time grows with the tree count.</p>
                                 <label for="advancedRFn_estmators">N Estimators - # of trees (integer >=1):</label>
                                 <input type="number" step=1 value=100 placeholder="100" min=1 id="advancedRFn_estmators" name="advancedRFn_estmators">
@@ -3109,7 +3078,6 @@
                             
                             <!-- MLP Non-Essential Hyperparameters -->
                             <div id="advancedMLPFields" class="hidden">
-                                <h3>MLP Model Settings</h3>
                                 <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Multi-Layer Perceptron regressor. Hidden layer sizes and learning rate are set below.</p>
                                 <div class="nonreqHyperparams">
                                     <div><br></div>
@@ -3193,7 +3161,6 @@
                             
                             <!-- K-Nearest Neighbors Hyperparameters -->
                             <div id="advancedK-NearestFields" class="hidden">
-                                <h3>K-Nearest Neighbors Model Settings</h3>
                                 <label for="advancedN_neighbors">N Neighbors - # of neighbors (int):</label>
                                 <input type="number" step=1 value=5 placeholder=5 id="advancedN_neighbors" name="advancedN_neighbors">
                                 <div class="nonreqHyperparams">
@@ -3240,7 +3207,6 @@
                             
                             <!-- Gradient Boosting Hyperparameters -->
                             <div id="advancedGradientBoostingFields" class="hidden">
-                                <h3>Gradient Boosting Model Settings</h3>
                                 <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Gradient Boosting fits each tree to the residuals of the previous trees.</p>
                                 <label for="advancedGBn_estimators">N Estimators - Trees (integer >=1):</label>
                                 <input type="number" step=1 value=100 placeholder=100 min=1 id="advancedGBn_estimators" name="advancedGBn_estimators">
@@ -3313,7 +3279,6 @@
                             
                             <!-- Classifier Non-Essential Hyperparameters -->
                             <div id="advancedLogistic_classifierFields" class="hidden">
-                                <h3>Logistic Classifier Model Settings</h3>
                                 <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Logistic regression computes class probabilities from a linear function through the logistic link.</p>
                                 <div class="nonreqHyperparams">
                                     <div class="toggle-container">
@@ -3391,7 +3356,6 @@
                             </div>
                             
                             <div id="advancedMLP_classifierFields" class="hidden">
-                                <h3>MLP Classifier Model Settings</h3>
                                 <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Multi-Layer Perceptron classifier. Hidden layer sizes and learning rate are set below.</p>
                                 <div class="nonreqHyperparams">
                                     <div class="toggle-container">
@@ -3473,7 +3437,6 @@
                             </div>
                             
                             <div id="advancedRF_classifierFields" class="hidden">
-                                <h3>Random Forest Classifier Model Settings</h3>
                                 <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Random Forest votes across decision trees fit on bootstrap samples. Run time grows with the tree count.</p>
                                 <label for="advancedClass_RFn_estmators">N Estimators - # of trees (integer >=1):</label>
                                 <input type="number" step=1 value=100 placeholder="100" min=1 id="advancedClass_RFn_estmators" name="advancedClass_RFn_estmators">
@@ -3530,7 +3493,6 @@
                             </div>
                             
                             <div id="advancedSVC_classifierFields" class="hidden">
-                                <h3>SVC Classifier Model Settings</h3>
                                 <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Support Vector Classifier fits a maximum-margin boundary in the kernel space.</p>
                                 <div class="nonreqHyperparams">
                                     <div><br></div>

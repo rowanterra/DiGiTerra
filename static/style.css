@@ -4846,3 +4846,24 @@ label:has(input[type="radio"][name="modelingMode"]:checked) { background: none; 
 .preprocess-more-body {
     padding-top: 8px;
 }
+
+/* Units and significant figures are one short row, not a toggle and a block. */
+.model-run-row {
+    display: flex;
+    gap: var(--app-gap);
+    flex-wrap: wrap;
+    align-items: flex-end;
+    margin: 12px 0;
+}
+/* .scaling-container is itself a flex row of label and input, so the two inputs sat
+   at different heights. Stacking each label over its input lines them up. */
+.model-run-row .scaling-container {
+    flex: 1 1 130px;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+.model-run-row .scaling-container input {
+    width: 100%;
+}
