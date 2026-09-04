@@ -5,9 +5,9 @@ Branch `audit-fixes`, off `147d313` (ADA Boost, 2026-03-25).
 ## Done and verified
 
 Verification scripts live in /tmp (regenerate if the container was recycled):
-`verify_ml.py` (11 unit checks, all pass) and `e2e.py` (upload → preprocess →
-train → predict through the Flask test client). `pytest tests/` is 112 green as of the eighth pass,
-`npm run lint` is clean.
+`verify_ml.py` (11 unit checks, all pass) and `e2e.py` (upload → preprocess → train →
+predict through the Flask test client). `pytest tests/` is 112 green as of the eighth
+pass, `npm run lint` is clean.
 
 ML correctness
 - Cross-validation reported RMSE and MAE as negative. The scoring dict renamed
@@ -79,65 +79,106 @@ Frontend
   bundle with `no-undef` on. `npm run check-bundle` fails if the committed bundle
   has drifted.
 
-## Eighth pass, 2026-09-04: the re-audit follow-up at 0c98f06
+## Ninth pass, 2026-09-04: the memory bound on isolated work, and where it holds
 
-Three findings, all sound. A bundle's zip was expanded before the signature could be
-checked, which is unavoidable in order (the signature is over the bytes) and therefore
-had to be bounded instead: one preflight now serves the workbook reader and the bundle
-loader, and every member is streamed against the same cap because a zip directory is
-data from the file. The model accounting was observational; `admit_model` now evicts or
-refuses, and a model that does not fit is dropped with a note on the result rather than
-kept. Measuring it revealed that the counting sink lacked `tell`, so the previous
-release charged nothing at all. The published security review contradicted the desktop
-limits; it is rewritten, and `tests/unit/test_docs.py` fails when a `DIGITERRA_*`
-variable or a desktop limit is not stated in the docs. Not done: a pickle-free model
-format and worker isolation. `pytest tests/` is 112 green.
+The isolated worker's memory ceiling was enforced on Linux and silently absent on macOS.
+`RLIMIT_AS` on Darwin is a second name for `RLIMIT_RSS`, which the kernel does not
+apply: measured on macOS 26 (Darwin 25.6, arm64), `setrlimit` returns `EINVAL` for every
+value below roughly 512 GiB, and the astronomical values above that which it does accept
+bound nothing. `_apply_limits` caught the error, logged a warning, and let the child run
+with no ceiling, so a step that should have been refused instead ran unbounded while the
+caller was told it had succeeded.
 
-## Seventh pass, 2026-09-04: the implementation re-audit at bfaca2a
+`memory_limit_supported()` now answers by platform rather than by probing, because a
+probe cannot stand in for the question: on Darwin a `setrlimit` that succeeds proves
+nothing, since the value it accepts is not enforced. `run_isolated` refuses before a
+child is started and names the platform and the reason; the child checks again, since it
+is the process that would do the allocating. A step asking for a ceiling of zero is
+opting out deliberately and still runs. `/upload` and `/predict` answer 500 with a
+message about the installation rather than the file. This is the rule the rest of the
+tree already follows: a fitted model whose size cannot be measured is discarded rather
+than kept uncharged.
 
-`IMPLEMENTATION_RE_AUDIT_2026-09-04.md` had four findings, all sound, two of them
-high. Bundle import in the desktop build was arbitrary code execution from a shared
-zip, because a hash in the manifest says nothing about who wrote the file: bundles are
-now signed with HMAC-SHA256 under a per-installation key and import verifies before
+`tests/unit/test_worker.py` asserts what each platform actually offers instead of
+skipping the one that cannot make the promise: where the ceiling holds, a four-gigabyte
+allocation under a 768 MB budget stops the child and the parent survives; where it
+cannot be set, the same call is refused before any child starts. One test spawns a child
+that asks for the real budget and reports whether the kernel gave it, so the platform
+reading cannot drift from what the allocating process finds; another simulates an
+unenforceable limit on any platform and checks no child is created. Forcing the platform
+reading wrong locally turned six of the ten red, which is the check that the tests bind.
+Two tests in `test_security.py` set `DIGITERRA_ISOLATE_WORK=0`: their subject is the
+CSRF token and the rate-limit bucket, and an upload was only the vehicle.
+
+The CI matrix was `ubuntu-latest` only, which is why this passed review twice; it now
+runs `macos-latest` as well, four jobs across Python 3.11 and 3.12. The server profile
+requires Linux, and `docs/SECURITY_REVIEW.md` says so where it previously claimed a
+memory bound without saying where it held. `pytest tests/` is 150 green with 1 skipped
+(Playwright absent).
+
+## Eighth pass, 2026-09-04: bundle preflight, model accounting, and the security review at 0c98f06
+
+Review of commit 0c98f06 raised three findings, all sound. A bundle's zip was expanded
+before the signature could be checked, which is unavoidable in order (the signature is
+over the bytes) and therefore had to be bounded instead: one preflight now serves the
+workbook reader and the bundle loader, and every member is streamed against the same cap
+because a zip directory is data from the file. The model accounting was observational;
+`admit_model` now evicts or refuses, and a model that does not fit is dropped with a
+note on the result rather than kept. Measuring it revealed that the counting sink lacked
+`tell`, so the previous release charged nothing at all. The published security review
+contradicted the desktop limits; it is rewritten, and `tests/unit/test_docs.py` fails
+when a `DIGITERRA_*` variable or a desktop limit is not stated in the docs. Not done: a
+pickle-free model format and worker isolation. `pytest tests/` is 112 green.
+
+## Seventh pass, 2026-09-04: signed bundles, compressed-input caps, and the session budget at bfaca2a
+
+A review of the implementation at bfaca2a raised four findings, all sound, two of them
+high. Bundle import in the desktop build was arbitrary code execution from a shared zip,
+because a hash in the manifest says nothing about who wrote the file: bundles are now
+signed with HMAC-SHA256 under a per-installation key and import verifies before
 unpickling. Excel and Parquet inflated before any cap applied, and the desktop build
 turned the caps off: the zip directory and the Parquet footer are checked against a
-decoded-size budget before anything is opened, Parquet reads in batches, and the
-desktop limits are large rather than absent. The session budget now runs against a
-metadata estimate before the parse and counts fitted objects after a run. The
-data-check override is a server-side switch that requires a reason and labels the run
-not valid for decision use. Not done from that review: a pickle-free model format and
-parsing or training in an isolated worker. `pytest tests/` is 106 green.
+decoded-size budget before anything is opened, Parquet reads in batches, and the desktop
+limits are large rather than absent. The session budget now runs against a metadata
+estimate before the parse and counts fitted objects after a run. The data-check override
+is a server-side switch that requires a reason and labels the run not valid for decision
+use. Not done, and raised in review: a pickle-free model format and parsing or training
+in an isolated worker. `pytest tests/` is 106 green.
 
-## Sixth pass, 2026-09-04 (commits 10 to 13): the market-gap items and the implementation review
+## Sixth pass, 2026-09-04 (commits 10 to 13): market-gap items, run records, bundles, and capacity controls
 
 Commits bc404d0, c22768f, 4216fdd, 4153210. `pytest tests/` is 97 green, `ruff check .`,
 `ruff format --check .`, and `npm run lint` are clean.
 
-Market-gap items from `MARKET_GAP_ANALYSIS.md` that are in the code now: Excel and Parquet
-input with an Excel export; time-ordered and grouped holdouts; data checks before
-training with a recorded override; a baseline on the same validation rows; a run
-record (manifest and model card) per run; a portable bundle with export, gated import,
-a scoring script, and a rerun script. `audit_handoff_2026-09-03/GAP_RESPONSE.md` has the
-item-by-item disposition, including the items left out and why.
+The market-gap items now in the code: Excel and Parquet input with an Excel export;
+time-ordered and grouped holdouts; data checks before training with a recorded override;
+a baseline on the same validation rows; a run record (manifest and model card) per run;
+a portable bundle with export, gated import, a scoring script, and a rerun script. Left
+out, and why: reopening a bundle as an editable project, cloning a run, and comparing
+runs side by side all need durable per-user storage, which does not exist; a cross-run
+leaderboard needs the same. A PDF model card was dropped because the HTML one prints.
+Calibrated probabilities and uncertainty intervals, backtesting over several folds,
+spatial blocking by coordinates, missingness reported by split, and
+train-versus-inference schema mismatch beyond the existing missing-feature error at
+`/predict` were all considered and not built.
 
 Two defects surfaced while testing the bundle. The fitted preprocessor's group-map step
 was a closure and could not be pickled. `prediction()` used the scaler's
 `feature_names_in_` array in a boolean `or`, which raises for more than one column, so
-`/predict` returned 500 for every scaled regression model since commit ccf017f, my own
-first-pass change. No test had run `/predict` after a real training run;
-`tests/unit/test_inference.py` does now, for five model and scaler combinations.
+`/predict` returned 500 for every scaled regression model since commit ccf017f, the
+first-pass change that introduced it. No test had run `/predict` after a real training
+run; `tests/unit/test_inference.py` does now, for five model and scaler combinations.
 
-The reviewer's `IMPLEMENTATION_REVIEW.md` had four findings, all sound and all
-addressed in 4153210: progress-stream slots (one per run, four across the process),
-a process-wide budget for uploaded data with job-protected eviction, a per-job core
-budget in place of `n_jobs=-1`, and a portable stream-starvation script that exits
-nonzero on failure. `tests/unit/test_capacity.py` covers the first three.
+Review of the implementation raised four findings, all sound and all addressed in
+4153210: progress-stream slots (one per run, four across the process), a process-wide
+budget for uploaded data with job-protected eviction, a per-job core budget in place of
+`n_jobs=-1`, and a portable stream-starvation script that exits nonzero on failure.
+`tests/unit/test_capacity.py` covers the first three.
 
-## Fifth pass, 2026-09-03 night (commit 9): the re-audit
+## Fifth pass, 2026-09-03 night (commit 9): admission control, a bounded parse, and the threaded worker
 
-The second reviewer re-audited commit 8 and filed `RE_AUDIT.md`: three high
-findings and one medium, all sound, plus one verification failure that was a
-real defect in my own test.
+A review of commit 8 raised three high findings and one medium, all sound, plus one
+verification failure that was a defect in the test rather than in the code.
 
 - The test compared floating-point means with exact equality. It now uses
   pytest.approx for the equality and a tolerance for the inequality.
@@ -160,82 +201,76 @@ real defect in my own test.
   a run in flight, refreshes a directory's age as it is used, and runs on a
   timer.
 
-Still not done, and still correct as the reviewer's conclusion: authentication,
-CSRF tokens, rate limiting, a durable job queue, and out-of-process session
-state. Without those the network deployment is not for untrusted users.
+Still not done, and the review's conclusion on them still stands: authentication, CSRF
+tokens, rate limiting, a durable job queue, and out-of-process session state. Without
+those the network deployment is not for untrusted users.
 
-## Fourth pass, 2026-09-03 late (commit 8): the external review handoff
+## Fourth pass, 2026-09-03 late (commit 8): external review findings
 
-A second reviewer left `audit_handoff_2026-09-03/` beside the repo with four
-findings and three patches. All three patches were sound and are applied,
-adapted to this tree: uploads are deleted once parsed (0001); testSize, CV
-folds, search folds and search iterations are bounded server-side, with the
-constants in core/constants.py and the UI inputs carrying the same ranges
-(0002); a progress stream answers only the browser session that started the
-run (0003). The two findings without a patch got code as well: a frame above
-DIGITERRA_MAX_CELLS cells is rejected before it is stored, the served default
-body limit is 64 MB with desktop_app.py raising it, and
-config.sweep_stale_outputs removes session directories and upload leftovers
-older than DIGITERRA_STALE_SESSION_HOURS. tests/unit/test_limits.py covers each
-item and caught one more defect on the way: reset_session_scope raised on the
-second teardown of a streamed response. DEPLOYMENT_OPTIONS.md is strategy (EDX
-and public deployments, values files not to be written until names are known)
-and needed no code beyond the escaping regression test it asked for.
+An external review supplied four findings and three patches. All three patches were
+sound and are applied, adapted to this tree: uploads are deleted once parsed (0001);
+testSize, CV folds, search folds and search iterations are bounded server-side, with the
+constants in core/constants.py and the UI inputs carrying the same ranges (0002); a
+progress stream answers only the browser session that started the run (0003). The two
+findings without a patch got code as well: a frame above DIGITERRA_MAX_CELLS cells is
+rejected before it is stored, the served default body limit is 64 MB with desktop_app.py
+raising it, and config.sweep_stale_outputs removes session directories and upload
+leftovers older than DIGITERRA_STALE_SESSION_HOURS. tests/unit/test_limits.py covers
+each item and caught one more defect on the way: reset_session_scope raised on the
+second teardown of a streamed response. The deployment-options note is strategy (EDX and
+public deployments, values files not to be written until names are known) and needed no
+code beyond the escaping regression test it asked for.
 
-Not done from the handoff, by its own scoping: authentication, CSRF tokens,
-rate limiting, a job queue, a shared backing store. The residual-risk
-paragraph in FINDINGS.md still holds for an untrusted network deployment.
+Not done, by that review's own scoping: authentication, CSRF tokens, rate limiting, a
+job queue, a shared backing store. The residual-risk conclusion still holds: without
+them the network deployment is not for untrusted users.
 
 ## Third pass, 2026-09-03 night (commits 3 to 5, unattended)
 
-Done: ruff 607 -> 0 with `ruff format` over the tree and the rest by hand; CI
-now fails on `ruff check` and `ruff format --check`. Two defects surfaced by
-the unused-variable cleanup: the regression pipeline returned "" in place of
-the per-bin evaluation table (the "quantile Bin Results" sheet never existed),
-and the user's bin labels were parsed and discarded. Imputation leakage is
-fixed: `preprocessing/split_fill.py` holds a FillPlan that preprocess_data
-records mean/median NaN and zero fills into; each pipeline fits the plan on its
-training rows after train_test_split and applies it to both halves; the fitted
-values go to session storage and inference reuses them
-(tests/unit/test_split_fill.py proves the stored fill is the train-split mean,
-not the whole-file mean). Regression heading 33 -> 32 models. Helm
-image.repository is `required`. shap.summary_plot takes rng=seed.
+Done: ruff 607 -> 0 with `ruff format` over the tree and the rest by hand; CI now fails
+on `ruff check` and `ruff format --check`. Two defects surfaced by the unused-variable
+cleanup: the regression pipeline returned "" in place of the per-bin evaluation table
+(the "quantile Bin Results" sheet never existed), and the user's bin labels were parsed
+and discarded. Imputation leakage is fixed: `preprocessing/split_fill.py` holds a
+FillPlan that preprocess_data records mean/median NaN and zero fills into; each pipeline
+fits the plan on its training rows after train_test_split and applies it to both halves;
+the fitted values go to session storage and inference reuses them
+(tests/unit/test_split_fill.py proves the stored fill is the train-split mean, not the
+whole-file mean). Regression heading 33 -> 32 models. Helm image.repository is
+`required`. shap.summary_plot takes rng=seed.
 
 RadiusNeighbors: a row with no training row inside the radius took NaN from
-scikit-learn; it now takes the value of its nearest training row, and
-`n_fallback_` on the model counts how many rows that was.
+scikit-learn; it now takes the value of its nearest training row, and `n_fallback_` on
+the model counts how many rows that was.
 
-Still open: the `n_estmators` id spelling is consistent across HTML and JS and
-was left.
+Still open: the `n_estmators` id spelling is consistent across HTML and JS and was left.
 
 ## Second pass, 2026-09-03 evening (commit 2)
 
-Done: XSS closed (escapeHtml escapes quotes; every innerHTML sink that takes
-server or CSV data is wrapped; the echoed filename comes from secure_filename);
-pairplot and the other nine fetch calls show an error in the page on failure;
-implicit globals declared; clustering now applies outlier handling and reports
-feature selection, search and CV as "Not applicable to clustering" in both the
-tracker and the result (`skipped_options`, rendered on the results panel); the
-every-model sweep (scripts/train_every_model.py) trains 67 of 67 offered
-estimators after fixes to SVR/NuSVR/SVC/NuSVC gamma, MLP hidden_layer_sizes,
-LassoCV/ElasticNetCV n_alphas (removed in scikit-learn 1.9), PassiveAggressive
-n_jobs, and SGDClassifier eta0; Perceptron (a classifier registered as a
-regressor) is now a rejected entry like Polynomial; a Playwright test
-(tests/integration/test_browser_advanced.py) drives the page and proves Ridge,
-Logistic classifier and the relocated AdaBoost group reach the /process payload
-in Advanced mode, which also caught 11 slider gates that still read the Simple
-id; docs rewritten for truth and register (four stale architecture docs
-deleted), requirements pinned, LICENSE, CHANGELOG, CITATION.cff,
-THIRD_PARTY_NOTICES.md (generated from installed metadata), Makefile, ruff
-config, CI matrix 3.11-3.12 with the bundle-drift check; UI copy cut from 6,678
-to 4,899 characters of field notes under the plain-technical-prose rules.
+Done: XSS closed (escapeHtml escapes quotes; every innerHTML sink that takes server or
+CSV data is wrapped; the echoed filename comes from secure_filename); pairplot and the
+other nine fetch calls show an error in the page on failure; implicit globals declared;
+clustering now applies outlier handling and reports feature selection, search and CV as
+"Not applicable to clustering" in both the tracker and the result (`skipped_options`,
+rendered on the results panel); the every-model sweep (scripts/train_every_model.py)
+trains 67 of 67 offered estimators after fixes to SVR/NuSVR/SVC/NuSVC gamma, MLP
+hidden_layer_sizes, LassoCV/ElasticNetCV n_alphas (removed in scikit-learn 1.9),
+PassiveAggressive n_jobs, and SGDClassifier eta0; Perceptron (a classifier registered as
+a regressor) is now a rejected entry like Polynomial; a Playwright test
+(tests/integration/test_browser_advanced.py) drives the page and proves Ridge, Logistic
+classifier and the relocated AdaBoost group reach the /process payload in Advanced mode,
+which also caught 11 slider gates that still read the Simple id; docs rewritten for
+truth and register (four stale architecture docs deleted), requirements pinned, LICENSE,
+CHANGELOG, CITATION.cff, THIRD_PARTY_NOTICES.md (generated from installed metadata),
+Makefile, ruff config, CI matrix 3.11-3.12 with the bundle-drift check; UI copy cut from
+6,678 to 4,899 characters of field notes under the plain-technical-prose rules.
 
-Still open: imputation leakage (unchanged, see item 2 below); RadiusNeighbors
-regression returns NaN when no training row is inside the radius (needs a
-larger default radius or a fallback); ruff baseline is 592 errors (354
-auto-fixable) and the CI step is continue-on-error; Helm deployment.yaml does
-not `required`-guard an empty image.repository; the UI still names "(33
-models)" for regression where the registry has 32 trainable.
+Still open: imputation leakage (unchanged, see item 2 below); RadiusNeighbors regression
+returns NaN when no training row is inside the radius (needs a larger default radius or
+a fallback); ruff baseline is 592 errors (354 auto-fixable) and the CI step is
+continue-on-error; Helm deployment.yaml does not `required`-guard an empty
+image.repository; the UI still names "(33 models)" for regression where the registry has
+32 trainable.
 
 ## Not done (first pass list, items 1 and 3-7 now closed)
 
