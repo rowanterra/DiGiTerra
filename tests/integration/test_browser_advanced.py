@@ -458,3 +458,19 @@ def test_the_catalog_count_does_not_change_with_the_page(session):
     p.wait_for_timeout(400)
     assert p.inner_text("#narrativeAppsCount").strip() == on_modeling
     assert not session.errors, session.errors
+
+
+def test_try_an_example_loads_penguins_and_opens_exploration(session):
+    """The app has to be usable with no file of one's own."""
+    p = session.page
+    assert p.query_selector("#tryExampleButton"), "no Try an Example control"
+    with p.expect_response(lambda r: r.url.endswith("/upload")) as up:
+        p.click("#tryExampleButton")
+    assert up.value.status == 200, f"example upload failed: {up.value.status}"
+    p.wait_for_timeout(1200)
+    assert p.evaluate("() => uploadedFileName") == "penguins.csv"
+    assert session.visible("columnsection") == "visible", "Data Exploration did not open"
+    # The rail arrives with the data, as it does for a chosen file.
+    assert p.evaluate("() => document.getElementById('narrativeRail').offsetParent !== null")
+    assert p.inner_text("#narrativeDataCount").strip() == "1"
+    assert not session.errors, session.errors

@@ -55,6 +55,8 @@
             <h4>A Machine Learning Exploration Tool</h4>
             <div style="width: 100%; max-width: 700px; margin: 0 auto;">
                 <button class="welcomebutton" id='startModelingButton' aria-label="Start modeling process">Start Modeling</button>
+                <button type="button" class="welcomebutton welcomebutton--secondary" id="tryExampleButton" aria-label="Load the example penguin dataset">Try an Example</button>
+                <p class="welcome-example-note">Loads <code>penguins.csv</code>, 344 rows of Palmer penguin measurements, and opens Data Exploration. Nothing is uploaded from your computer.</p>
             </div>
         </div>
         <div class="welcomesection logos">
@@ -63,8 +65,8 @@
             <img src='{{ static_root }}/NETLLogo.png' class="bottomlogo" alt="National Energy Technology Laboratory logo">
         </div>
         <div class="welcomesection disclaimer">
-            <div id="welcomeDisclaimerContent" style="padding: 12px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px; margin: 0;">
-                <p style="margin: 0; color: #856404; font-size: 0.9em; text-align: justify;">Disclaimer: This project was funded by the Department of Energy, National Energy Technology Laboratory an agency of the United States Government, through an appointment administered by the Oak Ridge Institute for Science and Education. Neither the United States Government nor any agency thereof, nor any of its employees, nor the support contractor, nor any of their employees, makes any warranty, express or implied, or assumes any legal liability or responsibility for the accuracy, completeness, or usefulness of any information, apparatus, product, or process disclosed, or represents that its use would not infringe privately owned rights. Reference herein to any specific commercial product, process, or service by trade name, trademark, manufacturer, or otherwise does not necessarily constitute or imply its endorsement, recommendation, or favoring by the United States Government or any agency thereof. The views and opinions of authors expressed herein do not necessarily state or reflect those of the United States Government or any agency thereof.</p>
+            <div id="welcomeDisclaimerContent" class="welcome-disclaimer-box" style="margin: 0;">
+                <p class="caution-note" style="margin: 0; font-size: 0.9em; text-align: justify;">Disclaimer: This project was funded by the Department of Energy, National Energy Technology Laboratory an agency of the United States Government, through an appointment administered by the Oak Ridge Institute for Science and Education. Neither the United States Government nor any agency thereof, nor any of its employees, nor the support contractor, nor any of their employees, makes any warranty, express or implied, or assumes any legal liability or responsibility for the accuracy, completeness, or usefulness of any information, apparatus, product, or process disclosed, or represents that its use would not infringe privately owned rights. Reference herein to any specific commercial product, process, or service by trade name, trademark, manufacturer, or otherwise does not necessarily constitute or imply its endorsement, recommendation, or favoring by the United States Government or any agency thereof. The views and opinions of authors expressed herein do not necessarily state or reflect those of the United States Government or any agency thereof.</p>
             </div>
         </div>
     </div>
@@ -216,10 +218,10 @@
                 <span class="doc-badge doc-workflow-arrow">→</span>
                 <span class="doc-badge doc-workflow-step">5. Review Results</span>
             </div>
-            <div class="doc-warning-content" style="margin-top: 24px; padding: 16px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
-                <p style="margin: 0 0 12px 0; font-weight: 600; color: #856404;">Disclaimer: DiGiTerra is an exploration tool, not a production system.</p>
-                <p style="margin: 0 0 12px 0; color: #856404;">DiGiTerra is an <strong>exploratory analysis and modeling tool</strong>. <strong>Results from the application are not claimed to be reliable for decision making.</strong></p>
-                <p style="margin: 0; color: #856404;"><strong>Findings should be checked with a statistician</strong> for model assumptions, performance in context, and interpretation. The tool supports expert analysis and does not replace the analysis.</p>
+            <div class="doc-warning-content welcome-disclaimer-box" style="margin-top: 24px;">
+                <p class="caution-note" style="margin: 0 0 12px 0; font-weight: 600;">Disclaimer: DiGiTerra is an exploration tool, not a production system.</p>
+                <p class="caution-note" style="margin: 0 0 12px 0;">DiGiTerra is an <strong>exploratory analysis and modeling tool</strong>. <strong>Results from the application are not claimed to be reliable for decision making.</strong></p>
+                <p class="caution-note" style="margin: 0;"><strong>Findings should be checked with a statistician</strong> for model assumptions, performance in context, and interpretation. The tool supports expert analysis and does not replace the analysis.</p>
             </div>
         </div>
             </details>
@@ -233,35 +235,48 @@
                     <h3>Tutorial</h3>
                 </summary>
                 <div class="doc-section-body">
-                    <p>This tutorial trains one classifier on <code>examples/iris.csv</code>, a file that ships with DiGiTerra. It has 150 rows and 5 columns. Columns A to D are measurements. Column E is the species.</p>
+                    <p>This tutorial trains one classifier on <code>examples/penguins.csv</code>, a file that ships with DiGiTerra. It holds 344 rows of Palmer penguin measurements in 7 columns. The target is the species. Two columns hold text and eleven rows have a missing value, so the run uses one-hot encoding, missing-value handling and a stratified split.</p>
+                    <p class="doc-note">You can load this file without leaving the app. Click <strong>Try an Example</strong> on the welcome screen.</p>
+
+                    <h4>The columns</h4>
+                    <p>A is <code>species</code>, the target. B is <code>island</code>, text. C to F are the measurements. G is <code>sex</code>, text.</p>
 
                     <h4>1. Load the file</h4>
-                    <p class="doc-step">Click <strong>Start Modeling</strong> on the welcome screen. Click <strong>Choose File</strong> and select <code>examples/iris.csv</code>. Click <strong>Upload</strong>.</p>
-                    <p class="doc-note">The page lists the five columns. The rail appears on the left. The Data panel names the file and reads <em>Tabular, 150 &times; 5</em>.</p>
+                    <p class="doc-step">Click <strong>Try an Example</strong> on the welcome screen.</p>
+                    <p class="doc-note">The page lists the seven columns. The rail appears on the left. The Data panel reads <em>Tabular, 344 &times; 7</em>.</p>
 
                     <h4>2. Look at the data</h4>
                     <p class="doc-step">Click <strong>Data Exploration</strong> in the rail. Click <strong>Correlation Matrix</strong>.</p>
-                    <p class="doc-note">A heat map appears. The four measurement columns correlate with each other. Petal length and petal width correlate most.</p>
+                    <p class="doc-note">The heat map covers the four numeric columns. Flipper length and body mass correlate most. The text columns do not appear, because a correlation needs numbers.</p>
 
-                    <h4>3. Choose the columns</h4>
-                    <p class="doc-step">Click <strong>Model Preprocessing</strong> in the rail. Set <strong>Modeling Task Type</strong> to <em>Classification</em>. Enter <code>A-D</code> in <strong>Indicator Columns</strong>. Enter <code>E</code> in <strong>Target Columns</strong>.</p>
+                    <h4>3. Handle the missing values</h4>
+                    <p class="doc-step">Click <strong>Model Preprocessing</strong> in the rail. Click <strong>Run autodetect</strong> under Data Cleaning.</p>
+                    <p class="doc-note">The check reports blanks in five columns. <code>sex</code> has 11 and each measurement column has 2.</p>
+                    <p class="doc-step">Tick <strong>All numeric</strong> under Missing values. Set <strong>Action for blanks</strong> to <em>Remove rows with blanks</em>.</p>
+
+                    <h4>4. Transform the text columns</h4>
+                    <p class="doc-step">Set <strong>Are any columns non-numeric?</strong> to <em>Yes</em>, or click <strong>Run autodetect</strong> beside it.</p>
+                    <p class="doc-note">DiGiTerra names <code>island</code> and <code>sex</code>. A transform makes one indicator column for each value they hold.</p>
+
+                    <h4>5. Choose the columns and the split</h4>
+                    <p class="doc-step">Set <strong>Modeling Task Type</strong> to <em>Classification</em>. Enter <code>B-G</code> in <strong>Indicator Columns</strong>. Enter <code>A</code> in <strong>Target Columns</strong>.</p>
+                    <p class="doc-step">Set <strong>Stratify the model&#39;s splitting by a specific variable?</strong> to <em>Yes</em>, and stratify by the target.</p>
+                    <p class="doc-note">The classes are uneven: 152, 124 and 68. A stratified split holds those proportions in the training rows and the test rows, so the smallest class is not left out of one of them.</p>
                     <p class="doc-step">Click <strong>Process Configurations and Continue</strong>.</p>
-                    <p class="doc-note">The page opens Modeling. The Models panel in the rail now lists 23 classification estimators.</p>
 
-                    <h4>4. Train the model</h4>
-                    <p class="doc-step">Select <strong>Simple Modeling</strong>. Click <strong>Logistic Classifier</strong> in the Models panel.</p>
-                    <p class="doc-step">Click <strong>Run This Model</strong>.</p>
-                    <p class="doc-note">The five-step strip moves to Run and then to Results. The result gives an accuracy near 0.97 on the test rows, a confusion matrix, and a comparison with the baseline. The exact number moves with the seed.</p>
+                    <h4>6. Train the model</h4>
+                    <p class="doc-step">Select <strong>Simple Modeling</strong>. Click <strong>Random Forest Classifier</strong> in the Models panel. Click <strong>Run This Model</strong>.</p>
+                    <p class="doc-note">The five-step strip moves to Run and then to Results. The result gives an accuracy near 0.99 on the test rows, a confusion matrix over the three species, and a comparison with the baseline. The baseline predicts Adelie every time and reaches about 0.44, so the model earns its place. The exact numbers move with the seed.</p>
 
-                    <h4>5. Predict on new rows</h4>
-                    <p class="doc-step">Click <strong>Inference on New Data</strong> in the rail. Upload a file with the same four measurement columns.</p>
+                    <h4>7. Predict on new rows</h4>
+                    <p class="doc-step">Click <strong>Inference on New Data</strong> in the rail. Upload a file with the same six indicator columns.</p>
                     <p class="doc-note">The page shows one predicted species for each row.</p>
 
-                    <h4>6. Watch a data check stop a run</h4>
+                    <h4>8. Watch a data check stop a run</h4>
                     <p>A data check refuses a run whose result would mislead. This step causes one on purpose.</p>
-                    <p class="doc-step">Open <code>examples/iris.csv</code> in a spreadsheet. Copy column E into a new column beside it. Name the new column <code>leak</code>. Save the file under a new name.</p>
-                    <p class="doc-step">Upload the new file. Set the task type to <em>Classification</em>. Enter <code>A-E</code> in <strong>Indicator Columns</strong> and <code>F</code> in <strong>Target Columns</strong>. Continue, select a model, and run it.</p>
-                    <p class="doc-note">The run stops. The page reads: <em>DiGiTerra stopped the run. The data checks found a problem that makes the result misleading. 'leak' is identical to the target 'species'. Remove the column, then train again.</em></p>
+                    <p class="doc-step">Open <code>examples/penguins.csv</code> in a spreadsheet. Copy column A into a new column at the end. Name the new column <code>leak</code>. Save the file under a new name.</p>
+                    <p class="doc-step">Upload the new file. Set the task type to <em>Classification</em>. Enter <code>B-H</code> in <strong>Indicator Columns</strong> and <code>A</code> in <strong>Target Columns</strong>. Continue, select a model, and run it.</p>
+                    <p class="doc-note">The run stops. The page reads: <em>DiGiTerra stopped the run. The data checks found a problem that makes the result misleading. Every value of &#39;leak&#39; maps to exactly one class of &#39;species&#39;. The column is the target in another form. Remove the column, then train again.</em></p>
                     <p>The message is correct. A column that copies the target predicts it perfectly, and a score from that column says nothing about new data. Remove the column and run the model again.</p>
                     <p class="doc-note">The desktop build allows a run past a data check. Open <strong>Advanced</strong>, then <strong>Data Checks</strong>, and give a reason. A served installation does not allow it unless the operator turns it on. A run that skips a check is recorded as not valid for decision use.</p>
                 </div>
@@ -6025,7 +6040,7 @@
                                     <button type="submit" class='processButton processButton--compact' id="advancedOptimizationSubmitButton">Run Model with Advanced Options</button>
                                     <button type="button" class='secondary-button' id="stopAdvancedButton" style="display: none; padding: 12px 24px;">Stop Model</button>
                                 </div>
-                                <p class="field-note" style="color: #856404; margin-top: 12px; margin-bottom: 0;">
+                                <p class="field-note caution-note" style="margin-top: 12px; margin-bottom: 0;">
                                     <strong>Warning:</strong> Hyperparameter search, feature selection, and cross-validation can run for hours on a large table.
                                 </p>
                             </div>
@@ -6230,7 +6245,7 @@
                                     <button type="submit" class='processButton processButton--compact success-button' id="automlSubmitButton">Run AutoML</button>
                                     <button type="button" class='secondary-button' id="stopAutomlButton" style="display: none; padding: 12px 24px;">Stop AutoML</button>
                                 </div>
-                                <p class="field-note" style="color: #856404; margin-top: 12px; margin-bottom: 0;">
+                                <p class="field-note caution-note" style="margin-top: 12px; margin-bottom: 0;">
                                     <strong>Warning:</strong> AutoML can run for hours on a large table.
                                 </p>
                             </div>

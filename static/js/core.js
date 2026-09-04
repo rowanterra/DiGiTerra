@@ -1606,7 +1606,43 @@ function initTutorialEntry() {
     });
 }
 
+/* Load an example through the ordinary upload, so it meets the same parse, the same
+   limits and the same data checks a chosen file meets. The file is fetched from the
+   server and handed to the existing form rather than a second code path being built. */
+function initTryExample() {
+    const button = document.getElementById('tryExampleButton');
+    if (!button) return;
+    button.addEventListener('click', async () => {
+        const name = 'penguins.csv';
+        const input = document.getElementById('file');
+        const form = document.getElementById('uploadForm');
+        if (!input || !form) return;
+        const original = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Loading the example...';
+        try {
+            const response = await fetch(`${API_ROOT}/example-data/${name}`);
+            if (!response.ok) throw new Error('status ' + response.status);
+            const blob = await response.blob();
+            const transfer = new DataTransfer();
+            transfer.items.add(new File([blob], name, { type: 'text/csv' }));
+            input.files = transfer.files;
+            if (typeof showTab === 'function') showTab('upload');
+            form.requestSubmit();
+        } catch (err) {
+            console.error('Example not loaded:', err);
+            button.disabled = false;
+            button.textContent = original;
+            const box = document.getElementById('uploadErrorDiv') || document.getElementById('errorDiv');
+            if (box && typeof showError === 'function') {
+                showError(box, 'DiGiTerra cannot load the example file. Choose a file instead.');
+            }
+        }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initDocContents();
     initTutorialEntry();
+    initTryExample();
 });

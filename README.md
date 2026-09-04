@@ -50,7 +50,7 @@ The prebuilt application contains the Python interpreter and every dependency, s
 
 ## Example datasets
 
-The `examples/` directory contains 9 CSV files: 3 classification (Iris, Wine, Breast cancer), 3 regression (Diabetes, Synthetic, Linnerud), and 3 feature-only clustering copies. `examples/README.md` lists the column setup for each file.
+The `examples/` directory contains 10 CSV files: 4 classification (Iris, Penguins, Wine, Breast cancer), 3 regression (Diabetes, Synthetic, Linnerud), and 3 feature-only clustering copies. Penguins is the one with categorical columns and missing values. `examples/README.md` lists the column setup for each file.
 
 ## Verification
 
@@ -185,7 +185,7 @@ The page uses ARIA attributes, keyboard navigation with a skip link, screen read
 
 DiGiTerra is built on the scientific Python stack and would not exist without it: scikit-learn (Pedregosa et al., 2011) for every estimator, preprocessing step, and metric the application offers; NumPy (Harris et al., 2020), pandas (McKinney, 2010), and SciPy (Virtanen et al., 2020) for the array, frame, and statistical foundations; matplotlib (Hunter, 2007) and seaborn (Waskom, 2021) for the figures; SHAP (Lundberg & Lee, 2017) for the model explanations; and Flask and Werkzeug (Pallets, 2026) for the web layer. `THIRD_PARTY_NOTICES.md` lists every runtime dependency with its version and license.
 
-The example datasets in `examples/` are static copies of the datasets distributed with scikit-learn. Their original sources are the iris measurements of Fisher (1936), the diabetes progression data of Efron et al. (2004), and the wine, breast cancer (WDBC), and Linnerud datasets held by the UCI Machine Learning Repository; `synthetic_regression.csv` was generated once with `sklearn.datasets.make_regression`. `examples/README.md` gives the column setup for each file.
+Most of the example datasets in `examples/` are static copies of the datasets distributed with scikit-learn. Their original sources are the iris measurements of Fisher (1936), the diabetes progression data of Efron et al. (2004), and the wine, breast cancer (WDBC), and Linnerud datasets held by the UCI Machine Learning Repository. `synthetic_regression.csv` was generated once with `sklearn.datasets.make_regression`. `penguins.csv` is the Palmer Archipelago penguin data collected by Gorman, Williams and Fraser (2014) and distributed under CC0 through the palmerpenguins package, copied here unmodified. `examples/README.md` gives the column setup for each file.
 
 The Documentation view's styling — the evergreen masthead, warm off-white paper, forest-green headings, and journal-style tables — follows the comparison page of the corrplotpy package (Terra, 2026).
 
@@ -194,6 +194,8 @@ The Documentation view's styling — the evergreen masthead, warm off-white pape
 Efron, B., Hastie, T., Johnstone, I., & Tibshirani, R. (2004). Least angle regression. *The Annals of Statistics, 32*(2), 407–499.
 
 Fisher, R. A. (1936). The use of multiple measurements in taxonomic problems. *Annals of Eugenics, 7*(2), 179–188.
+
+Gorman, K. B., Williams, T. D., & Fraser, W. R. (2014). Ecological sexual dimorphism and environmental variability within a community of Antarctic penguins (genus *Pygoscelis*). *PLoS ONE, 9*(3), e90081. https://doi.org/10.1371/journal.pone.0090081
 
 Harris, C. R., Millman, K. J., van der Walt, S. J., Gommers, R., Virtanen, P., Cournapeau, D., Wieser, E., Taylor, J., Berg, S., Smith, N. J., Kern, R., Picus, M., Hoyer, S., van Kerkwijk, M. H., Brett, M., Haldane, A., del Río, J. F., Wiebe, M., Peterson, P., … Oliphant, T. E. (2020). Array programming with NumPy. *Nature, 585*(7825), 357–362.
 

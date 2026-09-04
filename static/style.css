@@ -35,6 +35,11 @@
   --app-soft: #4a544d;
   --app-accent-wash: #eaf1ec;
 
+  /* The caution note on the welcome screen and beside the risky options. */
+  --app-caution-ink: #856404;
+  --app-caution-bg: #fff3cd;
+  --app-caution-rule: #ffc107;
+
   --app-radius: 8px;
   --app-radius-sm: 6px;
   --app-pad: 14px;
@@ -59,6 +64,9 @@ body.dark-mode {
   --app-muted: #b9b9b9;
   --app-soft: #cfd6d0;
   --app-accent-wash: #2b3a30;
+  --app-caution-ink: #f0d48a;
+  --app-caution-bg: #3a3322;
+  --app-caution-rule: #b8912e;
 }
 
 html {
@@ -88,25 +96,25 @@ body {
 
 body {
     font-family: Arial, sans-serif;
-    background-color: #f4f4f9;
+    background-color: var(--app-page);
     padding-top: var(--header-offset, 88px);
 }
 
 /* Ensure body background is visible - override any dark mode if not explicitly enabled */
 body:not(.dark-mode) {
-    background-color: #f4f4f9 !important;
-    color: #000000;
+    background-color: var(--app-page) !important;
+    color: var(--app-ink);
 }
 
 main,
 #main-content {
-    background-color: #f4f4f9;
+    background-color: var(--app-page);
     scroll-margin-top: var(--header-offset, 88px);
 }
 
 body:not(.dark-mode) main,
 body:not(.dark-mode) #main-content {
-    background-color: #f4f4f9 !important;
+    background-color: var(--app-page) !important;
 }
 
 .header {
@@ -1183,21 +1191,21 @@ input[type="file"] {
 
 /* Warning Content */
 .doc-warning-content {
-  background-color: #fff3cd;
-  border-left: 4px solid #ffc107;
+  background-color: var(--app-caution-bg);
+  border-left: 4px solid var(--app-caution-rule);
   padding: 20px;
   border-radius: 6px;
 }
 
 .doc-warning-title {
   font-weight: 600;
-  color: #856404;
+  color: var(--app-caution-ink);
   margin-bottom: 12px;
   font-size: 1.1em;
 }
 
 .doc-warning-content p {
-  color: #856404;
+  color: var(--app-caution-ink);
   margin: 0 0 12px 0;
   line-height: 1.6;
 }
@@ -1335,10 +1343,10 @@ input[type="file"] {
 .doc-warning-box {
   margin-top: 20px;
   padding: 16px;
-  background-color: #fff3cd;
-  border-left: 4px solid #ffc107;
+  background-color: var(--app-caution-bg);
+  border-left: 4px solid var(--app-caution-rule);
   border-radius: 6px;
-  color: #856404;
+  color: var(--app-caution-ink);
   font-size: 0.95em;
   line-height: 1.6;
 }
@@ -1705,16 +1713,16 @@ input:checked + .slider {
 
 /* Advanced options warning styling */
 .advanced-options-warning {
-  background-color: #fff3cd;
-  border-left: 4px solid #ffc107;
+  background-color: var(--app-caution-bg);
+  border-left: 4px solid var(--app-caution-rule);
   padding: 12px 16px;
   margin: 12px 0;
   border-radius: 4px;
-  color: #856404;
+  color: var(--app-caution-ink);
 }
 
 .advanced-options-warning strong {
-  color: #856404;
+  color: var(--app-caution-ink);
 }
 
 input:checked + .slider:before {
@@ -2464,15 +2472,15 @@ body.dark-mode .doc-tip-item p {
 
 body.dark-mode .doc-warning-content {
   background-color: #3d3420;
-  border-left-color: #ffc107;
+  border-left-color: var(--app-caution-rule);
 }
 
 body.dark-mode .doc-warning-title {
-  color: #ffc107;
+  color: var(--app-caution-rule);
 }
 
 body.dark-mode .doc-warning-content p {
-  color: #ffc107;
+  color: var(--app-caution-rule);
 }
 
 body.dark-mode .doc-feature-card {
@@ -2549,8 +2557,8 @@ body.dark-mode .doc-action-badge {
 
 body.dark-mode .doc-warning-box {
   background-color: #3d3420;
-  border-left-color: #ffc107;
-  color: #ffc107;
+  border-left-color: var(--app-caution-rule);
+  color: var(--app-caution-rule);
 }
 
 body.dark-mode .section-header {
@@ -2646,7 +2654,7 @@ body.dark-mode .disclaimer {
 
 body.dark-mode #welcomeDisclaimerContent {
   background-color: #3a3a3a !important;
-  border-left-color: #ffc107 !important;
+  border-left-color: var(--app-caution-rule) !important;
   color: #e0e0e0 !important;
 }
 
@@ -2787,7 +2795,7 @@ body:not(.dark-mode) #columnsection,
 body:not(.dark-mode) #modelpreprocessing,
 body:not(.dark-mode) #modeling,
 body:not(.dark-mode) #historic {
-  background-color: #f4f4f9 !important;
+  background-color: var(--app-page) !important;
   position: relative;
   z-index: 1;
 }
@@ -4017,4 +4025,85 @@ body.dark-mode .dg-band--infer   { fill: color-mix(in srgb, var(--doc-panel) 88%
     border-left: 0;
     background: none;
     padding: 0;
+}
+
+/* --- The welcome screen --------------------------------------------------
+   It is the whole page now and the first thing anyone sees, and the restyle had
+   not reached it. Its sections take the same panel, type and spacing tokens the
+   other views take. */
+.welcome {
+    color: var(--app-ink);
+    gap: var(--app-gap);
+}
+.welcome-header {
+    color: var(--app-heading);
+}
+.welcome-text {
+    color: var(--app-muted);
+}
+.welcome-text2 {
+    color: var(--app-accent);
+}
+.welcomesection {
+    background-color: var(--app-panel);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius);
+    color: var(--app-ink);
+}
+.welcomesection.logos {
+    background-color: transparent;
+    border: 0;
+}
+.welcomesection.disclaimer {
+    background-color: var(--app-caution-bg);
+    border: 1px solid var(--app-caution-rule);
+    border-left: 4px solid var(--app-caution-rule);
+}
+.welcomesection.disclaimer p {
+    color: var(--app-caution-ink);
+}
+.welcomebutton {
+    background-color: var(--app-accent);
+    color: var(--app-on-accent);
+    border: 0;
+    border-radius: var(--app-radius);
+}
+.welcomebutton:hover {
+    background-color: var(--app-accent-dark);
+}
+
+/* The caution note wherever it appears, not only on the welcome screen. */
+.advanced-options-warning {
+    background-color: var(--app-caution-bg);
+    border-left-color: var(--app-caution-rule);
+    color: var(--app-caution-ink);
+}
+.caution-note {
+    color: var(--app-caution-ink);
+}
+.welcome-disclaimer-box {
+    padding: 12px;
+    background-color: var(--app-caution-bg);
+    border-left: 4px solid var(--app-caution-rule);
+    border-radius: var(--app-radius-sm);
+    color: var(--app-caution-ink);
+}
+
+/* The second way into the app: an example file, for someone with nothing to upload. */
+.welcomebutton--secondary {
+    margin-top: 10px;
+    font-size: 1.2em;
+    background-color: var(--app-panel);
+    color: var(--app-accent);
+    border: 2px solid var(--app-accent);
+}
+.welcomebutton--secondary:hover {
+    background-color: var(--app-accent-wash);
+}
+.welcome-example-note {
+    max-width: 700px;
+    margin: 8px auto 0;
+    font-size: 0.85em;
+    text-align: center;
+    color: var(--app-muted);
 }

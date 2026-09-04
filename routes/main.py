@@ -6,7 +6,7 @@ import os
 import time
 import uuid
 
-from flask import Blueprint, Response, jsonify, render_template, stream_with_context
+from flask import Blueprint, Response, jsonify, render_template, send_file, stream_with_context
 
 from core import jobs
 from core.constants import (
@@ -26,6 +26,37 @@ from python_scripts.preprocessing.progress_tracker import get_result, peek_track
 logger = logging.getLogger(__name__)
 
 bp = Blueprint("main", __name__)
+
+# The example files the welcome screen may load. An allowlist rather than a path
+# taken from the request, so the route cannot be asked for anything else.
+EXAMPLE_FILES = {
+    "penguins.csv",
+    "iris.csv",
+    "wine.csv",
+    "breast_cancer.csv",
+    "diabetes.csv",
+    "linnerud.csv",
+    "synthetic_regression.csv",
+    "iris_clustering.csv",
+    "wine_clustering.csv",
+    "breast_cancer_clustering.csv",
+}
+
+
+@bp.route("/example-data/<name>", methods=["GET"])
+def example_data(name):
+    """Serve one example file so the page can load it through the ordinary upload.
+
+    The welcome screen fetches this, builds a File from it, and submits the upload
+    form, so an example goes through the same parse, the same limits and the same
+    data checks as a file a person chooses.
+    """
+    if name not in EXAMPLE_FILES:
+        return jsonify({"error": "That example is not available."}), HTTP_NOT_FOUND
+    path = os.path.join(config.BASE_DIR, "examples", name)
+    if not os.path.exists(path):
+        return jsonify({"error": "That example is not installed."}), HTTP_NOT_FOUND
+    return send_file(path, mimetype="text/csv", as_attachment=False, download_name=name)
 
 
 @bp.route("/")
