@@ -18,9 +18,10 @@ from sklearn.model_selection import train_test_split
 import python_scripts.plotting.plot_style  # noqa: F401
 from python_scripts.config import VIS_DIR
 from python_scripts.plotting.bundles import export_plots
-from python_scripts.preprocessing.applicability import record_applicability
+from python_scripts.preprocessing.applicability import record_applicability, set_applicability
 from python_scripts.preprocessing.outlier_handling import apply_outlier_handling
 from python_scripts.preprocessing.split_fill import apply_fill_plan_to_split, get_fill_plan
+from python_scripts.preprocessing.uncertainty import set_conformal
 from python_scripts.preprocessing.utilities import _scale_pairs, get_feature_names, make_preprocessor
 
 logger = logging.getLogger(__name__)
@@ -150,6 +151,12 @@ def run_clustering(
     Returns a 12-tuple: the 11 legacy items followed by ``outlier_info`` (None
     when outlier_method is 'none').
     """
+    # A record must never outlive the run that made it. Both are cleared at the top of
+    # the run, so a task that writes neither leaves nothing behind for the caller to
+    # read: a classification run following a regression one in the same thread used
+    # to inherit its interval.
+    set_applicability(None)
+    set_conformal(None)
     if progress_tracker:
         progress_tracker.update_stage("model_training", "running", 5, f"Preparing data for {model_name}...")
 

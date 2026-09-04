@@ -24,12 +24,12 @@ from python_scripts.helpers import (
     write_to_excelRegression,
 )
 from python_scripts.model_registry import CLUSTER_MODELS, MODEL_REGISTRY, get_model_kwargs
-from python_scripts.preprocessing.applicability import get_applicability
+from python_scripts.preprocessing.applicability import get_applicability, set_applicability
 from python_scripts.preprocessing.guardrails import run_guardrails
 from python_scripts.preprocessing.progress_tracker import get_tracker, set_result
 from python_scripts.preprocessing.split_fill import FillPlan, reset_fill_plan, set_fill_plan
 from python_scripts.preprocessing.splitting import SplitPlan, reset_split_plan, set_split_plan
-from python_scripts.preprocessing.uncertainty import get_conformal
+from python_scripts.preprocessing.uncertainty import get_conformal, set_conformal
 from python_scripts.reporting.bundle import build_manifest, serialized_size, write_run_record
 
 DEFAULT_CV_FOLDS = 5
@@ -1069,6 +1069,11 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
         store["applicability"] = get_applicability()
         # The half-width of a 90 percent interval, for a regression run.
         store["conformal"] = get_conformal()
+        # Read once, then cleared. The pipelines clear these on entry as well; doing
+        # it on both sides means no record survives the run that made it even when a
+        # run raises between the two points.
+        set_applicability(None)
+        set_conformal(None)
         # Store predictor names for use in prediction (handles multi-target regression)
         store["predictor_names"] = predictor_names
         # Store model type and training visualization for inference results page

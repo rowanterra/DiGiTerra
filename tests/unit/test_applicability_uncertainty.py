@@ -192,3 +192,147 @@ def test_a_bundle_reproduces_the_scores_and_the_interval_in_a_fresh_session(clie
     width_before = (first["upper_90"] - first["lower_90"]).iloc[0]
     width_after = (second["upper_90"] - second["lower_90"]).iloc[0]
     assert width_before == pytest.approx(width_after, rel=1e-9)
+
+
+# --- A record must not outlive the run that made it -----------------------
+
+
+def test_a_classification_run_after_a_regression_run_carries_no_interval():
+    """The records are held in a context variable, which a thread keeps between calls.
+
+    record_conformal is called only by the regression pipeline, so a classification
+    run that followed one in the same thread inherited its half-width. prediction
+    tested the record before the probability branch, so the classifier wrote NaN
+    intervals over a string class and wrote no probabilities at all. Both pipelines
+    now clear both records on entry, and app_model_training clears them after it
+    reads them.
+
+    These two runs are deliberately in this thread rather than through the routes,
+    because the routes give each run a thread of its own and a fresh context.
+    """
+    import os
+
+    from python_scripts.app_model_training import run_model_training
+    from python_scripts.config import VIS_DIR
+    from python_scripts.helpers import prediction
+    from python_scripts.preprocessing.progress_tracker import get_result, remove_tracker
+
+    base = dict(
+        hyperparameters={},
+        nonreq=False,
+        scaler="standard",
+        units="",
+        sigfig=3,
+        seedValue=33,
+        testSize="0.20",
+        stratifyBool=False,
+        dropMissing="none",
+        imputeStrategy="none",
+        dropZero="none",
+        quantileBinDict={"quantile": 0, "bin": 0, "binsLabel": ""},
+        useTransformer="No",
+        transformerCols=[],
+        filename="f.csv",
+        crossValidationType="None",
+        modelingMode="simple",
+    )
+
+    def run(csv, indicators, predictors, model):
+        store = {"data": pd.read_csv(csv).dropna()}
+        sid = f"pytest-leak-{uuid.uuid4().hex[:8]}"
+        run_model_training(
+            sid, dict(base, indicators=indicators, predictors=predictors, models=model), "store", lambda _s: store
+        )
+        result = get_result(sid)
+        remove_tracker(sid)
+        assert result is not None and "error" not in result, result
+        return store
+
+    run("examples/diabetes.csv", list(range(10)), [10], "Linear")
+    classifier = run("examples/penguins.csv", [2, 3, 4, 5], [0], "Logistic_classifier")
+
+    assert classifier.get("conformal") is None, "the classification run inherited an interval"
+
+    prediction(
+        pd.read_csv("examples/penguins_new.csv"),
+        best_model=classifier["model"],
+        training_features=classifier["feature_order"],
+        X_scaler=classifier.get("X_scaler"),
+        y_scaler=classifier.get("y_scaler"),
+        feature_order=classifier["feature_order"],
+        target_names=classifier.get("predictor_names"),
+        applicability=classifier.get("applicability"),
+        conformal=classifier.get("conformal"),
+        model_type=classifier.get("model_type"),
+    )
+    written = pd.read_csv(os.path.join(str(VIS_DIR), "predictions.csv"))
+    assert not [c for c in written.columns if c.startswith(("lower_90", "upper_90"))], sorted(written.columns)
+    assert [c for c in written.columns if c.startswith("probability_")], sorted(written.columns)
+    assert "max_probability" in written.columns
+
+    from python_scripts.reporting.bundle import build_manifest
+
+    manifest = build_manifest(classifier, dict(base, models="Logistic_classifier"), {}, "classification", "Logistic")
+    assert "half_width" not in (manifest.get("uncertainty") or {}), manifest.get("uncertainty")
+
+
+def test_an_interval_is_ignored_when_the_task_is_classification():
+    """Even handed one, prediction must not write it. The task decides, not the record."""
+    import os
+
+    from python_scripts.config import VIS_DIR
+    from python_scripts.helpers import prediction
+    from python_scripts.preprocessing.uncertainty import Conformal
+
+    app_flask = app  # the module-level Flask app, unused here but keeps the import honest
+    assert app_flask is not None
+
+    from python_scripts.app_model_training import run_model_training
+    from python_scripts.preprocessing.progress_tracker import remove_tracker
+
+    store = {"data": pd.read_csv("examples/penguins.csv").dropna()}
+    sid = f"pytest-ignore-{uuid.uuid4().hex[:8]}"
+    run_model_training(
+        sid,
+        dict(
+            hyperparameters={},
+            nonreq=False,
+            scaler="standard",
+            units="",
+            sigfig=3,
+            seedValue=33,
+            testSize="0.20",
+            stratifyBool=False,
+            dropMissing="none",
+            imputeStrategy="none",
+            dropZero="none",
+            quantileBinDict={"quantile": 0, "bin": 0, "binsLabel": ""},
+            useTransformer="No",
+            transformerCols=[],
+            filename="p.csv",
+            crossValidationType="None",
+            modelingMode="simple",
+            indicators=[2, 3, 4, 5],
+            predictors=[0],
+            models="Logistic_classifier",
+        ),
+        "store",
+        lambda _s: store,
+    )
+    remove_tracker(sid)
+
+    prediction(
+        pd.read_csv("examples/penguins_new.csv"),
+        best_model=store["model"],
+        training_features=store["feature_order"],
+        X_scaler=store.get("X_scaler"),
+        y_scaler=store.get("y_scaler"),
+        feature_order=store["feature_order"],
+        target_names=store.get("predictor_names"),
+        applicability=store.get("applicability"),
+        conformal=Conformal(half_width={"target": 92.5}, n_validation=89),
+        model_type="classification",
+    )
+    written = pd.read_csv(os.path.join(str(VIS_DIR), "predictions.csv"))
+    assert not [c for c in written.columns if c.startswith(("lower_90", "upper_90"))], sorted(written.columns)
+    assert "max_probability" in written.columns

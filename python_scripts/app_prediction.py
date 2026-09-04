@@ -166,6 +166,7 @@ def run_predict(
             target_names=target_names,
             applicability=store.get("applicability"),
             conformal=store.get("conformal"),
+            model_type=store.get("model_type"),
         )
         pred_path = user_vis_dir / "predictions.csv"
         applicability_summary = None

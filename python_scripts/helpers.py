@@ -893,6 +893,7 @@ def prediction(
     target_names=None,
     applicability=None,
     conformal=None,
+    model_type=None,
 ):
 
     logger.info("Starting prediction function")
@@ -1009,8 +1010,16 @@ def prediction(
     # rows, in target units. Classification carries the probability of each class,
     # which is the per-row statement a classifier already makes. A classifier without
     # predict_proba carries neither, and the model card says why.
+    #
+    # The branch is the task, not whichever record happens to be present. A conformal
+    # record on a classification run is a leak from an earlier run, and taking it
+    # would write NaN intervals over a string class and suppress the probabilities.
+    task = str(model_type or "").strip().lower()
+    if task == "classification" and conformal is not None:
+        logger.warning("Ignoring a conformal record on a classification run; an interval is for a numeric target.")
+        conformal = None
     try:
-        if conformal is not None and conformal.half_width:
+        if task != "classification" and conformal is not None and conformal.half_width:
             pred_columns = [c for c in df_clean.columns if c.startswith("Predicted_")]
             for column in pred_columns:
                 name = column[len("Predicted_") :]
@@ -1023,7 +1032,7 @@ def prediction(
                 suffix = "" if len(pred_columns) == 1 else f"_{name}"
                 df_clean[f"lower_90{suffix}"] = values - width
                 df_clean[f"upper_90{suffix}"] = values + width
-        elif hasattr(model_for_attrs, "predict_proba"):
+        elif task != "regression" and hasattr(model_for_attrs, "predict_proba"):
             probabilities = model_for_attrs.predict_proba(X_new_scaled)
             classes = list(getattr(model_for_attrs, "classes_", []))
             if int_to_label is not None:

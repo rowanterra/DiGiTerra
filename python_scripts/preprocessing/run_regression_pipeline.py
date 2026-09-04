@@ -16,7 +16,7 @@ from python_scripts.plotting.bundles import export_plots
 from python_scripts.plotting.plot_shap_summary_graphic import plot_shap_summary
 from python_scripts.plotting.plot_style import apply_plot_style
 from python_scripts.plotting.visualize_predictions import visualize_predictions
-from python_scripts.preprocessing.applicability import record_applicability
+from python_scripts.preprocessing.applicability import record_applicability, set_applicability
 from python_scripts.preprocessing.baseline import regression_baseline
 from python_scripts.preprocessing.evaluate_by_quantile import evaluate_by_quantile
 from python_scripts.preprocessing.feature_selection import apply_feature_selection
@@ -24,7 +24,7 @@ from python_scripts.preprocessing.hyperparameter_search import _estimate_param_c
 from python_scripts.preprocessing.outlier_handling import apply_outlier_handling
 from python_scripts.preprocessing.split_fill import apply_fill_plan_to_split, get_fill_plan
 from python_scripts.preprocessing.splitting import get_split_plan, split_indices
-from python_scripts.preprocessing.uncertainty import record_conformal
+from python_scripts.preprocessing.uncertainty import record_conformal, set_conformal
 from python_scripts.preprocessing.utilities import (
     _scale_pairs,
     get_feature_names,
@@ -65,6 +65,12 @@ def run_regression(
     modeling_mode="simple",
     **kwargs,
 ) -> dict[str, Any]:
+    # A record must never outlive the run that made it. Both are cleared at the top of
+    # the run, so a task that writes neither leaves nothing behind for the caller to
+    # read: a classification run following a regression one in the same thread used
+    # to inherit its interval.
+    set_applicability(None)
+    set_conformal(None)
     # Extract modeling_mode from kwargs if provided there (for backward compatibility with train functions)
     if "modeling_mode" in kwargs:
         modeling_mode = kwargs["modeling_mode"]

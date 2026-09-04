@@ -160,3 +160,59 @@ def test_the_split_receives_the_target_as_the_stratify_series(monkeypatch):
     captured = pd.Series(strat).reset_index(drop=True)
     expected = frame["species"].reset_index(drop=True)
     assert captured.equals(expected), "the stratify series is not the target column"
+
+
+def test_automl_classification_may_stratify_on_its_target(monkeypatch):
+    """The guard reads the task from the registry entry for the chosen model.
+
+    AutoML sets modelingMode but still names a registry model, so the exemption has
+    to hold there too. A model the registry does not know would read as regression
+    and be refused, which is the path this covers.
+    """
+    from python_scripts.preprocessing import splitting
+
+    seen = {}
+    real = splitting.train_test_split
+
+    def capture(*args, **kwargs):
+        seen["stratify"] = kwargs.get("stratify")
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(splitting, "train_test_split", capture)
+
+    frame = pd.read_csv(PENGUINS).dropna()
+    sid = f"pytest-automl-{uuid.uuid4().hex[:8]}"
+    run_model_training(
+        sid,
+        dict(
+            hyperparameters={},
+            nonreq=False,
+            scaler="standard",
+            units="",
+            sigfig=3,
+            seedValue=42,
+            testSize="0.20",
+            stratifyBool=True,
+            stratifyColumn=0,
+            dropMissing="none",
+            imputeStrategy="none",
+            dropZero="none",
+            quantileBinDict={"quantile": 0, "bin": 0, "binsLabel": ""},
+            useTransformer="No",
+            transformerCols=[],
+            filename="penguins.csv",
+            crossValidationType="None",
+            modelingMode="automl",
+            indicators=[2, 3, 4, 5],
+            predictors=[0],
+            models="Logistic_classifier",
+        ),
+        "store",
+        lambda _s: {"data": frame.copy()},
+    )
+    from python_scripts.preprocessing.progress_tracker import get_result
+
+    result = get_result(sid)
+    remove_tracker(sid)
+    assert result is not None and "error" not in result, result
+    assert seen.get("stratify") is not None, "the AutoML run was not stratified"
