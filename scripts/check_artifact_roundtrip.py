@@ -44,6 +44,10 @@ DATASETS = {
     "classification": ("iris.csv", None),
     "cluster": ("iris_clustering.csv", None),
 }
+# CategoricalNB takes integer-coded categories, not the continuous measurements of
+# the iris file, so it is trained on a discretized copy rather than reported as a
+# failure of the format.
+DISCRETE_CLASSIFIERS = ("CategoricalNB_classifier",)
 # The defaults an empty form would leave as None, matching train_every_model.py.
 FILLS = {
     "n_estimators": 20,
@@ -66,6 +70,7 @@ FILLS = {
     "nu": 0.5,
     "activation": "relu",
     "hidden_layer_sizes": (100,),
+    "solver": "adam",
 }
 
 BASE = {
@@ -122,6 +127,11 @@ def _predict(objects, X):
 def check(name: str, task: str) -> dict:
     csv, _ = DATASETS[task]
     df = pd.read_csv(EXAMPLES / csv)
+    if name in DISCRETE_CLASSIFIERS:
+        target = df.columns[-1]
+        for col in df.columns[:-1]:
+            df[col] = pd.qcut(df[col], 4, labels=False, duplicates="drop")
+        df[target] = df[target]
     n = len(df.columns)
     indicators = list(range(n - 1)) if task != "cluster" else list(range(n))
     predictors = [] if task == "cluster" else [n - 1]

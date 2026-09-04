@@ -195,13 +195,13 @@
     "model": "MLP",
     "task": "regression",
     "status": "train_failed",
-    "detail": "The 'activation' parameter of MLPRegressor must be a str among {'relu', 'tanh', 'identity', 'logistic'}. Got None instead."
+    "detail": "The 'solver' parameter of MLPRegressor must be a str among {'lbfgs', 'adam', 'sgd'}. Got None instead."
   },
   {
     "model": "MLP_classifier",
     "task": "classification",
     "status": "train_failed",
-    "detail": "The 'activation' parameter of MLPClassifier must be a str among {'relu', 'tanh', 'identity', 'logistic'}. Got None instead."
+    "detail": "The 'solver' parameter of MLPClassifier must be a str among {'lbfgs', 'adam', 'sgd'}. Got None instead."
   },
   {
     "model": "MultinomialNB_classifier",
@@ -272,10 +272,8 @@
   {
     "model": "RadiusNeighbors",
     "task": "regression",
-    "status": "untrusted_types",
-    "detail": [
-      "python_scripts.models.regression_models.train_radius_neighbors_regressor.RadiusNeighborsWithFallback"
-    ]
+    "status": "ok",
+    "bytes": 226035
   },
   {
     "model": "Ridge",
@@ -334,14 +332,14 @@
   {
     "model": "agglo",
     "task": "cluster",
-    "status": "predict_failed",
-    "detail": "AttributeError: 'AgglomerativeClustering' object has no attribute 'predict'"
+    "status": "ok",
+    "bytes": 97151
   },
   {
     "model": "birch",
     "task": "cluster",
-    "status": "write_failed",
-    "detail": "The fitted objects could not be written without a pickle: Objects of type Birch are not supported yet."
+    "status": "unsupported",
+    "detail": "A Birch model cannot be written in a format that does not execute on load, so this run cannot be exported as a bundle. Its results, model card and manifest are unaffected."
   },
   {
     "model": "bisecting_kmeans",
@@ -352,8 +350,8 @@
   {
     "model": "dbscan",
     "task": "cluster",
-    "status": "predict_failed",
-    "detail": "AttributeError: 'DBSCAN' object has no attribute 'predict'"
+    "status": "ok",
+    "bytes": 97066
   },
   {
     "model": "gmm",
@@ -370,8 +368,8 @@
   {
     "model": "hdbscan",
     "task": "cluster",
-    "status": "predict_failed",
-    "detail": "AttributeError: 'HDBSCAN' object has no attribute 'predict'"
+    "status": "ok",
+    "bytes": 107573
   },
   {
     "model": "kmeans",
@@ -394,13 +392,13 @@
   {
     "model": "optics",
     "task": "cluster",
-    "status": "predict_failed",
-    "detail": "AttributeError: 'OPTICS' object has no attribute 'predict'"
+    "status": "ok",
+    "bytes": 103166
   },
   {
     "model": "spectral",
     "task": "cluster",
-    "status": "predict_failed",
-    "detail": "AttributeError: 'SpectralClustering' object has no attribute 'predict'"
+    "status": "ok",
+    "bytes": 211566
   }
 ]
