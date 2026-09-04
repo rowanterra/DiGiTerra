@@ -23,8 +23,9 @@ from core.constants import (
     MAX_FRAME_MB,
     MAX_UPLOAD_MB,
 )
-from core.helpers import FrameTooLarge, allowed_file, estimate_decoded_bytes, read_table_bounded
+from core.helpers import FrameTooLarge, allowed_file, estimate_decoded_bytes
 from core.state import MemoryBudgetExceeded, admit_frame, get_session_id, get_session_storage, reserve_frame
+from core.worker import WorkerError, read_table_isolated
 from python_scripts.reporting.bundle import sha256_file
 
 bp = Blueprint("upload", __name__)
@@ -85,9 +86,17 @@ def upload_file():
         except Exception as e:  # unreadable container; the parser gives the specific message
             logger.debug("Decoded-size estimate unavailable for %s: %s", stored_filename, e)
         try:
-            data = read_table_bounded(filepath, max_cells=MAX_CELLS, max_frame_mb=MAX_FRAME_MB)
+            # Under the server profile this parse happens in a child process with a
+            # memory limit, so a file that gets past the metadata check cannot take
+            # the machine with it.
+            data = read_table_isolated(filepath, max_cells=MAX_CELLS, max_frame_mb=MAX_FRAME_MB)
         except FrameTooLarge as e:
             return jsonify({"error": str(e)}), HTTP_BAD_REQUEST
+        except WorkerError as e:
+            logger.warning("Isolated parse refused %s: %s", stored_filename, e)
+            return jsonify(
+                {"error": f"The file could not be read within the limits for one upload. {e}"}
+            ), HTTP_BAD_REQUEST
         except pd.errors.EmptyDataError:
             return jsonify({"error": "The uploaded file is empty."}), HTTP_BAD_REQUEST
         except pd.errors.ParserError as e:

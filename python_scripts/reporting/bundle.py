@@ -6,9 +6,11 @@ came out, so a result can be cited and rerun. The model card renders the same
 record as a page. The bundle is a zip of manifest, model card, and the fitted
 objects, readable by scripts/score_bundle.py without the web app.
 
-Loading a bundle unpickles the fitted objects with joblib. Unpickling runs code
-from the file, and a hash in the manifest proves nothing about who wrote the
-file, so every exported artifact is signed with HMAC-SHA256 under a key that
+The artifact is written by python_scripts.reporting.artifact, which stores the
+fitted objects as data with their types named and refuses to build a type outside
+its allowlist, so loading one does not execute what the file says. Older bundles
+carry a joblib pickle instead and are read only when DIGITERRA_ALLOW_LEGACY_PICKLE
+is set. On top of that, every artifact is signed with HMAC-SHA256 under a key that
 belongs to the installation (DIGITERRA_BUNDLE_KEY, or a key file generated once
 in the app support directory). Import verifies the signature before anything is
 unpickled: a bundle from another installation, or one altered after export, is
@@ -23,7 +25,6 @@ import datetime as _dt
 import hashlib
 import hmac
 import html
-import io
 import json
 import logging
 import os
@@ -33,12 +34,18 @@ import zipfile
 from importlib import metadata
 from pathlib import Path
 
-import joblib
 import numpy as np
+
+from python_scripts.reporting.artifact import ArtifactError
+from python_scripts.reporting.artifact import dumps as artifact_dumps
+from python_scripts.reporting.artifact import loads as artifact_loads
+from python_scripts.reporting.artifact import loads_legacy as artifact_loads_legacy
+from python_scripts.reporting.artifact import serialized_size as artifact_serialized_size
 
 logger = logging.getLogger(__name__)
 
-BUNDLE_FORMAT = "digiterra-bundle/1"
+BUNDLE_FORMAT = "digiterra-bundle/2"
+LEGACY_BUNDLE_FORMAT = "digiterra-bundle/1"
 # A bundle is a small, known set of files. Anything else in the zip, or a part
 # larger than these caps, is refused from the directory before a byte is
 # inflated, because the signature can only be checked after model.joblib is read.
@@ -48,7 +55,8 @@ MAX_BUNDLE_TOTAL_MB = float(os.environ.get("DIGITERRA_MAX_BUNDLE_TOTAL_MB", "102
 MANIFEST_NAME = "manifest.json"
 CARD_HTML_NAME = "model_card.html"
 CARD_JSON_NAME = "model_card.json"
-MODEL_NAME = "model.joblib"
+MODEL_NAME = "model.skops"
+LEGACY_MODEL_NAME = "model.joblib"
 BUNDLE_NAME = "model_bundle.zip"
 TRACKED_PACKAGES = ("numpy", "pandas", "scikit-learn", "scipy", "shap", "xgboost", "lightgbm", "catboost", "joblib")
 
@@ -480,37 +488,9 @@ def fitted_objects(store: dict) -> dict:
     return {k: store.get(k) for k in STORE_KEYS}
 
 
-class _CountingSink:
-    """A write-only file object that records the byte count and keeps nothing."""
-
-    def __init__(self):
-        self.n = 0
-
-    def write(self, b) -> int:
-        self.n += len(b)
-        return len(b)
-
-    def tell(self) -> int:
-        return self.n
-
-    def flush(self) -> None:
-        pass
-
-    def close(self) -> None:
-        pass
-
-    def seekable(self) -> bool:
-        return False
-
-    def writable(self) -> bool:
-        return True
-
-
 def serialized_size(store: dict) -> int:
-    """Bytes the session's fitted objects take when serialized, without holding them."""
-    sink = _CountingSink()
-    joblib.dump(fitted_objects(store), sink)
-    return sink.n
+    """Bytes the session's fitted objects take when written, without holding them."""
+    return artifact_serialized_size(fitted_objects(store))
 
 
 def write_bundle(store: dict, vis_dir: Path, extra_files: list[str] | None = None) -> Path:
@@ -522,9 +502,10 @@ def write_bundle(store: dict, vis_dir: Path, extra_files: list[str] | None = Non
     if store.get("model") is None:
         raise ValueError("No trained model in this session.")
 
-    buf = io.BytesIO()
-    joblib.dump(fitted_objects(store), buf)
-    model_bytes = buf.getvalue()
+    try:
+        model_bytes = artifact_dumps(fitted_objects(store))
+    except ArtifactError as e:
+        raise ValueError(str(e)) from e
 
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     key = signing_key(create=True)
@@ -532,7 +513,7 @@ def write_bundle(store: dict, vis_dir: Path, extra_files: list[str] | None = Non
         "file": MODEL_NAME,
         "sha256": sha256_bytes(model_bytes),
         "bytes": len(model_bytes),
-        "serializer": f"joblib {metadata.version('joblib')}",
+        "serializer": f"skops {metadata.version('skops')}",
         "signature": sign_bytes(model_bytes, key) if key else None,
         "signature_algorithm": "HMAC-SHA256" if key else None,
         "key_id": key_id(key) if key else None,
@@ -565,6 +546,7 @@ ALLOWED_BUNDLE_NAMES = {
     CARD_JSON_NAME,
     CARD_HTML_NAME,
     MODEL_NAME,
+    LEGACY_MODEL_NAME,
     "model_results.xlsx",
     "visualizations.pdf",
 }
@@ -610,8 +592,8 @@ def read_manifest(bundle_path: str | Path) -> dict:
             manifest = json.loads(raw.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError) as e:
             raise BundleError("manifest.json is not readable JSON; it is not a DiGiTerra bundle.") from e
-    if not isinstance(manifest, dict) or manifest.get("format") != BUNDLE_FORMAT:
-        fmt = manifest.get("format") if isinstance(manifest, dict) else None
+    fmt = manifest.get("format") if isinstance(manifest, dict) else None
+    if fmt not in (BUNDLE_FORMAT, LEGACY_BUNDLE_FORMAT):
         raise BundleError(f"Unsupported bundle format {fmt!r}; expected {BUNDLE_FORMAT}.")
     return manifest
 
@@ -638,23 +620,23 @@ def load_bundle(bundle_path: str | Path, *, force: bool = False, trust_unsigned:
     if hasattr(bundle_path, "seek"):
         bundle_path.seek(0)
     with zipfile.ZipFile(bundle_path) as z:
+        names = set(z.namelist())
+        member = MODEL_NAME if MODEL_NAME in names else LEGACY_MODEL_NAME
+        if member not in names:
+            raise BundleError(f"The bundle has no {MODEL_NAME}.")
         try:
-            model_bytes = read_zip_member_bounded(
-                z, MODEL_NAME, int(MAX_BUNDLE_MEMBER_MB * 1024 * 1024), label="bundle"
-            )
-        except KeyError as e:
-            raise BundleError("The bundle has no model.joblib.") from e
+            model_bytes = read_zip_member_bounded(z, member, int(MAX_BUNDLE_MEMBER_MB * 1024 * 1024), label="bundle")
         except ZipTooLarge as e:
             raise BundleError(str(e)) from e
-    artifact = manifest.get("artifact") or {}
-    expected = artifact.get("sha256")
+    artifact_meta = manifest.get("artifact") or {}
+    expected = artifact_meta.get("sha256")
     actual = sha256_bytes(model_bytes)
     if expected and expected != actual:
         raise BundleError("model.joblib does not match the hash in the manifest; the bundle was altered.")
     if not trust_unsigned:
         key = signing_key(create=False)
-        if not signature_valid(model_bytes, artifact.get("signature"), key):
-            theirs = artifact.get("key_id") or "none"
+        if not signature_valid(model_bytes, artifact_meta.get("signature"), key):
+            theirs = artifact_meta.get("key_id") or "none"
             mine = key_id(key) if key else "none"
             raise BundleError(
                 "The bundle's signature does not verify under this installation's key "
@@ -662,9 +644,10 @@ def load_bundle(bundle_path: str | Path, *, force: bool = False, trust_unsigned:
                 "Only bundles exported by this installation, or by one that shares its DIGITERRA_BUNDLE_KEY, "
                 "can be loaded."
             )
-    objects = joblib.load(io.BytesIO(model_bytes))
-    if not isinstance(objects, dict) or "model" not in objects:
-        raise BundleError("model.joblib is not a DiGiTerra fitted-objects record.")
+    try:
+        objects = artifact_loads(model_bytes) if member == MODEL_NAME else artifact_loads_legacy(model_bytes)
+    except ArtifactError as e:
+        raise BundleError(str(e)) from e
     return manifest, objects
 
 

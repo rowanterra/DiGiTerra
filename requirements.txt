@@ -6,12 +6,14 @@ matplotlib==3.11.1
 numpy==1.26.4
 openpyxl==3.1.5
 pandas==2.3.3
+prettytable==3.18.0
+pyarrow==25.0.1
+pywebview==5.4
 scikit-learn==1.9.0
-scipy==1.17.1
 scikit-optimize==0.10.2
+scipy==1.17.1
 seaborn==0.13.2
 shap==0.49.1
+skops==0.14.0
 werkzeug==3.1.8
 xlsxwriter==3.2.9
-pywebview==5.4
-pyarrow==25.0.1

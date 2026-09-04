@@ -105,7 +105,7 @@ def test_export_then_import_round_trip_and_predict(client, monkeypatch):
     assert r.status_code == 200, r.get_json()
     assert r.headers["Content-Disposition"].endswith("digiterra_Linear_bundle.zip")
     names = set(zipfile.ZipFile(io.BytesIO(r.data)).namelist())
-    assert {"manifest.json", "model_card.html", "model_card.json", "model.joblib"} <= names
+    assert {"manifest.json", "model_card.html", "model_card.json", "model.skops"} <= names
     manifest = read_manifest(io.BytesIO(r.data))
     assert manifest["artifact"]["sha256"]
 
@@ -140,7 +140,7 @@ def test_altered_artifact_is_refused(client):
     with zipfile.ZipFile(out, "w") as z:
         for name in src.namelist():
             payload = src.read(name)
-            if name == "model.joblib":
+            if name == "model.skops":
                 payload = payload + b"\x00"
             z.writestr(name, payload)
     out.seek(0)
@@ -282,7 +282,7 @@ def _zip_bomb_bundle(good_bundle: bytes, member: str, inflated_mb: int) -> io.By
 
 
 def test_compressed_bundle_is_refused_before_the_payload_is_inflated(client, monkeypatch):
-    """The signature can only be checked after model.joblib is read, so the zip is bounded first."""
+    """The signature can only be checked after model.skops is read, so the zip is bounded first."""
     import tracemalloc
 
     import python_scripts.reporting.bundle as bundle_mod
@@ -293,7 +293,7 @@ def test_compressed_bundle_is_refused_before_the_payload_is_inflated(client, mon
     good = client.get("/export-bundle").data
     monkeypatch.setenv("DIGITERRA_ALLOW_BUNDLE_IMPORT", "1")
 
-    bomb = _zip_bomb_bundle(good, "model.joblib", inflated_mb=64)
+    bomb = _zip_bomb_bundle(good, "model.skops", inflated_mb=64)
     assert len(bomb.getvalue()) < 1 << 20  # a small file that declares 64 MB
     tracemalloc.start()
     with pytest.raises(BundleError, match="is 64 MB|inflates|larger than"):
@@ -306,7 +306,7 @@ def test_compressed_bundle_is_refused_before_the_payload_is_inflated(client, mon
     bomb.seek(0)
     r = client.post("/import-bundle", data={"bundle": (bomb, "b.zip")})
     assert r.status_code == 400
-    assert "model.joblib" in r.get_json()["error"]
+    assert "model.skops" in r.get_json()["error"]
 
     manifest_bomb = _zip_bomb_bundle(good, "manifest.json", inflated_mb=64)
     with pytest.raises(BundleError, match="inflates|is 64 MB|larger than"):
@@ -337,9 +337,97 @@ def test_a_declared_size_that_lies_is_still_bounded_while_streaming(client, monk
     _train_in_session(sid)
     client.set_cookie("digiterra_session", sid)
     good = client.get("/export-bundle").data
-    bomb = _zip_bomb_bundle(good, "model.joblib", inflated_mb=32)
+    bomb = _zip_bomb_bundle(good, "model.skops", inflated_mb=32)
     # Preflight passes at a generous member cap; the byte cap still stops the read.
     monkeypatch.setattr(bundle_mod, "MAX_BUNDLE_MEMBER_MB", 4)
     monkeypatch.setattr(bundle_mod, "MAX_BUNDLE_TOTAL_MB", 4096)
     with pytest.raises(BundleError, match="4 MB"):
         load_bundle(bomb, force=True)
+
+
+def test_the_artifact_is_not_a_pickle_and_names_what_it_builds(client):
+    """Format v2 stores the objects as data; loading refuses any type outside the allowlist."""
+    from python_scripts.reporting import artifact
+    from python_scripts.reporting.bundle import BUNDLE_FORMAT, MODEL_NAME
+
+    sid = uuid.uuid4().hex
+    _train_in_session(sid)
+    client.set_cookie("digiterra_session", sid)
+    data = client.get("/export-bundle").data
+    names = set(zipfile.ZipFile(io.BytesIO(data)).namelist())
+    assert MODEL_NAME == "model.skops" and MODEL_NAME in names
+    assert "model.joblib" not in names
+    manifest = read_manifest(io.BytesIO(data))
+    assert manifest["format"] == BUNDLE_FORMAT
+    assert manifest["artifact"]["serializer"].startswith("skops")
+
+    payload = zipfile.ZipFile(io.BytesIO(data)).read(MODEL_NAME)
+    # Nothing in a DiGiTerra artifact falls outside the allowlist.
+    assert artifact.untrusted_types(payload) == []
+    # And it is not a pickle: joblib cannot read it.
+    # And it is not a pickle: the bytes are a zip of named parts, not a pickle
+    # stream, so nothing in them can be an instruction to run.
+    assert payload[:2] == b"PK"
+    assert b"\x80\x04" not in payload[:16]
+    inner = set(zipfile.ZipFile(io.BytesIO(payload)).namelist())
+    assert "schema.json" in inner
+
+
+def test_an_artifact_naming_an_unlisted_type_is_refused(monkeypatch):
+    """The allowlist is what stops a foreign file, before any object is built."""
+    import skops.io as sio
+
+    from python_scripts.reporting import artifact
+
+    class Sneaky:
+        def __init__(self):
+            self.x = 1
+
+    payload = sio.dumps({"model": Sneaky()})
+    refused = artifact.untrusted_types(payload)
+    assert refused and any("Sneaky" in name for name in refused)
+    with pytest.raises(artifact.ArtifactError, match="does not load"):
+        artifact.loads(payload)
+
+
+def test_a_legacy_pickle_bundle_needs_the_flag(monkeypatch, tmp_path):
+    """A v1 bundle still opens, but only where the operator says pickles are allowed."""
+    import joblib
+
+    from python_scripts.reporting import artifact
+    from python_scripts.reporting.bundle import LEGACY_BUNDLE_FORMAT, sha256_bytes, sign_bytes, signing_key
+
+    monkeypatch.setenv("DIGITERRA_BUNDLE_KEY", "legacy-key")
+    import numpy as np
+    from sklearn.linear_model import LinearRegression
+
+    model = LinearRegression().fit(np.arange(20).reshape(10, 2), np.arange(10))
+    payload = joblib.dumps({"model": model}) if hasattr(joblib, "dumps") else None
+    if payload is None:
+        buf = io.BytesIO()
+        joblib.dump({"model": model}, buf)
+        payload = buf.getvalue()
+    key = signing_key(create=True)
+    manifest = {
+        "format": LEGACY_BUNDLE_FORMAT,
+        "artifact": {
+            "file": "model.joblib",
+            "sha256": sha256_bytes(payload),
+            "signature": sign_bytes(payload, key),
+            "key_id": None,
+        },
+    }
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w") as z:
+        z.writestr("manifest.json", json.dumps(manifest))
+        z.writestr("model.joblib", payload)
+    out.seek(0)
+
+    monkeypatch.delenv("DIGITERRA_ALLOW_LEGACY_PICKLE", raising=False)
+    with pytest.raises(BundleError, match="older format"):
+        load_bundle(out, force=True)
+    out.seek(0)
+    monkeypatch.setenv("DIGITERRA_ALLOW_LEGACY_PICKLE", "1")
+    _, objects = load_bundle(out, force=True)
+    assert objects["model"] is not None
+    assert artifact.legacy_pickle_allowed()
