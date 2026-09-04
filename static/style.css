@@ -4793,3 +4793,56 @@ label:has(input[type="radio"][name="modelingMode"]:checked) { background: none; 
     background: none;
     color: var(--app-accent-deep);
 }
+
+/* --- Model Preprocessing as one column ------------------------------------ */
+.model-preprocess-layout.is-single {
+    display: block;
+    max-width: 720px;
+}
+.model-preprocess-layout.is-single .preprocess-column {
+    width: 100%;
+}
+.preprocess-findings {
+    margin: 12px 0;
+    padding: 12px var(--app-pad);
+    background-color: var(--app-sunken);
+    border-left: 3px solid var(--app-accent);
+    border-radius: var(--app-radius-sm);
+}
+.preprocess-finding {
+    margin: 0 0 6px;
+    color: var(--app-ink);
+}
+.preprocess-finding:last-child {
+    margin-bottom: 0;
+}
+.preprocess-change {
+    padding: 0;
+    font-size: 0.85em;
+    font-weight: 600;
+    color: var(--app-accent);
+    background: none;
+    border: 0;
+    text-decoration: underline;
+    cursor: pointer;
+}
+.preprocess-change:hover {
+    background: none;
+    color: var(--app-accent-deep);
+}
+.preprocess-controls:empty {
+    display: none;
+}
+.preprocess-more {
+    margin: 12px 0;
+    padding: 10px var(--app-pad);
+    background-color: var(--app-panel);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius);
+}
+.preprocess-more > .doc-summary h3 {
+    font-size: 0.98em;
+}
+.preprocess-more-body {
+    padding-top: 8px;
+}

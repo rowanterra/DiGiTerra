@@ -102,10 +102,22 @@ def handle_auto_detect_nan_zeros(store: dict, data: dict):
             message = (
                 f"Found {' and '.join(parts)} in the selected columns. Select the columns to clean and the action."
             )
+        # The page states what was found as a sentence, so it needs the numbers as
+        # well as the flags: how many rows carry a blank, and which columns hold a zero.
+        blank_rows = int(cols_df.isna().any(axis=1).sum())
+        # Which columns of the whole file hold numbers. The stratify column can sit
+        # outside the selection, and only a numeric column can be cut into bins.
+        numeric_indices = [i for i, c in enumerate(df.columns) if pd.api.types.is_numeric_dtype(df[c])]
+        zero_columns = (
+            [str(c) for c in numeric_cols.columns[(numeric_cols == 0).any()]] if not numeric_cols.empty else []
+        )
         return (
             {
                 "needs_missing_handling": bool(needs_missing_handling),
                 "needs_zero_handling": bool(needs_zero_handling),
+                "blank_rows": blank_rows,
+                "zero_columns": zero_columns,
+                "numeric_columns": numeric_indices,
                 "message": message,
                 "ok": not (needs_missing_handling or needs_zero_handling),
             },

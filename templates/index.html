@@ -637,7 +637,7 @@
         <!-- Navigation is the rail. #backToExploration stays for its handler. -->
         <button type="button" class="secondary-button hidden" id="backToExploration">Back to Data Exploration</button>
         <form id="preprocessform">
-            <div class="model-preprocess-layout">
+            <div class="model-preprocess-layout is-single">
                 <div class="preprocess-column">
                     <div class="preprocess-card">
                         <h2>Columns and task</h2>
@@ -660,12 +660,9 @@
                                 <span id="predictors-help" class="sr-only">Enter column letters for target variables</span>
                                 <span id="clusterTargetMessage" class="hidden cluster-target-message">Cluster models do not have targets.</span>
                             </div>
-                            <p class="field-note"><i>Unselected columns are ignored.</i></p>
-                            <p class="field-note"><i>Non-numeric columns must be transformed below.</i></p>
                         </div>
 
                         <h3 class="preprocess-section-title">Transformer</h3>
-                        <p class="field-note" style="margin-bottom: 8px;">Autodetect selects the non-numeric columns.</p>
                         <div id="transformerOptionWrapper">
                         <div class="scaling-container" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
                             <label for="useTransformer">Are any columns non-numeric?</label>
@@ -674,7 +671,7 @@
                                 <option value="Yes">Yes</option>
                             </select>
                             <span>Or</span>
-                            <button type="button" id="autoDetectTransformersTop" class="button-secondary" style="padding: 6px 14px; font-size: 0.9em;">Run autodetect</button>
+                            <button type="button" id="autoDetectTransformersTop" class="button-secondary" style="padding: 6px 14px; font-size: 0.9em;" hidden>Run autodetect</button>
                         </div>
                         <div id="transformerAutodetectMessage" class="field-note" style="margin-top: 4px; margin-bottom: 8px; min-height: 1.2em;" aria-live="polite"></div>
                         </div>
@@ -684,7 +681,7 @@
                                 <label for="transformerColumn">Which column(s)</label>
                                 <div style="display: flex; gap: 8px; align-items: center;">
                                     <input type="text" id="transformerColumn" name="transformerColumn" placeholder="Ex: A-D" style="flex: 1;">
-                                    <button type="button" id="autoDetectTransformers" class="button-secondary" style="white-space: nowrap; padding: 8px 16px; font-size: 0.9em;">Auto-detect</button>
+                                    <button type="button" id="autoDetectTransformers" class="button-secondary" style="white-space: nowrap; padding: 8px 16px; font-size: 0.9em;" hidden>Auto-detect</button>
                                 </div>
                                 <small style="display: block; margin-top: 4px; font-size: 0.85em;">Selects non-numeric and low-cardinality numeric indicator columns</small>
                             </div>
@@ -695,15 +692,13 @@
                 <div class="preprocess-column">
                     <div class="preprocess-card">
                         <h2>Data cleaning</h2>
-                        <p class="field-note" style="margin-bottom: 10px;">The check below reports <strong>blanks</strong> and <strong>zeros</strong> per column.</p>
                         <div class="scaling-container" style="margin-bottom: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
                             <span>Check selected columns for blanks or zeros:</span>
-                            <button type="button" id="autoDetectNanZeros" class="button-secondary" style="padding: 6px 14px; font-size: 0.9em;">Run autodetect</button>
+                            <button type="button" id="autoDetectNanZeros" class="button-secondary" style="padding: 6px 14px; font-size: 0.9em;" hidden>Run autodetect</button>
                         </div>
                         <div id="dataCleaningAutodetectMessage" class="field-note" style="margin-bottom: 12px; min-height: 1.2em;" aria-live="polite"></div>
                         <div id="dataCleaningMissingWrapper" class="scaling-container">
                             <div class="field-label-block" style="margin-bottom: 6px; font-weight: 600;">Missing values (blanks)</div>
-                            <p class="field-note" style="margin-bottom: 8px;">Columns to clean, then the action for blanks.</p>
                             <div class="cleaning-scope-checkboxes" style="display: flex; flex-wrap: nowrap; gap: 10px; align-items: center; margin-bottom: 8px; font-size: 0.82rem; white-space: nowrap;">
                                 <label style="margin: 0; flex-shrink: 0;"><input type="checkbox" id="missScopeInd"> Indicators</label>
                                 <label id="missScopeTgtLabel" style="margin: 0; flex-shrink: 0;"><input type="checkbox" id="missScopeTgt"> Targets</label>
@@ -729,7 +724,6 @@
                         </div>
                         <div id="dataCleaningZerosWrapper" class="scaling-container" style="margin-top: 8px;">
                             <div class="field-label-block" style="margin-bottom: 6px; font-weight: 600;">Zeros</div>
-                            <p class="field-note" style="margin-bottom: 8px;">Columns with invalid zeros, then the action.</p>
                             <div class="cleaning-scope-checkboxes" style="display: flex; flex-wrap: nowrap; gap: 10px; align-items: center; margin-bottom: 8px; font-size: 0.82rem; white-space: nowrap;">
                                 <label style="margin: 0; flex-shrink: 0;"><input type="checkbox" id="zeroScopeInd"> Indicators</label>
                                 <label id="zeroScopeTgtLabel" style="margin: 0; flex-shrink: 0;"><input type="checkbox" id="zeroScopeTgt"> Targets</label>
@@ -803,7 +797,7 @@
 
                         </div>
 
-                        <h3 class="preprocess-section-title">Scaling</h3>
+                        <div id="preprocessScaler" class="preprocess-setting"><h3 class="preprocess-section-title">Scaling</h3>
                         <div class="scaling-container">
                             <label for="scaler">Scaling</label>
                             <select name="scaler" id="scaler">
@@ -814,14 +808,13 @@
                             </select>
                         </div>
 
-                        <h3 class="preprocess-section-title">Seed</h3>
+                        </div><div id="preprocessSeed" class="preprocess-setting"><h3 class="preprocess-section-title">Seed</h3>
                         <div class="scaling-container">
                             <label for="seedValue">Select Seed</label>
                             <input type="number" id="seedValue" name="seedValue" placeholder="Ex: 33">
-                            <p class="field-note"><i>Blank selects a random seed.</i></p>
                         </div>
 
-                        <h3 class="preprocess-section-title">Train/Test Split</h3>
+                        </div><div id="preprocessSplit" class="preprocess-setting"><h3 class="preprocess-section-title">Train/Test Split</h3>
                         <div class="split-row">
                             <div class="scaling-container">
                                 <label for="trainSize">Train Size</label>
@@ -840,7 +833,7 @@
             <div class="preprocess-actions">
                 <button class="success-button header-forward" type="button" id="continueToModelingButton" onclick="var f=document.getElementById('preprocessform');if(f&&window.handlePreprocessFormSubmit){var e={target:f,defaultPrevented:false,preventDefault:function(){e.defaultPrevented=true;}};window.handlePreprocessFormSubmit(e);}return false;">Continue to Modeling</button>
             </div>
-        </form>
+        </div></form>
     </div>
 
     

@@ -1612,3 +1612,239 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
         });
     }
 
+
+/* ==========================================================================
+   Model Preprocessing as one column.
+
+   The page asked a person to press two Detect buttons and then read a grid of
+   controls for findings that had not been made yet. It now runs both detections
+   itself, on arrival and whenever the columns change, and states what it found as
+   a sentence with the action already chosen. The controls behind each sentence are
+   the ones that were always there: they are moved, not rebuilt, so every id and
+   every handler still works, and a "change" link reveals them.
+   ========================================================================== */
+
+/* The blocks each sentence reveals, and the settings that fold away. */
+const CLEANING_BLOCKS = ['dataCleaningMissingWrapper', 'imputeDiv', 'dataCleaningZerosWrapper'];
+const TRANSFORM_BLOCKS = ['transformerOptionWrapper', 'transformerYes'];
+const MORE_SETTINGS_BLOCKS = ['scalingQuestion', 'scalingYes', 'preprocessScaler', 'preprocessSeed', 'preprocessSplit'];
+
+function preprocessColumnsChosen() {
+    const indicators = (document.getElementById('indicators') || {}).value || '';
+    const target = (document.getElementById('predictors') || {}).value || '';
+    const isCluster = (document.getElementById('outputType1') || {}).value === 'Cluster';
+    return Boolean(indicators.trim()) && (isCluster || Boolean(target.trim()));
+}
+
+/** Build the findings block and the More settings disclosure, once. */
+function buildPreprocessLayout() {
+    const form = document.getElementById('preprocessform');
+    if (!form || document.getElementById('preprocessFindings')) return;
+
+    const findings = document.createElement('div');
+    findings.id = 'preprocessFindings';
+    findings.className = 'preprocess-findings';
+    findings.innerHTML = '<p class="narrative-empty">Enter the indicator and target columns.</p>';
+
+    const more = document.createElement('details');
+    more.id = 'preprocessMoreSettings';
+    more.className = 'preprocess-more';
+    more.innerHTML = '<summary class="doc-summary"><span class="doc-chevron" aria-hidden="true"></span><h3>More settings</h3></summary>';
+    const moreBody = document.createElement('div');
+    moreBody.className = 'preprocess-more-body';
+    more.appendChild(moreBody);
+
+    // The cleaning and transform controls hide behind their sentences.
+    const hidden = document.createElement('div');
+    hidden.id = 'preprocessControls';
+    hidden.className = 'preprocess-controls';
+
+    const firstCard = form.querySelector('.preprocess-card');
+    if (firstCard) firstCard.insertAdjacentElement('afterend', findings);
+    else form.insertBefore(findings, form.firstChild);
+    findings.insertAdjacentElement('afterend', hidden);
+    hidden.insertAdjacentElement('afterend', more);
+
+    CLEANING_BLOCKS.concat(TRANSFORM_BLOCKS).forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.classList.add('hidden');
+            hidden.appendChild(el);
+        }
+    });
+    MORE_SETTINGS_BLOCKS.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) moreBody.appendChild(el);
+    });
+}
+
+/** Reveal the controls a sentence stands for. */
+function revealPreprocessBlocks(ids) {
+    ids.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('hidden');
+    });
+}
+
+function preprocessSentence(text, blocks) {
+    const line = document.createElement('p');
+    line.className = 'preprocess-finding';
+    line.appendChild(document.createTextNode(text + ' '));
+    if (blocks && blocks.length) {
+        const link = document.createElement('button');
+        link.type = 'button';
+        link.className = 'preprocess-change';
+        link.textContent = 'change';
+        link.addEventListener('click', () => {
+            revealPreprocessBlocks(blocks);
+            link.remove();
+        });
+        line.appendChild(link);
+    }
+    return line;
+}
+
+/** Run both detections and say what they found. */
+async function runPreprocessDetection() {
+    const host = document.getElementById('preprocessFindings');
+    if (!host) return;
+    if (!preprocessColumnsChosen()) {
+        host.innerHTML = '<p class="narrative-empty">Enter the indicator and target columns.</p>';
+        return;
+    }
+    const isCluster = (document.getElementById('outputType1') || {}).value === 'Cluster';
+    const indicators = getColumnIndices(document.getElementById('indicators').value.toUpperCase().replace(/\s/g, ''));
+    const target = isCluster ? [] : getColumnIndices(document.getElementById('predictors').value.toUpperCase().replace(/\s/g, ''));
+    if (!indicators.length) {
+        host.innerHTML = '<p class="narrative-empty">DiGiTerra cannot read the indicator columns. Use the form "A-D" or "A,B,C".</p>';
+        return;
+    }
+    const body = JSON.stringify({ indicators: indicators, predictors: target });
+    const post = (path) => fetch(`${API_ROOT}${path}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body,
+    }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+
+    const [clean, text] = await Promise.all([post('/auto-detect-nan-zeros'), post('/auto-detect-transformers')]);
+    lastNumericColumns = clean && Array.isArray(clean.numeric_columns) ? clean.numeric_columns : [];
+    host.innerHTML = '';
+
+    let found = false;
+    if (clean && clean.blank_rows) {
+        found = true;
+        const rows = clean.blank_rows === 1 ? '1 row has a blank.' : `${clean.blank_rows} rows have a blank.`;
+        host.appendChild(preprocessSentence(`${rows} DiGiTerra will remove them.`, CLEANING_BLOCKS));
+        setPreprocessDefault('missScopeAll', true);
+        setPreprocessDefault('imputeStrategy', 'none');
+    }
+    if (clean && clean.zero_columns && clean.zero_columns.length) {
+        found = true;
+        const names = clean.zero_columns.join(' and ');
+        host.appendChild(preprocessSentence(`${names} hold a zero. DiGiTerra will keep the zeros.`, CLEANING_BLOCKS));
+    }
+    if (text && Array.isArray(text.transformer_indices) && text.transformer_indices.length) {
+        found = true;
+        const names = window.uploadedColumnNames || [];
+        const labels = text.transformer_indices.map((i) => names[i] || indexToColumn(i)).join(' and ');
+        const verb = text.transformer_indices.length === 1 ? 'is text' : 'are text';
+        host.appendChild(preprocessSentence(`${labels} ${verb}. DiGiTerra will one-hot encode them.`, TRANSFORM_BLOCKS));
+        setPreprocessDefault('useTransformer', 'Yes');
+        setPreprocessDefault('transformerColumn', text.transformer_indices.map(indexToColumn).join(', '));
+    }
+    if (!found) {
+        host.appendChild(preprocessSentence('No blanks or zeros in the selected columns.', CLEANING_BLOCKS));
+    }
+    // Setting a default fires the change the old handlers listen for, and one of them
+    // opens the transformer block. The sentence is what opens it, so it closes again.
+    CLEANING_BLOCKS.concat(TRANSFORM_BLOCKS).forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+    });
+    applyStratifyDefault();
+}
+
+function setPreprocessDefault(id, value) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.type === 'checkbox') el.checked = Boolean(value);
+    else el.value = value;
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+function indexToColumn(index) {
+    let n = Number(index) + 1;
+    let out = '';
+    while (n > 0) {
+        const rem = (n - 1) % 26;
+        out = String.fromCharCode(65 + rem) + out;
+        n = Math.floor((n - 1) / 26);
+    }
+    return out;
+}
+
+/* Stratify defaults to Yes on the target for classification and No for regression.
+   Quantiles and bins cut a continuous column into groups, so that control belongs to
+   a numeric stratify column and is not drawn for a categorical one. */
+function applyStratifyDefault() {
+    const task = (document.getElementById('outputType1') || {}).value;
+    const toggle = document.getElementById('scalingYesNo');
+    const column = document.getElementById('specificVariableSelect');
+    if (!toggle) return;
+    if (task === 'Classifier') {
+        setPreprocessDefault('scalingYesNo', 'Yes');
+        if (column && !column.value.trim()) {
+            setPreprocessDefault('specificVariableSelect', (document.getElementById('predictors') || {}).value || '');
+        }
+    } else if (task === 'Numeric') {
+        setPreprocessDefault('scalingYesNo', 'No');
+    }
+    updateQuantileBinVisibility();
+}
+
+/* The numeric columns of the loaded file, as the last detection reported them. The
+   transformer list will not do: it names the text columns among the indicators and
+   leaves the target out, so a text target would read as numeric. */
+let lastNumericColumns = [];
+
+function stratifyColumnIsNumeric() {
+    const column = document.getElementById('specificVariableSelect');
+    if (!column || !column.value.trim() || typeof columnToIndex !== 'function') return false;
+    const first = column.value.trim().toUpperCase().match(/^[A-Z]+/);
+    if (!first) return false;
+    return lastNumericColumns.includes(columnToIndex(first[0]));
+}
+
+function updateQuantileBinVisibility() {
+    const wrapper = document.getElementById('quantileBins');
+    if (!wrapper) return;
+    const row = wrapper.closest('.scaling-container') || wrapper.parentElement;
+    const numeric = stratifyColumnIsNumeric();
+    if (row) row.classList.toggle('hidden', !numeric);
+    if (!numeric) setPreprocessDefault('quantileBins', 'None');
+}
+
+function initPreprocessPage() {
+    const host = document.getElementById('userInputSection');
+    if (!host) return;
+    buildPreprocessLayout();
+    let ran = false;
+    const refresh = () => {
+        if (host.classList.contains('hidden')) return;
+        if (!ran) {
+            ran = true;
+            buildPreprocessLayout();
+        }
+        runPreprocessDetection();
+    };
+    refresh();
+    new MutationObserver(refresh).observe(host, { attributes: true, attributeFilter: ['class'] });
+    ['indicators', 'predictors', 'outputType1'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', runPreprocessDetection);
+    });
+    ['specificVariableSelect', 'scalingYesNo'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', updateQuantileBinVisibility);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', initPreprocessPage);
