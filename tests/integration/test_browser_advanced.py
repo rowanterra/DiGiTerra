@@ -293,14 +293,17 @@ def _rail_entry(session, tab):
     return session.page.query_selector(f'#narrativeNav .tab-button[data-tab="{tab}"]')
 
 
-def test_the_rail_exists_before_any_upload(session):
-    """The shell is built on load, not after a file arrives."""
+def test_no_rail_before_a_file_is_loaded(session):
+    """With nothing loaded the views take the page and the rail is not drawn."""
     p = session.page
-    assert p.query_selector("#narrativeRail"), "no rail on a cold load"
-    assert p.query_selector("#narrativeNav"), "no navigation in the rail"
-    for tab in RAIL_TABS + ["documentation"]:
-        assert _rail_entry(session, tab), f"rail has no entry for {tab}"
-    # The bar the buttons came from must not still be drawing them.
+    assert p.evaluate("() => document.getElementById('narrativePage').classList.contains('is-single')")
+    assert p.evaluate("() => document.getElementById('narrativeRail').offsetParent === null"), (
+        "the rail is drawn with no data"
+    )
+    # Documentation and Tutorial are in the banner, so they work with no data.
+    assert p.query_selector('.header-links [data-tab="documentation"]'), "Documentation left the banner"
+    assert p.query_selector("#tutorialButton"), "no Tutorial entry in the banner"
+    # The bar the view buttons came from must not still be drawing them.
     assert p.evaluate(
         "() => { const b=document.getElementById('appTabs');"
         " return !b || b.querySelectorAll('.tab-button').length === 0; }"
@@ -308,9 +311,46 @@ def test_the_rail_exists_before_any_upload(session):
     assert not session.errors, session.errors
 
 
-def test_the_empty_states_read_as_the_application(session):
-    """Before an upload: no data, and the registry listed but inert."""
+def test_documentation_opens_full_width_with_no_data(session):
     p = session.page
+    p.click('.header-links [data-tab="documentation"]')
+    p.wait_for_timeout(400)
+    assert session.visible("documentation") == "visible"
+    assert p.evaluate("() => document.getElementById('narrativeRail').offsetParent === null")
+    assert not session.errors, session.errors
+
+
+def test_the_rail_appears_when_a_file_loads_and_every_entry_reaches_its_view(session):
+    """A cold load has no rail; an upload brings it, and each entry then navigates."""
+    p = session.page
+    assert p.evaluate("() => document.getElementById('narrativeRail').offsetParent === null")
+
+    session.upload_and_preprocess("iris.csv", "Classification", "A-D", "E")
+
+    assert not p.evaluate("() => document.getElementById('narrativePage').classList.contains('is-single')"), (
+        "the page stayed single-column after a file loaded"
+    )
+    assert p.evaluate("() => document.getElementById('narrativeRail').offsetParent !== null"), (
+        "the rail did not appear after a file loaded"
+    )
+    for tab in RAIL_TABS:
+        assert _rail_entry(session, tab), f"rail has no entry for {tab}"
+        assert _rail_entry(session, tab).get_attribute("disabled") is None, f"{tab} still refuses"
+
+    for tab, view in VIEW_OF_TAB.items():
+        if tab == "documentation":
+            p.click('.header-links [data-tab="documentation"]')
+        else:
+            _rail_entry(session, tab).click()
+        p.wait_for_timeout(350)
+        assert session.visible(view) == "visible", f"{tab} did not reveal {view}"
+    assert not session.errors, session.errors
+
+
+def test_the_empty_states_read_as_the_application(session):
+    """Once the rail exists but before a task type is chosen: registry listed, inert."""
+    p = session.page
+    p.evaluate("() => { const pg=document.getElementById('narrativePage'); pg.classList.remove('is-single'); }")
     assert p.inner_text("#narrativeDataCount").strip() == "0"
     assert "No data loaded" in p.inner_text("#narrativeDataBody")
     # The catalog lists the registry with its group counts rather than vanishing.
@@ -325,13 +365,16 @@ def test_the_empty_states_read_as_the_application(session):
 
 def test_the_rail_gates_on_state_and_says_why(session):
     """Everything past Upload is refused, with a reason, until a file is loaded."""
+    session.upload_and_preprocess("iris.csv", "Classification", "A-D", "E")
+    # The rail exists now. Reset the session so the entries are gated again.
+    p = session.page
+    p.evaluate("() => { uploadedFileName = ''; const c=document.getElementById('columnList'); if (c) c.innerHTML=''; }")
+    p.evaluate("() => { if (window.narrativeSync) narrativeSync(); }")
     for tab in RAIL_TABS[1:]:
         el = _rail_entry(session, tab)
         assert el.get_attribute("disabled") is not None, f"{tab} is reachable with no data"
         assert (el.get_attribute("title") or "").strip(), f"{tab} is disabled with no reason given"
-    # Upload and Documentation are always reachable.
-    for tab in ["upload", "documentation"]:
-        assert _rail_entry(session, tab).get_attribute("disabled") is None, f"{tab} should stay reachable"
+    assert _rail_entry(session, "upload").get_attribute("disabled") is None, "Upload should stay reachable"
 
     session.upload_and_preprocess("iris.csv", "Classification", "A-D", "E")
     for tab in RAIL_TABS[1:]:
@@ -344,14 +387,18 @@ def test_clicking_the_rail_changes_the_view(session):
     session.upload_and_preprocess("iris.csv", "Classification", "A-D", "E")
     p = session.page
     for tab, view in VIEW_OF_TAB.items():
-        _rail_entry(session, tab).click()
+        if tab == "documentation":
+            p.click('.header-links [data-tab="documentation"]')
+        else:
+            _rail_entry(session, tab).click()
         p.wait_for_timeout(350)
-        assert session.visible(view) == "visible", f"rail entry {tab} did not reveal {view}"
-        active = p.evaluate(
-            "() => { const b=document.querySelector('#narrativeNav .tab-button.active');"
-            " return b ? b.dataset.tab : null; }"
-        )
-        assert active == tab, f"rail entry {tab} left {active} marked active"
+        assert session.visible(view) == "visible", f"entry {tab} did not reveal {view}"
+        if tab != "documentation":
+            active = p.evaluate(
+                "() => { const b=document.querySelector('#narrativeNav .tab-button.active');"
+                " return b ? b.dataset.tab : null; }"
+            )
+            assert active == tab, f"rail entry {tab} left {active} marked active"
     assert not session.errors, session.errors
 
 

@@ -3179,6 +3179,16 @@ body.dark-mode .documentation .doc-warning-content p {
     min-width: 0;
 }
 
+/* Before a file is loaded the views take the whole page and the rail is not drawn.
+   The shell is the same one, collapsed to a single column, so there is one layout
+   rather than two. narrative.js removes this class when a file arrives. */
+.narrative-page.is-single {
+    grid-template-columns: minmax(0, 1fr);
+}
+.narrative-page.is-single > .narrative-rail {
+    display: none;
+}
+
 .narrative-rail {
     position: sticky;
     top: var(--header-offset, 88px);
@@ -3857,4 +3867,18 @@ button[aria-disabled="true"] {
 .narrative-nav .tab-button:disabled,
 .narrative-nav .tab-button[aria-disabled="true"] {
     background-color: transparent;
+}
+
+/* Documentation and Tutorial sit beside the wordmark. They must work with no data
+   loaded, and with no data there is no rail to hold them. */
+.header-links {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: 20px;
+    flex: 0 0 auto;
+}
+.header-links .tab-button {
+    border-radius: var(--app-radius-sm);
+    font-weight: 600;
 }

@@ -107,7 +107,7 @@ function narrativeBuildShell() {
 
     const page = document.createElement('div');
     page.id = 'narrativePage';
-    page.className = 'narrative-page';
+    page.className = 'narrative-page is-single';
 
     const rail = document.createElement('aside');
     rail.id = 'narrativeRail';
@@ -174,13 +174,8 @@ function narrativeMoveNav() {
 
     // Documentation sits in the header's right-hand group rather than in the bar,
     // so it is found on the page rather than inside it.
-    const doc = document.querySelector('.tab-button[data-tab="documentation"]');
-    if (doc) {
-        const aside = document.createElement('div');
-        aside.className = 'narrative-nav-aside';
-        aside.appendChild(doc);
-        nav.appendChild(aside);
-    }
+    // Documentation and Tutorial stay in the banner. They have to work with no data
+    // loaded, and with no data there is no rail to put them in.
     // The bar keeps its node so core.js can still address it; empty, it draws nothing.
     bar.classList.add('is-retired');
 }
@@ -359,8 +354,27 @@ function narrativeRefreshApps() {
     if (count) count.textContent = String(total);
 }
 
-/** Bring the rail's three parts up to date with whatever the app now knows. */
+/**
+ * Show the rail once a file is loaded, and keep it from then on.
+ *
+ * With no data the rail would carry an empty data panel, an inert catalog and five
+ * entries that all refuse, so the welcome and upload screens take the whole page
+ * instead. The shell is the same one either way: a class collapses the grid to one
+ * column rather than a second layout being built.
+ */
+function narrativeApplyLayout() {
+    const page = document.getElementById('narrativePage');
+    if (!page) return;
+    // narrativeGateNav reads the same answer, so the rail appears exactly when its
+    // entries stop refusing.
+    if (narrativeHasData()) page.classList.remove('is-single');
+    else if (!page.dataset.railShown) page.classList.add('is-single');
+    if (narrativeHasData()) page.dataset.railShown = 'true';
+}
+
+/** Bring the rail's parts up to date with whatever the app now knows. */
 function narrativeSync() {
+    narrativeApplyLayout();
     narrativeGateNav();
     narrativeRefreshData();
     narrativeRefreshApps();
