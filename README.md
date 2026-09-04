@@ -72,11 +72,15 @@ versions. The result page links the model card and `GET /export-bundle`, a zip o
 with the fitted objects. `scripts/score_bundle.py BUNDLE.zip NEW_ROWS.csv` scores a file from
 a bundle without the web app; `scripts/rerun_bundle.py BUNDLE.zip DATA.csv` checks the data
 hash, replays the recorded request, and reports whether the metrics reproduce. Loading a
-bundle unpickles its objects, which runs code from the file, so every exported bundle is
-signed under the installation's key and import refuses one that is unsigned, altered, or
-signed elsewhere; installations that share `DIGITERRA_BUNDLE_KEY` can exchange bundles. The
-in-app import (`POST /import-bundle`) is on in the desktop build and off in the container
-unless `DIGITERRA_ALLOW_BUNDLE_IMPORT` is set.
+bundle builds fitted objects from a file, so the artifact is written in a format that
+stores them as data with their types named and refuses to build a type outside an
+allowlist, and every bundle is signed under the installation's key as well: import refuses
+one that is unsigned, altered, or signed elsewhere, and installations that share
+`DIGITERRA_BUNDLE_KEY` can exchange bundles. `scripts/check_artifact_roundtrip.py` trains
+every registered estimator and compares its predictions before and after the round trip;
+`docs/artifact_roundtrip_2026-09-04.json` is the record, with the numbers in it. The in-app
+import (`POST /import-bundle`) is on in the desktop build and off in the container unless
+`DIGITERRA_ALLOW_BUNDLE_IMPORT` is set.
 
 ## Regression stability across seeds
 
