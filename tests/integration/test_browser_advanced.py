@@ -7,6 +7,7 @@ Skipped automatically when Playwright or the browser is unavailable.
 import glob
 import json
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -474,3 +475,126 @@ def test_try_an_example_loads_penguins_and_opens_exploration(session):
     assert p.evaluate("() => document.getElementById('narrativeRail').offsetParent !== null")
     assert p.inner_text("#narrativeDataCount").strip() == "1"
     assert not session.errors, session.errors
+
+
+# --- The example path, end to end -----------------------------------------
+
+# The fields Try an Example fills in, and the tutorial's step for each.
+EXAMPLE_FIELDS = {
+    "outputType1": "Classifier",
+    "indicators": "B-G",
+    "predictors": "A",
+    "imputeStrategy": "none",
+    "useTransformer": "Yes",
+    "transformerColumn": "B, G",
+    "scalingYesNo": "Yes",
+    "specificVariableSelect": "A",
+    "seedValue": "33",
+    "corrCols": "C-F",
+}
+
+
+def test_try_an_example_fills_the_run_in(session):
+    """A reader should not have to type nine settings before anything will run."""
+    p = session.page
+    with p.expect_response(lambda r: r.url.endswith("/upload")):
+        p.click("#tryExampleButton")
+    p.wait_for_timeout(1500)
+    p.evaluate("() => { if (window.showTab) showTab('model-preprocessing'); }")
+    p.wait_for_timeout(800)
+
+    for field, expected in EXAMPLE_FIELDS.items():
+        actual = p.evaluate("(id) => { const e = document.getElementById(id); return e ? e.value : 'MISSING'; }", field)
+        assert actual == expected, f"{field} is {actual!r}, expected {expected!r}"
+    assert p.evaluate("() => document.getElementById('missScopeAll').checked"), "the blank scope is not set"
+
+    # Stratify is in More settings and is open, because the run uses it. The cleaning
+    # and transform controls stay behind their sentences until a reader asks: the
+    # value is set either way, and the page says what it will do.
+    assert p.evaluate("() => !document.getElementById('scalingYes').classList.contains('hidden')"), (
+        "the stratify controls did not open"
+    )
+    for section in ("transformerYes", "dataCleaningMissingWrapper"):
+        assert p.evaluate("(id) => document.getElementById(id).classList.contains('hidden')", section), (
+            f"{section} should stay behind its sentence"
+        )
+    assert not session.errors, session.errors
+
+
+def test_a_persons_own_file_is_not_prefilled(session):
+    """The values only make sense for the columns penguins.csv has."""
+    p = session.page
+    p.evaluate("() => { const b = document.getElementById('startModelingButton'); if (b) b.click(); }")
+    p.set_input_files("#file", os.path.join(EXAMPLES, "iris.csv"))
+    with p.expect_response(lambda r: r.url.endswith("/upload")):
+        p.evaluate("() => document.getElementById('uploadForm').requestSubmit()")
+    p.wait_for_timeout(1200)
+    p.evaluate("() => { if (window.showTab) showTab('model-preprocessing'); }")
+    p.wait_for_timeout(600)
+    for field in ("indicators", "predictors", "seedValue"):
+        assert p.evaluate("(id) => document.getElementById(id).value", field) == "", (
+            f"{field} was filled for a file the app knows nothing about"
+        )
+    assert not session.errors, session.errors
+
+
+def test_the_page_states_what_the_detection_found(session):
+    """Model Preprocessing reports blanks and text columns without a button."""
+    p = session.page
+    with p.expect_response(lambda r: r.url.endswith("/upload")):
+        p.click("#tryExampleButton")
+    p.wait_for_timeout(1500)
+    p.evaluate("() => { if (window.showTab) showTab('model-preprocessing'); }")
+    p.wait_for_selector("#preprocessFindings .preprocess-finding", timeout=30000)
+    text = p.inner_text("#preprocessFindings")
+    assert "11 rows have a blank" in text, text
+    assert "island and sex are text" in text, text
+    # The controls stay behind the sentence until a reader asks for them.
+    assert p.evaluate("() => document.getElementById('dataCleaningMissingWrapper').classList.contains('hidden')")
+    p.click("#preprocessFindings .preprocess-change")
+    p.wait_for_timeout(300)
+    assert not p.evaluate("() => document.getElementById('dataCleaningMissingWrapper').classList.contains('hidden')")
+    assert not session.errors, session.errors
+
+
+def test_the_example_path_runs_from_the_welcome_screen_to_a_prediction(live_session):
+    """Cold load to 22 predictions, taking only the controls the tutorial names."""
+    s = live_session
+    p = s.page
+    with p.expect_response(lambda r: r.url.endswith("/upload")):
+        p.click("#tryExampleButton")
+    p.wait_for_timeout(1500)
+
+    p.evaluate("() => { if (window.showTab) showTab('model-preprocessing'); }")
+    p.wait_for_timeout(1200)
+    with p.expect_response(lambda r: r.url.endswith("/preprocess")) as pre:
+        p.click("#continueToModelingButton", force=True)
+    assert pre.value.status == 200, pre.value.text()[:300]
+    p.wait_for_timeout(900)
+
+    p.select_option("#simpleClassModels", "RF_classifier")
+    p.wait_for_timeout(400)
+    with p.expect_response(lambda r: r.url.endswith("/process"), timeout=180000) as run:
+        p.click("#processButton", force=True)
+    assert run.value.status in (200, 202), run.value.text()[:300]
+    p.wait_for_selector('#narrativeFlow .narrative-step[data-step="results"].is-current', timeout=300000)
+
+    # The way on appears only once there is a model to apply.
+    p.wait_for_selector("#continueToInferenceButton", timeout=30000)
+    p.click("#continueToInferenceButton")
+    p.wait_for_timeout(700)
+    assert s.visible("predictionDiv") == "visible"
+
+    with p.expect_response(lambda r: r.url.endswith("/predict"), timeout=180000) as pred:
+        p.click("#usePenguinRowsButton")
+    assert pred.value.status == 200, pred.value.text()[:300]
+    p.wait_for_selector("#exampleRowAgreement", timeout=60000)
+
+    line = p.inner_text("#exampleRowAgreement")
+    match = re.search(r"(\d+) of (\d+) rows match", line)
+    assert match, line
+    agreed, total = int(match.group(1)), int(match.group(2))
+    assert total == 22, line
+    # The model scores near 0.99 on held-out real rows, so this is a loose floor.
+    assert agreed >= 15, f"only {agreed} of {total} synthetic rows came back as drawn"
+    assert not s.errors, s.errors

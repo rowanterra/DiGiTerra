@@ -222,49 +222,45 @@
                 </summary>
                 <div class="doc-section-body">
                     <p>This tutorial trains one classifier on <code>examples/penguins.csv</code>, a file that ships with DiGiTerra. It holds 344 rows of Palmer penguin measurements in 7 columns. The target is the species. Two columns hold text and eleven rows have a missing value, so the run uses one-hot encoding, missing-value handling and a stratified split.</p>
-                    <p class="doc-note">You can load this file without leaving the app. Click <strong>Try an Example</strong> on the welcome screen.</p>
-
-                    <h4>The columns</h4>
-                    <p>A is <code>species</code>, the target. B is <code>island</code>, text. C to F are the measurements. G is <code>sex</code>, text.</p>
+                    <p>Column A is <code>species</code>, the target. B is <code>island</code>, text. C to F are the measurements. G is <code>sex</code>, text.</p>
 
                     <h4>1. Load the file</h4>
                     <p class="doc-step">Click <strong>Try an Example</strong> on the welcome screen.</p>
-                    <p class="doc-note">The page lists the seven columns. The rail appears on the left. The Data panel reads <em>Tabular, 344 &times; 7</em>.</p>
+                    <p class="doc-note">The rail appears on the left. Its Data panel reads <em>penguins.csv, 344 &times; 7</em>. DiGiTerra fills the run in: the task, the columns, the cleaning, the transform, the stratified split and the seed all arrive set. Every field stays editable, and step 8 shows where to change one.</p>
 
                     <h4>2. Look at the data</h4>
-                    <p class="doc-step">Click <strong>Data Exploration</strong> in the rail. Click <strong>Correlation Matrix</strong>.</p>
-                    <p class="doc-note">The heat map covers the four numeric columns. Flipper length and body mass correlate most. The text columns do not appear, because a correlation needs numbers.</p>
+                    <p class="doc-step">Click <strong>Data Exploration</strong> in the rail. Click <strong>Evaluate</strong>.</p>
+                    <p class="doc-note">The correlation columns arrive set to C-F, the four measurements. A heat map and the descriptive statistics appear. Flipper length and body mass correlate most.</p>
 
-                    <h4>3. Handle the missing values</h4>
-                    <p class="doc-step">Click <strong>Model Preprocessing</strong> in the rail. Click <strong>Run autodetect</strong> under Data Cleaning.</p>
-                    <p class="doc-note">The check reports blanks in five columns. <code>sex</code> has 11 and each measurement column has 2.</p>
-                    <p class="doc-step">Tick <strong>All numeric</strong> under Missing values. Set <strong>Action for blanks</strong> to <em>Remove rows with blanks</em>.</p>
+                    <h4>3. Read what the data needs</h4>
+                    <p class="doc-step">Click <strong>Model Preprocessing</strong> in the rail.</p>
+                    <p class="doc-note">The page checks the columns itself and states what it found: <em>11 rows have a blank. DiGiTerra will remove them.</em> and <em>island and sex are text. DiGiTerra will one-hot encode them.</em> The task reads Classification, the indicators B-G and the target A.</p>
 
-                    <h4>4. Transform the text columns</h4>
-                    <p class="doc-step">Set <strong>Are any columns non-numeric?</strong> to <em>Yes</em>, or click <strong>Run autodetect</strong> beside it.</p>
-                    <p class="doc-note">DiGiTerra names <code>island</code> and <code>sex</code>. A transform makes one indicator column for each value they hold.</p>
+                    <h4>4. Change an action, if you want to</h4>
+                    <p class="doc-step">Click <strong>change</strong> beside a sentence.</p>
+                    <p class="doc-note">The controls behind that sentence appear. The blanks can be filled with a mean or a median instead of the rows being removed. Leave them as they are to follow the tutorial.</p>
 
-                    <h4>5. Choose the columns and the split</h4>
-                    <p class="doc-step">Set <strong>Modeling Task Type</strong> to <em>Classification</em>. Enter <code>B-G</code> in <strong>Indicator Columns</strong>. Enter <code>A</code> in <strong>Target Columns</strong>.</p>
-                    <p class="doc-step">Set <strong>Stratify the model&#39;s splitting by a specific variable?</strong> to <em>Yes</em>, and stratify by the target.</p>
-                    <p class="doc-note">The classes are uneven: 152, 124 and 68. A stratified split holds those proportions in the training rows and the test rows, so the smallest class is not left out of one of them.</p>
-                    <p class="doc-step">Click <strong>Process Configurations and Continue</strong>.</p>
+                    <h4>5. Check the split</h4>
+                    <p class="doc-step">Open <strong>More settings</strong>.</p>
+                    <p class="doc-note">Stratify is set to Yes on column A. The classes are uneven, at 152, 124 and 68, and a stratified split holds those proportions in the training rows and the test rows, so the smallest class is not left out of one of them. Quantiles and bins are not offered, because they cut a continuous column into groups and the species column is text. The seed reads 33.</p>
 
                     <h4>6. Train the model</h4>
-                    <p class="doc-step">Select <strong>Simple Modeling</strong>. Click <strong>Random Forest Classifier</strong> in the Models panel. Click <strong>Run This Model</strong>.</p>
-                    <p class="doc-note">The five-step strip moves to Run and then to Results. The result gives an accuracy near 0.99 on the test rows, a confusion matrix over the three species, and a comparison with the baseline. The baseline predicts Adelie every time and reaches about 0.44, so the model earns its place. The exact numbers move with the seed.</p>
+                    <p class="doc-step">Click <strong>Continue to Modeling</strong> at the foot of the page.</p>
+                    <p class="doc-step">Click <strong>Random Forest Classifier</strong> in the Models panel. Click <strong>Run This Model</strong>.</p>
+                    <p class="doc-note">The strip at the top moves to Run and then to Results. The result gives an accuracy near 0.99 on the test rows, a confusion matrix over the three species, and a comparison with the baseline. The baseline predicts Adelie every time and reaches about 0.44, so the model earns its place. The exact numbers move with the seed.</p>
 
                     <h4>7. Predict on new rows</h4>
-                    <p class="doc-step">Click <strong>Inference on New Data</strong> in the rail. Upload a file with the same six indicator columns.</p>
-                    <p class="doc-note">The page shows one predicted species for each row.</p>
+                    <p class="doc-step">Click <strong>Continue to Inference on New Data</strong> in the results panel.</p>
+                    <p class="doc-step">Click <strong>Use the Example Rows</strong>.</p>
+                    <p class="doc-note">DiGiTerra scores <code>examples/penguins_new.csv</code>, 22 rows drawn from the three species with no blanks. One predicted species comes back for each row, and a line under the summary says how many match the species each row was drawn from. The rows are synthetic, so the count is a check on the run rather than a score.</p>
 
                     <h4>8. Watch a data check stop a run</h4>
                     <p>A data check refuses a run whose result would mislead. This step causes one on purpose.</p>
                     <p class="doc-step">Open <code>examples/penguins.csv</code> in a spreadsheet. Copy column A into a new column at the end. Name the new column <code>leak</code>. Save the file under a new name.</p>
-                    <p class="doc-step">Upload the new file. Set the task type to <em>Classification</em>. Enter <code>B-H</code> in <strong>Indicator Columns</strong> and <code>A</code> in <strong>Target Columns</strong>. Continue, select a model, and run it.</p>
+                    <p class="doc-step">Click <strong>Replace</strong> beside the file name in the rail, and upload the new file. Set the task type to <em>Classification</em>. Enter <code>B-H</code> in <strong>Indicator Columns</strong> and <code>A</code> in <strong>Target Columns</strong>. Continue, select a model, and run it.</p>
                     <p class="doc-note">The run stops. The page reads: <em>DiGiTerra stopped the run. The data checks found a problem that makes the result misleading. Every value of &#39;leak&#39; maps to exactly one class of &#39;species&#39;. The column is the target in another form. Remove the column, then train again.</em></p>
                     <p>The message is correct. A column that copies the target predicts it perfectly, and a score from that column says nothing about new data. Remove the column and run the model again.</p>
-                    <p class="doc-note">The desktop build allows a run past a data check. Open <strong>Advanced</strong>, then <strong>Data Checks</strong>, and give a reason. A served installation does not allow it unless the operator turns it on. A run that skips a check is recorded as not valid for decision use.</p>
+                    <p class="doc-note">The desktop build allows a run past a data check. Open <strong>More settings</strong>, then <strong>Data Checks</strong>, and give a reason. A served installation does not allow it unless the operator turns it on. A run that skips a check is recorded as not valid for decision use.</p>
                 </div>
             </details>
         </div>
