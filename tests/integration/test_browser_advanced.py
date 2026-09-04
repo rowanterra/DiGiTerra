@@ -95,7 +95,7 @@ def browser():
 class Session:
     """One page with console-error capture and a /process interceptor."""
 
-    def __init__(self, browser, base_url):
+    def __init__(self, browser, base_url, intercept=True):
         self.page = browser.new_page()
         self.errors = []
         self.payloads = []
@@ -122,7 +122,8 @@ class Session:
             else:
                 route.continue_()
 
-        self.page.route("**/process", handle)
+        if intercept:
+            self.page.route("**/process", handle)
         self.page.goto(base_url + "/")
         self.page.wait_for_load_state("networkidle")
 
@@ -188,6 +189,14 @@ class Session:
 @pytest.fixture
 def session(browser, base_url):
     s = Session(browser, base_url)
+    yield s
+    s.close()
+
+
+@pytest.fixture
+def live_session(browser, base_url):
+    """A session whose /process reaches the server, so a run can finish."""
+    s = Session(browser, base_url, intercept=False)
     yield s
     s.close()
 
@@ -260,3 +269,127 @@ def test_logistic_classifier_advanced_controls_reach_payload(session):
     assert hp.get("Class_LogisticSolver") == "saga", hp
     assert hp.get("Class_LogisticTol") == pytest.approx(1e-6), hp
     assert not session.errors, session.errors
+
+
+# --- The rail ------------------------------------------------------------
+#
+# The id inventory cannot catch a dead rail entry, because an id survives being
+# moved into a rail that no longer navigates anywhere. These tests click the rail
+# and assert the view actually changed.
+
+RAIL_TABS = ["upload", "processing", "model-preprocessing", "modeling", "historic"]
+
+# The container each rail entry is meant to reveal.
+VIEW_OF_TAB = {
+    "processing": "columnsection",
+    "model-preprocessing": "userInputSection",
+    "modeling": "columnSelection",
+    "historic": "predictionDiv",
+    "documentation": "documentation",
+}
+
+
+def _rail_entry(session, tab):
+    return session.page.query_selector(f'#narrativeNav .tab-button[data-tab="{tab}"]')
+
+
+def test_the_rail_exists_before_any_upload(session):
+    """The shell is built on load, not after a file arrives."""
+    p = session.page
+    assert p.query_selector("#narrativeRail"), "no rail on a cold load"
+    assert p.query_selector("#narrativeNav"), "no navigation in the rail"
+    for tab in RAIL_TABS + ["documentation"]:
+        assert _rail_entry(session, tab), f"rail has no entry for {tab}"
+    # The bar the buttons came from must not still be drawing them.
+    assert p.evaluate(
+        "() => { const b=document.getElementById('appTabs');"
+        " return !b || b.querySelectorAll('.tab-button').length === 0; }"
+    ), "the top tab bar still carries buttons"
+    assert not session.errors, session.errors
+
+
+def test_the_empty_states_read_as_the_application(session):
+    """Before an upload: no data, and the registry listed but inert."""
+    p = session.page
+    assert p.inner_text("#narrativeDataCount").strip() == "0"
+    assert "No data loaded" in p.inner_text("#narrativeDataBody")
+    # The catalog lists the registry with its group counts rather than vanishing.
+    count = int(p.inner_text("#narrativeAppsCount").strip())
+    assert count > 0, "the catalog is empty before an upload"
+    items = p.query_selector_all("#narrativeAppsBody .narrative-app")
+    assert len(items) == count, f"{count} claimed, {len(items)} listed"
+    assert p.query_selector_all("#narrativeAppsBody .narrative-group"), "no group counts"
+    assert all(i.get_attribute("disabled") is not None for i in items), "catalog is live before a task type"
+    assert not session.errors, session.errors
+
+
+def test_the_rail_gates_on_state_and_says_why(session):
+    """Everything past Upload is refused, with a reason, until a file is loaded."""
+    for tab in RAIL_TABS[1:]:
+        el = _rail_entry(session, tab)
+        assert el.get_attribute("disabled") is not None, f"{tab} is reachable with no data"
+        assert (el.get_attribute("title") or "").strip(), f"{tab} is disabled with no reason given"
+    # Upload and Documentation are always reachable.
+    for tab in ["upload", "documentation"]:
+        assert _rail_entry(session, tab).get_attribute("disabled") is None, f"{tab} should stay reachable"
+
+    session.upload_and_preprocess("iris.csv", "Classification", "A-D", "E")
+    for tab in RAIL_TABS[1:]:
+        el = _rail_entry(session, tab)
+        assert el.get_attribute("disabled") is None, f"{tab} still gated after an upload"
+
+
+def test_clicking_the_rail_changes_the_view(session):
+    """The only check that catches a rail entry that no longer navigates."""
+    session.upload_and_preprocess("iris.csv", "Classification", "A-D", "E")
+    p = session.page
+    for tab, view in VIEW_OF_TAB.items():
+        _rail_entry(session, tab).click()
+        p.wait_for_timeout(350)
+        assert session.visible(view) == "visible", f"rail entry {tab} did not reveal {view}"
+        active = p.evaluate(
+            "() => { const b=document.querySelector('#narrativeNav .tab-button.active');"
+            " return b ? b.dataset.tab : null; }"
+        )
+        assert active == tab, f"rail entry {tab} left {active} marked active"
+    assert not session.errors, session.errors
+
+
+def test_the_rail_carries_a_run_from_a_cold_load(live_session):
+    """Cold load to a finished run, navigating only by the rail."""
+    s = live_session
+    p = s.page
+    assert p.inner_text("#narrativeDataCount").strip() == "0"
+
+    s.upload_and_preprocess("iris.csv", "Classification", "A-D", "E")
+    # The data panel learned about the file without anything telling it to.
+    assert p.inner_text("#narrativeDataCount").strip() == "1"
+    assert "iris.csv" in p.inner_text("#narrativeDataBody")
+
+    _rail_entry(s, "modeling").click()
+    p.wait_for_timeout(350)
+    assert s.visible("columnSelection") == "visible"
+    # The strip is inside Modeling and is progress, not navigation.
+    assert p.query_selector("#columnSelection #narrativeFlow"), "the run strip left the Modeling view"
+    assert not p.query_selector("#narrativeRail #narrativeFlow"), "the run strip became rail navigation"
+
+    # Choose a model from the catalog, which is live now that a task type is known.
+    model = p.query_selector('#narrativeAppsBody .narrative-app[data-model="Logistic_classifier"]')
+    assert model, "the catalog does not list the classifier"
+    assert model.get_attribute("disabled") is None, "the catalog is still inert after preprocessing"
+    model.click()
+    p.wait_for_timeout(200)
+    assert p.eval_on_selector("#simpleClassModels", "e => e.value") == "Logistic_classifier"
+
+    with p.expect_response(lambda r: r.url.endswith("/process"), timeout=120000) as run:
+        p.click("#processButton", force=True)
+    # A run is accepted and then streamed, so /process answers 202 and the result
+    # arrives over the progress stream. Wait for the strip to reach Results, which
+    # is the page's own statement that the run finished.
+    assert run.value.status in (200, 202), f"run refused: {run.value.status} {run.value.text()[:200]}"
+    p.wait_for_selector('#narrativeFlow .narrative-step[data-step="results"].is-current', timeout=180000)
+
+    # Inference is reachable from the rail once a model exists.
+    _rail_entry(s, "historic").click()
+    p.wait_for_timeout(350)
+    assert s.visible("predictionDiv") == "visible"
