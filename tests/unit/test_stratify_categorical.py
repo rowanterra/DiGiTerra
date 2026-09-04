@@ -108,23 +108,23 @@ def test_a_categorical_stratify_column_runs_end_to_end():
     assert result.get("support"), "the run produced no test rows"
 
 
-def test_the_pipeline_passes_the_column_values_as_the_stratify_series(monkeypatch):
-    """The proof that it stratifies, at the point the split is made.
+def test_the_split_receives_the_target_as_the_stratify_series(monkeypatch):
+    """The proof that it stratifies, at the call that does it.
 
-    The result records no per-class support, so the run alone cannot show whether the
-    proportions were held. This captures what split_indices receives: with a
-    categorical column and no bins it must be the column's own values, not None.
+    The result records no per-class support, so a finished run cannot show whether
+    the proportions were held. This captures the stratify argument sklearn actually
+    receives: with penguins column A and no bins it must be the species values.
     """
-    from python_scripts.preprocessing import run_classification_pipeline as pipeline
+    from python_scripts.preprocessing import splitting
 
     seen = {}
-    real = pipeline.split_indices
+    real = splitting.train_test_split
 
-    def capture(X, test_size, seed, strat=None, **kwargs):
-        seen["strat"] = strat
-        return real(X, test_size, seed, strat=strat, **kwargs)
+    def capture(*args, **kwargs):
+        seen["stratify"] = kwargs.get("stratify")
+        return real(*args, **kwargs)
 
-    monkeypatch.setattr(pipeline, "split_indices", capture)
+    monkeypatch.setattr(splitting, "train_test_split", capture)
 
     frame = pd.read_csv(PENGUINS).dropna()
     sid = f"pytest-strat-{uuid.uuid4().hex[:8]}"
@@ -137,7 +137,7 @@ def test_the_pipeline_passes_the_column_values_as_the_stratify_series(monkeypatc
         seedValue=42,
         testSize="0.20",
         stratifyBool=True,
-        stratifyColumn=0,
+        stratifyColumn=0,  # column A, species
         dropMissing="none",
         imputeStrategy="none",
         dropZero="none",
@@ -155,8 +155,8 @@ def test_the_pipeline_passes_the_column_values_as_the_stratify_series(monkeypatc
     run_model_training(sid, payload, "store", lambda _s: {"data": frame.copy()})
     remove_tracker(sid)
 
-    strat = seen.get("strat")
-    assert strat is not None, "the split was not stratified"
-    assert set(pd.Series(strat).unique()) == {"Adelie", "Gentoo", "Chinstrap"}, (
-        f"the stratify series is not the species column: {pd.Series(strat).unique()}"
-    )
+    strat = seen.get("stratify")
+    assert strat is not None, "train_test_split was called without a stratify series"
+    captured = pd.Series(strat).reset_index(drop=True)
+    expected = frame["species"].reset_index(drop=True)
+    assert captured.equals(expected), "the stratify series is not the target column"

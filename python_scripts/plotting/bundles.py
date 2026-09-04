@@ -379,20 +379,51 @@ def plot_classification_bundle(art: dict, svctrue: bool):
     else:
         y_score = None
 
-    # 2) ROC curves using scikit-learn's RocCurveDisplay (micro-averaged -> roc_curve.png)
+    # 2) ROC curve -> roc_curve.png, which the result page offers as "ROC Curve (micro)".
+    #
+    # RocCurveDisplay.from_estimator takes a binary classifier only. On a three-class
+    # target it raised, the warning was logged, and roc_curve.png was never written,
+    # so the page asked for a file that did not exist and drew its alt text instead.
+    # The micro-average is what the option names: every one-against-rest decision
+    # pooled into a single curve, which is defined for any number of classes.
     if y_score is not None:
-        try:
-            plot_roc_curve_from_estimator(
-                model,
-                X_test,
-                y_for_sklearn,
-                model_name=art.get("model_name", "Model"),
-                pdf_pages=None,
-                plot_chance_level=True,
-                despine=True,
-            )
-        except Exception as e:
-            logger.warning(f"Could not generate ROC curve using Display class: {e}")
+        if len(classes) == 2:
+            try:
+                plot_roc_curve_from_estimator(
+                    model,
+                    X_test,
+                    y_for_sklearn,
+                    model_name=art.get("model_name", "Model"),
+                    pdf_pages=None,
+                    plot_chance_level=True,
+                    despine=True,
+                )
+            except Exception as e:
+                logger.warning(f"Could not generate ROC curve using Display class: {e}")
+        else:
+            try:
+                fpr_micro, tpr_micro, _ = roc_curve(y_bin.ravel(), np.asarray(y_score).ravel())
+                auc_micro = roc_auc_score(y_bin, y_score, average="micro", multi_class="ovr")
+                fig_micro, ax_micro = plt.subplots(figsize=(6, 5))
+                ax_micro.plot(
+                    fpr_micro,
+                    tpr_micro,
+                    linewidth=2,
+                    label=f"Micro-average over {len(classes)} classes (AUC={auc_micro:.3f})",
+                )
+                ax_micro.plot([0, 1], [0, 1], "k--", linewidth=1, label="Chance")
+                ax_micro.set_xlabel("False Positive Rate")
+                ax_micro.set_ylabel("True Positive Rate")
+                ax_micro.set_title(f"{art.get('model_name', 'Model')} | ROC (micro-average)")
+                ax_micro.legend(loc="lower right", fontsize=9)
+                ax_micro.set_xlim([0, 1])
+                ax_micro.set_ylim([0, 1.05])
+                ax_micro.grid(True, alpha=0.7)
+                plt.tight_layout()
+                plt.savefig(VIS_DIR / "roc_curve.png", dpi=150, bbox_inches="tight", facecolor="white")
+                plt.close(fig_micro)
+            except Exception as e:
+                logger.warning(f"Could not generate the micro-average ROC: {e}")
         # Per-class ROC (one curve per class) -> roc_curve_per_class.png
         try:
             fig_roc, ax_roc = plt.subplots(figsize=(6, 5))
