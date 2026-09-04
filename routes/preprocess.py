@@ -83,9 +83,12 @@ def preprocess():
         ), HTTP_BAD_REQUEST
 
     output_type = (data.get("outputType") or "").strip()
-    # Clustering has no supervised target, so the guard applies to everything else.
+    # Clustering has no supervised target. Classification stratifies on the class
+    # labels, which is what train_test_split's own stratify argument does, so naming
+    # the target there is correct rather than a leak. The guard is for regression,
+    # where the target is cut into bins and the bins would carry it into the split.
     # The client sends stratify as a bare index or a one-element list; both are checked.
-    if output_type != "Cluster" and selected_predictors is not None:
+    if output_type not in ("Cluster", "Classifier") and selected_predictors is not None:
         strat_list = stratify if isinstance(stratify, (list, tuple)) else [stratify]
         strat_idx = {int(s) for s in strat_list if isinstance(s, (int, np.integer))}
         pred_raw = selected_predictors if isinstance(selected_predictors, (list, tuple)) else [selected_predictors]

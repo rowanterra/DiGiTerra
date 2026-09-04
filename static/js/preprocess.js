@@ -57,15 +57,10 @@ async function handlePreprocessFormSubmit(e) {
         }
     }
 
-    else if (stratifyColumn.trim()!=='' && quantileBins=='None'){
-        e.preventDefault();
-        showError(stratErrorDiv, 'Select bins or quantiles. A stratify value needs one of them.', false);
-        const quantileBinsSelect = document.getElementById('quantileBins');
-        if (quantileBinsSelect) {
-            quantileBinsSelect.setAttribute('aria-invalid', 'true');
-            manageFocus(quantileBinsSelect);
-        }
-    }
+    // A stratify column with neither bins nor quantiles is the categorical case: the
+    // split holds the proportions of the column's own values. Only a continuous
+    // column needs to be cut into groups first. The server decides whether the
+    // column can carry a split and says so if it cannot.
     else if (!predictors && outputType!=='Cluster'){
         e.preventDefault();
         showError(stratErrorDiv, 'Enter a target column. Classification and regression both need one.', false);
@@ -75,7 +70,7 @@ async function handlePreprocessFormSubmit(e) {
             manageFocus(predictorsInput);
         }
     }
-    else if (stratifyColumn.trim() !== '' && (quantileBins === 'quantiles' || quantileBins === 'Bins') && predictors.trim() !== '' && outputType !== 'Cluster') {
+    else if (stratifyColumn.trim() !== '' && (quantileBins === 'quantiles' || quantileBins === 'Bins') && predictors.trim() !== '' && outputType !== 'Cluster' && outputType !== 'Classifier') {
         const pCols = getColumnIndices(predictors.toUpperCase().replace(/\s/g, ''));
         const stratNum = columnToIndex(stratifyColumn.trim().toUpperCase());
         if (pCols.indexOf(stratNum) !== -1) {

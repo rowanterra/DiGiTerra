@@ -138,6 +138,12 @@ def run_classification(
         bins = list(map(parseIntString, quantileBinDict["bin"].split(",")))
         train_data, use_strat, counts = make_strat_labels_robust(ddf, stratifyColumn, "classification", testSize, bins)
 
+    elif stratifyColumn:
+        # Neither bins nor quantiles: stratify on the column's own values. The
+        # candidate loop below accepts the column only when it has at least two
+        # values and at least two rows in each, which is what a split needs.
+        train_data, use_strat, _counts = ddf.copy(), True, {}
+
     else:
         train_data, use_strat, _counts = ddf.copy(), False, {}
 

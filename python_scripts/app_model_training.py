@@ -456,8 +456,14 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
                 "minibatch_kmeans",
                 "optics",
             }
+            # Classification stratifies on the class labels, which is what
+            # train_test_split's own stratify argument takes, so naming the target
+            # there is correct. The guard is for regression, where the target is cut
+            # into bins and those bins would carry it into the split.
+            is_classification = (data.get("outputType") or "").strip() == "Classifier"
             if (
                 modelName not in cluster_models
+                and not is_classification
                 and stratify_name
                 and predictor_names
                 and stratify_name in predictor_names
