@@ -102,7 +102,8 @@ def upload_file():
             return jsonify(
                 {
                     "error": "DiGiTerra did not read the file. This installation cannot apply a "
-                    "memory limit to the parse. Ask the operator to run the server profile on Linux."
+                    "memory limit to the parse. Ask the operator to run the server profile on a "
+                    "platform whose kernel applies RLIMIT_AS. Linux and the BSDs apply it."
                 }
             ), HTTP_INTERNAL_SERVER_ERROR
         except WorkerError as e:

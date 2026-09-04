@@ -147,3 +147,29 @@ def test_forced_run_is_labeled_in_the_model_card():
     card = render_model_card(manifest)
     assert "not valid for decision use" in card
     assert "known proxy kept" in card
+
+
+def test_the_block_message_offers_the_override_only_where_it_exists(monkeypatch):
+    """A served page must not name a control the operator has not turned on."""
+    from core import constants
+    from python_scripts.preprocessing.guardrails import GuardrailReport
+
+    report = GuardrailReport()
+    report.add("target_as_feature", "block", "'leak' is identical to the target 'y'.", ["leak"])
+
+    monkeypatch.setattr(constants, "ALLOW_UNSAFE_OVERRIDE", True)
+    with_override = report.block_message()
+    assert "Data Checks" in with_override, with_override
+    assert "Ask the operator" not in with_override, with_override
+
+    monkeypatch.setattr(constants, "ALLOW_UNSAFE_OVERRIDE", False)
+    without = report.block_message()
+    assert "Data Checks" not in without, without
+    assert "Ask the operator" in without, without
+
+    # Either way the finding comes before anything said about the override.
+    for message in (with_override, without):
+        assert message.startswith("DiGiTerra stopped the run."), message
+        finding = message.index("'leak' is identical to the target 'y'.")
+        tail = max(message.find("Data Checks"), message.find("Ask the operator"))
+        assert tail > finding, message

@@ -148,6 +148,31 @@ def test_altered_artifact_is_refused(client):
         load_bundle(out, force=True)
 
 
+def test_the_hash_refusal_names_the_file_in_the_bundle(client):
+    """The message hardcoded model.joblib while the code had already picked the member."""
+    from python_scripts.reporting.bundle import MODEL_NAME
+
+    sid = uuid.uuid4().hex
+    _train_in_session(sid)
+    client.set_cookie("digiterra_session", sid)
+    data = client.get("/export-bundle").data
+    src = zipfile.ZipFile(io.BytesIO(data))
+    assert MODEL_NAME in src.namelist(), "this bundle is not in the current format"
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w") as z:
+        for name in src.namelist():
+            payload = src.read(name)
+            if name == MODEL_NAME:
+                payload = payload + b"\x00"
+            z.writestr(name, payload)
+    out.seek(0)
+    with pytest.raises(BundleError) as caught:
+        load_bundle(out, force=True)
+    message = str(caught.value)
+    assert MODEL_NAME in message, message
+    assert "model.joblib" not in message, message
+
+
 def test_bundle_from_another_installation_is_refused(client, monkeypatch, tmp_path):
     """A valid hash is not authenticity: a foreign key, or no signature, is refused before unpickling."""
     import python_scripts.reporting.bundle as bundle_mod

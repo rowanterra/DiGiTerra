@@ -16,6 +16,7 @@
      The accent green does not change between light and dark: every rule that
      used it did so identically in both, so it is one value in one place. */
   --app-accent: #357a53;
+  --app-accent-dark: #2d6543;
   --app-accent-deep: #24503d;
   --app-accent-lift: #4a9d6e;
   --app-on-accent: #ffffff;
@@ -1493,7 +1494,7 @@ button {
 }
 
 button:hover {
-    background-color: #0056b3;
+    background-color: var(--app-accent-dark);
 }
 .processButton{
   padding: 20px 48px 20px 40px; /* Extra padding on right for triangle */
@@ -1681,8 +1682,9 @@ button:hover {
   flex: 0 0 auto !important;
 }
 
+/* The toggle switch when it is on. */
 input:checked + .slider {
-  background-color: #2196f3;
+  background-color: var(--app-accent);
 }
 
 /* Advanced options warning styling */
@@ -3339,8 +3341,8 @@ body.dark-mode .documentation .doc-warning-content p {
     cursor: default;
 }
 .narrative-app:hover {
-    background-color: #f0f2ee;
-    border-color: #d7dbd4;
+    background-color: var(--app-panel-head);
+    border-color: var(--app-rule);
 }
 .narrative-app.is-selected {
     background-color: #eaf1ec;
@@ -3814,4 +3816,29 @@ body.dark-mode .upload-card > .RedoButton,
 body.dark-mode #uploadPredictDf > h3 {
     background-color: var(--app-panel-head);
     border-bottom-color: var(--app-border);
+}
+
+/* A pseudo-class outranks a bare element rule whatever the source order, so the
+   accent above did not reach a hovered, focused or disabled plain button. These
+   restate it at the same specificity as the rules that were winning. */
+button:hover {
+    background-color: var(--app-accent-dark);
+}
+button:focus-visible {
+    outline: 3px solid var(--app-accent-deep);
+    outline-offset: 2px;
+}
+button:active {
+    background-color: var(--app-accent-deep);
+}
+button:disabled,
+button[aria-disabled="true"] {
+    background-color: var(--app-sunken);
+    color: var(--app-muted);
+    cursor: not-allowed;
+}
+/* The rail's own entries are transparent rows, not filled buttons. */
+.narrative-nav .tab-button:disabled,
+.narrative-nav .tab-button[aria-disabled="true"] {
+    background-color: transparent;
 }

@@ -632,17 +632,22 @@ def load_bundle(bundle_path: str | Path, *, force: bool = False, trust_unsigned:
     expected = artifact_meta.get("sha256")
     actual = sha256_bytes(model_bytes)
     if expected and expected != actual:
-        raise BundleError("model.joblib does not match the hash in the manifest. The bundle was altered.")
+        raise BundleError(f"{member} does not match the hash in the manifest. The bundle was altered.")
     if not trust_unsigned:
         key = signing_key(create=False)
         if not signature_valid(model_bytes, artifact_meta.get("signature"), key):
             theirs = artifact_meta.get("key_id") or "none"
             mine = key_id(key) if key else "none"
+            # The signature is checked here, before artifact_loads reads the member,
+            # so a bundle that fails is refused with its artifact still unread. The
+            # code-execution warning belongs to the legacy pickle alone: the current
+            # format is skops, which builds only the types the allowlist names.
+            risk = " Its artifact is a pickle, which runs code when it is read." if member == LEGACY_MODEL_NAME else ""
             raise BundleError(
                 "The bundle's signature does not verify under this installation's key "
-                f"(bundle key {theirs}, this key {mine}). Loading it would run code from the file. "
-                "Only bundles exported by this installation, or by one that shares its DIGITERRA_BUNDLE_KEY, "
-                "can be loaded."
+                f"(bundle key {theirs}, this key {mine}). DiGiTerra refused the bundle before it read "
+                f"the artifact.{risk} "
+                "Load a bundle exported by this installation, or by one that shares its DIGITERRA_BUNDLE_KEY."
             )
     try:
         objects = artifact_loads(model_bytes) if member == MODEL_NAME else artifact_loads_legacy(model_bytes)

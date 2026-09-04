@@ -112,8 +112,11 @@ def export_bundle():
 def import_bundle():
     """Load a bundle's fitted objects into this session so /predict can use them.
 
-    Off unless DIGITERRA_ALLOW_BUNDLE_IMPORT is set: the objects are unpickled,
-    and unpickling runs code from the file. The desktop launcher sets the flag.
+    Off unless DIGITERRA_ALLOW_BUNDLE_IMPORT is set. The current format is skops,
+    which builds only the types the allowlist names, and the signature is checked
+    before the artifact is read. A bundle in the older format holds a pickle, which
+    runs code when it is read, and opens only where DIGITERRA_ALLOW_LEGACY_PICKLE
+    says so. The desktop launcher sets the import flag.
     """
     from python_scripts.reporting.bundle import STORE_KEYS, BundleError, import_allowed, load_bundle, package_drift
 

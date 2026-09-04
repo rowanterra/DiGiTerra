@@ -6120,7 +6120,7 @@
 
         <form id="importBundleForm" enctype="multipart/form-data" class="hidden">
             <h3>Load a Saved Model Bundle</h3>
-            <p class="field-note">A bundle (.zip) exported from an earlier run replaces the model in this session. Only bundles exported by this installation, or by one that shares its signing key, are accepted, because loading a bundle runs code from the file. The prediction file then needs the same feature columns the bundle lists.</p>
+            <p class="field-note">A bundle (.zip) exported from an earlier run replaces the model in this session. Only bundles exported by this installation, or by one that shares its signing key, are accepted. DiGiTerra checks the signature before it reads the model. The prediction file then needs the same feature columns the bundle lists.</p>
             <input type="file" name="bundle" id="bundleFile" accept=".zip" required>
             <div>
                 <button type="submit">Load Bundle</button>

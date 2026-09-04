@@ -11,13 +11,14 @@ taking the machine, and with a wall clock, so a fit that never converges is kill
 rather than held. The parent gets an answer, a refusal, or a timeout, and its own
 memory is untouched either way.
 
-RLIMIT_AS is not honored everywhere. On Darwin it is a second name for RLIMIT_RSS,
+Not every kernel applies RLIMIT_AS. On Darwin it is a second name for RLIMIT_RSS,
 which the kernel does not implement, so setrlimit refuses every value and no
 ceiling can be set at any size. Where the ceiling cannot be set, a step that asks
-for one is refused before a child is started rather than run without it: an
-unbounded child is the thing this module exists to prevent, and running one while
-reporting success would be worse than not running it at all. In practice that
-means the server profile requires Linux.
+for one is refused before a child is started rather than run without it. An
+unbounded child is what this module exists to prevent, and running one while
+reporting success would be worse than not running it at all. The server profile
+therefore needs a platform whose kernel applies RLIMIT_AS, which is currently
+Linux and the BSDs.
 
 The child is started with the spawn method so it does not inherit the parent's
 loaded state, and the two ends exchange data through a file rather than a pipe,
@@ -114,7 +115,8 @@ def _refusal(reason: str) -> str:
     """The one message both ends give when the ceiling cannot be set."""
     return (
         f"DiGiTerra did not start the step. {reason}. "
-        "Run the server profile on Linux, which applies RLIMIT_AS. "
+        "Run the server profile on a platform whose kernel applies RLIMIT_AS, "
+        "which is currently Linux and the BSDs. "
         "To run the step in this process without a memory limit, set DIGITERRA_ISOLATE_WORK to 0."
     )
 

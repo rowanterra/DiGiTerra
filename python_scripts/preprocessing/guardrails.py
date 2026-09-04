@@ -62,12 +62,25 @@ class GuardrailReport:
         }
 
     def block_message(self) -> str:
-        """What happened, then why, then what to do about it, in that order."""
+        """What happened, then why, then what to do about it, in that order.
+
+        The correction to the data comes first, because it is what a person can
+        always do. The override is named only where it exists: it is off unless the
+        deployment sets DIGITERRA_ALLOW_UNSAFE_OVERRIDE, which the desktop launcher
+        does and a server installation does not, so a served page that offered it
+        would name a control the operator has not turned on.
+        """
+        from core import constants as _constants
+
         lines = [f.message for f in self.blocking]
+        if _constants.ALLOW_UNSAFE_OVERRIDE:
+            last = " To run the model without this check, open Advanced, then Data Checks, and give a reason."
+        else:
+            last = " This installation does not allow a run past a data check. Ask the operator to turn one on."
         return (
             "DiGiTerra stopped the run. The data checks found a problem that makes the result misleading. "
             + " ".join(lines)
-            + " To run the model anyway, open Advanced, then Data Checks, and give a reason."
+            + last
         )
 
 
