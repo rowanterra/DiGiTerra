@@ -36,13 +36,27 @@ Session output directories older than `DIGITERRA_STALE_SESSION_HOURS` (default 2
 
 `GET /progress/<id>` in `routes/main.py` returns 404 for an id that has no tracker and for an id that a different browser session started; each tracker records the session cookie that created it. Trackers are capped at 256 (`MAX_TRACKED_SESSIONS` in `python_scripts/preprocessing/progress_tracker.py`).
 
-A stream occupies a worker thread while it is open. The Dockerfile runs gunicorn with one worker process and `--worker-class gthread --threads 8`, which keeps session state in one process while letting an open stream coexist with other requests; the default synchronous worker does not. `scripts/check_stream_starvation.py` measures both: recorded on 2026-09-03, an unrelated request was not answered within ten seconds under the synchronous worker and was answered in 0.01 s under the threaded worker. The thread count is the ceiling on concurrent requests including open streams. A stream ends after `DIGITERRA_PROGRESS_TIMEOUT_SECONDS` (900) without an error payload, so the browser's EventSource reconnects and a longer run still delivers its result.
+A stream occupies a worker thread while it is open. The Dockerfile runs gunicorn with one worker process and `--worker-class gthread --threads 8`, which keeps session state in one process while letting an open stream coexist with other requests; the default synchronous worker does not. `scripts/check_stream_starvation.py` measures both: recorded on 2026-09-03, an unrelated request was not answered within ten seconds under the synchronous worker and was answered in 0.01 s under the threaded worker. A stream ends after `DIGITERRA_PROGRESS_TIMEOUT_SECONDS` (900) without an error payload, so the browser's EventSource reconnects and a longer run still delivers its result.
+
+Streams take a slot from `core/jobs.py`: one per training id, and `DIGITERRA_MAX_CONCURRENT_STREAMS` (default 4, half the thread pool) across the process. A request past either limit returns 429, and the slot is released when the generator ends or the response closes, so a client that never reads the body does not hold it. `tests/unit/test_capacity.py` opens two streams under a cap of two, checks that a third and a duplicate are refused while an unrelated request answers, and that closing one frees its slot.
 
 ## Training request bounds and admission control
 
 `validate_training_request` in `python_scripts/app_model_training.py` runs in the request handler, before `routes/modeling.py` creates a thread, so a malformed or out-of-range request costs a JSON parse. It checks the required fields, that the named model is in the registry, and the ranges held in `core/constants.py`: `testSize` in [`DIGITERRA_MIN_TEST_SIZE`, `DIGITERRA_MAX_TEST_SIZE`] (0.05 to 0.90), cross-validation folds 2 to `DIGITERRA_MAX_CV_FOLDS` (20), search folds 2 to `DIGITERRA_MAX_SEARCH_CV_FOLDS` (10), and search iterations 1 to `DIGITERRA_MAX_SEARCH_ITERATIONS` (100). A value outside its range returns 400.
 
-`core/jobs.py` limits how many runs exist at once: one per browser session, and `DIGITERRA_MAX_CONCURRENT_TRAINING` (default 2) across the process. A request past either limit returns 429 without starting a thread. The search and cross-validation paths use every core (`n_jobs=-1`), so this is the ceiling on the CPU one client can occupy.
+`core/jobs.py` limits how many runs exist at once: one per browser session, and `DIGITERRA_MAX_CONCURRENT_TRAINING` (default 2) across the process. A request past either limit returns 429 without starting a thread. Hyperparameter searches, feature-selection forests, and the finalist evaluation ask for `job_n_jobs()` cores: `DIGITERRA_JOB_CORES` when set, otherwise `cpu_count // DIGITERRA_MAX_CONCURRENT_TRAINING`, so the concurrent runs together ask for the host once. Estimators that take `n_jobs` from the form keep the form's value.
+
+Data checks run before dispatch (`python_scripts/preprocessing/guardrails.py`). A blocking finding raises before any estimator is fit unless the request sets `allowUnsafe`; the override is recorded in the result and the run record.
+
+## Session memory
+
+`core/state.py` holds at most `DIGITERRA_MAX_SESSIONS` (32) session dictionaries and, with each, the `memory_usage(deep=True)` size of its frame. An upload is admitted only when the total across sessions stays within `DIGITERRA_MAX_TOTAL_FRAME_MB` (default 1024, 0 disables; the desktop launcher disables it). The oldest sessions without a run in flight are evicted first; when only sessions with running jobs remain, the upload is refused with 429. The session-count eviction also skips sessions with a run in flight. Without this budget, a client rotating cookies could hold `MAX_SESSIONS` frames at the per-frame cap.
+
+## Run records and model bundles
+
+Each run writes `manifest.json`, `model_card.json`, and `model_card.html` into the session directory (`python_scripts/reporting/bundle.py`). The card is generated with every value HTML-escaped and no script. `GET /export-bundle` zips those with the fitted objects serialized by joblib and records the SHA-256 of that artifact in the manifest.
+
+`POST /import-bundle` loads a bundle's objects into the session for `/predict`. Loading unpickles the objects, and unpickling runs code from the file, so the route answers 403 unless `DIGITERRA_ALLOW_BUNDLE_IMPORT` is set. The desktop launcher sets it; the container and Helm defaults do not. When enabled, the route checks the bundle format string and the artifact hash before unpickling, which detects alteration of a bundle DiGiTerra wrote but does not make an untrusted bundle safe. `scripts/score_bundle.py` and `scripts/rerun_bundle.py` unpickle without the flag and are for bundles from a known source.
 
 There is no rate limiting, so a client can still send requests that are rejected cheaply, and no queue, so a refused run is not deferred. Those need an external limiter and a job queue.
 

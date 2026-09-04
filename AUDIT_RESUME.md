@@ -6,7 +6,7 @@ Branch `audit-fixes`, off `147d313` (ADA Boost, 2026-03-25).
 
 Verification scripts live in /tmp (regenerate if the container was recycled):
 `verify_ml.py` (11 unit checks, all pass) and `e2e.py` (upload → preprocess →
-train → predict through the Flask test client). `pytest tests/` is 15 green,
+train → predict through the Flask test client). `pytest tests/` is 97 green as of the sixth pass,
 `npm run lint` is clean.
 
 ML correctness
@@ -78,6 +78,31 @@ Frontend
   clean. `npm run lint` now builds the bundle, lints the split files, and lints the
   bundle with `no-undef` on. `npm run check-bundle` fails if the committed bundle
   has drifted.
+
+## Sixth pass, 2026-09-04 (commits 10 to 13): the market-gap items and the implementation review
+
+Commits bc404d0, c22768f, 4216fdd, 4153210. `pytest tests/` is 97 green, `ruff check .`,
+`ruff format --check .`, and `npm run lint` are clean.
+
+Market-gap items from `MARKET_GAP_ANALYSIS.md` that are in the code now: Excel and Parquet
+input with an Excel export; time-ordered and grouped holdouts; data checks before
+training with a recorded override; a baseline on the same validation rows; a run
+record (manifest and model card) per run; a portable bundle with export, gated import,
+a scoring script, and a rerun script. `audit_handoff_2026-09-03/GAP_RESPONSE.md` has the
+item-by-item disposition, including the items left out and why.
+
+Two defects surfaced while testing the bundle. The fitted preprocessor's group-map step
+was a closure and could not be pickled. `prediction()` used the scaler's
+`feature_names_in_` array in a boolean `or`, which raises for more than one column, so
+`/predict` returned 500 for every scaled regression model since commit ccf017f, my own
+first-pass change. No test had run `/predict` after a real training run;
+`tests/unit/test_inference.py` does now, for five model and scaler combinations.
+
+The reviewer's `IMPLEMENTATION_REVIEW.md` had four findings, all sound and all
+addressed in 4153210: progress-stream slots (one per run, four across the process),
+a process-wide budget for uploaded data with job-protected eviction, a per-job core
+budget in place of `n_jobs=-1`, and a portable stream-starvation script that exits
+nonzero on failure. `tests/unit/test_capacity.py` covers the first three.
 
 ## Fifth pass, 2026-09-03 night (commit 9): the re-audit
 

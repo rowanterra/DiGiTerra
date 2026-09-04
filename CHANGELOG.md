@@ -25,6 +25,8 @@ Model training and inference
 - The regression pipeline computed the per-bin evaluation table and then returned an empty string in its place, so the "quantile Bin Results" sheet was never written. The bin labels a user types were parsed and discarded; they now name the rows of that table.
 - RadiusNeighborsRegressor returned NaN for a row with no training row inside the radius. Such a row now takes the value of its nearest training row, and the model records how many rows that was.
 - 67 of 67 offered estimators train from an empty hyperparameter form (`scripts/train_every_model.py`): `gamma=None` in the four SVM trainers, an empty MLP `hidden_layer_sizes`, the `n_alphas` argument removed in scikit-learn 1.9, `n_jobs` on PassiveAggressiveRegressor, and `eta0=0` on SGDClassifier. Perceptron, a classifier registered as a regressor, is a rejected entry like Polynomial.
+- `prediction()` in `python_scripts/helpers.py` used the scaler's `feature_names_in_` array in a boolean `or`, which raises for more than one column, so `/predict` returned 500 for every scaled regression model. `tests/unit/test_inference.py` runs `/predict` after a regression run with and without a scaler, a random forest, a classifier, and k-means.
+- The fitted preprocessor's group-map step was a closure and could not be pickled. `apply_group_map` in `python_scripts/preprocessing/utilities.py` is a module-level function with the maps passed as `kw_args`.
 
 Web layer
 
@@ -57,6 +59,12 @@ Frontend
 
 ### Added
 
+- Data checks before training (`python_scripts/preprocessing/guardrails.py`): a feature identical or near-identical to the target, the target listed as a feature, a categorical column that maps one-to-one onto the class, constant and identifier columns, heavy missingness, duplicate rows, class imbalance, and too few rows for the requested split or folds. Blocking findings stop the run with the reasons unless the request sets `allowUnsafe` (Advanced, Data Checks); every finding is returned as `data_checks` and shown above the result.
+- A baseline scored on the same validation rows (`python_scripts/preprocessing/baseline.py`): the training mean for regression, the most common class for classification. The result says whether the model beats it.
+- Time-ordered and grouped holdouts (`python_scripts/preprocessing/splitting.py`; Advanced, Train/Test Split). Excel (`.xlsx`, `.xlsm`) and Parquet input; `GET /download/predictions.xlsx`.
+- A run record per training run: `manifest.json` and `model_card.html` in the session directory, with the SHA-256 of the uploaded bytes, the request, seed, estimator and parameters, preprocessing and split, metrics, baseline, data checks, and package versions (`python_scripts/reporting/bundle.py`). `GET /export-bundle` zips the record with the fitted objects and the artifact hash. `POST /import-bundle` loads a bundle for `/predict` and is off unless `DIGITERRA_ALLOW_BUNDLE_IMPORT` is set; the desktop launcher sets it.
+- `scripts/score_bundle.py` scores a new file from a bundle without the web app. `scripts/rerun_bundle.py` checks the data hash, replays the recorded request, and compares the metrics.
+- Progress-stream slots: one stream per run and `DIGITERRA_MAX_CONCURRENT_STREAMS` (4) across the process, 429 past either. A process-wide budget for uploaded data, `DIGITERRA_MAX_TOTAL_FRAME_MB` (1024), evicting idle sessions first and refusing with 429 when only sessions with running jobs remain. Searches and feature-selection forests use `cpu_count // DIGITERRA_MAX_CONCURRENT_TRAINING` cores, or `DIGITERRA_JOB_CORES`.
 - MIT license.
 - This changelog.
 - Makefile with `install`, `dev`, `lint`, `test`, `check`, and `build-bundle` targets.

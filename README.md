@@ -63,6 +63,18 @@ trained and 2 (Polynomial, Perceptron) are registered without a trainer and were
 and checks that values typed into Advanced-mode controls reach the training request; the
 test skips itself when Playwright or the browser is absent.
 
+## Run records and bundles
+
+Every training run writes `manifest.json` and `model_card.html` into the session's output
+directory: the SHA-256 of the uploaded file, the request, seed, estimator and parameters,
+preprocessing and split, metrics, the baseline comparison, data-check findings, and package
+versions. The result page links the model card and `GET /export-bundle`, a zip of the record
+with the fitted objects. `scripts/score_bundle.py BUNDLE.zip NEW_ROWS.csv` scores a file from
+a bundle without the web app; `scripts/rerun_bundle.py BUNDLE.zip DATA.csv` checks the data
+hash, replays the recorded request, and reports whether the metrics reproduce. Loading a
+bundle unpickles its objects, so the in-app import (`POST /import-bundle`) is on in the
+desktop build and off in the container unless `DIGITERRA_ALLOW_BUNDLE_IMPORT` is set.
+
 ## Regression stability across seeds
 
 `python_scripts/preprocessing/evaluate_regression_robustness.py` repeats the train/test split and cross-validation over a range of seeds and records the spread:
