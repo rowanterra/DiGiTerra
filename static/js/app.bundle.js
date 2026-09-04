@@ -6326,7 +6326,7 @@ function renderRunNotes(data) {
     const base = data && data.baseline;
     if (base && base.metric) {
         const better = base.model_beats_baseline;
-        const verdict = better === true ? 'The model beats the baseline.' : (better === false ? 'The model does not beat the baseline; the result carries no information beyond the target distribution.' : '');
+        const verdict = better === true ? 'The model beats the baseline.' : (better === false ? 'The model does not beat the baseline; the score adds nothing beyond the target distribution.' : '');
         parts.push(`<p class="run-note ${better === false ? 'run-note-warn' : 'field-note'}"><strong>Baseline.</strong> ${escapeHtml(base.description)} scores ${escapeHtml(String(base.baseline_value))} ${escapeHtml(base.metric)} on the validation split against ${escapeHtml(String(base.model_value))} for the model. ${verdict}</p>`);
     }
     if (data && data.model_card_url) {

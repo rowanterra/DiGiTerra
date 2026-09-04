@@ -38,7 +38,7 @@ MODEL_NAME = "model.joblib"
 BUNDLE_NAME = "model_bundle.zip"
 TRACKED_PACKAGES = ("numpy", "pandas", "scikit-learn", "scipy", "shap", "xgboost", "lightgbm", "catboost", "joblib")
 
-# Keys of the training request that carry no reproducibility information or that
+# Keys of the training request with no reproducibility value, or that
 # the manifest records under another name.
 _REQUEST_SKIP = {"filename"}
 
@@ -479,7 +479,7 @@ def load_bundle(bundle_path: str | Path, *, force: bool = False) -> tuple[dict, 
         raise BundleError("model.joblib does not match the hash in the manifest; the bundle was altered.")
     objects = joblib.load(io.BytesIO(model_bytes))
     if not isinstance(objects, dict) or "model" not in objects:
-        raise BundleError("model.joblib does not hold DiGiTerra fitted objects.")
+        raise BundleError("model.joblib is not a DiGiTerra fitted-objects record.")
     return manifest, objects
 
 

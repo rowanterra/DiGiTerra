@@ -120,7 +120,7 @@ def run_guardrails(
     constant = [c for c in features if df[c].nunique(dropna=True) <= 1]
     if constant:
         report.add(
-            "constant_columns", "warn", f"Constant columns carry no information: {', '.join(constant)}.", constant
+            "constant_columns", "warn", f"Constant columns add no information: {', '.join(constant)}.", constant
         )
     id_like = []
     for c in features:
