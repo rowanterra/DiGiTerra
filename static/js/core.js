@@ -42,6 +42,35 @@ let uploadedFileName = '';
 let uploadedShape = { rows: null, columns: null };
 const API_ROOT = (window.API_ROOT || '').replace(/\/+$/, '');
 
+// The server sets a CSRF cookie that script can read; every request the page makes
+// echoes it in a header. A cross-site form can cause the cookie to be sent but
+// cannot read it, so it cannot set the header. On a desktop build the server does
+// not check the header, and sending it costs nothing.
+function csrfToken() {
+    const match = document.cookie.match(/(?:^|;\s*)digiterra_csrf=([^;]*)/);
+    return match ? decodeURIComponent(match[1]) : '';
+}
+
+// fetch is wrapped once, so no call site has to remember the header.
+(function addCsrfHeaderToFetch() {
+    const original = window.fetch;
+    window.fetch = function (input, init) {
+        const options = init ? { ...init } : {};
+        const method = (options.method || (typeof input === 'object' && input && input.method) || 'GET').toUpperCase();
+        const url = typeof input === 'string' ? input : (input && input.url) || '';
+        const sameOrigin = !/^https?:\/\//i.test(url) || url.startsWith(window.location.origin);
+        if (sameOrigin && method !== 'GET' && method !== 'HEAD') {
+            const token = csrfToken();
+            if (token) {
+                const headers = new Headers(options.headers || (typeof input === 'object' && input ? input.headers : undefined));
+                headers.set('X-DiGiTerra-CSRF', token);
+                options.headers = headers;
+            }
+        }
+        return original.call(this, input, options);
+    };
+})();
+
 function withApiRoot(path) {
     if (!path) return API_ROOT || '';
     if (/^https?:\/\//i.test(path) || path.startsWith('//')) return path;

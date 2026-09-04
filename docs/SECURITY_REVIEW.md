@@ -1,6 +1,16 @@
 # Security posture
 
-Reviewed against the `audit-fixes` branch on 2026-09-04, at the commit that added the bundle signature and the compressed-input preflight. The statements below describe the code at that commit; `tests/unit/test_docs.py` fails when a `DIGITERRA_*` variable is added to the code without appearing here or in `docs/documentation.md`, so a new limit cannot ship undocumented. DiGiTerra is a single-user desktop application that also runs as a web app behind gunicorn. There is no authentication, CSRF protection, or rate limiting. A multi-user deployment needs those before exposure to untrusted clients.
+Reviewed against the `audit-fixes` branch on 2026-09-04, at the commit that added the deployment profile. The statements below describe the code at that commit; `tests/unit/test_docs.py` fails when a `DIGITERRA_*` variable is added to the code without appearing here or in `docs/documentation.md`, so a new limit cannot ship undocumented. DiGiTerra is a single-user desktop application that also runs as a web app behind gunicorn, and the two need opposite defaults. `DIGITERRA_PROFILE` picks a set rather than leaving an operator to set each control correctly on its own.
+
+## Deployment profile
+
+`desktop` (the default, and what `desktop_app.py` runs) asks for no identity, no CSRF token, and applies no rate limit, because the only user is the person at the keyboard. `server` requires all three. Each control also answers to its own variable, so a pilot can turn one on while its proxy is being arranged: `DIGITERRA_REQUIRE_AUTH`, `DIGITERRA_REQUIRE_CSRF`, `DIGITERRA_RATE_LIMIT`.
+
+Identity is delegated, not implemented. `core/security.py` reads the name in `DIGITERRA_AUTH_HEADER` (default `X-Forwarded-User`) only when the connection comes from an address in `DIGITERRA_TRUSTED_PROXIES`, which is the arrangement an EDX or comparable environment provides by terminating single sign-on at its proxy; a header from any other peer is ignored, since anyone who can reach the port can set one. `DIGITERRA_SHARED_SECRET` accepts a constant-time match on `X-DiGiTerra-Token` for a deployment with no such proxy. Neither gives per-user sessions, a login page, logout, or a record of who did what: the session cookie still identifies the browser rather than the person, so two people behind one proxy identity share a session's data. An account system remains to be built.
+
+CSRF uses a double-submit token: the server sets `digiterra_csrf`, readable by script on purpose, and the page echoes it in `X-DiGiTerra-CSRF` on every unsafe method. `static/js/core.js` wraps `fetch` once so no call site has to remember it. A cross-site form can cause the cookie to be sent but cannot read it to set the header.
+
+The rate limit is a token bucket per identity, or per address when there is none: `DIGITERRA_RATE_PER_MINUTE` (120) with `DIGITERRA_RATE_BURST` (40). `/process`, `/predict`, and `/upload` take ten tokens each, the rest take one, so a run costs what a run costs. The buckets live in this process, which is where the session state already lives; a deployment across more than one process needs a shared store for both.
 
 ## Uploads
 
@@ -86,5 +96,8 @@ There is no rate limiting, so a client can still send requests that are rejected
 
 ## Open items
 
-- Add CSRF protection, authentication, and rate limiting before a multi-user deployment.
+- Build an account system with its own sessions, so that identity is per person rather than per browser and a proxy is not the only place a name can come from.
+- Move session state and the rate-limit buckets out of the process, so more than one worker can serve a deployment.
+- Run parsing and training in a worker with memory and wall-time limits, and put a durable queue in front of it, so a refused run is deferred rather than dropped.
+- Replace the joblib artifact with a format that does not execute on load.
 - Put the app behind HTTPS and a reverse proxy for any network deployment.

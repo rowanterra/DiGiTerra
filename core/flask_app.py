@@ -49,6 +49,7 @@ logger = _configure_logging()
 from core import jobs  # noqa: E402  logging must be configured before the routes import
 from core.constants import DEFAULT_MAX_UPLOAD_MB  # noqa: E402  logging must be configured before the routes import
 from core.errors import register_error_handlers  # noqa: E402  logging must be configured before the routes import
+from core.security import install as install_security  # noqa: E402  logging is configured above
 from core.state import SESSION_COOKIE_NAME  # noqa: E402  logging must be configured before the routes import
 from python_scripts.preprocessing.progress_tracker import (  # noqa: E402  logging is configured above
     active_owner_sessions,
@@ -114,6 +115,8 @@ def _set_session_cookie(response):
 config.set_active_session_provider(lambda: active_owner_sessions() | jobs.active_sessions())
 config.start_sweep_timer()
 
+# The profile's controls run before the blueprints see a request.
+install_security(app)
 register_blueprints(app)
 register_error_handlers(app)
 
