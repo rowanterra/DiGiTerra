@@ -2427,6 +2427,7 @@ processForm.addEventListener('submit', async (e) => {
     
     // Function to update progress display
     function updateProgressDisplay(progress, container) {
+        if (typeof narrativeSetStages === 'function') narrativeSetStages(progress);
         if (!container || !progress) return;
         
         const stages = progress.stages || {};

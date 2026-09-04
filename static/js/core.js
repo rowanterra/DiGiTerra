@@ -36,6 +36,10 @@ let pywebviewReady = false;
 let headerResizeObserver = null;
 
 let uploadedFileName = '';
+// Rows and columns of the uploaded file, as the server counted them. Read by the
+// Data panel of the modeling page; written by upload.js.
+/* eslint-disable-next-line no-unused-vars */
+let uploadedShape = { rows: null, columns: null };
 const API_ROOT = (window.API_ROOT || '').replace(/\/+$/, '');
 
 function withApiRoot(path) {

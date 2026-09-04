@@ -3361,3 +3361,48 @@ body.dark-mode .narrative-step-num {
     background-color: #1f1f1f;
     border-color: #3a3a3a;
 }
+
+/* The stages of a run, under the step strip. */
+.narrative-stages {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #eeeeee;
+}
+.narrative-stage {
+    padding: 2px 9px;
+    font-size: 0.8em;
+    color: #6b6b6b;
+    background-color: #f6f6f4;
+    border: 1px solid #e2e4df;
+    border-radius: 11px;
+}
+.narrative-stage.is-running {
+    color: #24503d;
+    font-weight: 600;
+    background-color: #eaf1ec;
+    border-color: #357a53;
+}
+.narrative-stage.is-done {
+    color: #4a544d;
+    background-color: #ffffff;
+}
+.narrative-stage.is-done::before {
+    content: "\2713\00a0";
+    color: #357a53;
+}
+body.dark-mode .narrative-stages {
+    border-top-color: #3a3a3a;
+}
+body.dark-mode .narrative-stage {
+    color: #b9b9b9;
+    background-color: #1f1f1f;
+    border-color: #3a3a3a;
+}
+body.dark-mode .narrative-stage.is-running {
+    color: #8fbfa3;
+    background-color: #2b3a30;
+    border-color: #4f9d72;
+}

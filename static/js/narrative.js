@@ -138,6 +138,35 @@ function narrativeSetStep(key) {
     });
 }
 
+/** Draw the stages the server reports underneath the run strip.
+ *
+ * The five steps say where the run is; these say what it is doing inside the Run
+ * step. The stage names and their state come from the same progress message the
+ * loading area reads, so the two cannot disagree.
+ */
+function narrativeSetStages(progress) {
+    const flow = document.getElementById('narrativeFlow');
+    if (!flow) return;
+    let host = document.getElementById('narrativeStages');
+    if (!host) {
+        host = document.createElement('div');
+        host.id = 'narrativeStages';
+        host.className = 'narrative-stages';
+        flow.appendChild(host);
+    }
+    const stages = (progress && progress.stages) || {};
+    const chips = Object.entries(stages)
+        .filter(([, stage]) => stage.status !== 'skipped')
+        .map(([name, stage]) => {
+            const state = stage.status === 'running' ? 'running' : stage.status === 'completed' ? 'done' : 'waiting';
+            const label = name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+            const pct = state === 'running' ? ` ${Math.round(stage.progress || 0)}%` : '';
+            return `<span class="narrative-stage is-${state}">${escapeHtml(label)}${pct}</span>`;
+        });
+    host.innerHTML = chips.length ? chips.join('') : '';
+    host.hidden = !chips.length;
+}
+
 /** Fill the data panel from what the page already knows about the upload. */
 function narrativeRefreshData() {
     const body = document.getElementById('narrativeDataBody');
@@ -151,8 +180,10 @@ function narrativeRefreshData() {
     }
     const note = document.querySelector('.modeling-mode-section:not(.hidden) .modeling-selection-note');
     const selection = note && note.textContent.trim() ? note.textContent.trim() : '';
-    const shapeEl = document.getElementById('narrativeShapeSource');
-    const shape = shapeEl ? shapeEl.textContent.trim() : '';
+    let shape = '';
+    if (typeof uploadedShape === 'object' && uploadedShape && uploadedShape.rows) {
+        shape = `Tabular, ${Number(uploadedShape.rows).toLocaleString()} \u00d7 ${uploadedShape.columns}`;
+    }
     body.innerHTML = `
         <div class="narrative-item narrative-item-data">
             <span class="narrative-tile">CSV</span>

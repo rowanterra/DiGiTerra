@@ -48,6 +48,8 @@ uploadForm.addEventListener('submit', async (e) => {
 
         // once recieves column names
         uploadedFileName = formData.get('file').name;
+        // The shape the server measured, kept for the Data panel of the modeling page.
+        uploadedShape = { rows: data.rows || null, columns: data.numcols || null };
 
         // show the divs for preprocessing and selecting targets, indicators, output type, etc
         let columnDiv = document.getElementById('columnsection');
