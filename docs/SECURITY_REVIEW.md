@@ -70,6 +70,14 @@ A 32 MB request body says little about an Excel or Parquet file, which can infla
 
 The desktop launcher no longer disables the limits; it sets them at the scale of one machine (1 GB body, 200 million cells, 4 GB frame).
 
+## Where a session lives
+
+`core/session_store.py` puts session contents behind two backends. `memory`, the desktop default, is the dictionary this application has always used. `disk`, the server default, writes one directory per session under the application support directory: the frame as parquet, the fitted objects through the artifact format, everything else as JSON, each written to a temporary file and renamed into place so a reader sees one version or the other and never half of either. A session id that is not the 32 hex characters this application issues is refused rather than used to build a path. `DIGITERRA_SESSION_BACKEND` overrides the profile.
+
+The mapping a caller receives is the same either way: it records that it has changed, and `core.state.flush` writes it at the end of a request and at the end of a run rather than on every key, which would rewrite a parquet file for a one-word change. `tests/unit/test_session_store.py` starts a second interpreter and reads a session the first one wrote, which is the only way that claim can be checked.
+
+The rate-limit buckets are still per process. Two workers therefore each allow the configured rate, so a deployment behind more than one should set the limit accordingly until the buckets move to the same store.
+
 ## Isolated work
 
 A budget enforced inside the process doing the allocating cannot bound that process: by the time a frame or a fitted model is large enough to measure, the memory is already taken. `core/worker.py` runs a step in a child process started with the spawn method, under `RLIMIT_AS` and a wall clock, and the two ends exchange data through a file rather than a pipe, which would deadlock on a result larger than its buffer. An allocation past the limit raises `MemoryError` in the child or has it killed; either way the parent gets a refusal and its own memory is untouched.
@@ -109,7 +117,7 @@ There is no rate limiting, so a client can still send requests that are rejected
 ## Open items
 
 - Build an account system with its own sessions, so that identity is per person rather than per browser and a proxy is not the only place a name can come from.
-- Move session state and the rate-limit buckets out of the process, so more than one worker can serve a deployment.
+- Move the rate-limit buckets to the session store, so a limit means the same thing behind more than one worker.
 - Run parsing and training in a worker with memory and wall-time limits, and put a durable queue in front of it, so a refused run is deferred rather than dropped.
 - Run training in the isolated worker as parsing already is, which means moving the fitted objects across the process boundary through the artifact format.
 - Put the app behind HTTPS and a reverse proxy for any network deployment.

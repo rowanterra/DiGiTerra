@@ -131,9 +131,9 @@ def test_upload_is_refused_from_the_estimate_before_parsing(client, monkeypatch)
     import routes.upload as upload_route
 
     calls = []
-    monkeypatch.setattr(
-        upload_route, "read_table_bounded", lambda *a, **k: calls.append(1) or upload_route.read_table_bounded
-    )
+    # The route parses through the worker now, which is the call that must not
+    # happen when the estimate has already refused the file.
+    monkeypatch.setattr(upload_route, "read_table_isolated", lambda *a, **k: calls.append(1))
     monkeypatch.setattr(state, "MAX_TOTAL_FRAME_MB", 0.0005)  # about 500 bytes
     client.set_cookie("digiterra_session", "f" * 32)
     csv = io.BytesIO(_frame(0.01).to_csv(index=False).encode())

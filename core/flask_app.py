@@ -51,6 +51,7 @@ from core.constants import DEFAULT_MAX_UPLOAD_MB  # noqa: E402  logging must be 
 from core.errors import register_error_handlers  # noqa: E402  logging must be configured before the routes import
 from core.security import install as install_security  # noqa: E402  logging is configured above
 from core.state import SESSION_COOKIE_NAME  # noqa: E402  logging must be configured before the routes import
+from core.state import flush as state_flush  # noqa: E402  logging is configured above
 from python_scripts.preprocessing.progress_tracker import (  # noqa: E402  logging is configured above
     active_owner_sessions,
 )  # noqa: E402  logging must be configured before the routes import
@@ -94,6 +95,14 @@ def _clear_session_scope(exc=None):
     token = getattr(g, "vis_scope_token", None)
     if token is not None:
         config.reset_session_scope(token)
+    # A change made while answering this request becomes visible to other
+    # processes here rather than on every key that was set.
+    sid = getattr(g, "session_id", None)
+    if sid:
+        try:
+            state_flush(sid)
+        except Exception:  # a failed write must not fail the response
+            pass
 
 
 @app.after_request

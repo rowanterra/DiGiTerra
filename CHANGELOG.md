@@ -78,6 +78,7 @@ Frontend
 - Model artifacts are written with `skops` instead of joblib: the objects are stored as data with their types named, and loading builds only the types on an allowlist, so a bundle no longer executes what its file says. Bundle format is `digiterra-bundle/2` with `model.skops`; an older bundle's pickle is read only when `DIGITERRA_ALLOW_LEGACY_PICKLE` is set. `scripts/check_artifact_roundtrip.py` checks every registered estimator writes, reads, and predicts the same.
 - `core/worker.py` runs a step in a child process under `RLIMIT_AS` and a wall clock, which is the control a budget measured inside the allocating process cannot be. Parsing goes through it under the server profile.
 - A failed Excel export lost a completed classification run, because that call was the only one of the three not wrapped. It is wrapped now, as the regression and clustering exports already were.
+- Session contents live behind a backend: in memory as before, or one directory per session on disk, written atomically, which lets more than one worker serve a deployment and lets a session outlive a restart. The mapping records that it has changed and is written at the end of a request and at the end of a run.
 - MIT license.
 - This changelog.
 - Makefile with `install`, `dev`, `lint`, `test`, `check`, and `build-bundle` targets.

@@ -1130,6 +1130,15 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
             )
             logger.warning("Fitted model discarded: %s", budget_err)
 
+        # The run wrote the fitted objects into the session; another process can
+        # read them once they are written.
+        try:
+            from core.state import flush as _flush_session
+
+            _flush_session(storage_session_id)
+        except Exception as flush_err:
+            logger.warning("Session not written after the run: %s", flush_err)
+
         # Store result for SSE endpoint
         set_result(session_id, result)
 

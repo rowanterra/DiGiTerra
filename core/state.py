@@ -1,16 +1,28 @@
 """Session state and request-scoped helpers for DiGiTerra. Used by app and blueprints.
 
-Storage is per process and contains whole DataFrames and fitted models, so it is
-bounded and thread-safe: entries are evicted oldest-first once the cap is reached,
-and every access takes a lock because training runs in a background thread while
-the browser keeps polling.
+A session holds a whole DataFrame and a fitted model, so the store is bounded and
+thread-safe: entries are evicted oldest-first once the cap is reached, and every
+access takes a lock because training runs in a background thread while the browser
+keeps polling.
+
+Where those entries live is core.session_store's decision. In memory, which is
+what the desktop uses and what this application has always done, or on disk, one
+directory per session, which lets more than one process serve a deployment and
+lets a session outlive a restart. The dictionary a caller receives is the same
+either way: it is a write-through mapping that remembers it has changed, and
+`flush` is what puts a change where another process can see it. Flushing on every
+key would rewrite a parquet file for a one-word change, so it happens at the end
+of a request and at the end of a run instead.
 """
 
+import logging
 import os
 import threading
 from collections import OrderedDict
 
 from flask import g, request
+
+logger = logging.getLogger(__name__)
 
 SESSION_COOKIE_NAME = "digiterra_session"
 
@@ -27,6 +39,80 @@ MODEL_BYTES_KEY = "_model_bytes"
 
 _STORE: "OrderedDict[str, dict]" = OrderedDict()
 _LOCK = threading.RLock()
+
+
+class SessionMapping(dict):
+    """A session's contents, which remembers that it has changed.
+
+    Every existing call site writes into the mapping it is handed
+    (`store["data"] = df`), so the mapping is what notices. `dirty` says a flush
+    would write something; `flush` clears it.
+    """
+
+    def __init__(self, session_id: str, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.session_id = session_id
+        self.dirty = False
+
+    def _touch(self):
+        self.dirty = True
+
+    def __setitem__(self, key, value):
+        super().__setitem__(key, value)
+        self._touch()
+
+    def __delitem__(self, key):
+        super().__delitem__(key)
+        self._touch()
+
+    def pop(self, *args, **kwargs):
+        out = super().pop(*args, **kwargs)
+        self._touch()
+        return out
+
+    def popitem(self):
+        out = super().popitem()
+        self._touch()
+        return out
+
+    def update(self, *args, **kwargs):
+        super().update(*args, **kwargs)
+        self._touch()
+
+    def setdefault(self, key, default=None):
+        missing = key not in self
+        out = super().setdefault(key, default)
+        if missing:
+            self._touch()
+        return out
+
+    def clear(self):
+        super().clear()
+        self._touch()
+
+
+def flush(session_id: str | None = None) -> None:
+    """Write a session's contents where another process can read them.
+
+    A no-op on the memory backend, where the mapping in this process is already
+    the storage. Called at the end of a request and at the end of a run.
+    """
+    from core.session_store import backend, backend_name
+
+    if backend_name() == "memory":
+        return
+    with _LOCK:
+        ids = [session_id] if session_id else list(_STORE)
+        for sid in ids:
+            store = _STORE.get(sid)
+            if store is None or not getattr(store, "dirty", False):
+                continue
+            try:
+                backend().save(sid, dict(store))
+                store.dirty = False
+            except Exception as e:
+                logger.warning("Session %s not written: %s", sid, e)
+
 
 # Sessions with a run in flight are never evicted. Set by core.jobs at import so
 # this module does not depend on it.
@@ -174,12 +260,25 @@ def get_session_id() -> str:
 
 
 def get_session_storage(session_id: str | None = None) -> dict:
-    """Get or create session-scoped storage dict."""
+    """Get or create session-scoped storage dict.
+
+    On the disk backend a session this process has not seen is read from storage,
+    which is how a second worker answers a request about a session the first one
+    started.
+    """
+    from core.session_store import backend, backend_name
+
     sid = session_id or get_session_id()
     with _LOCK:
         store = _STORE.get(sid)
         if store is None:
-            store = {}
+            loaded = None
+            if backend_name() != "memory":
+                try:
+                    loaded = backend().load(sid)
+                except Exception as e:
+                    logger.warning("Session %s not read: %s", sid, e)
+            store = SessionMapping(sid, loaded or {})
             _STORE[sid] = store
             protect = _active() | {sid}
             while len(_STORE) > MAX_SESSIONS:
@@ -191,9 +290,16 @@ def get_session_storage(session_id: str | None = None) -> dict:
 
 
 def clear_session_storage(session_id: str) -> None:
-    """Drop one session's storage."""
+    """Drop one session's storage, here and in the backend."""
+    from core.session_store import backend, backend_name
+
     with _LOCK:
         _STORE.pop(session_id, None)
+    if backend_name() != "memory":
+        try:
+            backend().delete(session_id)
+        except Exception as e:
+            logger.warning("Session %s not removed: %s", session_id, e)
 
 
 def session_count() -> int:
