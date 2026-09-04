@@ -431,3 +431,26 @@ def test_a_legacy_pickle_bundle_needs_the_flag(monkeypatch, tmp_path):
     _, objects = load_bundle(out, force=True)
     assert objects["model"] is not None
     assert artifact.legacy_pickle_allowed()
+
+
+def test_the_radius_neighbors_fallback_estimator_is_on_the_allowlist():
+    """The sweep caught this name being wrong, which would have refused its artifact."""
+    from python_scripts.models.regression_models.train_radius_neighbors_regressor import (
+        RadiusNeighborsWithFallback,
+    )
+    from python_scripts.reporting import artifact
+
+    dotted = f"{RadiusNeighborsWithFallback.__module__}.{RadiusNeighborsWithFallback.__name__}"
+    assert dotted in artifact.OWN_TRUSTED_TYPES
+
+
+def test_a_model_that_cannot_be_written_without_a_pickle_says_so():
+    """Birch is not describable by skops; the export refuses rather than pickling."""
+    import numpy as np
+    from sklearn.cluster import Birch
+
+    from python_scripts.reporting import artifact
+
+    model = Birch(n_clusters=2).fit(np.random.default_rng(0).normal(size=(30, 3)))
+    with pytest.raises(artifact.ArtifactError, match="cannot be exported as a bundle"):
+        artifact.dumps({"model": model})

@@ -31,7 +31,7 @@ LEGACY_ARTIFACT_NAME = "model.joblib"
 # step of the preprocessor. Anything else named by a file is refused.
 OWN_TRUSTED_TYPES = (
     "python_scripts.preprocessing.utilities.apply_group_map",
-    "python_scripts.models.regression_models.train_radius_neighbors_regressor._NearestFallbackRadiusNeighbors",
+    "python_scripts.models.regression_models.train_radius_neighbors_regressor.RadiusNeighborsWithFallback",
     "numpy.dtype",
     "numpy.ufunc",
 )
@@ -47,6 +47,12 @@ TRUSTED_PREFIXES = (
     "collections.OrderedDict",
     "builtins.",
 )
+
+
+# Estimators skops cannot describe as data. A bundle of one of these cannot be
+# written without a pickle, so the export says so rather than falling back to one.
+# Checked by scripts/check_artifact_roundtrip.py, which names any that appear.
+UNSUPPORTED_ESTIMATORS = ("Birch",)
 
 
 class ArtifactError(ValueError):
@@ -70,6 +76,12 @@ def dumps(objects: dict) -> bytes:
     try:
         return sio.dumps(objects)
     except Exception as e:  # a type skops cannot describe as data
+        model_name = type(objects.get("model")).__name__ if isinstance(objects, dict) else "the model"
+        if model_name in UNSUPPORTED_ESTIMATORS:
+            raise ArtifactError(
+                f"A {model_name} model cannot be written in a format that does not execute on load, so this run "
+                "cannot be exported as a bundle. Its results, model card and manifest are unaffected."
+            ) from e
         raise ArtifactError(f"The fitted objects could not be written without a pickle: {e}") from e
 
 

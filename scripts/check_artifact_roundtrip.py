@@ -64,9 +64,15 @@ FILLS = {
     "epsilon": 1.35,
     "quantile": 0.5,
     "nu": 0.5,
+    "activation": "relu",
+    "hidden_layer_sizes": (100,),
 }
 
 BASE = {
+    # The Excel export reads the file name from the request. A missing one is a
+    # warning in the application now rather than a lost run, but the harness
+    # should send what a page sends.
+    "filename": "example.csv",
     "scaler": "standard",
     "hyperparameters": {},
     "nonreq": False,
@@ -85,6 +91,22 @@ BASE = {
     "crossValidationType": "None",
     "crossValidationFolds": 5,
 }
+
+
+def _outputs(objects, X):
+    """What the model produces: predictions, or the labels of a fit that has none.
+
+    Several clustering models have no predict, which the application already knows
+    (app_prediction refuses inference for them). Comparing their labels is the
+    equivalent check that the fit came back the same.
+    """
+    model = objects["model"]
+    if not hasattr(model, "predict"):
+        labels = getattr(model, "labels_", None)
+        if labels is None:
+            raise AttributeError(f"{type(model).__name__} has neither predict nor labels_")
+        return np.asarray(labels, dtype=object)
+    return _predict(objects, X)
 
 
 def _predict(objects, X):
@@ -120,14 +142,17 @@ def check(name: str, task: str) -> dict:
     try:
         data = artifact.dumps(objects)
     except artifact.ArtifactError as e:
-        return {"model": name, "task": task, "status": "write_failed", "detail": str(e)}
+        status = (
+            "unsupported" if type(store.get("model")).__name__ in artifact.UNSUPPORTED_ESTIMATORS else "write_failed"
+        )
+        return {"model": name, "task": task, "status": status, "detail": str(e)}
     refused = artifact.untrusted_types(data)
     if refused:
         return {"model": name, "task": task, "status": "untrusted_types", "detail": refused}
     back = artifact.loads(data)
     X = df.iloc[:8, indicators]
     try:
-        same = np.array_equal(_predict(objects, X), _predict(back, X))
+        same = np.array_equal(_outputs(objects, X), _outputs(back, X))
     except Exception as e:
         return {"model": name, "task": task, "status": "predict_failed", "detail": f"{type(e).__name__}: {e}"}
     return {
@@ -169,10 +194,13 @@ def main() -> int:
     # format, so it is reported separately and does not fail the run. Anything
     # else did reach the format and did not survive it.
     untrainable = [r for r in rows if r["status"] == "train_failed"]
-    bad = [r for r in rows if r["status"] not in ("ok", "train_failed")]
+    unsupported = [r for r in rows if r["status"] == "unsupported"]
+    bad = [r for r in rows if r["status"] not in ("ok", "train_failed", "unsupported")]
     print(f"\n{len(ok)} of {len(rows) - len(untrainable)} trained models round-tripped with identical predictions")
     for r in untrainable:
         print(f"  not trained on the example data: {r['model']}: {str(r.get('detail'))[:160]}")
+    for r in unsupported:
+        print(f"  cannot be written without a pickle, and says so: {r['model']}")
     for r in bad:
         print(f"  FORMAT: {r['model']}: {r['status']} {str(r.get('detail'))[:200]}")
     if args.json:

@@ -1,0 +1,406 @@
+[
+  {
+    "model": "ARDRegression",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 134864
+  },
+  {
+    "model": "AdaBoost",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 1013413
+  },
+  {
+    "model": "AdaBoost_classifier",
+    "task": "classification",
+    "status": "ok",
+    "bytes": 1025231
+  },
+  {
+    "model": "Bagging",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 618940
+  },
+  {
+    "model": "Bagging_classifier",
+    "task": "classification",
+    "status": "ok",
+    "bytes": 307773
+  },
+  {
+    "model": "BayesianRidge",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 135339
+  },
+  {
+    "model": "BernoulliNB_classifier",
+    "task": "classification",
+    "status": "ok",
+    "bytes": 98684
+  },
+  {
+    "model": "CategoricalNB_classifier",
+    "task": "classification",
+    "status": "train_failed",
+    "detail": "index 1 is out of bounds for axis 1 with size 1"
+  },
+  {
+    "model": "ComplementNB_classifier",
+    "task": "classification",
+    "status": "ok",
+    "bytes": 101032
+  },
+  {
+    "model": "DecisionTree",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 184941
+  },
+  {
+    "model": "DecisionTree_classifier",
+    "task": "classification",
+    "status": "ok",
+    "bytes": 107260
+  },
+  {
+    "model": "ElasticNet",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 130880
+  },
+  {
+    "model": "ElasticNetCV",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 139627
+  },
+  {
+    "model": "ExtraTrees",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 6858641
+  },
+  {
+    "model": "ExtraTrees_classifier",
+    "task": "classification",
+    "status": "ok",
+    "bytes": 2312673
+  },
+  {
+    "model": "GaussianNB_classifier",
+    "task": "classification",
+    "status": "ok",
+    "bytes": 98106
+  },
+  {
+    "model": "GradientBoosting_classifier",
+    "task": "classification",
+    "status": "ok",
+    "bytes": 8241653
+  },
+  {
+    "model": "HistGradientBoosting",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 730043
+  },
+  {
+    "model": "HistGradientBoosting_classifier",
+    "task": "classification",
+    "status": "ok",
+    "bytes": 1417706
+  },
+  {
+    "model": "Huber",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 129823
+  },
+  {
+    "model": "K-Nearest",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 174372
+  },
+  {
+    "model": "KNeighbors_classifier",
+    "task": "classification",
+    "status": "ok",
+    "bytes": 113904
+  },
+  {
+    "model": "LARS",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 137776
+  },
+  {
+    "model": "LARSCV",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 142844
+  },
+  {
+    "model": "LDA_classifier",
+    "task": "classification",
+    "status": "ok",
+    "bytes": 102503
+  },
+  {
+    "model": "Lasso",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 130875
+  },
+  {
+    "model": "LassoCV",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 138523
+  },
+  {
+    "model": "LassoLars",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 132260
+  },
+  {
+    "model": "Linear",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 128437
+  },
+  {
+    "model": "LinearSVC_classifier",
+    "task": "classification",
+    "status": "ok",
+    "bytes": 100518
+  },
+  {
+    "model": "LinearSVR",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 129781
+  },
+  {
+    "model": "Logistic_classifier",
+    "task": "classification",
+    "status": "ok",
+    "bytes": 101583
+  },
+  {
+    "model": "MLP",
+    "task": "regression",
+    "status": "train_failed",
+    "detail": "The 'activation' parameter of MLPRegressor must be a str among {'relu', 'tanh', 'identity', 'logistic'}. Got None instead."
+  },
+  {
+    "model": "MLP_classifier",
+    "task": "classification",
+    "status": "train_failed",
+    "detail": "The 'activation' parameter of MLPClassifier must be a str among {'relu', 'tanh', 'identity', 'logistic'}. Got None instead."
+  },
+  {
+    "model": "MultinomialNB_classifier",
+    "task": "classification",
+    "status": "ok",
+    "bytes": 99914
+  },
+  {
+    "model": "NuSVC_classifier",
+    "task": "classification",
+    "status": "ok",
+    "bytes": 115737
+  },
+  {
+    "model": "NuSVR",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 159653
+  },
+  {
+    "model": "OMP",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 127710
+  },
+  {
+    "model": "PassiveAggressive",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 134379
+  },
+  {
+    "model": "PassiveAggressive_classifier",
+    "task": "classification",
+    "status": "ok",
+    "bytes": 107261
+  },
+  {
+    "model": "QDA_classifier",
+    "task": "classification",
+    "status": "ok",
+    "bytes": 102459
+  },
+  {
+    "model": "Quantile",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 127722
+  },
+  {
+    "model": "RANSAC",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 142297
+  },
+  {
+    "model": "RF",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 1113367
+  },
+  {
+    "model": "RF_classifier",
+    "task": "classification",
+    "status": "ok",
+    "bytes": 516389
+  },
+  {
+    "model": "RadiusNeighbors",
+    "task": "regression",
+    "status": "untrusted_types",
+    "detail": [
+      "python_scripts.models.regression_models.train_radius_neighbors_regressor.RadiusNeighborsWithFallback"
+    ]
+  },
+  {
+    "model": "Ridge",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 129348
+  },
+  {
+    "model": "RidgeCV",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 129985
+  },
+  {
+    "model": "Ridge_classifier",
+    "task": "classification",
+    "status": "ok",
+    "bytes": 104106
+  },
+  {
+    "model": "SGD",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 133971
+  },
+  {
+    "model": "SGD_classifier",
+    "task": "classification",
+    "status": "ok",
+    "bytes": 106849
+  },
+  {
+    "model": "SVC_classifier",
+    "task": "classification",
+    "status": "ok",
+    "bytes": 113655
+  },
+  {
+    "model": "SVM",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 168299
+  },
+  {
+    "model": "TheilSen",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 129812
+  },
+  {
+    "model": "affinity_propagation",
+    "task": "cluster",
+    "status": "ok",
+    "bytes": 211278
+  },
+  {
+    "model": "agglo",
+    "task": "cluster",
+    "status": "predict_failed",
+    "detail": "AttributeError: 'AgglomerativeClustering' object has no attribute 'predict'"
+  },
+  {
+    "model": "birch",
+    "task": "cluster",
+    "status": "write_failed",
+    "detail": "The fitted objects could not be written without a pickle: Objects of type Birch are not supported yet."
+  },
+  {
+    "model": "bisecting_kmeans",
+    "task": "cluster",
+    "status": "ok",
+    "bytes": 181954
+  },
+  {
+    "model": "dbscan",
+    "task": "cluster",
+    "status": "predict_failed",
+    "detail": "AttributeError: 'DBSCAN' object has no attribute 'predict'"
+  },
+  {
+    "model": "gmm",
+    "task": "cluster",
+    "status": "ok",
+    "bytes": 113703
+  },
+  {
+    "model": "gradient_boosting",
+    "task": "regression",
+    "status": "ok",
+    "bytes": 706035
+  },
+  {
+    "model": "hdbscan",
+    "task": "cluster",
+    "status": "predict_failed",
+    "detail": "AttributeError: 'HDBSCAN' object has no attribute 'predict'"
+  },
+  {
+    "model": "kmeans",
+    "task": "cluster",
+    "status": "ok",
+    "bytes": 97165
+  },
+  {
+    "model": "meanshift",
+    "task": "cluster",
+    "status": "ok",
+    "bytes": 93997
+  },
+  {
+    "model": "minibatch_kmeans",
+    "task": "cluster",
+    "status": "ok",
+    "bytes": 101559
+  },
+  {
+    "model": "optics",
+    "task": "cluster",
+    "status": "predict_failed",
+    "detail": "AttributeError: 'OPTICS' object has no attribute 'predict'"
+  },
+  {
+    "model": "spectral",
+    "task": "cluster",
+    "status": "predict_failed",
+    "detail": "AttributeError: 'SpectralClustering' object has no attribute 'predict'"
+  }
+]
