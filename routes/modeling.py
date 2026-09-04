@@ -111,7 +111,7 @@ def process_columns():
                 "session_id": session_id,
                 "status": "queued",
                 "position": queued["position"],
-                "message": f"{e.reason} This run is waiting; it starts when a slot is free.",
+                "message": f"{e.reason} This run is waiting. The run starts when a slot is free.",
             }
         ), HTTP_ACCEPTED
 

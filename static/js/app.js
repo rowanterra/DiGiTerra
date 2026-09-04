@@ -443,7 +443,7 @@ function navigateToAdvancedWithModel(){
     if (!outputType || !outputType.value) {
         const errorDiv = getCachedElement('errorDiv');
         if (errorDiv) {
-            showError(errorDiv, 'A model must be selected before Advanced Modeling opens.');
+            showError(errorDiv, 'Select a model before you open Advanced Modeling.');
             errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
         return;
@@ -476,7 +476,7 @@ function navigateToAdvancedWithModel(){
     if (!selectedModel) {
         const errorDiv = getCachedElement('errorDiv');
         if (errorDiv) {
-            showError(errorDiv, 'A model must be selected before Advanced Modeling opens.');
+            showError(errorDiv, 'Select a model before you open Advanced Modeling.');
             errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
         return;

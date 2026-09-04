@@ -102,24 +102,20 @@ def memory_limit_supported() -> tuple[bool, str]:
     try:
         import resource  # noqa: F401 - present only where the limit could be set at all
     except ImportError:
-        return False, f"{sys.platform} has no resource module, so RLIMIT_AS cannot be set"
+        return False, f"{sys.platform} has no resource module, so DiGiTerra cannot set RLIMIT_AS"
     if sys.platform.startswith(_PLATFORMS_ENFORCING_RLIMIT_AS):
         return True, ""
     if sys.platform == "darwin":
-        return False, (
-            "darwin does not enforce RLIMIT_AS: it is a second name for RLIMIT_RSS, which the "
-            "kernel does not apply, and setrlimit refuses every value small enough to bound a step"
-        )
-    return False, f"{sys.platform} is not known to enforce RLIMIT_AS"
+        return False, ("the darwin kernel does not apply RLIMIT_AS, which is a second name for RLIMIT_RSS")
+    return False, f"{sys.platform} is not known to apply RLIMIT_AS"
 
 
 def _refusal(reason: str) -> str:
     """The one message both ends give when the ceiling cannot be set."""
     return (
-        f"The step was not started because its memory limit cannot be enforced here: {reason}. "
-        "Isolated work needs a platform that honors RLIMIT_AS, which in practice means Linux, "
-        "so the server profile requires one. Set DIGITERRA_ISOLATE_WORK=0 to run the step in "
-        "this process with no memory limit instead."
+        f"DiGiTerra did not start the step. {reason}. "
+        "Run the server profile on Linux, which applies RLIMIT_AS. "
+        "To run the step in this process without a memory limit, set DIGITERRA_ISOLATE_WORK to 0."
     )
 
 
@@ -135,14 +131,14 @@ def _apply_limits(memory_mb: float) -> tuple[bool, str]:
     try:
         import resource
     except ImportError:
-        return False, f"{sys.platform} has no resource module, so RLIMIT_AS cannot be set"
+        return False, f"{sys.platform} has no resource module, so DiGiTerra cannot set RLIMIT_AS"
     try:
         limit = int(memory_mb * 1024 * 1024)
         soft, hard = resource.getrlimit(resource.RLIMIT_AS)
         ceiling = limit if hard == resource.RLIM_INFINITY else min(limit, hard)
         resource.setrlimit(resource.RLIMIT_AS, (ceiling, hard))
     except (ValueError, OSError) as e:
-        return False, f"{sys.platform} refuses setrlimit(RLIMIT_AS): {e}"
+        return False, f"{sys.platform} refused setrlimit(RLIMIT_AS). {e}"
     return True, ""
 
 
@@ -160,7 +156,7 @@ def _child(func, args, kwargs, out_path: str, memory_mb: float) -> None:
     try:
         payload = {"ok": True, "value": func(*args, **(kwargs or {}))}
     except MemoryError:
-        payload = {"ok": False, "kind": "memory", "detail": "The step asked for more memory than its limit."}
+        payload = {"ok": False, "kind": "memory", "detail": "The step asked for more memory than its limit allows."}
     except BaseException as e:  # noqa: BLE001 - the outcome is reported, not swallowed
         payload = {
             "ok": False,
@@ -211,14 +207,14 @@ def run_isolated(func, *args, memory_mb: float | None = None, timeout_s: float |
             if proc.is_alive():
                 proc.kill()
                 proc.join(5)
-            raise WorkerTimeout(f"The step ran past its limit of {timeout_s:.0f} seconds and was stopped.")
+            raise WorkerTimeout(f"DiGiTerra stopped the step. The step ran past its limit of {timeout_s:.0f} seconds.")
         size = Path(out_path).stat().st_size if Path(out_path).exists() else 0
         if size == 0:
             # The child died without writing: the kernel killed it, which is what
             # an allocation past a hard limit looks like from out here.
             raise WorkerMemoryExceeded(
-                f"The step stopped without a result (exit code {proc.exitcode}); "
-                "it asked for more memory than its limit allows."
+                f"The step stopped and returned no result. The exit code was {proc.exitcode}. "
+                "The step asked for more memory than its limit allows."
             )
         with open(out_path, "rb") as fh:
             payload = pickle.load(fh)

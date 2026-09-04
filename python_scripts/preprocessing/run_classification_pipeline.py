@@ -45,8 +45,9 @@ def _encode_ordinal_target(y_part, label_to_int: dict[str, int]) -> pd.Series:
         k = str(v)
         if k not in label_to_int:
             raise ValueError(
-                f"Target label {k!r} has no ordinal mapping; known labels: {sorted(label_to_int.keys())!r}. "
-                "Check for mixed label types (int and float) or typos."
+                f"The target label {k!r} has no ordinal mapping. "
+                f"The known labels are {sorted(label_to_int.keys())!r}. "
+                "Check the labels for a typo, and for a mix of integer and float types."
             )
         return label_to_int[k]
 
@@ -276,9 +277,10 @@ def run_classification(
     if fit_y_series.isna().any():
         n_bad = int(fit_y_series.isna().sum())
         raise ValueError(
-            f"Target y contains {n_bad} missing value(s) after preprocessing. "
-            "In Data Cleaning, include the target in missing-value handling or drop rows that include the target; "
-            "re-run autodetect with Targets (or All numeric) selected if blanks are in y."
+            f"The target has {n_bad} missing value(s) after preprocessing. "
+            "In Data Cleaning, add the target to the missing-value handling. "
+            "You can also drop the rows that have a missing target. "
+            "If the target still has blanks, run autodetect again with Targets selected."
         )
     if hyperparameter_search != "none":
         model = apply_hyperparameter_search(

@@ -24,7 +24,7 @@ async function handlePreprocessFormSubmit(e) {
     //Error checking for if using stratify or quantiles/bins
     if ((quantileBins =='quantiles' || quantileBins =='Bins') && stratifyColumn.trim()==""){
         e.preventDefault();
-        showError(stratErrorDiv, 'Must fill out stratify variable if using quantiles or Bins', false);
+        showError(stratErrorDiv, 'Enter a stratify variable. Quantiles and bins both need one.', false);
         // Set aria-invalid on the stratify field
         const stratifyInput = document.getElementById('specificVariableSelect');
         if (stratifyInput) {
@@ -35,7 +35,7 @@ async function handlePreprocessFormSubmit(e) {
 
     else if (quantileBins =='quantiles' && quantiles==''){
         e.preventDefault();
-        showError(stratErrorDiv, 'Must fill out quantiles', false);
+        showError(stratErrorDiv, 'Enter the number of quantiles.', false);
         const quantilesInput = document.getElementById('quantiles');
         if (quantilesInput) {
             quantilesInput.setAttribute('aria-invalid', 'true');
@@ -45,7 +45,7 @@ async function handlePreprocessFormSubmit(e) {
 
     else if (quantileBins =='Bins' && (bins=='' || binsLabel=='')){
         e.preventDefault();
-        showError(stratErrorDiv, 'Must fill out bins thresholds and labels', false);
+        showError(stratErrorDiv, 'Enter the bin thresholds and the bin labels.', false);
         const binsInput = document.getElementById('bins');
         const binsLabelInput = document.getElementById('binsLabel');
         if (binsInput && !binsInput.value) {
@@ -59,7 +59,7 @@ async function handlePreprocessFormSubmit(e) {
 
     else if (stratifyColumn.trim()!=='' && quantileBins=='None'){
         e.preventDefault();
-        showError(stratErrorDiv, 'Must fill use bins or quantiles if using stratify value', false);
+        showError(stratErrorDiv, 'Select bins or quantiles. A stratify value needs one of them.', false);
         const quantileBinsSelect = document.getElementById('quantileBins');
         if (quantileBinsSelect) {
             quantileBinsSelect.setAttribute('aria-invalid', 'true');
@@ -68,7 +68,7 @@ async function handlePreprocessFormSubmit(e) {
     }
     else if (!predictors && outputType!=='Cluster'){
         e.preventDefault();
-        showError(stratErrorDiv, 'Must have targets for Classification and Regression Models', false);
+        showError(stratErrorDiv, 'Enter a target column. Classification and regression both need one.', false);
         const predictorsInput = document.getElementById('predictors');
         if (predictorsInput) {
             predictorsInput.setAttribute('aria-invalid', 'true');
@@ -137,8 +137,8 @@ async function handlePreprocessFormSubmit(e) {
             const data = await response.json();
 
             if (!response.ok) {
-                if (stratErrorDiv) showError(stratErrorDiv, data.error || 'Preprocessing failed for the selected columns.', false);
-                else if (errorDiv) showError(errorDiv, data.error || 'Preprocess failed.', false);
+                if (stratErrorDiv) showError(stratErrorDiv, data.error || 'DiGiTerra cannot preprocess the selected columns. Check the column letters, then try again.', false);
+                else if (errorDiv) showError(errorDiv, data.error || 'DiGiTerra cannot preprocess the file.', false);
                 return;
             }
 
@@ -166,7 +166,7 @@ async function handlePreprocessFormSubmit(e) {
             const outputTypeLabel = outputType === 'Numeric' ? 'Regression' : outputType;
 
             if (!IndicatorsPredictorsSection) {
-                if (errorDiv) showError(errorDiv, 'Modeling header section not found.');
+                if (errorDiv) showError(errorDiv, 'DiGiTerra cannot find the modeling header section. Reload the page.');
                 return;
             }
 
@@ -199,7 +199,7 @@ async function handlePreprocessFormSubmit(e) {
             }
         } catch (error) {
             console.error('Preprocess submit error:', error);
-            const msg = error && error.message ? error.message : 'The request failed; the console has details.';
+            const msg = error && error.message ? error.message : 'The request failed. Open the browser console for the details.';
             if (stratErrorDiv) showError(stratErrorDiv, msg, false);
             else if (errorDiv) showError(errorDiv, msg, false);
         }
@@ -509,11 +509,11 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
             const outputTypeEl = document.getElementById('outputType1');
             const isCluster = outputTypeEl && outputTypeEl.value === 'Cluster';
             if (!indicatorsSelect || !indicatorsSelect.value.trim()) {
-                alert('Indicator columns are required first (for example A-D).');
+                alert('Enter the indicator columns first, for example A-D.');
                 return;
             }
             if (!isCluster && (!predictorsSelect || !predictorsSelect.value.trim())) {
-                alert('Indicator and target columns are required first (for example A-D and A).');
+                alert('Enter the indicator columns and the target columns first, for example A-D and E.');
                 return;
             }
             const indicatorIndices = getColumnIndices(indicatorsSelect.value.toUpperCase().replace(/\s/g, ""));
@@ -521,11 +521,11 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
                 ? []
                 : getColumnIndices(predictorsSelect.value.toUpperCase().replace(/\s/g, ""));
             if (indicatorIndices.length === 0) {
-                alert('Could not parse indicator column indices. Use format like "A-D" or "A,B,C".');
+                alert('DiGiTerra cannot read the indicator columns. Use the form "A-D" or "A,B,C".');
                 return;
             }
             if (!isCluster && predictorIndices.length === 0) {
-                alert('Could not parse target column indices. Use format like "A-D" or "A,B,C".');
+                alert('DiGiTerra cannot read the target columns. Use the form "A-D" or "A,B,C".');
                 return;
             }
             try {
@@ -568,7 +568,7 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
                 }
             } catch (err) {
                 console.error(err);
-                dataCleaningAutodetectMessage.textContent = 'Autodetect failed; the console has details.';
+                dataCleaningAutodetectMessage.textContent = 'Autodetect failed. Open the browser console for the details.';
                 if (dataCleaningMissingWrapper) dataCleaningMissingWrapper.classList.remove('autodetect-greyed');
                 if (dataCleaningZerosWrapper) dataCleaningZerosWrapper.classList.remove('autodetect-greyed');
                 if (dropMissingSelect) dropMissingSelect.disabled = false;
@@ -615,12 +615,12 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
     if (autoDetectTransformersTopBtn) {
         autoDetectTransformersTopBtn.addEventListener('click', async function() {
             if (!indicatorsSelect || !indicatorsSelect.value.trim()) {
-                alert('Indicator columns are required first (for example A-D).');
+                alert('Enter the indicator columns first, for example A-D.');
                 return;
             }
             const indicatorIndices = getColumnIndices(indicatorsSelect.value.toUpperCase().replace(/\s/g, ""));
             if (indicatorIndices.length === 0) {
-                alert('Could not parse indicator column indices. Use format like "A-D" or "A,B,C".');
+                alert('DiGiTerra cannot read the indicator columns. Use the form "A-D" or "A,B,C".');
                 return;
             }
             try {
@@ -653,12 +653,12 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
         autoDetectTransformersBtn.addEventListener('click', async function() {
             const indicatorsInput = document.getElementById('indicators');
             if (!indicatorsInput || !indicatorsInput.value.trim()) {
-                alert('Indicator columns are required first (for example A-D).');
+                alert('Enter the indicator columns first, for example A-D.');
                 return;
             }
             const indicatorIndices = getColumnIndices(indicatorsInput.value.toUpperCase().replace(/\s/g, ""));
             if (indicatorIndices.length === 0) {
-                alert('The indicator column indices did not parse; the accepted formats are "A-D" and "A,B,C".');
+                alert('DiGiTerra cannot read the indicator columns. Use the form "A-D" or "A,B,C".');
                 return;
             }
             try {
@@ -681,7 +681,7 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
                 }
             } catch (error) {
                 console.error('Error auto-detecting transformers:', error);
-                if (transformerAutodetectMessage) transformerAutodetectMessage.textContent = 'Error detecting categorical columns.';
+                if (transformerAutodetectMessage) transformerAutodetectMessage.textContent = 'DiGiTerra cannot detect the categorical columns.';
                 transformerOptionWrapper.classList.remove('autodetect-greyed');
                 if (useTransformerSelect) useTransformerSelect.disabled = false;
             } finally {

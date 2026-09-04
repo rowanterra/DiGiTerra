@@ -2590,7 +2590,7 @@ processForm.addEventListener('submit', async (e) => {
         if (response.ok) {
             processModelResult(data, unitStr, predictorCols, hyperparameters);
         } else {
-            showError(errorDiv, data.error ? `Error: ${data.error}` : 'The request failed; the console has details.');
+            showError(errorDiv, data.error ? `Error: ${data.error}` : 'The request failed. Open the browser console for the details.');
         }
     } catch (error) {
         console.error('Error:', error);
@@ -2600,7 +2600,7 @@ processForm.addEventListener('submit', async (e) => {
             progressEventSource.close();
             progressEventSource = null;
         }
-        showError(errorDiv, 'The run failed; the console has details.');
+        showError(errorDiv, 'The run failed. Open the browser console for the details.');
         
         // Determine which loading div and button to use based on current mode
         const simpleMode = document.getElementById('simpleMode');
@@ -2737,7 +2737,7 @@ function renderRunNotes(data) {
     const base = data && data.baseline;
     if (base && base.metric) {
         const better = base.model_beats_baseline;
-        const verdict = better === true ? 'The model beats the baseline.' : (better === false ? 'The model does not beat the baseline; the score adds nothing beyond the target distribution.' : '');
+        const verdict = better === true ? 'The model beats the baseline.' : (better === false ? 'The model does not beat the baseline. The score adds nothing beyond the target distribution.' : '');
         parts.push(`<p class="run-note ${better === false ? 'run-note-warn' : 'field-note'}"><strong>Baseline.</strong> ${escapeHtml(base.description)} scores ${escapeHtml(String(base.baseline_value))} ${escapeHtml(base.metric)} on the validation split against ${escapeHtml(String(base.model_value))} for the model. ${verdict}</p>`);
     }
     if (data && data.model_card_url) {
@@ -3681,7 +3681,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
     } catch (error) {
         console.error('Error processing result:', error);
         const errDiv = getCachedElement('errorDiv');
-        if (errDiv) showError(errDiv, 'Result processing failed; the console has details.');
+        if (errDiv) showError(errDiv, 'DiGiTerra cannot process the result. Open the browser console for the details.');
     }
 }
 

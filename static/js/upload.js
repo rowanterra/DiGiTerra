@@ -128,7 +128,7 @@ uploadForm.addEventListener('submit', async (e) => {
 
     } catch (error) {
         console.error('Upload error:', error);
-        alert('The upload failed. The console has details.');
+        alert('The upload failed. Open the browser console for the details.');
     }
     
 });
@@ -164,7 +164,7 @@ corrForm.addEventListener('submit', async(e) => {
         });
         let data = await response.json();
         if (!response.ok) {
-            throw new Error(data.error || 'An error occurred.');
+            throw new Error(data.error || 'The upload failed.');
         }
 
         // show div to tell user they can download resutls
@@ -413,7 +413,7 @@ corrForm.addEventListener('submit', async(e) => {
         }
     }
     catch (error) {
-        showError(errorDiv, error.message || 'The request failed; the console has details.');
+        showError(errorDiv, error.message || 'The request failed. Open the browser console for the details.');
     }
 
 });

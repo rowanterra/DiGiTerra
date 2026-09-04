@@ -85,4 +85,9 @@ def test_predict_names_the_missing_feature(client):
     frame = pd.read_csv("examples/diabetes.csv").iloc[:6, :9]
     r = _post_rows(client, frame)
     assert r.status_code == 400
-    assert "Missing features" in r.get_json()["error"]
+    message = r.get_json()["error"]
+    # The refusal says what happened, then what to do about it, and names the column.
+    assert "has no column for these features" in message, message
+    assert "Add the columns" in message, message
+    missing = pd.read_csv("examples/diabetes.csv").columns[9]
+    assert missing in message, message

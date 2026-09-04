@@ -290,7 +290,7 @@ def run_clustering(
             )
         if len(X_train_s) < 2:
             raise ValueError(
-                "Outlier removal left fewer than 2 training rows; choose a less aggressive method or 'cap'."
+                "Outlier removal gave fewer than 2 training rows. Choose a less aggressive method or 'cap'."
             )
 
     if progress_tracker:

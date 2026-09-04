@@ -525,8 +525,9 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
         # Registry-based dispatch
         if modelName == "TerraFORMER" or modelName not in MODEL_REGISTRY or MODEL_REGISTRY[modelName][0] is None:
             raise ValueError(
-                f"Invalid or unsupported model: {modelName!r}. "
-                "If you did not pick a model, select one from the list; reserved names are not valid."
+                f"DiGiTerra cannot train the model {modelName!r}. "
+                "The name is reserved or it is not in the registry. "
+                "Select a model from the list, then train again."
             )
         else:
             train_fn, problem_type = MODEL_REGISTRY[modelName]

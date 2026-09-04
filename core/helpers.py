@@ -39,12 +39,14 @@ def _check_width(n_cols: int, max_cells: int):
 
         raise pd.errors.EmptyDataError("No columns to parse from file")
     if max_cells and n_cols > max_cells:
-        raise FrameTooLarge(f"The file has {n_cols:,} columns; the limit is {max_cells:,} cells.")
+        raise FrameTooLarge(
+            f"The file has {n_cols:,} columns. The limit is {max_cells:,} cells. Remove columns from the file."
+        )
 
 
 def _too_many_rows(max_rows: int, n_cols: int, max_cells: int) -> FrameTooLarge:
     return FrameTooLarge(
-        f"The file has more than {max_rows:,} rows across {n_cols} columns; the limit is {max_cells:,} cells."
+        f"The file has more than {max_rows:,} rows across {n_cols} columns. The limit is {max_cells:,} cells."
     )
 
 
@@ -98,7 +100,7 @@ def preflight_zip(
     with zipfile.ZipFile(source) as z:
         infos = z.infolist()
         if len(infos) > max_members:
-            raise ZipTooLarge(f"The {label} has {len(infos):,} parts; the limit is {max_members:,}.")
+            raise ZipTooLarge(f"The {label} has {len(infos):,} parts. The limit is {max_members:,} parts.")
         if allowed_names is not None:
             unexpected = sorted({i.filename for i in infos} - allowed_names)
             if unexpected:
@@ -109,16 +111,16 @@ def preflight_zip(
             if max_member_bytes and info.file_size > max_member_bytes:
                 mb, limit_mb = info.file_size / (1024 * 1024), max_member_bytes / (1024 * 1024)
                 raise ZipTooLarge(
-                    f"Part {info.filename!r} of the {label} is {mb:.0f} MB; the limit is {limit_mb:.0f} MB."
+                    f"Part {info.filename!r} of the {label} is {mb:.0f} MB. The limit is {limit_mb:.0f} MB."
                 )
             if info.compress_size and info.file_size / info.compress_size > max_ratio and info.file_size > 1 << 20:
                 ratio = info.file_size / info.compress_size
                 raise ZipTooLarge(
-                    f"Part {info.filename!r} of the {label} inflates {ratio:.0f} times; the limit is {max_ratio}."
+                    f"Part {info.filename!r} of the {label} inflates {ratio:.0f} times. The limit is {max_ratio} times."
                 )
         if max_total_bytes and total > max_total_bytes:
             mb, limit_mb = total / (1024 * 1024), max_total_bytes / (1024 * 1024)
-            raise ZipTooLarge(f"The {label} holds {mb:.0f} MB once inflated; the limit is {limit_mb:.0f} MB.")
+            raise ZipTooLarge(f"The {label} inflates to {mb:.0f} MB. The limit is {limit_mb:.0f} MB.")
         return infos
 
 
@@ -157,7 +159,7 @@ def _preflight_parquet(pf, max_decoded_bytes: int):
     total = sum(md.row_group(i).total_byte_size for i in range(md.num_row_groups))
     if total > max_decoded_bytes:
         mb, limit_mb = total / (1024 * 1024), max_decoded_bytes / (1024 * 1024)
-        raise FrameTooLarge(f"The file decodes to {mb:.0f} MB; the limit is {limit_mb:.0f} MB.")
+        raise FrameTooLarge(f"The file decodes to {mb:.0f} MB. The limit is {limit_mb:.0f} MB.")
 
 
 def _read_csv(filepath, max_cells: int):
@@ -265,7 +267,7 @@ def read_table_bounded(filepath, max_cells: int = 0, max_frame_mb: float = 0):
         frame_mb = float(data.memory_usage(index=True, deep=True).sum()) / (1024 * 1024)
         if frame_mb > max_frame_mb:
             del data
-            raise FrameTooLarge(f"The file uses {frame_mb:.0f} MB once parsed; the limit is {max_frame_mb:.0f} MB.")
+            raise FrameTooLarge(f"The file uses {frame_mb:.0f} MB once parsed. The limit is {max_frame_mb:.0f} MB.")
     return data
 
 

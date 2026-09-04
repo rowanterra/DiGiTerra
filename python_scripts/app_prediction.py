@@ -35,15 +35,15 @@ def run_predict(
     Returns (response_dict, status_code). On error, response_dict has 'error' key.
     """
     if "predictFile" not in request.files:
-        return ({"error": "No file uploaded"}, 400)
+        return ({"error": "The request has no file. Select a file and upload it again."}, 400)
     file = request.files["predictFile"]
     if file.filename == "":
-        return ({"error": "No file selected"}, 400)
+        return ({"error": "No file is selected. Select a file and click Upload."}, 400)
     if not allowed_file_fn(file.filename):
-        return ({"error": "Invalid file type. Accepted types are .csv, .xlsx, .xlsm, and .parquet."}, 400)
+        return ({"error": "DiGiTerra cannot read this file type. Use a .csv, .xlsx, .xlsm, or .parquet file."}, 400)
     safe_filename_str = secure_filename(file.filename)
     if not safe_filename_str:
-        return ({"error": "Invalid filename."}, 400)
+        return ({"error": "The file name is not valid. Rename the file and upload it again."}, 400)
     unique_prefix = uuid.uuid4().hex[:8]
     stored_filename = f"{unique_prefix}_{safe_filename_str}"
     filepath = os.path.join(upload_folder, stored_filename)
@@ -54,17 +54,23 @@ def run_predict(
         return ({"error": str(e)}, 400)
     except WorkerLimitUnavailable as e:
         logger.error("Isolated parse unavailable on this platform: %s", e)
-        return ({"error": "This installation cannot run an upload within a memory limit, so it did not run one."}, 500)
+        return (
+            {
+                "error": "DiGiTerra did not read the file. This installation cannot apply a "
+                "memory limit to the parse. Ask the operator to run the server profile on Linux."
+            },
+            500,
+        )
     except WorkerError as e:
-        return ({"error": f"The file could not be read within the limits for one upload. {e}"}, 400)
+        return ({"error": f"DiGiTerra cannot read the file within the limits for one upload. {e}"}, 400)
     except pd.errors.EmptyDataError:
-        return ({"error": "The uploaded file is empty."}, 400)
+        return ({"error": "The file is empty. Upload a file that contains data."}, 400)
     except pd.errors.ParserError as e:
         logger.error("Parsing error: %s", e)
-        return ({"error": f"Error parsing file: {str(e)}"}, 400)
+        return ({"error": f"DiGiTerra cannot parse the file. {str(e)}"}, 400)
     except Exception as e:
         logger.error("Error reading file: %s", e, exc_info=True)
-        return ({"error": f"Error reading file: {str(e)}"}, 400)
+        return ({"error": f"DiGiTerra cannot read the file. {str(e)}"}, 400)
     finally:
         # Read once into memory; the copy on disk has no further use.
         try:
@@ -72,7 +78,7 @@ def run_predict(
         except OSError:
             logger.debug("Temporary prediction upload already removed or unavailable: %s", filepath)
     if data.empty:
-        return ({"error": "The uploaded file contains no data."}, 400)
+        return ({"error": "The file has no data rows. Upload a file that contains data."}, 400)
     if data.columns.duplicated().any():
         logger.warning("Duplicate column names detected in prediction file. Renaming duplicates.")
         new_columns = []
@@ -86,9 +92,12 @@ def run_predict(
                 new_columns.append(col)
         data.columns = new_columns
     if "model" not in store or store["model"] is None:
-        return ({"error": "No trained model found. Train a model first."}, 400)
+        return ({"error": "DiGiTerra has no trained model. Train a model, then run the prediction again."}, 400)
     if "feature_order" not in store or not store["feature_order"]:
-        return ({"error": "No feature_order found. Train a model first."}, 400)
+        return (
+            {"error": "DiGiTerra has no recorded feature order. Train a model, then run the prediction again."},
+            400,
+        )
     # Cluster models: only some support assigning new points to clusters (e.g. KMeans, GMM). Spectral, DBSCAN, OPTICS,
     # etc. do not.
     if store.get("model_type") == "cluster":
@@ -135,7 +144,13 @@ def run_predict(
         required_features = list(store["feature_order"])
         missing = sorted(set(required_features) - set(df.columns))
         if missing:
-            return ({"error": f"Missing features in prediction file: {missing}"}, 400)
+            return (
+                {
+                    "error": f"The prediction file has no column for these features. {missing}. "
+                    "Add the columns, then upload the file again."
+                },
+                400,
+            )
         y_scaler = store.get("y_scaler", None)
         target_names = store.get("predictor_names", None)
         if target_names is not None and hasattr(target_names, "tolist"):

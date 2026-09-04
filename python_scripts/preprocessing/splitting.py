@@ -94,8 +94,8 @@ def _order_keys(values: pd.Series, column: str) -> np.ndarray:
         return as_num.to_numpy(dtype=float)
     sample = values[present & as_time.isna() & as_num.isna()].iloc[0]
     raise ValueError(
-        f"Split column '{column}' has values such as '{sample}' that parse neither as a date nor as a number, "
-        "so the rows cannot be ordered in time."
+        f"The split column '{column}' has values such as '{sample}'. "
+        "These values parse neither as a date nor as a number, so DiGiTerra cannot order the rows in time."
     )
 
 

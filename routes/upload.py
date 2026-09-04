@@ -42,19 +42,19 @@ def upload_file():
     store = get_session_storage()
     if "file" not in request.files:
         logger.warning("No 'file' key in request.files")
-        return jsonify({"error": "No file uploaded"}), HTTP_BAD_REQUEST
+        return jsonify({"error": "The request has no file. Select a file and upload it again."}), HTTP_BAD_REQUEST
     file = request.files["file"]
     if file.filename == "":
         logger.warning("File filename is empty")
-        return jsonify({"error": "No file selected"}), HTTP_BAD_REQUEST
+        return jsonify({"error": "No file is selected. Select a file and click Upload."}), HTTP_BAD_REQUEST
     logger.info("Processing file upload: %s", file.filename)
     if not allowed_file(file.filename):
         return jsonify(
-            {"error": "Invalid file type. Accepted types are .csv, .xlsx, .xlsm, and .parquet."}
+            {"error": "DiGiTerra cannot read this file type. Use a .csv, .xlsx, .xlsm, or .parquet file."}
         ), HTTP_BAD_REQUEST
     safe_filename_val = secure_filename(file.filename)
     if not safe_filename_val:
-        return jsonify({"error": "Invalid filename."}), HTTP_BAD_REQUEST
+        return jsonify({"error": "The file name is not valid. Rename the file and upload it again."}), HTTP_BAD_REQUEST
 
     unique_prefix = uuid.uuid4().hex[:8]
     stored_filename = f"{unique_prefix}_{safe_filename_val}"
@@ -66,7 +66,9 @@ def upload_file():
     try:
         file_size_mb = os.path.getsize(filepath) / BYTES_PER_MB
         if ENFORCE_UPLOAD_LIMIT and MAX_UPLOAD_MB > 0 and file_size_mb > MAX_UPLOAD_MB:
-            return jsonify({"error": f"File exceeds maximum allowed size of {MAX_UPLOAD_MB:.1f} MB."}), HTTP_BAD_REQUEST
+            return jsonify(
+                {"error": f"The file is larger than the limit of {MAX_UPLOAD_MB:.1f} MB. Upload a smaller file."}
+            ), HTTP_BAD_REQUEST
 
         size_warning = (
             f"Large file detected ({file_size_mb:.1f} MB). Processing may take longer."
@@ -98,21 +100,24 @@ def upload_file():
             # bound a parse, so it declines to run one. The operator has to move it.
             logger.error("Isolated parse unavailable on this platform: %s", e)
             return jsonify(
-                {"error": "This installation cannot run an upload within a memory limit, so it did not run one."}
+                {
+                    "error": "DiGiTerra did not read the file. This installation cannot apply a "
+                    "memory limit to the parse. Ask the operator to run the server profile on Linux."
+                }
             ), HTTP_INTERNAL_SERVER_ERROR
         except WorkerError as e:
             logger.warning("Isolated parse refused %s: %s", stored_filename, e)
             return jsonify(
-                {"error": f"The file could not be read within the limits for one upload. {e}"}
+                {"error": f"DiGiTerra cannot read the file within the limits for one upload. {e}"}
             ), HTTP_BAD_REQUEST
         except pd.errors.EmptyDataError:
-            return jsonify({"error": "The uploaded file is empty."}), HTTP_BAD_REQUEST
+            return jsonify({"error": "The file is empty. Upload a file that contains data."}), HTTP_BAD_REQUEST
         except pd.errors.ParserError as e:
             logger.error("Parsing error: %s", e)
-            return jsonify({"error": f"Error parsing file: {str(e)}"}), HTTP_BAD_REQUEST
+            return jsonify({"error": f"DiGiTerra cannot parse the file. {str(e)}"}), HTTP_BAD_REQUEST
         except Exception as e:
             logger.error("Error reading file: %s", e, exc_info=True)
-            return jsonify({"error": f"Error reading file: {str(e)}"}), HTTP_BAD_REQUEST
+            return jsonify({"error": f"DiGiTerra cannot read the file. {str(e)}"}), HTTP_BAD_REQUEST
     finally:
         try:
             os.remove(filepath)
@@ -120,7 +125,7 @@ def upload_file():
             logger.debug("Temporary upload already removed or unavailable: %s", filepath)
 
     if data.empty:
-        return jsonify({"error": "The uploaded file contains no data."}), HTTP_BAD_REQUEST
+        return jsonify({"error": "The file has no data rows. Upload a file that contains data."}), HTTP_BAD_REQUEST
 
     if data.columns.duplicated().any():
         logger.warning("Duplicate column names detected in uploaded file. Renaming duplicates.")

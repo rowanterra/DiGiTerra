@@ -1515,7 +1515,7 @@ function downloadFile(filename, downloadName = filename) {
 function showCrossValidationUnavailable() {
     const errDiv = getCachedElement('errorDiv');
     if (errDiv) {
-        showError(errDiv, 'Cross-validation results are unavailable because cross-validation was not run.');
+        showError(errDiv, 'DiGiTerra has no cross-validation results, because the run did not use cross-validation.');
         errDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
     return false;
@@ -1533,7 +1533,7 @@ function downloadAdditionalInfoTable(tableData, sheetName, timestamp) {
         .then(data => {
             if (data.error) {
                 const errDiv = getCachedElement('errorDiv');
-                if (errDiv) { showError(errDiv, 'Error generating download: ' + data.error); }
+                if (errDiv) { showError(errDiv, 'DiGiTerra cannot make the download. ' + data.error); }
                 return;
             }
             const downloadName = `additional_info_${sheetName.toLowerCase().replace(/\s+/g, '_')}_${ts}.xlsx`;

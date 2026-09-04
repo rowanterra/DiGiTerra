@@ -498,7 +498,7 @@ def write_bundle(store: dict, vis_dir: Path, extra_files: list[str] | None = Non
     vis_dir = Path(vis_dir)
     manifest_path = vis_dir / MANIFEST_NAME
     if not manifest_path.is_file():
-        raise FileNotFoundError("No manifest for this session; train a model first.")
+        raise FileNotFoundError("This session has no manifest. Train a model, then export the bundle.")
     if store.get("model") is None:
         raise ValueError("No trained model in this session.")
 
@@ -585,7 +585,7 @@ def read_manifest(bundle_path: str | Path) -> dict:
         try:
             raw = read_zip_member_bounded(z, MANIFEST_NAME, MAX_MANIFEST_BYTES, label="bundle")
         except KeyError as e:
-            raise BundleError("The zip has no manifest.json; it is not a DiGiTerra bundle.") from e
+            raise BundleError("The zip has no manifest.json file. The zip is not a DiGiTerra bundle.") from e
         except ZipTooLarge as e:
             raise BundleError(str(e)) from e
         try:
@@ -632,7 +632,7 @@ def load_bundle(bundle_path: str | Path, *, force: bool = False, trust_unsigned:
     expected = artifact_meta.get("sha256")
     actual = sha256_bytes(model_bytes)
     if expected and expected != actual:
-        raise BundleError("model.joblib does not match the hash in the manifest; the bundle was altered.")
+        raise BundleError("model.joblib does not match the hash in the manifest. The bundle was altered.")
     if not trust_unsigned:
         key = signing_key(create=False)
         if not signature_valid(model_bytes, artifact_meta.get("signature"), key):

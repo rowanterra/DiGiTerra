@@ -124,9 +124,9 @@ def loads_legacy(data: bytes) -> dict:
     """
     if not legacy_pickle_allowed():
         raise ArtifactError(
-            "This bundle is in the older format, whose artifact is a pickle that runs code when it is read. "
-            "Set DIGITERRA_ALLOW_LEGACY_PICKLE=1 to open one from a source you trust, or export it again "
-            "from the installation that made it."
+            "This bundle uses the older format. Its artifact is a pickle, which runs code when it is read. "
+            "Export the bundle again from the installation that made it. "
+            "To open a bundle from a source you trust, set DIGITERRA_ALLOW_LEGACY_PICKLE to 1."
         )
     import joblib
 

@@ -62,11 +62,12 @@ class GuardrailReport:
         }
 
     def block_message(self) -> str:
+        """What happened, then why, then what to do about it, in that order."""
         lines = [f.message for f in self.blocking]
         return (
-            "Training stopped because the result would not be meaningful: "
+            "DiGiTerra stopped the run. The data checks found a problem that makes the result misleading. "
             + " ".join(lines)
-            + " Set allowUnsafe to run anyway."
+            + " To run the model anyway, open Advanced, then Data Checks, and give a reason."
         )
 
 
@@ -95,15 +96,15 @@ def run_guardrails(
     # --- rows -----------------------------------------------------------------
     if n < MIN_ROWS:
         report.add(
-            "few_rows", "warn", f"The file has {n} rows; estimates from fewer than {MIN_ROWS} rows are unstable."
+            "few_rows", "warn", f"The file has {n} rows. Estimates from fewer than {MIN_ROWS} rows are unstable."
         )
     test_rows = int(round(n * test_size))
     if test_rows < MIN_TEST_ROWS:
         report.add(
             "small_test_set",
             "warn",
-            f"A test size of {test_size:.2f} leaves {test_rows} test rows; a test metric on fewer than "
-            f"{MIN_TEST_ROWS} rows says little.",
+            f"A test size of {test_size:.2f} gives {test_rows} test rows. "
+            f"A test metric on fewer than {MIN_TEST_ROWS} rows is not reliable.",
         )
     dup_cols = features + targets
     if dup_cols:
@@ -112,14 +113,19 @@ def run_guardrails(
             report.add(
                 "duplicate_rows",
                 "warn",
-                f"{n_dup:,} rows are exact duplicates across the modeling columns; a duplicate that lands on "
+                f"{n_dup:,} rows are exact duplicates across the modeling columns. A duplicate in "
                 "both sides of the split inflates the test score.",
             )
 
     # --- features -------------------------------------------------------------
     constant = [c for c in features if df[c].nunique(dropna=True) <= 1]
     if constant:
-        report.add("constant_columns", "warn", f"Constant columns add no information: {', '.join(constant)}.", constant)
+        report.add(
+            "constant_columns",
+            "warn",
+            f"These columns have one value and add no information. {', '.join(constant)}.",
+            constant,
+        )
     id_like = []
     for c in features:
         s = df[c]
@@ -129,7 +135,7 @@ def run_guardrails(
         report.add(
             "identifier_columns",
             "warn",
-            f"Columns with one distinct integer per row look like identifiers, which a tree model can memorize: "
+            f"These columns have one distinct integer per row, so a tree model can memorize them. "
             f"{', '.join(id_like)}.",
             id_like,
         )
@@ -144,7 +150,7 @@ def run_guardrails(
         report.add(
             "high_cardinality",
             "warn",
-            f"Text columns with many distinct values expand into one indicator column each when transformed: "
+            f"These text columns have many distinct values. A transform makes one indicator column for each value. "
             f"{', '.join(high_card)}.",
             high_card,
         )
@@ -152,7 +158,7 @@ def run_guardrails(
     if missing:
         desc = ", ".join(f"{c} ({v:.0%})" for c, v in missing.items())
         report.add(
-            "heavy_missingness", "warn", f"Columns with more than half the values missing: {desc}.", list(missing)
+            "heavy_missingness", "warn", f"These columns have more than half the values missing. {desc}.", list(missing)
         )
 
     # --- target ---------------------------------------------------------------
@@ -163,7 +169,13 @@ def run_guardrails(
                 continue
             for c in features:
                 if c == t:
-                    report.add("target_as_feature", "block", f"'{c}' is both a feature and the target.", [c])
+                    report.add(
+                        "target_as_feature",
+                        "block",
+                        f"'{c}' is both a feature and the target. "
+                        "Remove the column from the features, then train again.",
+                        [c],
+                    )
                     continue
                 x = _numeric(df[c])
                 mask = x.notna() & y.notna()
@@ -174,14 +186,17 @@ def run_guardrails(
                     report.add(
                         "target_leakage",
                         "block",
-                        f"'{c}' has |r| = {abs(r):.4f} with the target '{t}'; it is the target in another form.",
+                        f"'{c}' has |r| = {abs(r):.4f} with the target '{t}'. "
+                        "The column is the target in another form. "
+                        "Remove the column, then train again.",
                         [c],
                     )
                 elif abs(r) >= LEAK_WARN_R:
                     report.add(
                         "near_target_leakage",
                         "warn",
-                        f"'{c}' has |r| = {abs(r):.3f} with the target '{t}'; check that it is available before the "
+                        f"'{c}' has |r| = {abs(r):.3f} with the target '{t}'. "
+                        "Check that the column is available before the "
                         "target is known.",
                         [c],
                     )
@@ -197,7 +212,7 @@ def run_guardrails(
                 report.add(
                     "class_imbalance",
                     "warn",
-                    f"The smallest class '{counts.index[-1]}' is {frac:.1%} of rows ({int(minority)} of {n}); accuracy "
+                    f"The smallest class '{counts.index[-1]}' is {frac:.1%} of rows ({int(minority)} of {n}). Accuracy "
                     "alone will look good for a model that never predicts it.",
                     [t],
                 )
@@ -205,7 +220,7 @@ def run_guardrails(
                 report.add(
                     "class_smaller_than_folds",
                     "warn",
-                    f"Class '{counts.index[-1]}' has {int(minority)} rows, fewer than the {cv_folds} folds requested; "
+                    f"Class '{counts.index[-1]}' has {int(minority)} rows, fewer than the {cv_folds} folds requested. "
                     "stratified folds cannot each contain it.",
                     [t],
                 )
@@ -213,16 +228,27 @@ def run_guardrails(
                 report.add(
                     "singleton_class",
                     "warn",
-                    f"Class '{counts.index[-1]}' has one row; it cannot appear in both the training and the test set.",
+                    f"Class '{counts.index[-1]}' has one row. "
+                    "The row cannot appear in both the training set and the test set.",
                     [t],
                 )
         for c in features:
             if c == t:
-                report.add("target_as_feature", "block", f"'{c}' is both a feature and the target.", [c])
+                report.add(
+                    "target_as_feature",
+                    "block",
+                    f"'{c}' is both a feature and the target. Remove the column from the features, then train again.",
+                    [c],
+                )
                 continue
             s = df[c]
             if s.astype(str).equals(y):
-                report.add("target_leakage", "block", f"'{c}' is identical to the target '{t}'.", [c])
+                report.add(
+                    "target_leakage",
+                    "block",
+                    f"'{c}' is identical to the target '{t}'. Remove the column, then train again.",
+                    [c],
+                )
                 continue
             k = s.nunique(dropna=True)
             if 1 < k <= max(2 * n_classes, 4):
@@ -231,7 +257,9 @@ def run_guardrails(
                     report.add(
                         "target_leakage",
                         "block",
-                        f"Every value of '{c}' maps to exactly one class of '{t}'; it is the target in another form.",
+                        f"Every value of '{c}' maps to exactly one class of '{t}'. "
+                        "The column is the target in another form. "
+                        "Remove the column, then train again.",
                         [c],
                     )
     return report

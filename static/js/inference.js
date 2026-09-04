@@ -298,7 +298,7 @@ if (automlForm) {
         if (!processForm) {
             const errorDiv = getCachedElement('errorDiv');
             if (errorDiv) {
-                showError(errorDiv, 'No model configuration was found; the data must be configured first.');
+                showError(errorDiv, 'DiGiTerra has no model configuration. Configure the data first.');
                 errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
             return;
@@ -364,7 +364,7 @@ function wireAdvancedOptimizationFormSubmit(form) {
         if (!selectedModel) {
             const errorDiv = getCachedElement('errorDiv');
             if (errorDiv) {
-                showError(errorDiv, 'A model must be selected before a run with advanced options.');
+                showError(errorDiv, 'Select a model before you run with advanced options.');
                 errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
             return;
@@ -373,7 +373,7 @@ function wireAdvancedOptimizationFormSubmit(form) {
         if (!processForm) {
             const errorDiv = getCachedElement('errorDiv');
             if (errorDiv) {
-                showError(errorDiv, 'No model configuration was found; the data must be configured first.');
+                showError(errorDiv, 'DiGiTerra has no model configuration. Configure the data first.');
                 errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
             return;
@@ -419,14 +419,14 @@ wireAdvancedOptimizationFormSubmit(document.getElementById('advancedOptimization
             const response = await fetch('/import-bundle', { method: 'POST', body: new FormData(form) });
             const data = await response.json();
             if (!response.ok) {
-                status.textContent = data.error || 'The bundle could not be loaded.';
+                status.textContent = data.error || 'DiGiTerra cannot load the bundle.';
                 return;
             }
             const model = data.model || {};
             const features = Array.isArray(model.features) ? model.features.join(', ') : '';
             status.textContent = `Loaded ${model.name || 'model'} (${model.problem_type || ''}) trained ${data.created_at || ''}. Features: ${features}. ${data.note || ''}`;
         } catch (err) {
-            status.textContent = 'The bundle could not be loaded.';
+            status.textContent = 'DiGiTerra cannot load the bundle.';
         }
     });
 })();
