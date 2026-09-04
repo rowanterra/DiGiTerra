@@ -49,6 +49,17 @@ STE_PROCEDURAL_WORDS = 20
 STE_DESCRIPTIVE_WORDS = 25
 
 # Verbs that name no mechanism. The rule is to say what the code does instead.
+# Phrasings where a listed verb is the exact term rather than a figure of speech.
+LITERAL_USES = (
+    "holds for",
+    "does not hold",
+    "the ceiling holds",
+    "where the memory bound holds",
+    "still holds",
+    "drives the page",
+    "drives the browser",
+)
+
 FIGURATIVE = (
     "land",
     "lands",
@@ -81,7 +92,12 @@ FIGURATIVE = (
     "ride",
     "rides",
 )
-FIRST_SECOND = ("i", "we", "our", "us", "ours", "my", "mine")
+FIRST_SECOND = ("we", "our", "us", "ours", "my", "mine")
+# "I" is checked against the original case, and only where it is used as a pronoun:
+# followed by a space and a lowercase word. Lowercasing the line first made every
+# author initial read as first person, and a bare capital test made the ruff rule
+# list "E, F, I, B" read as one too.
+FIRST_PERSON_I = re.compile(r"(?<![.\-])\bI\s+[a-z]")
 
 # An en dash between digits is a numeric range and is allowed.
 EM_DASH = re.compile(r"—")
@@ -247,10 +263,14 @@ def scan_prose(report: Report) -> None:
             if EN_DASH_NON_NUMERIC.search(line):
                 report.add(path, i, "en dash outside a numeric range", line.strip()[:70])
             low = line.lower()
+            if any(phrase in low for phrase in LITERAL_USES):
+                continue
             for verb in FIGURATIVE:
                 if re.search(rf"\b{verb}\b", low):
                     report.add(path, i, f"figurative verb {verb!r}", line.strip()[:70])
                     break
+            if FIRST_PERSON_I.search(line):
+                report.add(path, i, "first person 'I'", line.strip()[:70])
             for pron in FIRST_SECOND:
                 if re.search(rf"\b{pron}\b", low):
                     report.add(path, i, f"first person {pron!r}", line.strip()[:70])

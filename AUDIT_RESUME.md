@@ -43,12 +43,12 @@ ML correctness
   copy-on-write) is gone.
 
 Web layer
-- `GET /progress/<anything>` created a tracker on demand and held an SSE stream
-  for an hour, which on the shipped single sync worker is a full outage.
+- `GET /progress/<anything>` created a tracker on demand and kept an SSE stream open
+  for an hour, which on the released single sync worker is a full outage.
   `peek_tracker` returns 404 for an unknown id; trackers are capped at 256.
 - A failed training stored its error and then deleted it with the tracker, so the
   client sat at a spinner until the one-hour timeout. `ProgressTracker.fail()`
-  drives progress to the terminal value and keeps the result.
+  sets progress to the terminal value and keeps the result.
 - Generated files had fixed names in one shared directory, so one user's
   `predictions.csv` overwrote another's at the same URL. Each session now gets its
   own subdirectory through a context variable that the request and the training
@@ -91,7 +91,7 @@ to something other than visible computes the other axis to auto rather than visi
 then measured its offset from the body's content edge, which already starts one
 header-offset down because of the body padding, and the two offsets added. With the
 body no longer scrolling and the sticky offset set to one header-offset exactly, the
-rail starts at 102 against views at 102 and holds at 102 while scrolled, clear of the
+rail starts at 102 against views at 102 and stays at 102 while scrolled, clear of the
 86 px header.
 
 A screenshot of the Documentation view showed a "No file chosen" box over the contents
@@ -107,7 +107,7 @@ views moved into `#narrativeViews`. A screenshot records what the compositor dre
 including chrome the page does not own, so an element that looks wrong in one is worth
 measuring before it is worth fixing.
 
-## Ninth pass, 2026-09-04: the memory bound on isolated work, and where it holds
+## Ninth pass, 2026-09-04: the memory bound on isolated work, and where it applies
 
 The isolated worker's memory ceiling was enforced on Linux and silently absent on macOS.
 `RLIMIT_AS` on Darwin is a second name for `RLIMIT_RSS`, which the kernel does not
@@ -141,7 +141,7 @@ CSRF token and the rate-limit bucket, and an upload was only the vehicle.
 The CI matrix was `ubuntu-latest` only, which is why this passed review twice; it now
 runs `macos-latest` as well, four jobs across Python 3.11 and 3.12. The server profile
 requires Linux, and `docs/SECURITY_REVIEW.md` says so where it previously claimed a
-memory bound without saying where it held. `pytest tests/` is 150 green with 1 skipped
+memory bound without saying where it applied. `pytest tests/` is 150 green with 1 skipped
 (Playwright absent).
 
 ## Eighth pass, 2026-09-04: bundle preflight, model accounting, and the security review at 0c98f06
@@ -259,7 +259,7 @@ Done: ruff 607 -> 0 with `ruff format` over the tree and the rest by hand; CI no
 on `ruff check` and `ruff format --check`. Two defects surfaced by the unused-variable
 cleanup: the regression pipeline returned "" in place of the per-bin evaluation table
 (the "quantile Bin Results" sheet never existed), and the user's bin labels were parsed
-and discarded. Imputation leakage is fixed: `preprocessing/split_fill.py` holds a
+and discarded. Imputation leakage is fixed: `preprocessing/split_fill.py` defines a
 FillPlan that preprocess_data records mean/median NaN and zero fills into; each pipeline
 fits the plan on its training rows after train_test_split and applies it to both halves;
 the fitted values go to session storage and inference reuses them

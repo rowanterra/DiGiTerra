@@ -1,6 +1,6 @@
 """Emit the run-flow diagram as an inline SVG for the Documentation view.
 
-Same layout as paper/build_figure1.js, redrawn for the screen: classes instead of
+The same layout as the manuscript's figure, redrawn for the screen: classes instead of
 baked-in fills, so the app stylesheet themes it in light and dark, and the
 interface's font stack instead of Times.
 

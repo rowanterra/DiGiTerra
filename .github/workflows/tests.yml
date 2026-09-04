@@ -57,6 +57,24 @@ jobs:
           ruff check .
           ruff format --check .
 
+      - name: Check the writing standards
+        run: python scripts/check_language.py
+
+      - name: Check that no runtime dependency is missing from the notices
+        run: |
+          python - <<'PY'
+          import sys
+          req = {l.split("==")[0].strip() for l in open("requirements.txt") if l.strip() and not l.startswith("#")}
+          notices = open("THIRD_PARTY_NOTICES.md").read().lower()
+          missing = sorted(p for p in req if p.lower() not in notices)
+          if missing:
+              sys.exit("Not in THIRD_PARTY_NOTICES.md: " + ", ".join(missing))
+          print("every runtime dependency is listed")
+          PY
+
+      - name: Audit the runtime npm dependencies
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Run tests
         run: pytest tests/ -q --tb=short
         env:

@@ -93,7 +93,7 @@ A classification run writes one `probability_` column per class and `max_probabi
 An estimator with no probability of its own writes neither, and the model card records
 that it could not.
 
-The model card carries the detector, the threshold, the training ranges, alpha and the
+The model card records the detector, the threshold, the training ranges, alpha and the
 validation size, so a reader of a run sees the same numbers without the file.
 
 ## Accessibility

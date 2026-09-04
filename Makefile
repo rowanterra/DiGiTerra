@@ -15,9 +15,9 @@ lint:
 	npm run lint
 	$(PYTHON) -m ruff check .
 	$(PYTHON) -m ruff format --check .
-	$(PYTHON) scripts/check_language.py --standard a
+	$(PYTHON) scripts/check_language.py
 
-# Standard B, the prose rules, reports 34 items and does not gate yet.
+# Kept as its own target for a prose-only pass; `make lint` runs both standards.
 lint-prose:
 	$(PYTHON) scripts/check_language.py --standard b
 
