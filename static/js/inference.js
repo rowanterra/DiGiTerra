@@ -245,7 +245,7 @@ predictionForm.addEventListener('submit', async (e) => {
                     <a href="${withApiRoot('/download/predictions.csv')}?download_name=${encodeURIComponent(predictionDownloadName)}" onclick="return downloadFile('predictions.csv', '${predictionDownloadName}')">
                         <button class="predictionresultButton export-button">Download Results CSV</button>
                     </a>
-                    <button class="secondary-button" onclick="backToModel()">Back To Model</button>
+                    <button class="secondary-button" onclick="backToModel()">Back to Modeling</button>
                     <button class="secondary-button" onclick="newPredict()">Run inference on another dataset</button>
                 </div>
                 <div class="inference-results-content" style="display: flex; flex-wrap: nowrap; gap: 24px; align-items: flex-start;">

@@ -21,27 +21,27 @@
   --app-accent-lift: #4a9d6e;
   --app-on-accent: #ffffff;
 
-  --app-page: #f4f4f9;
+  --app-page: #fbfaf7;
   --app-panel: #ffffff;
   --app-panel-head: #f0f2ee;
-  --app-sunken: #f8f9fa;
-  --app-border: #e0e0e0;
+  --app-sunken: #f3f4f0;
+  --app-border: #d7dbd4;
   --app-rule: #d7dbd4;
-  --app-hairline: #eeeeee;
+  --app-hairline: #e6e9e3;
 
-  --app-ink: #333333;
+  --app-ink: #2b2f2c;
   --app-heading: var(--app-accent-deep);
-  --app-muted: #6b6b6b;
+  --app-muted: #6c7069;
   --app-soft: #4a544d;
   --app-accent-wash: #eaf1ec;
 
   /* The caution note on the welcome screen and beside the risky options. */
-  --app-caution-ink: #856404;
-  --app-caution-bg: #fff3cd;
-  --app-caution-rule: #ffc107;
+  --app-caution-ink: #6f5a1e;
+  --app-caution-bg: #f6f2e6;
+  --app-caution-rule: #cdbb84;
 
-  --app-radius: 8px;
-  --app-radius-sm: 6px;
+  --app-radius: 4px;
+  --app-radius-sm: 3px;
   --app-pad: 14px;
   --app-gap: 16px;
   --app-gap-sm: 8px;
@@ -64,9 +64,9 @@ body.dark-mode {
   --app-muted: #b9b9b9;
   --app-soft: #cfd6d0;
   --app-accent-wash: #2b3a30;
-  --app-caution-ink: #f0d48a;
-  --app-caution-bg: #3a3322;
-  --app-caution-rule: #b8912e;
+  --app-caution-ink: #d8c48a;
+  --app-caution-bg: #2a2718;
+  --app-caution-rule: #5a4f2a;
 }
 
 html {
@@ -3109,8 +3109,8 @@ body.dark-mode h4 {
 .documentation .doc-info-box,
 .documentation .doc-callout,
 .documentation .doc-modes-note {
-    background-color: var(--doc-panel) !important;
-    border-left: 3px solid var(--doc-heading) !important;
+    background-color: var(--doc-panel);
+    border-left: 3px solid var(--doc-heading);
     border-radius: 0.3rem;
     color: var(--doc-ink);
 }
@@ -4107,3 +4107,623 @@ body.dark-mode .dg-band--infer   { fill: color-mix(in srgb, var(--doc-panel) 88%
     text-align: center;
     color: var(--app-muted);
 }
+
+
+/* =====================================================================
+   Plain layer. Appended last so it wins on source order. Everything
+   below removes chrome rather than adding it: one panel style, no
+   badges, no chips, no colored callouts, prose where there were cards.
+   ===================================================================== */
+
+/* -- Documentation ---------------------------------------------------- */
+
+.documentation .doc-header {
+    min-height: 0;
+    padding: 34px 24px 30px;
+}
+.documentation .doc-header h3 { font-size: 2rem; margin: 0 0 6px; }
+.documentation .doc-header .doc-subtitle,
+.documentation .doc-header p { font-size: 1.05rem; margin: 0; }
+
+/* Contents: a two-column list on the page, not a boxed panel. */
+.documentation .doc-toc .doc-toc-box {
+    background: none;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+}
+.documentation .doc-toc {
+    background: none;
+    border: 0;
+    border-bottom: 1px solid var(--doc-rule);
+    border-radius: 0;
+    padding: 20px 0 16px;
+    max-width: 900px;
+    margin: 0 auto 8px;
+}
+.documentation .doc-toc .doc-toc-title {
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--doc-muted);
+    text-align: left;
+    margin: 0 0 8px;
+}
+.documentation .doc-toc ul { columns: 2; column-gap: 40px; margin: 0; padding-left: 1.1em; }
+.documentation .doc-toc li { break-inside: avoid; margin: 2px 0; }
+
+/* Every grid becomes a single flow of terms and definitions. */
+.documentation .doc-method-grid,
+.documentation .doc-modeling-types-grid,
+.documentation .doc-approach-grid,
+.documentation .doc-concepts-grid,
+.documentation .doc-tips-list,
+.documentation .doc-features,
+.documentation .doc-feature-grid {
+    display: block;
+    gap: 0;
+}
+.documentation .doc-method-card,
+.documentation .doc-modeling-type-card,
+.documentation .doc-approach-card,
+.documentation .doc-concept-item,
+.documentation .doc-tip-item,
+.documentation .doc-feature-card {
+    background: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0 0 0 1.25rem;
+    margin: 0 0 14px;
+    transition: none;
+}
+.documentation .doc-method-card:hover,
+.documentation .doc-modeling-type-card:hover,
+.documentation .doc-approach-card:hover { box-shadow: none; transform: none; }
+
+.documentation .doc-method-card > strong,
+.documentation .doc-concept-item > strong,
+.documentation .doc-tip-item > strong,
+.documentation .doc-feature-card > strong,
+.documentation .doc-approach-header h4,
+.documentation .doc-modeling-type-card h4 {
+    display: inline;
+    margin: 0 0 4px -1.25rem;
+    padding: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--doc-heading);
+}
+.documentation .doc-method-card > p,
+.documentation .doc-concept-item > p,
+.documentation .doc-tip-item > p,
+.documentation .doc-feature-card > p { margin: 2px 0 0; }
+
+/* Badges become a parenthetical after the term. No pill, no color. */
+.documentation .doc-badge,
+.documentation .doc-method-badge,
+.documentation .doc-approach-badge {
+    display: inline;
+    padding: 0;
+    margin: 0 0 0 0.35em;
+    border: 0;
+    border-radius: 0;
+    background: none !important;
+    color: var(--doc-muted) !important;
+    font-size: 0.9em;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+}
+.documentation .doc-badge:not(.doc-workflow-step)::before,
+.documentation .doc-method-badge::before,
+.documentation .doc-approach-badge::before { content: "("; }
+.documentation .doc-badge:not(.doc-workflow-step)::after,
+.documentation .doc-method-badge::after,
+.documentation .doc-approach-badge::after { content: ")"; }
+.documentation .doc-workflow-step:not(:last-child)::after { content: ", "; font-weight: 400; color: var(--doc-muted); }
+.documentation .doc-count { font-size: 0.85em; font-weight: 400; color: var(--doc-muted); }
+
+/* The five-step row reads as a sentence. */
+.documentation .doc-workflow-badges { display: block; }
+.documentation .doc-workflow-step {
+    display: inline;
+    padding: 0;
+    border: 0;
+    background: none;
+    border-radius: 0;
+    font-weight: 600;
+    color: var(--doc-heading);
+}
+.documentation .doc-workflow-arrow { display: inline; padding: 0 0.4em; color: var(--doc-muted); }
+
+/* Notes and steps: plain paragraphs, a note is quieter than a step. */
+.documentation .doc-note,
+.documentation .doc-tutorial .doc-note,
+.documentation .doc-intro-text {
+    background: none;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    margin: 4px 0 10px;
+    color: var(--doc-muted);
+    font-size: 0.95rem;
+}
+.documentation .doc-tutorial .doc-step {
+    background: none;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    margin: 0 0 4px;
+}
+.documentation .doc-tutorial h4 { margin: 18px 0 4px; font-size: 1rem; }
+
+/* Cautions: small, ochre lead line, hairlines above and below, no fill. */
+.documentation .doc-warning-content,
+.documentation .doc-warning-box,
+.documentation .welcome-disclaimer-box,
+.documentation .doc-warning-content.welcome-disclaimer-box {
+    background: none !important;
+    border: 0;
+    border-top: 1px solid var(--doc-rule);
+    border-bottom: 1px solid var(--doc-rule);
+    border-radius: 0;
+    padding: 12px 0;
+    margin: 20px 0 8px;
+}
+.documentation .caution-note {
+    color: var(--doc-ink);
+    font-size: 0.92rem;
+    margin: 0 0 6px !important;
+}
+.documentation .caution-note:first-child { color: var(--app-caution-ink); }
+
+/* Subsections: a rule and a heading, not another panel. */
+.documentation .doc-subsection {
+    background: none;
+    border: 0;
+    border-top: 1px solid var(--doc-rule);
+    border-radius: 0;
+    padding: 14px 0 0;
+    margin: 18px 0 0;
+}
+.documentation .doc-subsection-header h4 { margin: 0 0 6px; }
+
+/* Three parallel task types compare better as a table than as three cards. */
+.documentation table.doc-compare {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0 14px;
+    font-size: 0.95rem;
+}
+.documentation table.doc-compare th,
+.documentation table.doc-compare td {
+    text-align: left;
+    vertical-align: top;
+    padding: 8px 12px 8px 0;
+    border-bottom: 1px solid var(--doc-rule);
+}
+/* Journal tables: bold header, no fill, no zebra stripes. Overrides the general rule above. */
+.documentation table th { background: none; color: var(--doc-ink); border-bottom: 2px solid var(--doc-ink); }
+.documentation table tr:nth-child(odd) { background: none; }
+.documentation table.doc-compare th { font-weight: 700; color: var(--doc-ink); border-bottom: 2px solid var(--doc-ink); background: none; }
+.documentation table.doc-compare th .doc-count { font-weight: 400; color: var(--doc-muted); display: inline; margin-left: 0.3em; }
+.documentation table.doc-compare th:first-child,
+.documentation table.doc-compare td:first-child { width: 9em; color: var(--doc-muted); font-weight: 600; }
+.documentation table.doc-compare ul { margin: 0; padding-left: 1.1em; }
+
+/* -- Welcome ------------------------------------------------------------ */
+
+.welcome {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 24px 16px;
+    display: flex;
+    justify-content: center;
+}
+.welcome.hidden { display: none; }
+.welcome {
+    flex-direction: column;
+    gap: 22px;
+    min-height: calc(100vh - var(--header-offset, 88px) - 16px);
+    justify-content: center;
+}
+.welcomesection {
+    background: var(--app-panel);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius);
+    box-shadow: none;
+    padding: 28px 32px 24px;
+    max-width: 640px;
+    margin: 0 auto;
+    width: 100%;
+}
+.welcome-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    margin: 0 0 6px;
+}
+.welcome-header .welcome-text { display: none; }
+.welcome-header .logo-inline { width: 84px; height: auto; }
+.welcome-header .welcome-text2 {
+    font-size: 2.6rem;
+    font-weight: 700;
+    color: var(--app-heading);
+    letter-spacing: -0.01em;
+}
+.welcomesection h4 {
+    text-align: center;
+    font-weight: 500;
+    color: var(--app-muted);
+    margin: 0 0 20px;
+    font-size: 1rem;
+}
+.welcome-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.welcomebutton,
+#startModelingButton,
+#tryExampleButton {
+    min-width: 200px;
+    width: auto;
+    padding: 12px 22px;
+    font-size: 1.05rem;
+    border-radius: var(--app-radius);
+    box-shadow: none;
+    margin: 0;
+}
+#tryExampleButton {
+    background: transparent;
+    color: var(--app-accent-deep);
+    border: 1px solid var(--app-accent);
+}
+#tryExampleButton:hover { background: var(--app-accent-wash); }
+.welcome-example-note,
+.welcomesection .field-note {
+    text-align: center;
+    color: var(--app-muted);
+    font-size: 0.85rem;
+    margin: 12px 0 0;
+}
+.welcomesection.logos {
+    background: none;
+    border: 0;
+    padding: 0;
+    max-width: 900px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 32px;
+}
+.welcomesection.logos img { max-height: 56px; width: auto; max-width: 260px; object-fit: contain; }
+.welcomesection.disclaimer {
+    background: none;
+    border: 0;
+    border-top: 1px solid var(--app-hairline);
+    border-radius: 0;
+    padding: 12px 0 0;
+    max-width: 1100px;
+}
+.welcomesection.disclaimer p,
+.welcomesection.disclaimer #welcomeDisclaimerContent p {
+    color: var(--app-muted) !important;
+    font-size: 0.74rem !important;
+    line-height: 1.45;
+    text-align: left !important;
+    margin: 0;
+}
+.welcomesection.disclaimer .welcome-disclaimer-box {
+    background: none;
+    border: 0;
+    padding: 0;
+}
+
+/* -- Documentation, second pass ------------------------------------------ */
+
+/* The masthead is a title bar, not a hero. */
+.documentation .doc-masthead { padding: 1.5rem 2rem 1.3rem; }
+.documentation .doc-masthead-title { font-size: 1.7rem; margin-bottom: 0.2rem; }
+.documentation .doc-masthead-tagline { font-size: 1.05rem; margin-bottom: 0; }
+
+/* Heading scale: section 1.35rem, subsection 1.12rem, entry 1rem. */
+.documentation .doc-section > .doc-summary h3 { font-size: 1.35rem; font-weight: 600; }
+.documentation .doc-subsection-header { font-size: 1.12rem; font-weight: 600; margin: 0 0 4px; }
+.documentation .doc-subsection-intro { margin: 0 0 8px; color: var(--doc-muted); }
+
+/* What the reader should see after a step: indented, quiet, upright. */
+.documentation .doc-tutorial .doc-note {
+    font-style: normal;
+    color: var(--doc-muted);
+    background: none;
+    border: 0;
+    border-left: 2px solid var(--doc-rule);
+    border-radius: 0;
+    padding: 0 0 0 10px;
+    margin: 4px 0 12px 0;
+}
+
+/* Contents: one rule below, none above the first section. */
+.documentation .documentation-card:first-of-type,
+.documentation #doc-about { border-top: 0; }
+
+/* Core concepts and method entries: term, then definition on the next line, tight. */
+.documentation .doc-concept-item,
+.documentation .doc-method-card { margin: 0 0 8px; }
+.documentation .doc-concept-item strong { display: block; }
+.documentation .doc-method-card strong { display: inline; }
+.documentation .doc-not-supported-header { font-size: 1.12rem; font-weight: 600; margin: 14px 0 4px; }
+.documentation .doc-action-note { background: none; border: 0; padding: 0; margin: 6px 0 0; color: var(--doc-ink); }
+.documentation .doc-concept-item p,
+.documentation .doc-method-card p { margin: 0 0 0 0; }
+
+/* The disclaimer lead is in the caution color; the rest is body ink. */
+.documentation .caution-note strong { color: var(--app-caution-ink); }
+.documentation .caution-note { color: var(--doc-ink); }
+
+/* =========================================================================
+   Density layer. Appended last so it wins on source order. Every working
+   view should fit a 1440 x 900 window without scrolling the page. Type is
+   one step smaller, spacer <br> elements are gone, controls share one
+   height, and the page header is a single title row rather than a panel
+   inside a panel.
+   ========================================================================= */
+
+.narrative-views { font-size: 0.92rem; }
+.narrative-views p,
+.narrative-views label,
+.narrative-views span,
+.narrative-views small,
+.narrative-views li { font-size: inherit; }
+.narrative-views .field-note { font-size: 0.86em; margin: 2px 0 6px; }
+.narrative-views .field-note i { font-style: normal; }
+
+/* Spacer breaks are replaced by margins. */
+.preprocess-card br,
+.exploration-card br,
+.model-card br,
+.upload-card br,
+.selectcolumns br,
+.scaling-container br,
+.stratify-options br,
+#quantileInput br,
+#binInput br,
+.narrative-views div > br:only-child { display: none; }
+.narrative-views .selectcolumns > div:empty { display: none; }
+
+/* Page header: a title row, no outer frame. */
+.narrative-views .section-header,
+.narrative-views .results-header {
+    padding: 8px 12px;
+    margin: 0 0 10px;
+    min-height: 0;
+}
+.narrative-views .section-header h2 { font-size: 1.05em; margin: 0; }
+.narrative-views .section-header-content { gap: 10px; }
+.narrative-views .section-header-content .header-forward,
+.narrative-views .section-header-content .success-button { margin-left: auto; }
+.narrative-views .RedoButton { padding: 8px 12px; margin: 0 0 10px; }
+.narrative-views .RedoButton h2 { font-size: 1.05em; }
+
+/* Panels. */
+.narrative-views .preprocess-card,
+.narrative-views .model-card,
+.narrative-views .exploration-card,
+.narrative-views .upload-card {
+    padding: 10px 14px 12px;
+    margin-bottom: 10px;
+}
+.narrative-views .preprocess-card > h2,
+.narrative-views .model-card > h2,
+.narrative-views .exploration-card > h2 {
+    font-size: 0.98em;
+    margin: 0 0 8px;
+    padding: 0 0 6px;
+    border-bottom: 1px solid var(--app-hairline);
+}
+.narrative-views .preprocess-card h3,
+.narrative-views .model-card h3,
+.narrative-views .exploration-card h3,
+.narrative-views .preprocess-section-title {
+    font-size: 0.95em;
+    font-weight: 600;
+    color: var(--app-heading);
+    margin: 12px 0 6px;
+    padding: 8px 0 0;
+    border-top: 1px solid var(--app-hairline);
+}
+.narrative-views .preprocess-card h3:first-of-type,
+.narrative-views .preprocess-card > h2 + h3,
+.narrative-views .preprocess-card > h2 + .preprocess-section-title { border-top: 0; padding-top: 0; margin-top: 4px; }
+.narrative-views .preprocess-card h4,
+.narrative-views .model-card h4 { font-size: 0.95em; margin: 8px 0 4px; }
+.narrative-views .field-label-block { margin: 6px 0 2px; }
+.narrative-views .scaling-container { margin: 0 0 6px; }
+.narrative-views .split-row { display: flex; gap: 12px; }
+
+/* One control height everywhere. */
+.narrative-views select,
+.narrative-views input[type="text"],
+.narrative-views input[type="number"],
+.narrative-views input[type="search"] {
+    font: inherit;
+    font-size: 0.95em;
+    color: var(--app-ink);
+    background-color: var(--app-panel);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-sm);
+    padding: 3px 8px;
+    height: 28px;
+    line-height: 20px;
+    box-sizing: border-box;
+    max-width: 100%;
+}
+.narrative-views select { padding-right: 24px; }
+.narrative-views select:focus,
+.narrative-views input:focus { outline: 2px solid var(--app-accent); outline-offset: 0; border-color: var(--app-accent); }
+.narrative-views input[type="checkbox"],
+.narrative-views input[type="radio"] { accent-color: var(--app-accent); width: 14px; height: 14px; margin: 0 4px 0 0; vertical-align: -2px; }
+.narrative-views label { margin: 0 0 2px; }
+.narrative-views .cleaning-scope-checkboxes { font-size: 0.92em !important; }
+
+/* Buttons: one size, no inline sizing. */
+.narrative-views button,
+.narrative-views .button-secondary,
+.narrative-views .processButton,
+.narrative-views .success-button,
+.narrative-views .secondary-button,
+.narrative-views .export-button {
+    font: inherit;
+    font-size: 0.92em;
+    font-weight: 600;
+    padding: 5px 12px;
+    height: 28px;
+    line-height: 18px;
+    border-radius: var(--app-radius-sm);
+    box-sizing: border-box;
+}
+.narrative-views .success-button { padding-right: 24px; }
+.narrative-views .secondary-button { padding-left: 24px; }
+.narrative-views .success-button::after { border-top-width: 5px; border-bottom-width: 5px; border-left-width: 6px; right: 8px; }
+.narrative-views .secondary-button::before { border-top-width: 5px; border-bottom-width: 5px; border-right-width: 6px; left: 8px; }
+.narrative-views button.button-secondary {
+    background: var(--app-panel);
+    color: var(--app-accent-deep);
+    border: 1px solid var(--app-accent);
+}
+.narrative-views button.button-secondary:hover { background: var(--app-accent-wash); }
+.narrative-views .secondary-button { background-color: var(--app-panel); color: var(--app-soft); border: 1px solid var(--app-border); }
+.narrative-views .secondary-button::before { border-right-color: var(--app-soft); }
+.narrative-views .secondary-button:hover { background-color: var(--app-sunken); }
+.narrative-views .processButton { background-color: var(--app-accent); color: var(--app-on-accent); }
+.narrative-views .processButton:hover { background-color: var(--app-accent-dark); }
+
+/* Downloads and the restart confirm take the app palette. */
+.narrative-views .export-button,
+.export-button {
+    background-color: var(--app-panel);
+    color: var(--app-accent-deep);
+    border: 1px solid var(--app-accent);
+}
+.narrative-views .export-button:hover,
+.export-button:hover { background-color: var(--app-accent-wash); }
+.narrative-views .export-button--muted,
+.export-button--muted { color: var(--app-muted); border-color: var(--app-border); background: var(--app-sunken); }
+.orangebutton { background-color: var(--app-caution-ink); color: #fff; }
+.orangebutton:hover { background-color: #574614; }
+
+/* Modeling mode: one row of three radios. */
+.narrative-views .mode-select { padding: 8px 14px; margin: 0 0 10px; }
+.narrative-views .mode-select > h2 { display: inline-block; border: 0; margin: 0 16px 0 0; padding: 0; vertical-align: middle; }
+.narrative-views .mode-select-options { display: inline-flex; flex-wrap: wrap; gap: 6px 22px; vertical-align: middle; }
+.narrative-views .modeling-mode-option {
+    display: inline-flex; align-items: center; gap: 6px;
+    cursor: pointer; padding: 2px 0; border: 0; background: none; margin: 0;
+}
+.narrative-views .modeling-mode-option strong { color: var(--app-ink); font-weight: 600; }
+.narrative-views .modeling-mode-option small { color: var(--app-muted); font-size: 0.88em; }
+.narrative-views .modeling-mode-option.is-selected { background: none; border: 0; }
+.narrative-views .modeling-mode-option.is-selected strong { color: var(--app-accent-deep); text-decoration: underline; text-underline-offset: 3px; }
+label:has(input[type="radio"][name="modelingMode"]:checked) { background: none; border-color: transparent; }
+
+/* The selection sentence lives in the rail's Data panel; the view does not repeat it. */
+.narrative-views .modeling-selection-note,
+.narrative-views .app-note:has(> .modeling-selection-note) { display: none; }
+
+/* Inline padding on a few selects would otherwise clip the text at this height. */
+.narrative-views select { padding: 2px 24px 2px 8px !important; }
+.narrative-views input[type="text"],
+.narrative-views input[type="number"] { padding: 2px 8px !important; }
+.narrative-views .processButton { padding-right: 24px; }
+.narrative-views .section-header-content { width: 100%; }
+.narrative-views .split-row .scaling-container { flex: 1; }
+.narrative-views .target-input-row label,
+.narrative-views .selectcolumns label { display: inline-block; min-width: 0; margin-right: 6px; }
+.narrative-views .selectcolumns input[type="text"] { width: 60%; }
+
+/* Toggle rows and settings headings inside the model card. */
+.narrative-views .model-card h3,
+.narrative-views #modelConfigurationCard h3 { font-size: 0.95em; }
+.narrative-views .matrix-toggle { margin: 6px 0 8px; }
+.narrative-views .matrix-toggle label { font-weight: 600; font-size: 0.95em; }
+.narrative-views .switch { transform: scale(0.8); transform-origin: left center; }
+
+/* Tables in results: hairline rules, no colored frame. */
+.narrative-views table { font-size: 0.92em; }
+.narrative-views .stats-table,
+.narrative-views .hyperparameterstable,
+.narrative-views .model-stats-table,
+.narrative-views .column-summary-table { border: 1px solid var(--app-border); }
+.narrative-views .stats-table th, .narrative-views .stats-table td,
+.narrative-views .hyperparameterstable th, .narrative-views .hyperparameterstable td,
+.narrative-views .model-stats-table th, .narrative-views .model-stats-table td,
+.narrative-views .column-summary-table th, .narrative-views .column-summary-table td {
+    padding: 4px 8px;
+    border: 0;
+    border-bottom: 1px solid var(--app-hairline);
+}
+.narrative-views .stats-table th,
+.narrative-views .hyperparameterstable th,
+.narrative-views .model-stats-table th,
+.narrative-views .column-summary-table th { background: var(--app-panel-head); color: var(--app-ink); }
+
+/* Data Exploration: the file summary is one line, the three form panels are one. */
+.narrative-views .column-summary-table { width: 100%; }
+.narrative-views .column-summary-table th { width: 40%; text-align: left; }
+
+/* Results: downloads in one row, table frames to hairline, graphics headings smaller. */
+.narrative-views .model-stats-table-wrapper { border: 1px solid var(--app-border); border-radius: var(--app-radius-sm); }
+.narrative-views .downloadperformanceButton,
+.narrative-views .export-button { display: inline-block; margin: 6px 8px 0 0; }
+.narrative-views .result-graphic-box h4 { font-size: 0.95em !important; margin: 10px 0 4px !important; }
+.narrative-views .result-graphic-box img { max-width: 100%; height: auto; }
+.narrative-views .visualSection > h3,
+.narrative-views .visualSection h3 { font-size: 0.95em; }
+
+/* Folded option groups: a plain disclosure, the summary reads as a subheading. */
+.narrative-views details.app-details { margin: 8px 0; border-top: 1px solid var(--app-hairline); padding-top: 6px; }
+.narrative-views details.app-details > summary {
+    cursor: pointer; font-weight: 600; color: var(--app-heading); font-size: 0.95em;
+    list-style: none; padding: 2px 0; display: flex; align-items: center; gap: 6px;
+}
+.narrative-views details.app-details > summary::-webkit-details-marker { display: none; }
+.narrative-views details.app-details > summary::before {
+    content: ""; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent;
+    border-top: 5px solid var(--app-muted); transform: rotate(-90deg); transition: transform 120ms ease;
+}
+.narrative-views details.app-details[open] > summary::before { transform: rotate(0); }
+.narrative-views details.app-details > summary:focus-visible { outline: 2px solid var(--app-accent); outline-offset: 2px; }
+.narrative-views .corr-actions { margin-top: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.narrative-views .corr-actions > button[type="submit"] { background: var(--app-accent); color: var(--app-on-accent); }
+
+/* Once data is loaded the upload card is only the page header, so it drops its frame. */
+.narrative-views .upload-card:has(#redobutton:not(.hidden)) { border: 0; background: none; padding: 0; margin: 0; box-shadow: none; }
+.narrative-views .upload-card:has(#redobutton:not(.hidden)) > form { display: none; }
+.narrative-views .RedoButton { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--app-panel-head); border: 1px solid var(--app-border); border-radius: var(--app-radius); }
+.narrative-views .RedoButton h2 { margin: 0; }
+.narrative-views #redobutton { margin-left: auto; display: flex; gap: 8px; }
+.narrative-views #redobutton.hidden { display: none; }
+
+/* The placeholder line goes once output exists. */
+.narrative-views .exploration-results:has(#explorationOutput:not(:empty)) .results-header p { display: none; }
+.narrative-views .results-header p { display: inline; margin: 0 0 0 8px; color: var(--app-muted); }
+.narrative-views .results-header h2 { display: inline; }
+
+/* Chart selectors sit on one line with their labels. */
+.narrative-views .exploration-results label { margin-right: 4px; }
+.narrative-views .exploration-results select { margin: 2px 8px 6px 0; }
+.narrative-views .exploration-results h3 { font-size: 1em; margin: 6px 0 4px; }
+.narrative-views .exploration-results img { max-width: 100%; height: auto; }
+.narrative-views .matrix-heading { gap: 6px 8px; margin-bottom: 4px; }
+.narrative-views .matrix-heading h3 { margin: 0 6px 0 0; }
+.narrative-views .matrix-heading select { margin: 0; max-width: 150px; }
+.narrative-views .stats-table-wrapper:has(table tr:nth-child(6)),
+.narrative-views .model-stats-table-wrapper:has(table tr:nth-child(6)) { border-color: var(--app-border); border-width: 1px; }
+.narrative-views .download-buttons { display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.narrative-views .download-buttons a { display: inline-block; }
+.narrative-views .download-buttons .export-button { margin: 0; }

@@ -181,7 +181,7 @@ async function handlePreprocessFormSubmit(e) {
                 if (automlNote) automlNote.innerHTML = noteText;
                 IndicatorsPredictorsSection.innerHTML = `
                 <div class='columnOutputSection' style="display: flex; gap: 12px; align-items: center;">
-                    <button class="success-button" onclick="predictionPage()">Move Forward to Apply this Model for Inferencing on New Data</button>
+                    <button class="success-button" onclick="predictionPage()">Continue to Inference on New Data</button>
                 </div>`;
             }
             else {
@@ -194,7 +194,7 @@ async function handlePreprocessFormSubmit(e) {
                 if (automlNote) automlNote.innerHTML = noteText;
                 IndicatorsPredictorsSection.innerHTML = `
                 <div class='columnOutputSection' style="display: flex; gap: 12px; align-items: center;">
-                    <button class="success-button" onclick="predictionPage()">Move Forward to Apply this Model for Inferencing on New Data</button>
+                    <button class="success-button" onclick="predictionPage()">Continue to Inference on New Data</button>
                 </div>`;
             }
         } catch (error) {

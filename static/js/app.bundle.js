@@ -2292,7 +2292,7 @@ async function handlePreprocessFormSubmit(e) {
                 if (automlNote) automlNote.innerHTML = noteText;
                 IndicatorsPredictorsSection.innerHTML = `
                 <div class='columnOutputSection' style="display: flex; gap: 12px; align-items: center;">
-                    <button class="success-button" onclick="predictionPage()">Move Forward to Apply this Model for Inferencing on New Data</button>
+                    <button class="success-button" onclick="predictionPage()">Continue to Inference on New Data</button>
                 </div>`;
             }
             else {
@@ -2305,7 +2305,7 @@ async function handlePreprocessFormSubmit(e) {
                 if (automlNote) automlNote.innerHTML = noteText;
                 IndicatorsPredictorsSection.innerHTML = `
                 <div class='columnOutputSection' style="display: flex; gap: 12px; align-items: center;">
-                    <button class="success-button" onclick="predictionPage()">Move Forward to Apply this Model for Inferencing on New Data</button>
+                    <button class="success-button" onclick="predictionPage()">Continue to Inference on New Data</button>
                 </div>`;
             }
         } catch (error) {
@@ -6703,10 +6703,10 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                                 </div>
                                 <div class="download-buttons" style="margin-top: 12px; display: flex; gap: 12px; align-items: center;">
                                     <a href="/download/model_performance.xlsx?download_name=${encodeURIComponent(performanceDownloadName)}" onclick="return downloadFile('model_performance.xlsx', '${performanceDownloadName}')">
-                                        <button type="button" class='downloadperformanceButton export-button'>Model Performance XLSX</button>
+                                        <button type="button" class='downloadperformanceButton export-button'>Performance XLSX</button>
                                     </a>
                                     <a href="/download/visualizations.pdf?download_name=${encodeURIComponent(visualizationsDownloadName)}" onclick="return downloadFile('visualizations.pdf', '${visualizationsDownloadName}')">
-                                        <button class="export-button" style="font-size: 0.95rem;">Visualizations PDF</button>
+                                        <button class="export-button" style="font-size: 0.95rem;">Graphics PDF</button>
                                     </a>
                                     ${crossValidationButton}
                                 </div>
@@ -6740,10 +6740,6 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                             <br>
                         </div>
 
-                    <div class="results-header" style="margin-top: 24px; margin-bottom: 16px;">
-                        <h2>Modeling Results</h2>
-                        <p>Charts, tables, and downloads will appear here.</p>
-                    </div>
                     <div class="result-graphic-row-train-test" style="display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;">
                         <div class="result-graphic-box" style="flex: 1; min-width: 320px;">
                             <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">Visualization 1</h4>
@@ -6965,10 +6961,10 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                             </div>
                             <div class="download-buttons" style="margin-top: 12px; display: flex; gap: 12px; align-items: center;">
                                 <a href="/download/model_performance.xlsx?download_name=${encodeURIComponent(performanceDownloadName)}" onclick="return downloadFile('model_performance.xlsx', '${performanceDownloadName}')">
-                                    <button type="button" class='downloadperformanceButton export-button'>Model Performance XLSX</button>
+                                    <button type="button" class='downloadperformanceButton export-button'>Performance XLSX</button>
                                 </a>
                                 <a href="/download/visualizations.pdf?download_name=${encodeURIComponent(visualizationsDownloadName)}" onclick="return downloadFile('visualizations.pdf', '${visualizationsDownloadName}')">
-                                    <button class="export-button" style="font-size: 0.95rem;">Visualizations PDF</button>
+                                    <button class="export-button" style="font-size: 0.95rem;">Graphics PDF</button>
                                 </a>
                                 ${crossValidationButton}
                             </div>
@@ -7002,10 +6998,6 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                         <br>
                     </div>
 
-                    <div class="results-header" style="margin-top: 24px; margin-bottom: 16px;">
-                        <h2>Modeling Results</h2>
-                        <p>Charts, tables, and downloads will appear here.</p>
-                    </div>
                     <div class="result-graphic-row-train-test" style="display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;">
                         <div class="result-graphic-box" style="flex: 1; min-width: 320px;">
                             <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">Visualization 1</h4>
@@ -7182,10 +7174,10 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                             </div>
                             <div class="download-buttons" style="margin-top: 12px; display: flex; gap: 12px; align-items: center;">
                                 <a href="/download/model_performance.xlsx?download_name=${encodeURIComponent(performanceDownloadName)}" onclick="return downloadFile('model_performance.xlsx', '${performanceDownloadName}')">
-                                    <button type="button" class='downloadperformanceButton export-button'>Model Performance XLSX</button>
+                                    <button type="button" class='downloadperformanceButton export-button'>Performance XLSX</button>
                                 </a>
                                 <a href="/download/visualizations.pdf?download_name=${encodeURIComponent(visualizationsDownloadName)}" onclick="return downloadFile('visualizations.pdf', '${visualizationsDownloadName}')">
-                                    <button class="export-button" style="font-size: 0.95rem;">Visualizations PDF</button>
+                                    <button class="export-button" style="font-size: 0.95rem;">Graphics PDF</button>
                                 </a>
                             </div>
                         </div>
@@ -7220,12 +7212,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                     <br>
                 </div>
 
-                <div class="results-header" style="margin-top: 24px; margin-bottom: 16px;">
-                    <h2>Modeling Results</h2>
-                    <p>Charts, tables, and downloads will appear here.</p>
-                </div>
                 <h3>Graphics</h3>
-                <p style="margin-top: 4px; margin-bottom: 12px; color: #666; font-size: 0.95rem;">Modeling graphics will be displayed here</p>
                 <div class="result-graphic-row-train-test" style="display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;">
                     <div class="result-graphic-box" style="flex: 1; min-width: 320px;">
                         <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">Visualization 1</h4>
@@ -7336,10 +7323,10 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                                 <p style="margin-top: 12px;"><strong>Best K:</strong> ${data.best_k}</p>
                                 <div class="download-buttons" style="margin-top: 12px; display: flex; gap: 12px; align-items: center;">
                                     <a href="${withApiRoot('/download/model_performance.xlsx')}?download_name=${encodeURIComponent(performanceDownloadName)}" onclick="return downloadFile('model_performance.xlsx', '${performanceDownloadName}')">
-                                        <button class='downloadperformanceButton export-button'>Model Performance XLSX</button>
+                                        <button class='downloadperformanceButton export-button'>Performance XLSX</button>
                                     </a>
                                     <a href="${withApiRoot('/download/visualizations.pdf')}?download_name=${encodeURIComponent(visualizationsDownloadName)}" onclick="return downloadFile('visualizations.pdf', '${visualizationsDownloadName}')">
-                                        <button class="export-button" style="font-size: 0.95rem;">Visualizations PDF</button>
+                                        <button class="export-button" style="font-size: 0.95rem;">Graphics PDF</button>
                                     </a>
                                 </div>
                             </div>
@@ -7354,12 +7341,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                         <br>
                     </div>
 
-                    <div class="results-header" style="margin-top: 24px; margin-bottom: 16px;">
-                        <h2>Modeling Results</h2>
-                        <p>Charts, tables, and downloads will appear here.</p>
-                    </div>
                     <h3>Graphics</h3>
-                    <p style="margin-top: 4px; margin-bottom: 12px; color: #666; font-size: 0.95rem;">Modeling graphics will be displayed here</p>
                     <div class="result-graphic-row-train-test" style="display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;">
                         <div class="result-graphic-box" style="flex: 1; min-width: 320px;">
                             <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">Visualization 1</h4>
@@ -8151,7 +8133,7 @@ predictionForm.addEventListener('submit', async (e) => {
                     <a href="${withApiRoot('/download/predictions.csv')}?download_name=${encodeURIComponent(predictionDownloadName)}" onclick="return downloadFile('predictions.csv', '${predictionDownloadName}')">
                         <button class="predictionresultButton export-button">Download Results CSV</button>
                     </a>
-                    <button class="secondary-button" onclick="backToModel()">Back To Model</button>
+                    <button class="secondary-button" onclick="backToModel()">Back to Modeling</button>
                     <button class="secondary-button" onclick="newPredict()">Run inference on another dataset</button>
                 </div>
                 <div class="inference-results-content" style="display: flex; flex-wrap: nowrap; gap: 24px; align-items: flex-start;">

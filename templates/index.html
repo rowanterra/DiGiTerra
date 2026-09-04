@@ -53,11 +53,11 @@
                 </div>
             </h1>
             <h4>A Machine Learning Exploration Tool</h4>
-            <div style="width: 100%; max-width: 700px; margin: 0 auto;">
+            <div class="welcome-actions">
                 <button class="welcomebutton" id='startModelingButton' aria-label="Start modeling process">Start Modeling</button>
                 <button type="button" class="welcomebutton welcomebutton--secondary" id="tryExampleButton" aria-label="Load the example penguin dataset">Try an Example</button>
-                <p class="welcome-example-note">Loads <code>penguins.csv</code>, 344 rows of Palmer penguin measurements, and opens Data Exploration. Nothing is uploaded from your computer.</p>
             </div>
+            <p class="welcome-example-note">Loads <code>penguins.csv</code>, 344 rows of Palmer penguin measurements, and opens Data Exploration. Nothing is uploaded from your computer.</p>
         </div>
         <div class="welcomesection logos">
             <img src='{{ static_root }}/ORISELogo.png' class="ORISE" alt="Oak Ridge Institute for Science and Education logo">
@@ -75,7 +75,6 @@
         <header class="doc-masthead" style="background-image: url('{{ static_root }}/doc_banner.jpg');">
             <h1 class="doc-masthead-title">DiGiTerra</h1>
             <p class="doc-masthead-tagline">A machine learning exploration tool for tabular scientific data</p>
-            <p class="doc-masthead-meta">Documentation</p>
         </header>
 
         <nav class="doc-toc" aria-label="Documentation contents">
@@ -206,22 +205,9 @@
                   <rect class="dg-data" x="220" y="1070" width="160" height="46" rx="23"/>
                   <text class="dg-label" x="300" y="1093" font-size="13">End</text>
                 </svg>
-            <p style="margin: 16px 0; color: #555;">The pipeline has five steps:</p>
-            <div class="doc-workflow-badges">
-                <span class="doc-badge doc-workflow-step">1. Upload</span>
-                <span class="doc-badge doc-workflow-arrow">→</span>
-                <span class="doc-badge doc-workflow-step">2. Explore</span>
-                <span class="doc-badge doc-workflow-arrow">→</span>
-                <span class="doc-badge doc-workflow-step">3. Preprocess</span>
-                <span class="doc-badge doc-workflow-arrow">→</span>
-                <span class="doc-badge doc-workflow-step">4. Model</span>
-                <span class="doc-badge doc-workflow-arrow">→</span>
-                <span class="doc-badge doc-workflow-step">5. Review Results</span>
-            </div>
-            <div class="doc-warning-content welcome-disclaimer-box" style="margin-top: 24px;">
-                <p class="caution-note" style="margin: 0 0 12px 0; font-weight: 600;">Disclaimer: DiGiTerra is an exploration tool, not a production system.</p>
-                <p class="caution-note" style="margin: 0 0 12px 0;">DiGiTerra is an <strong>exploratory analysis and modeling tool</strong>. <strong>Results from the application are not claimed to be reliable for decision making.</strong></p>
-                <p class="caution-note" style="margin: 0;"><strong>Findings should be checked with a statistician</strong> for model assumptions, performance in context, and interpretation. The tool supports expert analysis and does not replace the analysis.</p>
+            <p>A run moves through the five pages in the figure: upload, data exploration, model preprocessing, modeling, and inference on new data. The rail on the left of every page after upload lists them in that order.</p>
+            <div class="doc-warning-content welcome-disclaimer-box">
+                <p class="caution-note"><strong>Disclaimer.</strong> DiGiTerra is an exploration tool, not a production system. Results from the application are not claimed to be reliable for decision making. Findings should be checked with a statistician for model assumptions, performance in context, and interpretation. The tool supports expert analysis and does not replace the analysis.</p>
             </div>
         </div>
             </details>
@@ -324,60 +310,41 @@
                 </summary>
                 <div class="doc-section-body">
             <p class="doc-intro-text">DiGiTerra supports three task types.</p>
-            <div class="doc-modeling-types-grid">
-                <div class="doc-modeling-type-card">
-                    <div class="doc-approach-header">
-                        <h4>Regression <span style="font-size: 0.75em; font-weight: 500; color: #666;">(32 models)</span></h4>
-                    </div>
-                    <p><strong>Use case:</strong> a continuous numeric target, such as concentration or yield.</p>
-                    <p><strong>Method:</strong> a regression model fits the relation between the indicators and a continuous target and predicts the target for new rows.</p>
-                    <ul class="doc-feature-list">
-                        <li>Predict numeric targets</li>
-                        <li>Report R², MSE, RMSE, and MAE</li>
-                        <li>Plot predicted against actual values</li>
-                        <li>Plot residuals</li>
-                    </ul>
-                </div>
-                <div class="doc-modeling-type-card">
-                    <div class="doc-approach-header">
-                        <h4>Classification <span style="font-size: 0.75em; font-weight: 500; color: #666;">(23 models)</span></h4>
-                    </div>
-                    <p><strong>Use case:</strong> a categorical target, such as species or sample type.</p>
-                    <p><strong>Method:</strong> a classifier assigns each row to one of the classes in the target column.</p>
-                    <ul class="doc-feature-list">
-                        <li>Predict categorical targets</li>
-                        <li>Report accuracy, precision, recall, and F1</li>
-                        <li>Draw ROC curves and confusion matrices</li>
-                        <li>Binary and multi-class targets</li>
-                    </ul>
-                </div>
-                <div class="doc-modeling-type-card">
-                    <div class="doc-approach-header">
-                        <h4>Clustering <span style="font-size: 0.75em; font-weight: 500; color: #666;">(12 models)</span></h4>
-                    </div>
-                    <p><strong>Use case:</strong> grouping rows without a target column.</p>
-                    <p><strong>Method:</strong> a clustering model groups rows by similarity of the indicator values.</p>
-                    <ul class="doc-feature-list">
-                        <li>No target column (unsupervised)</li>
-                        <li>Report silhouette, Calinski-Harabasz, and Davies-Bouldin scores</li>
-                        <li>Plot cluster labels on PCA axes</li>
-                        <li>Write cluster labels to a CSV</li>
-                    </ul>
-                </div>
-            </div>
+            <table class="doc-compare">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>Regression <span class="doc-count">(32 estimators)</span></th>
+                        <th>Classification <span class="doc-count">(23 estimators)</span></th>
+                        <th>Clustering <span class="doc-count">(12 estimators)</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Target</td>
+                        <td>A continuous numeric column, such as concentration or yield.</td>
+                        <td>A categorical column, such as species or sample type. Two classes or more.</td>
+                        <td>None. Rows are grouped by similarity of the indicator values.</td>
+                    </tr>
+                    <tr>
+                        <td>Fits</td>
+                        <td>The relation between the indicators and the target, then predicts the target for new rows.</td>
+                        <td>A rule that assigns each row to one of the classes in the target column.</td>
+                        <td>Groups of rows that resemble one another.</td>
+                    </tr>
+                    <tr>
+                        <td>Reports</td>
+                        <td>R&sup2;, MSE, RMSE, MAE; predicted against actual; residuals.</td>
+                        <td>Accuracy, precision, recall, F1; ROC curves; confusion matrix.</td>
+                        <td>Silhouette, Calinski-Harabasz, Davies-Bouldin; labels on PCA axes; labels to CSV.</td>
+                    </tr>
+                </tbody>
+            </table>
             
             <!-- Types Not Supported -->
             <div class="doc-not-supported">
-                <h4 class="doc-not-supported-header">Unsupported Task Types</h4>
-                <p class="doc-intro-text">The following task types are not supported:</p>
-                <ul class="doc-not-supported-list">
-                    <li><strong>Time Series Forecasting:</strong> no ARIMA or sequence models. A regression model on lagged columns is the available substitute.</li>
-                    <li><strong>Reinforcement Learning:</strong> not included.</li>
-                    <li><strong>Transformer Models (Deep Learning):</strong> no BERT, GPT, or vision transformer architectures. The preprocessing transformers (OneHotEncoder and others) that encode categorical columns are unrelated and are included.</li>
-                    <li><strong>Other Deep Learning Architectures:</strong> MLP is included. CNN and RNN architectures are not.</li>
-                    <li><strong>Anomaly Detection:</strong> the outlier step (Isolation Forest, LOF) removes or caps training rows and is not an anomaly detector for new data.</li>
-                    <li><strong>Recommendation Systems:</strong> not included.</li>
-                </ul>
+                <h4 class="doc-not-supported-header">Not included</h4>
+                <p>DiGiTerra fits tabular models only. Time series forecasting has no ARIMA or sequence model; a regression on lagged columns is the available substitute. Deep learning stops at the multilayer perceptron, so there is no CNN, RNN, or transformer architecture (the preprocessing transformers that encode text columns are unrelated and are included). Reinforcement learning and recommendation systems are not included. The outlier step removes or caps training rows with Isolation Forest or LOF; it is not an anomaly detector for new data.</p>
             </div>
         </div>
             </details>
@@ -392,46 +359,10 @@
                 </summary>
                 <div class="doc-section-body">
                     <p>The registry holds 67 trainable estimators: 32 for regression, 23 for classification and 12 for clustering. Every mode offers all of them for its task, so the rail catalog reads 32, 23 or 12 with the task type. <code>tests/unit/test_catalog_reachable.py</code> reads the sweep record and fails when an estimator trains but no select offers it.</p>
-            <p class="doc-intro-text">Regression and classification offer three modeling modes after Model Preprocessing.</p>
-            <div class="doc-approach-grid">
-                <div class="doc-approach-card doc-automl">
-                    <div class="doc-approach-header">
-                        <h4>AutoML</h4>
-                    </div>
-                    <p>AutoML selects and tunes the model without manual configuration.</p>
-                    <ul class="doc-feature-list">
-                        <li>Automatic model selection (or specify one)</li>
-                        <li>Automatic feature selection (RFE)</li>
-                        <li>Automatic outlier detection (Isolation Forest)</li>
-                        <li>Automatic hyperparameter optimization (Randomized Search)</li>
-                        <li>Cross-validation included</li>
-                    </ul>
-                </div>
-                <div class="doc-approach-card doc-simple">
-                    <div class="doc-approach-header">
-                        <h4>Simple Modeling</h4>
-                    </div>
-                    <p>One model with the main hyperparameters.</p>
-                    <ul class="doc-feature-list">
-                        <li>Select a model</li>
-                        <li>Configure essential hyperparameters</li>
-                        <li>Run training with baseline evaluation</li>
-                    </ul>
-                </div>
-                <div class="doc-approach-card doc-advanced">
-                    <div class="doc-approach-header">
-                        <h4>Advanced Modeling</h4>
-                    </div>
-                    <p>Every Simple setting together with the options below.</p>
-                    <ul class="doc-feature-list">
-                        <li>Feature selection</li>
-                        <li>Outlier handling</li>
-                        <li>Hyperparameter optimization</li>
-                        <li>Cross-validation</li>
-                    </ul>
-                </div>
-            </div>
-            <p class="doc-note">The three modes are independent. Clustering has one interface with no mode selection.</p>
+            <p>Regression and classification offer three modeling modes after Model Preprocessing. The modes are independent, and clustering has one interface with no mode selection.</p>
+            <p><strong>AutoML</strong> selects and tunes the model without manual configuration. It chooses the estimator (or takes the one named), selects features by recursive feature elimination, removes outliers with Isolation Forest, tunes hyperparameters by randomized search, and scores by cross-validation.</p>
+            <p><strong>Simple Modeling</strong> fits one chosen estimator with its main hyperparameters and reports the score against a baseline.</p>
+            <p><strong>Advanced Modeling</strong> keeps every Simple setting and adds feature selection, outlier handling, hyperparameter optimization, and cross-validation, each set by hand.</p>
         </div>
             </details>
             </div>
@@ -569,7 +500,7 @@
                     </div>
                 </div>
                 <div class="doc-action-note">
-                    <strong>Actions:</strong> <span class="doc-action-badge">Remove</span> deletes the marked rows from the training data. <span class="doc-action-badge">Cap</span> clips the marked values to the threshold.
+                    Marked rows are then either removed from the training data or capped, which clips the marked values to the threshold.
                 </div>
             </div>
 
@@ -582,18 +513,15 @@
                 <div class="doc-method-grid">
                     <div class="doc-method-card">
                         <strong>Grid Search</strong>
-                        <span class="doc-method-badge doc-badge-slow">Slowest</span>
-                        <p>Fits every combination in the grid. Slowest.</p>
+                        <p>Fits every combination in the grid, so it is the slowest of the three.</p>
                     </div>
                     <div class="doc-method-card">
                         <strong>Randomized Search</strong>
-                        <span class="doc-method-badge doc-badge-medium">Faster</span>
                         <p>Fits a fixed number of combinations sampled from the grid.</p>
                     </div>
                     <div class="doc-method-card">
                         <strong>Bayesian Optimization</strong>
-                        <span class="doc-method-badge doc-badge-fast">Most Efficient</span>
-                        <p>Selects each next combination from a probabilistic model of the scores. Requires an extra dependency.</p>
+                        <p>Selects each next combination from a probabilistic model of the scores, so it reaches a good setting in the fewest fits. Requires an extra dependency.</p>
                     </div>
                 </div>
                 <div class="doc-warning-box">
@@ -612,7 +540,7 @@
                 <h2 id="uploadHeader">Upload Data</h2>
                 <div id="redobutton" class="hidden">
                     <button class="secondary-button" onclick="openResetPopup()">Restart with New Dataset</button>
-                    <button class="success-button" type="button" onclick="moveToModelPreprocess()">Move Forward to Model Preprocessing</button>
+                    <button class="success-button" type="button" onclick="moveToModelPreprocess()">Continue to Model Preprocessing</button>
                 </div>
             </div>
             <form id="uploadForm" enctype="multipart/form-data">
@@ -629,7 +557,7 @@
             <div class="processing-layout">
                 <div class="exploration-panel">
                     <div class="exploration-card">
-                        <h2>Columns in the Uploaded File</h2>
+                        <h2>Uploaded file</h2>
 
                         <div class="column-list" id="columnList">
                             <!-- Column headers will be displayed here -->
@@ -639,61 +567,52 @@
                     <!-- Correleation Matrices Section -->
                     <form id="corrForm">
                         <div class="exploration-card">
-                            <h2>Data to be Explored</h2>
+                            <h2>Explore</h2>
                             <div class="selectcolumns">
-                                <label for ="corrCols">Columns for data exploration</label>
-                                <input type="text" id="corrCols" name="corrCols" placeholder="Ex: A-D, Y, Z"><br>
-                                <div><br></div>  
+                                <label for ="corrCols">Columns to explore</label>
+                                <input type="text" id="corrCols" name="corrCols" placeholder="Ex: A-D, Y, Z">
                             </div>
-                        </div>
-
-                        <div class="exploration-card">
-                            <h2>Optional Exploration Preprocessing</h2>
-                            <p class="field-note" style="margin-bottom: 10px;">Blanks and zeros can be cleaned before the correlation or pairplot.</p>
-                            <div class="scaling-container">
-                                <label for="exploreDropMissing">Handle missing values (blanks) in:</label>
-                                <select name="exploreDropMissing" id="exploreDropMissing">
-                                    <option value="none">Don't apply</option>
-                                    <option value="indicator">Selected columns only</option>
-                                    <option value="all">All columns</option>
-                                </select>
-                            </div>
-                            <br>
-                            <div class="scaling-container" id="exploreImputeDiv">
-                                <label for="exploreImputeStrategy">Action for blanks</label>
-                                <select name="exploreImputeStrategy" id="exploreImputeStrategy">
-                                    <option value="none">Remove rows with blanks</option>
-                                    <option value="mean">Fill with column mean</option>
-                                    <option value="median">Fill with column median</option>
-                                    <option value="0">Fill with 0</option>
-                                    <option value="0.01">Fill with 0.01</option>
-                                </select>
-                            </div>
-                            <br>
-                            <div class="scaling-container">
-                                <label for="exploreDrop0">Treat zeros in:</label>
-                                <select name="exploreDrop0" id="exploreDrop0">
-                                    <option value="none">Don't apply</option>
-                                    <option value="indicator">Selected columns only</option>
-                                    <option value="all">All columns</option>
-                                </select>
-                            </div>
-                            <br>
-                            <div class="scaling-container hidden" id="exploreZeroActionDiv">
-                                <label for="exploreZeroHandle">Action for zeros</label>
-                                <select name="exploreZeroHandle" id="exploreZeroHandle">
-                                    <option value="drop">Remove rows with zeros (in scope)</option>
-                                    <option value="mean">Replace zeros with column mean</option>
-                                    <option value="median">Replace zeros with column median</option>
-                                    <option value="0">Replace zeros with 0</option>
-                                    <option value="0.01">Replace zeros with 0.01</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="exploration-card">
-                            <h2>Evaluate and Download</h2>
-                            <p style="margin-bottom: 15px; color: #666; font-size: 0.9em;">Non-numeric data will be ignored in data exploration.</p>
+                            <p class="field-note">Non-numeric columns are ignored in data exploration.</p>
+                            <details class="app-details">
+                                <summary>Blanks and zeros</summary>
+                                <p class="field-note">Cleaned before the correlation or pairplot.</p>
+                                <div class="scaling-container">
+                                    <label for="exploreDropMissing">Handle missing values (blanks) in:</label>
+                                    <select name="exploreDropMissing" id="exploreDropMissing">
+                                        <option value="none">Don't apply</option>
+                                        <option value="indicator">Selected columns only</option>
+                                        <option value="all">All columns</option>
+                                    </select>
+                                </div>
+                                <div class="scaling-container" id="exploreImputeDiv">
+                                    <label for="exploreImputeStrategy">Action for blanks</label>
+                                    <select name="exploreImputeStrategy" id="exploreImputeStrategy">
+                                        <option value="none">Remove rows with blanks</option>
+                                        <option value="mean">Fill with column mean</option>
+                                        <option value="median">Fill with column median</option>
+                                        <option value="0">Fill with 0</option>
+                                        <option value="0.01">Fill with 0.01</option>
+                                    </select>
+                                </div>
+                                <div class="scaling-container">
+                                    <label for="exploreDrop0">Treat zeros in:</label>
+                                    <select name="exploreDrop0" id="exploreDrop0">
+                                        <option value="none">Don't apply</option>
+                                        <option value="indicator">Selected columns only</option>
+                                        <option value="all">All columns</option>
+                                    </select>
+                                </div>
+                                <div class="scaling-container hidden" id="exploreZeroActionDiv">
+                                    <label for="exploreZeroHandle">Action for zeros</label>
+                                    <select name="exploreZeroHandle" id="exploreZeroHandle">
+                                        <option value="drop">Remove rows with zeros (in scope)</option>
+                                        <option value="mean">Replace zeros with column mean</option>
+                                        <option value="median">Replace zeros with column median</option>
+                                        <option value="0">Replace zeros with 0</option>
+                                        <option value="0.01">Replace zeros with 0.01</option>
+                                    </select>
+                                </div>
+                            </details>
                             <div class="corr-actions">
                                 <button type="submit">Evaluate</button>
                                 <div id="dataExploration" class="corr-downloads"></div>
@@ -719,15 +638,14 @@
             <div class="section-header-content">
                 <h2>Model Preprocessing</h2>
                 <button type="button" class="secondary-button" id="backToExploration">Back to Data Exploration</button>
+                <button class="success-button header-forward" type="button" id="continueToModelingButton" onclick="var f=document.getElementById('preprocessform');if(f&&window.handlePreprocessFormSubmit){var e={target:f,defaultPrevented:false,preventDefault:function(){e.defaultPrevented=true;}};window.handlePreprocessFormSubmit(e);}return false;">Continue to Modeling</button>
             </div>
         </div>
         <form id="preprocessform">
             <div class="model-preprocess-layout">
                 <div class="preprocess-column">
                     <div class="preprocess-card">
-                        <h2>Essential Inputs</h2>
-                        
-                        <h3 style="margin-top: 24px; margin-bottom: 12px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 1.1em; font-weight: 600; color: #000000;">Model Configuration</h3>
+                        <h2>Columns and task</h2>
                         <div class="selectcolumns">
                             <label for="outputType1">Modeling Task Type<span class="requiredAsterisk">*</span></label>
                             <select name="outputType1" id="outputType1" required>
@@ -751,13 +669,43 @@
                             <p class="field-note"><i>Non-numeric columns must be transformed below.</i></p>
                         </div>
 
-                        <h3 style="margin-top: 24px; margin-bottom: 12px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 1.1em; font-weight: 600; color: #000000;">Data Cleaning</h3>
+                        <h3 class="preprocess-section-title">Transformer</h3>
+                        <p class="field-note" style="margin-bottom: 8px;">Autodetect selects the non-numeric columns.</p>
+                        <div id="transformerOptionWrapper">
+                        <div class="scaling-container" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+                            <label for="useTransformer">Are any columns non-numeric?</label>
+                            <select name="useTransformer" id="useTransformer">
+                                <option value="No">No</option>
+                                <option value="Yes">Yes</option>
+                            </select>
+                            <span>Or</span>
+                            <button type="button" id="autoDetectTransformersTop" class="button-secondary" style="padding: 6px 14px; font-size: 0.9em;">Run autodetect</button>
+                        </div>
+                        <div id="transformerAutodetectMessage" class="field-note" style="margin-top: 4px; margin-bottom: 8px; min-height: 1.2em;" aria-live="polite"></div>
+                        </div>
+                        <br>
+                        <div id="transformerYes" class="hidden">
+                            <div class="scaling-container">
+                                <label for="transformerColumn">Which column(s)</label>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <input type="text" id="transformerColumn" name="transformerColumn" placeholder="Ex: A-D" style="flex: 1;">
+                                    <button type="button" id="autoDetectTransformers" class="button-secondary" style="white-space: nowrap; padding: 8px 16px; font-size: 0.9em;">Auto-detect</button>
+                                </div>
+                                <small style="display: block; margin-top: 4px; font-size: 0.85em;">Selects non-numeric and low-cardinality numeric indicator columns</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="preprocess-column">
+                    <div class="preprocess-card">
+                        <h2>Data cleaning</h2>
                         <p class="field-note" style="margin-bottom: 10px;">The check below reports <strong>blanks</strong> and <strong>zeros</strong> per column.</p>
                         <div class="scaling-container" style="margin-bottom: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
                             <span>Check selected columns for blanks or zeros:</span>
                             <button type="button" id="autoDetectNanZeros" class="button-secondary" style="padding: 6px 14px; font-size: 0.9em;">Run autodetect</button>
                         </div>
-                        <div id="dataCleaningAutodetectMessage" class="field-note" style="margin-bottom: 12px; min-height: 1.2em; color: #666;" aria-live="polite"></div>
+                        <div id="dataCleaningAutodetectMessage" class="field-note" style="margin-bottom: 12px; min-height: 1.2em;" aria-live="polite"></div>
                         <div id="dataCleaningMissingWrapper" class="scaling-container">
                             <div class="field-label-block" style="margin-bottom: 6px; font-weight: 600;">Missing values (blanks)</div>
                             <p class="field-note" style="margin-bottom: 8px;">Columns to clean, then the action for blanks.</p>
@@ -810,38 +758,12 @@
                             </select>
                         </div>
 
-                        <h3 style="margin-top: 24px; margin-bottom: 12px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 1.1em; font-weight: 600; color: #000000;">Transformer</h3>
-                        <p class="field-note" style="margin-bottom: 8px;">Autodetect selects the non-numeric columns.</p>
-                        <div id="transformerOptionWrapper">
-                        <div class="scaling-container" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
-                            <label for="useTransformer">Are any columns non-numeric?</label>
-                            <select name="useTransformer" id="useTransformer">
-                                <option value="No">No</option>
-                                <option value="Yes">Yes</option>
-                            </select>
-                            <span>Or</span>
-                            <button type="button" id="autoDetectTransformersTop" class="button-secondary" style="padding: 6px 14px; font-size: 0.9em;">Run autodetect</button>
-                        </div>
-                        <div id="transformerAutodetectMessage" class="field-note" style="margin-top: 4px; margin-bottom: 8px; min-height: 1.2em; color: #666;" aria-live="polite"></div>
-                        </div>
-                        <br>
-                        <div id="transformerYes" class="hidden">
-                            <div class="scaling-container">
-                                <label for="transformerColumn">Which column(s)</label>
-                                <div style="display: flex; gap: 8px; align-items: center;">
-                                    <input type="text" id="transformerColumn" name="transformerColumn" placeholder="Ex: A-D" style="flex: 1;">
-                                    <button type="button" id="autoDetectTransformers" class="button-secondary" style="white-space: nowrap; padding: 8px 16px; font-size: 0.9em;">Auto-detect</button>
-                                </div>
-                                <small style="display: block; margin-top: 4px; color: #666; font-size: 0.85em;">Selects non-numeric and low-cardinality numeric indicator columns</small>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
-                <div class="preprocess-column">
+                <div class="preprocess-column preprocess-column--split">
                     <div class="preprocess-card">
-                        <!-- Select other options section -->
-                        <h2>Optional Modifications</h2>
+                        <h2>Split, scaling and seed</h2>
                         <!-- Stratifying Section  -->
                         <h3 class="preprocess-section-title">Stratify</h3>
                         <div id="scalingQuestion">
@@ -915,23 +837,9 @@
                                 <input type="number" value="0.20" min="0.05" max="0.90" step="0.01" id="testSize" name="testSize" placeholder="0.20" inputmode="decimal">
                             </div>
                         </div>
-                    </div>
-
-                </div>
-
-                <div class="preprocess-column">
-                    <div class="preprocess-card">
-                        <h2>Continue to Modeling</h2>
-                        <p class="field-note" style="margin-bottom: 16px;">
-                            Process applies these settings and opens the mode selection.
-                        </p>
-                        <button class="processButton processButton--compact success-button" type="submit" id="continueToModelingButton" onclick="var f=document.getElementById('preprocessform');if(f&&window.handlePreprocessFormSubmit){var e={target:f,defaultPrevented:false,preventDefault:function(){e.defaultPrevented=true;}};window.handlePreprocessFormSubmit(e);}return false;">Process Configurations and Continue</button>
-                        <br>
-                        <p><span class="requiredAsterisk">*</span>Required field</p>
-
+                        <p class="field-note"><span class="requiredAsterisk">*</span> Required field</p>
                         <div id="stratErrorDiv"></div>
                     </div>
-
                 </div>
             </div>
         </form>
@@ -950,33 +858,21 @@
         </div>
         
         <!-- Modeling Mode Selector -->
-        <div class="preprocess-card" style="margin: 20px 0; max-width: 100%;">
-            <h2 style="margin-top: 0; margin-bottom: 16px;">Select Modeling Mode</h2>
-            <p class="field-note" style="margin-bottom: 16px;">Modeling mode.</p>
-            <div class="scaling-container">
-                <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: stretch; width: 100%;">
-                    <label class="modeling-mode-option" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; flex: 1; min-width: 250px; transition: all 0.2s;">
-                        <input type="radio" name="modelingMode" id="automlMode" value="automl" style="margin: 0;">
-                        <div>
-                            <strong>AutoML</strong>
-                            <p style="margin: 4px 0 0 0; font-size: 0.9em; color: #666;">Model selection, tuning, and preprocessing run without manual settings</p>
-                        </div>
-                    </label>
-                    <label class="modeling-mode-option" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; flex: 1; min-width: 250px; transition: all 0.2s;">
-                        <input type="radio" name="modelingMode" id="simpleMode" value="simple" checked style="margin: 0;">
-                        <div>
-                            <strong>Simple Modeling</strong>
-                            <p style="margin: 4px 0 0 0; font-size: 0.9em; color: #666;">Basic model selection and configuration</p>
-                        </div>
-                    </label>
-                    <label class="modeling-mode-option" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; flex: 1.2; min-width: 280px; transition: all 0.2s;">
-                        <input type="radio" name="modelingMode" id="advancedMode" value="advanced" style="margin: 0;">
-                        <div>
-                            <strong>Advanced Modeling</strong>
-                            <p style="margin: 4px 0 0 0; font-size: 0.9em; color: #666;">Choose model and tune hyperparameters</p>
-                        </div>
-                    </label>
-                </div>
+        <div class="preprocess-card mode-select" id="modelingModeCard">
+            <h2>Modeling mode</h2>
+            <div class="mode-select-options" role="radiogroup" aria-label="Modeling mode">
+                <label class="modeling-mode-option">
+                    <input type="radio" name="modelingMode" id="automlMode" value="automl">
+                    <span><strong>AutoML</strong> <small>chooses and tunes the model</small></span>
+                </label>
+                <label class="modeling-mode-option">
+                    <input type="radio" name="modelingMode" id="simpleMode" value="simple" checked>
+                    <span><strong>Simple</strong> <small>one model, main settings</small></span>
+                </label>
+                <label class="modeling-mode-option">
+                    <input type="radio" name="modelingMode" id="advancedMode" value="advanced">
+                    <span><strong>Advanced</strong> <small>selection, outliers, search, cross-validation</small></span>
+                </label>
             </div>
         </div>
         
@@ -6302,7 +6198,7 @@
         <div class="section-header">
             <div class="section-header-content">
                 <h2>Inference on New Data</h2>
-                <button class="secondary-button" onclick="backToModel()">Back To Model</button>
+                <button class="secondary-button" onclick="backToModel()">Back to Modeling</button>
             </div>
         </div>
         <form id="uploadPredictDf" enctype="multipart/form-data">
