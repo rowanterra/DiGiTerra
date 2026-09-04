@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "lint": "npm run build && npm run lint:files && npm run lint:bundle",
-    "lint:files": "eslint static/js/app.js static/js/core.js static/js/upload.js static/js/preprocess.js static/js/modeling.js static/js/inference.js static/js/init.js --max-warnings 0",
+    "lint:files": "eslint static/js/app.js static/js/core.js static/js/upload.js static/js/preprocess.js static/js/modeling.js static/js/narrative.js static/js/inference.js static/js/init.js --max-warnings 0",
     "lint:bundle": "eslint --no-eslintrc -c .eslintrc.bundle.cjs static/js/app.bundle.js",
     "build": "node scripts/build-js-bundle.cjs",
     "check-bundle": "node scripts/build-js-bundle.cjs && git diff --exit-code -- static/js/app.bundle.js"

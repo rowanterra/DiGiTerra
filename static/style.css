@@ -2699,10 +2699,14 @@ body.dark-mode #fileuploaddiv,
 body.dark-mode #columnsection,
 body.dark-mode #modelpreprocessing,
 body.dark-mode #modeling,
-body.dark-mode #historic,
-body.dark-mode #documentation {
+body.dark-mode #historic {
   background-color: #1a1a1a !important;
   color: #e0e0e0;
+  position: relative;
+  z-index: 1;
+}
+/* The documentation view paints its own paper in both modes. */
+body.dark-mode #documentation {
   position: relative;
   z-index: 1;
 }
@@ -3021,6 +3025,17 @@ body.dark-mode h4 {
     color: #6b5316 !important;
 }
 
+/* Notes between sections take the panel color rather than the old pale blue. */
+.documentation .doc-note,
+.documentation .doc-info-box,
+.documentation .doc-callout,
+.documentation .doc-modes-note {
+    background-color: var(--doc-panel) !important;
+    border-left: 3px solid var(--doc-heading) !important;
+    border-radius: 0.3rem;
+    color: var(--doc-ink);
+}
+
 /* The heading of the view is the masthead, so the old header row is gone. */
 .documentation > .section-header {
     display: none;
@@ -3061,6 +3076,10 @@ body.dark-mode .documentation {
     --doc-muted: #9a9f97;
     --doc-code: #cfd6d0;
 }
+body.dark-mode .documentation {
+    background-color: var(--doc-paper) !important;
+    color: var(--doc-ink);
+}
 body.dark-mode .documentation table tr:nth-child(odd) {
     background-color: #20241f;
 }
@@ -3069,4 +3088,276 @@ body.dark-mode .documentation .doc-warning-content {
 }
 body.dark-mode .documentation .doc-warning-content p {
     color: #e2c98d !important;
+}
+
+/* ---------------------------------------------------------------------------
+   Modeling as a narrative: a data panel and a model catalog on the left, the run
+   as a numbered sequence in the middle. The arrangement follows KBase, which is
+   what people who work in that environment already know how to read. The mode
+   sections keep their own markup and ids; this only places them.
+   -------------------------------------------------------------------------- */
+.narrative-wrap {
+    display: grid;
+    grid-template-columns: 288px minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+}
+.narrative-main {
+    min-width: 0;
+}
+
+.narrative-rail {
+    position: sticky;
+    top: calc(var(--header-offset, 88px) + 12px);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-height: calc(100vh - var(--header-offset, 88px) - 32px);
+}
+.narrative-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+/* The data panel sizes to its content; the catalog takes the rest of the rail. */
+#narrativeDataPanel {
+    flex: 0 0 auto;
+}
+#narrativeDataPanel .narrative-panel-body {
+    overflow: visible;
+}
+.narrative-apps {
+    flex: 1 1 auto;
+    min-height: 220px;
+}
+.narrative-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background-color: #f0f2ee;
+    border-bottom: 1px solid #e0e0e0;
+}
+.narrative-panel-head h3 {
+    margin: 0;
+    font-size: 0.95em;
+    font-weight: 600;
+    color: #24503d;
+}
+.narrative-count {
+    min-width: 22px;
+    padding: 1px 7px;
+    text-align: center;
+    font-size: 0.8em;
+    color: #4a544d;
+    background-color: #ffffff;
+    border: 1px solid #d7dbd4;
+    border-radius: 10px;
+}
+.narrative-panel-body {
+    padding: 8px;
+    overflow-y: auto;
+}
+.narrative-search {
+    padding: 8px;
+    border-bottom: 1px solid #eeeeee;
+}
+.narrative-search input {
+    width: 100%;
+    padding: 6px 8px;
+    font-size: 0.9em;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+.narrative-empty {
+    margin: 0;
+    padding: 12px 6px;
+    font-size: 0.88em;
+    font-style: italic;
+    color: #6b6b6b;
+}
+.narrative-group {
+    margin: 10px 0 4px 6px;
+    font-size: 0.72em;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #6b6b6b;
+}
+.narrative-group span {
+    color: #9a9a9a;
+}
+
+/* One row per model, a lettered tile and a name, as an app list reads. */
+.narrative-item {
+    display: flex;
+    gap: 9px;
+    align-items: center;
+    width: 100%;
+    padding: 6px 8px;
+    text-align: left;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    font: inherit;
+    color: #2c3e50;
+    cursor: pointer;
+}
+.narrative-item-data {
+    align-items: flex-start;
+    cursor: default;
+}
+.narrative-app:hover {
+    background-color: #f0f2ee;
+    border-color: #d7dbd4;
+}
+.narrative-app.is-selected {
+    background-color: #eaf1ec;
+    border-color: #357a53;
+}
+.narrative-app-name {
+    font-size: 0.9em;
+    line-height: 1.35;
+}
+.narrative-tile {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    font-size: 0.72em;
+    font-weight: 700;
+    color: #ffffff;
+    background-color: #357a53;
+    border-radius: 5px;
+}
+.narrative-item-data strong {
+    display: block;
+    font-size: 0.92em;
+    word-break: break-word;
+}
+.narrative-item-data p {
+    margin: 3px 0 0;
+    font-size: 0.82em;
+    color: #6b6b6b;
+    line-height: 1.35;
+}
+
+/* The run as a numbered sequence. The current step is filled, the steps behind
+   it are marked done, the steps ahead are outlined. */
+.narrative-flow {
+    margin: 0 0 16px 0;
+    padding: 12px 14px;
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+}
+.narrative-flow ol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.narrative-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-right: 14px;
+    margin-right: 8px;
+    font-size: 0.88em;
+    color: #8a8a8a;
+    border-right: 1px solid #e6e6e6;
+}
+.narrative-step:last-child {
+    padding-right: 0;
+    margin-right: 0;
+    border-right: 0;
+}
+.narrative-step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    font-size: 0.85em;
+    font-weight: 600;
+    color: #8a8a8a;
+    background-color: #ffffff;
+    border: 1px solid #d5d5d5;
+    border-radius: 50%;
+}
+.narrative-step.is-done {
+    color: #357a53;
+}
+.narrative-step.is-done .narrative-step-num {
+    color: #ffffff;
+    background-color: #357a53;
+    border-color: #357a53;
+}
+.narrative-step.is-current {
+    color: #24503d;
+    font-weight: 600;
+}
+.narrative-step.is-current .narrative-step-num {
+    color: #ffffff;
+    background-color: #24503d;
+    border-color: #24503d;
+}
+
+@media (max-width: 1100px) {
+    .narrative-wrap {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .narrative-rail {
+        position: static;
+        max-height: none;
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    .narrative-panel {
+        flex: 1 1 320px;
+    }
+    .narrative-apps {
+        max-height: 320px;
+    }
+}
+
+body.dark-mode .narrative-panel,
+body.dark-mode .narrative-flow {
+    background-color: #242424;
+    border-color: #3a3a3a;
+}
+body.dark-mode .narrative-panel-head {
+    background-color: #2c332e;
+    border-bottom-color: #3a3a3a;
+}
+body.dark-mode .narrative-panel-head h3 {
+    color: #8fbfa3;
+}
+body.dark-mode .narrative-count {
+    color: #ddd9d0;
+    background-color: #1f1f1f;
+    border-color: #3a3a3a;
+}
+body.dark-mode .narrative-item {
+    color: #e0e0e0;
+}
+body.dark-mode .narrative-app:hover {
+    background-color: #2c332e;
+    border-color: #3a3a3a;
+}
+body.dark-mode .narrative-app.is-selected {
+    background-color: #2b3a30;
+    border-color: #4f9d72;
+}
+body.dark-mode .narrative-step-num {
+    background-color: #1f1f1f;
+    border-color: #3a3a3a;
 }

@@ -2508,6 +2508,7 @@ processForm.addEventListener('submit', async (e) => {
     }
     
     let isAsyncProcessing = false;
+    if (typeof narrativeSetStep === 'function') narrativeSetStep('run');
     try {
         const response = await fetch('/process', {
             method: 'POST',
@@ -2745,6 +2746,7 @@ function renderRunNotes(data) {
 }
 
 function processModelResult(data, unitStr = '', predictorCols = [], hyperparameters = {}) {
+    if (typeof narrativeSetStep === 'function') narrativeSetStep('results');
     console.log('processModelResult called with data:', data);
     try {
         const errorDiv = getCachedElement('errorDiv');
