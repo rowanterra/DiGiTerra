@@ -249,11 +249,8 @@ function narrativeBuildFlow() {
     ).join('')}</ol>`;
 
     host.insertBefore(flow, host.firstChild);
-    // The page stacked the tab bar, this page header and the strip. The bar is gone
-    // to the rail; the header moves inside the strip. The node is moved, so
-    // #backToModelPreprocess and #modelingHeaderActions keep their ids and handlers.
-    const pageHeader = host.querySelector(':scope > .section-header');
-    if (pageHeader) flow.insertBefore(pageHeader, flow.firstChild);
+    // The page header is gone: the rail is the navigation and its active entry is the
+    // title. The strip stays as one slim line of run progress at the top of the view.
     return true;
 }
 
@@ -346,6 +343,7 @@ function narrativeRefreshData() {
             <span class="narrative-tile">CSV</span>
             <div>
                 <strong>${escapeHtml(name)}</strong>
+                <button type="button" class="narrative-replace" id="narrativeReplaceFile">Replace</button>
                 ${shape ? `<p>${escapeHtml(shape)}</p>` : ''}
                 ${columns ? `<p class="narrative-selection">${escapeHtml(columns)}</p>` : ''}
             </div>
@@ -459,6 +457,16 @@ function narrativeWire() {
     }
     const search = document.getElementById('narrativeAppSearch');
     if (search) search.addEventListener('input', narrativeRefreshApps);
+
+    // The Data panel is redrawn, so the click is caught on the panel rather than
+    // bound to a button that will not be the same node next time.
+    const dataBody = document.getElementById('narrativeDataBody');
+    if (dataBody) {
+        dataBody.addEventListener('click', (e) => {
+            if (!e.target.closest('#narrativeReplaceFile')) return;
+            if (typeof openResetPopup === 'function') openResetPopup();
+        });
+    }
 
     ['indicators', 'predictors'].forEach((id) => {
         const el = document.getElementById(id);

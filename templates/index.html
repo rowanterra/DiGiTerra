@@ -536,13 +536,11 @@
 <!-- File upload when user clicks 'Start Modeling' -->
     <div id="fileuploaddiv" class="uploadform hidden">
         <div class="upload-card">
-            <div class="RedoButton">
-                <h2 id="uploadHeader">Upload Data</h2>
-                <div id="redobutton" class="hidden">
-                    <button class="secondary-button" onclick="openResetPopup()">Restart with New Dataset</button>
-                    <button class="success-button" type="button" onclick="moveToModelPreprocess()">Continue to Model Preprocessing</button>
-                </div>
-            </div>
+            <!-- The rail is the navigation and its active entry is the title, so this
+                 band is gone. #uploadHeader and #redobutton stay for the handlers and
+                 the tests that address them; neither is drawn. -->
+            <h2 id="uploadHeader" class="hidden">Upload Data</h2>
+            <div id="redobutton" class="hidden"></div>
             <form id="uploadForm" enctype="multipart/form-data">
                 <input type="file" name="file" id="file" accept=".csv,.xlsx,.xlsm,.parquet" required>
 
@@ -556,9 +554,10 @@
         <div id="columnsection" class="columnSection hidden">
             <div class="processing-layout">
                 <div class="exploration-panel">
-                    <div class="exploration-card">
-                        <h2>Uploaded file</h2>
-
+                    <!-- The rail's Data panel states the file and its shape. This block
+                         stays because checkHasDataForExploration reads #columnList to
+                         decide whether a session has data; it is not drawn. -->
+                    <div class="exploration-card hidden">
                         <div class="column-list" id="columnList">
                             <!-- Column headers will be displayed here -->
                         </div>
@@ -615,6 +614,7 @@
                             </details>
                             <div class="corr-actions">
                                 <button type="submit">Evaluate</button>
+                                <button class="success-button" type="button" id="continueToPreprocessButton" onclick="moveToModelPreprocess()">Continue to Model Preprocessing</button>
                                 <div id="dataExploration" class="corr-downloads"></div>
                             </div>
                         </div>
@@ -634,13 +634,8 @@
     </div>   
 <!-- User Selects targets, indicators, output type, transformers, stratify, etc then clicks process button -->
     <div id="userInputSection" class="userInputSection hidden">
-        <div class="section-header">
-            <div class="section-header-content">
-                <h2>Model Preprocessing</h2>
-                <button type="button" class="secondary-button" id="backToExploration">Back to Data Exploration</button>
-                <button class="success-button header-forward" type="button" id="continueToModelingButton" onclick="var f=document.getElementById('preprocessform');if(f&&window.handlePreprocessFormSubmit){var e={target:f,defaultPrevented:false,preventDefault:function(){e.defaultPrevented=true;}};window.handlePreprocessFormSubmit(e);}return false;">Continue to Modeling</button>
-            </div>
-        </div>
+        <!-- Navigation is the rail. #backToExploration stays for its handler. -->
+        <button type="button" class="secondary-button hidden" id="backToExploration">Back to Data Exploration</button>
         <form id="preprocessform">
             <div class="model-preprocess-layout">
                 <div class="preprocess-column">
@@ -842,6 +837,9 @@
                     </div>
                 </div>
             </div>
+            <div class="preprocess-actions">
+                <button class="success-button header-forward" type="button" id="continueToModelingButton" onclick="var f=document.getElementById('preprocessform');if(f&&window.handlePreprocessFormSubmit){var e={target:f,defaultPrevented:false,preventDefault:function(){e.defaultPrevented=true;}};window.handlePreprocessFormSubmit(e);}return false;">Continue to Modeling</button>
+            </div>
         </form>
     </div>
 
@@ -849,13 +847,10 @@
 <!-- Unified Modeling Page -->
 <div class="container">
     <div class="form hidden" id="columnSelection" data-ready="false">
-        <div class="section-header">
-            <div class="section-header-content">
-                <h2>Modeling</h2>
-                <button type="button" class="secondary-button" id="backToModelPreprocess">Back to Model Preprocessing</button>
-                <div id="modelingHeaderActions"></div>
-            </div>
-        </div>
+        <!-- The run strip is the only band this view keeps. These two stay for the
+             handlers and for narrative.js, which fills #modelingHeaderActions. -->
+        <button type="button" class="secondary-button hidden" id="backToModelPreprocess">Back to Model Preprocessing</button>
+        <div id="modelingHeaderActions" class="hidden"></div>
         
         <!-- Modeling Mode Selector -->
         <div class="preprocess-card mode-select" id="modelingModeCard">
@@ -6195,12 +6190,7 @@
 <!-- Advanced Modeling Page (legacy full-page panel; kept for DOM clone source — unified advanced UI is #advancedModelingSection) -->
 
     <div id="predictionDiv" class="hidden">
-        <div class="section-header">
-            <div class="section-header-content">
-                <h2>Inference on New Data</h2>
-                <button class="secondary-button" onclick="backToModel()">Back to Modeling</button>
-            </div>
-        </div>
+        <!-- Navigation is the rail. -->
         <form id="uploadPredictDf" enctype="multipart/form-data">
             <h3>Upload New Data File to Predict With</h3>
             <input type="file" name="predictFile" id="predictFile" accept=".csv,.xlsx,.xlsm,.parquet" required>

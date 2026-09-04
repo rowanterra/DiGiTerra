@@ -6597,6 +6597,10 @@ function renderRunNotes(data) {
 
 function processModelResult(data, unitStr = '', predictorCols = [], hyperparameters = {}) {
     if (typeof narrativeSetStep === 'function') narrativeSetStep('results');
+    // The way on shows once there is a model to apply, inside the results panel.
+    // Queued rather than called: the panel this appends to is revealed by the render
+    // that is still running, so a direct call finds every panel hidden.
+    if (typeof showInferenceForward === 'function') window.setTimeout(showInferenceForward, 0);
     console.log('processModelResult called with data:', data);
     try {
         const errorDiv = getCachedElement('errorDiv');
@@ -7518,6 +7522,32 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
 
 
 
+/* Put "Continue to Inference on New Data" in the results panel of the visible mode.
+   It appears only after a run has finished, because before that there is no model to
+   apply and the button would lead to a page that refuses. */
+function showInferenceForward() {
+    const panels = ['NumericResultDiv', 'ClusterResultDiv', 'ClassifierResultDiv']
+    for (const id of panels) {
+        const panel = document.getElementById(id)
+        if (!panel || panel.classList.contains('hidden')) continue
+        if (panel.querySelector('.results-forward')) return
+        const wrap = document.createElement('div')
+        wrap.className = 'results-forward'
+        const button = document.createElement('button')
+        button.type = 'button'
+        button.className = 'success-button'
+        button.id = 'continueToInferenceButton'
+        button.textContent = 'Continue to Inference on New Data'
+        button.addEventListener('click', () => {
+            if (typeof showTab === 'function') showTab('historic')
+        })
+        wrap.appendChild(button)
+        panel.appendChild(wrap)
+        return
+    }
+}
+
+
 // === narrative.js ===
 /**
  * The application as a narrative: one rail down the left carrying navigation, the
@@ -7770,11 +7800,8 @@ function narrativeBuildFlow() {
     ).join('')}</ol>`;
 
     host.insertBefore(flow, host.firstChild);
-    // The page stacked the tab bar, this page header and the strip. The bar is gone
-    // to the rail; the header moves inside the strip. The node is moved, so
-    // #backToModelPreprocess and #modelingHeaderActions keep their ids and handlers.
-    const pageHeader = host.querySelector(':scope > .section-header');
-    if (pageHeader) flow.insertBefore(pageHeader, flow.firstChild);
+    // The page header is gone: the rail is the navigation and its active entry is the
+    // title. The strip stays as one slim line of run progress at the top of the view.
     return true;
 }
 
@@ -7867,6 +7894,7 @@ function narrativeRefreshData() {
             <span class="narrative-tile">CSV</span>
             <div>
                 <strong>${escapeHtml(name)}</strong>
+                <button type="button" class="narrative-replace" id="narrativeReplaceFile">Replace</button>
                 ${shape ? `<p>${escapeHtml(shape)}</p>` : ''}
                 ${columns ? `<p class="narrative-selection">${escapeHtml(columns)}</p>` : ''}
             </div>
@@ -7980,6 +8008,16 @@ function narrativeWire() {
     }
     const search = document.getElementById('narrativeAppSearch');
     if (search) search.addEventListener('input', narrativeRefreshApps);
+
+    // The Data panel is redrawn, so the click is caught on the panel rather than
+    // bound to a button that will not be the same node next time.
+    const dataBody = document.getElementById('narrativeDataBody');
+    if (dataBody) {
+        dataBody.addEventListener('click', (e) => {
+            if (!e.target.closest('#narrativeReplaceFile')) return;
+            if (typeof openResetPopup === 'function') openResetPopup();
+        });
+    }
 
     ['indicators', 'predictors'].forEach((id) => {
         const el = document.getElementById(id);

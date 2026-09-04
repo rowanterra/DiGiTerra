@@ -2757,6 +2757,10 @@ function renderRunNotes(data) {
 
 function processModelResult(data, unitStr = '', predictorCols = [], hyperparameters = {}) {
     if (typeof narrativeSetStep === 'function') narrativeSetStep('results');
+    // The way on shows once there is a model to apply, inside the results panel.
+    // Queued rather than called: the panel this appends to is revealed by the render
+    // that is still running, so a direct call finds every panel hidden.
+    if (typeof showInferenceForward === 'function') window.setTimeout(showInferenceForward, 0);
     console.log('processModelResult called with data:', data);
     try {
         const errorDiv = getCachedElement('errorDiv');
@@ -3676,3 +3680,29 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
     }
 }
 
+
+
+/* Put "Continue to Inference on New Data" in the results panel of the visible mode.
+   It appears only after a run has finished, because before that there is no model to
+   apply and the button would lead to a page that refuses. */
+function showInferenceForward() {
+    const panels = ['NumericResultDiv', 'ClusterResultDiv', 'ClassifierResultDiv']
+    for (const id of panels) {
+        const panel = document.getElementById(id)
+        if (!panel || panel.classList.contains('hidden')) continue
+        if (panel.querySelector('.results-forward')) return
+        const wrap = document.createElement('div')
+        wrap.className = 'results-forward'
+        const button = document.createElement('button')
+        button.type = 'button'
+        button.className = 'success-button'
+        button.id = 'continueToInferenceButton'
+        button.textContent = 'Continue to Inference on New Data'
+        button.addEventListener('click', () => {
+            if (typeof showTab === 'function') showTab('historic')
+        })
+        wrap.appendChild(button)
+        panel.appendChild(wrap)
+        return
+    }
+}
