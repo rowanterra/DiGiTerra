@@ -1106,8 +1106,8 @@
     <!-- Dropdowns populated based on output type selected -->
         <div class="modelSection">  
             <!-- Descriptive text about column selection -->
-            <div style="margin-bottom: 16px; padding: 12px; background-color: #f8f9fa; border-radius: 6px; border-left: 3px solid #357a53;">
-                <span id="simpleModelingSelectionNote" class="modeling-selection-note" style="font-style: italic; color: #2c3e50;"></span>
+            <div class="app-note">
+                <span id="simpleModelingSelectionNote" class="modeling-selection-note"></span>
             </div>
             
             <!-- Model Selection -->
@@ -2509,8 +2509,8 @@
                 <form id="advancedOptimizationForm">
                     <div class="modelSection">
                         <!-- Descriptive text about column selection -->
-                        <div style="margin-bottom: 12px; padding: 10px 12px; background-color: #f8f9fa; border-radius: 6px; border-left: 3px solid #357a53;">
-                            <span id="advancedModelingSelectionNote" class="modeling-selection-note" style="font-style: italic; color: #2c3e50;"></span>
+                        <div class="app-note app-note--tight">
+                            <span id="advancedModelingSelectionNote" class="modeling-selection-note"></span>
                         </div>
                         
                         <div class="preprocess-card" style="margin-bottom: 16px;">
@@ -5875,8 +5875,8 @@
                 <form id="automlForm">
                     <div class="modelSection">
                         <!-- Descriptive text about column selection -->
-                        <div style="margin-bottom: 16px; padding: 12px; background-color: #f8f9fa; border-radius: 6px; border-left: 3px solid #357a53;">
-                            <span id="automlModelingSelectionNote" class="modeling-selection-note" style="font-style: italic; color: #2c3e50;"></span>
+                        <div class="app-note">
+                            <span id="automlModelingSelectionNote" class="modeling-selection-note"></span>
                         </div>
                         
                         <!-- Model Selection -->
@@ -6007,7 +6007,7 @@
                             <div class="preprocess-card" style="margin-top: 20px;">
                                 <h2>AutoML Settings Summary</h2>
                                 <p class="field-note" style="margin-bottom: 16px;">AutoML configuration:</p>
-                                <div id="automlSettingsDisplay" style="padding: 16px; background-color: #f0f7ff; border: 2px solid #357a53; border-radius: 8px; margin: 12px 0;">
+                                <div id="automlSettingsDisplay" class="app-panel app-panel--accent">
                                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 0.95rem;">
                                         <div><strong>Model:</strong> <span id="automlDisplayModel" style="color: #2c3e50;">-</span></div>
                                         <div><strong>Scaler:</strong> <span id="automlDisplayScaler" style="color: #2c3e50;">-</span></div>
@@ -6041,7 +6041,7 @@
                                 </div>
                             </div>
                             
-                            <div style="margin-top: 20px; padding: 16px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #e0e0e0;">
+                            <div class="app-panel app-panel--run">
                                 <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px;">
                                     <button type="submit" class='processButton processButton--compact success-button' id="automlSubmitButton">Run AutoML</button>
                                     <button type="button" class='secondary-button' id="stopAutomlButton" style="display: none; padding: 12px 24px;">Stop AutoML</button>
@@ -6070,7 +6070,7 @@
             </div>
             
             <!-- Loading div outside model-layout to preserve grid structure -->
-            <div id="automlLoading" class="hidden" style="margin-top: 20px; padding: 20px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #e0e0e0; max-width: 100%;" role="status" aria-live="polite" aria-atomic="true" aria-label="AutoML loading status"></div>
+            <div id="automlLoading" class="hidden app-panel app-panel--status" role="status" aria-live="polite" aria-atomic="true" aria-label="AutoML loading status"></div>
         </div>
     </div>
     

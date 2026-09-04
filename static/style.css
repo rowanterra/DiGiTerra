@@ -6,6 +6,58 @@
 
 :root {
   --header-offset: 88px;
+
+  /* The surface, type and spacing tokens for the application views. The values
+     are the ones the Modeling page's narrative treatment established; naming
+     them is what lets the header, the tab bar, upload, preprocessing and
+     inference take the same treatment instead of each carrying its own hex.
+     The Documentation view keeps its own --doc-* palette, defined further down.
+
+     The accent green does not change between light and dark: every rule that
+     used it did so identically in both, so it is one value in one place. */
+  --app-accent: #357a53;
+  --app-accent-deep: #24503d;
+  --app-accent-lift: #4a9d6e;
+  --app-on-accent: #ffffff;
+
+  --app-page: #f4f4f9;
+  --app-panel: #ffffff;
+  --app-panel-head: #f0f2ee;
+  --app-sunken: #f8f9fa;
+  --app-border: #e0e0e0;
+  --app-rule: #d7dbd4;
+  --app-hairline: #eeeeee;
+
+  --app-ink: #333333;
+  --app-heading: var(--app-accent-deep);
+  --app-muted: #6b6b6b;
+  --app-soft: #4a544d;
+  --app-accent-wash: #eaf1ec;
+
+  --app-radius: 8px;
+  --app-radius-sm: 6px;
+  --app-pad: 14px;
+  --app-gap: 16px;
+  --app-gap-sm: 8px;
+}
+
+/* Dark mode moves the surfaces, not the accent. The values are the ones the
+   narrative panels already used, so a view that takes these tokens matches the
+   Modeling page in both themes. */
+body.dark-mode {
+  --app-page: #1a1a1a;
+  --app-panel: #242424;
+  --app-panel-head: #2c332e;
+  --app-sunken: #1f1f1f;
+  --app-border: #3a3a3a;
+  --app-rule: #3a3a3a;
+  --app-hairline: #3a3a3a;
+
+  --app-ink: #e0e0e0;
+  --app-heading: #8fbfa3;
+  --app-muted: #b9b9b9;
+  --app-soft: #cfd6d0;
+  --app-accent-wash: #2b3a30;
 }
 
 html,
@@ -46,7 +98,7 @@ body:not(.dark-mode) #main-content {
   left: 0;           /* Aligns to the left */
   width: 100%;       /* Full width */
   min-height: 72px;      /* Set height */
-  background-color: #357a53; /* Dark background */
+  background-color: var(--app-accent); /* Dark background */
   color: white;
   display: flex;
   align-items: center;
@@ -136,7 +188,7 @@ input:focus,
 select:focus,
 textarea:focus,
 a:focus {
-  outline: 3px solid #357a53;
+  outline: 3px solid var(--app-accent);
   outline-offset: 2px;
   box-shadow: 0 0 0 2px rgba(53, 122, 83, 0.2);
 }
@@ -146,7 +198,7 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 a:focus-visible {
-  outline: 3px solid #357a53;
+  outline: 3px solid var(--app-accent);
   outline-offset: 2px;
 }
 
@@ -155,7 +207,7 @@ a:focus-visible {
   position: absolute;
   top: -40px;
   left: 0;
-  background: #357a53;
+  background: var(--app-accent);
   color: white;
   padding: 8px;
   text-decoration: none;
@@ -199,22 +251,22 @@ a:focus-visible {
 
 /* Mode selector radio button styling */
 label:has(input[type="radio"][name="modelingMode"]:checked) {
-  border-color: #357a53 !important;
+  border-color: var(--app-accent) !important;
   background-color: #f0fff4;
 }
 
 label:has(input[type="radio"][name="modelingMode"]:checked) strong {
-  color: #357a53;
+  color: var(--app-accent);
 }
 
 /* Firefox-safe fallback for modeling mode selector */
 .modeling-mode-option.is-selected {
-  border-color: #357a53 !important;
+  border-color: var(--app-accent) !important;
   background-color: #f0fff4;
 }
 
 .modeling-mode-option.is-selected strong {
-  color: #357a53;
+  color: var(--app-accent);
 }
 /* .welcome{
   text-align: center;
@@ -249,7 +301,7 @@ label:has(input[type="radio"][name="modelingMode"]:checked) strong {
   width: 100%; /* Span full width of parent container */
   max-width: 100%; /* Span full width of logo + DiGiTerra text container */
   margin: 0 auto;
-  background-color: #357a53; /* Match banner green */
+  background-color: var(--app-accent); /* Match banner green */
   box-sizing: border-box;
   border-radius: 8px;
   display: block; /* Ensure it's a block element to respect width */
@@ -348,7 +400,7 @@ label:has(input[type="radio"][name="modelingMode"]:checked) strong {
   vertical-align: middle;
   display: inline-block;
   font-size: 1.8em;
-  color: #357a53;
+  color: var(--app-accent);
   word-wrap: break-word;
 }
 /* .uploadform{
@@ -580,7 +632,7 @@ input[type="file"] {
   position: relative;
   /* Visual indicators for scrollable content - enhanced scrollbar */
   scrollbar-width: thin;
-  scrollbar-color: #357a53 #f0f0f0;
+  scrollbar-color: var(--app-accent) #f0f0f0;
   /* Subtle inset shadow to indicate scrollable area */
   box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.04);
 }
@@ -601,7 +653,7 @@ input[type="file"] {
 
 .stats-table-wrapper::-webkit-scrollbar-thumb,
 .model-stats-table-wrapper::-webkit-scrollbar-thumb {
-  background: #357a53;
+  background: var(--app-accent);
   border-radius: 4px;
   border: 1px solid #f0f0f0;
   min-height: 30px; /* Make scrollbar thumb more visible */
@@ -617,7 +669,7 @@ input[type="file"] {
 .model-stats-table-wrapper:has(table tbody tr:nth-child(6)),
 .stats-table-wrapper:has(table tr:nth-child(6)),
 .model-stats-table-wrapper:has(table tr:nth-child(6)) {
-  border-color: #357a53;
+  border-color: var(--app-accent);
   border-width: 1.5px;
 }
 
@@ -907,8 +959,8 @@ input[type="file"] {
   font-style: italic;
   margin: 16px 0 20px 0;
   padding: 12px 16px;
-  background-color: #f8f9fa;
-  border-left: 3px solid #357a53;
+  background-color: var(--doc-panel);
+  border-left: 3px solid var(--app-accent);
   border-radius: 4px;
 }
 
@@ -971,7 +1023,7 @@ input[type="file"] {
 .doc-modeling-type-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-color: #357a53;
+  border-color: var(--app-accent);
 }
 
 /* Approach Cards */
@@ -1006,7 +1058,7 @@ input[type="file"] {
 
 .doc-advanced {
   background-color: #f0fff4;
-  border-color: #357a53;
+  border-color: var(--app-accent);
 }
 
 .doc-approach-header {
@@ -1042,15 +1094,15 @@ input[type="file"] {
   content: "•";
   position: absolute;
   left: 0;
-  color: #357a53;
+  color: var(--app-accent);
   font-weight: bold;
 }
 
 .doc-note {
   margin-top: 20px;
   padding: 12px 16px;
-  background-color: #f8f9fa;
-  border-left: 4px solid #357a53;
+  background-color: var(--doc-panel);
+  border-left: 4px solid var(--app-accent);
   border-radius: 4px;
   font-size: 0.95em;
 }
@@ -1065,9 +1117,9 @@ input[type="file"] {
 
 .doc-concept-item {
   padding: 16px;
-  background-color: #f8f9fa;
+  background-color: var(--doc-panel);
   border-radius: 8px;
-  border-left: 4px solid #357a53;
+  border-left: 4px solid var(--app-accent);
 }
 
 .doc-concept-item strong {
@@ -1094,9 +1146,9 @@ input[type="file"] {
 
 .doc-tip-item {
   padding: 16px;
-  background-color: #f8f9fa;
+  background-color: var(--doc-panel);
   border-radius: 8px;
-  border-left: 4px solid #357a53;
+  border-left: 4px solid var(--app-accent);
 }
 
 .doc-tip-item strong {
@@ -1147,7 +1199,7 @@ input[type="file"] {
 
 .doc-feature-card {
   padding: 16px;
-  background-color: #f8f9fa;
+  background-color: var(--doc-panel);
   border-radius: 8px;
   border: 1px solid #e5e5e5;
   transition: background-color 0.2s ease;
@@ -1199,7 +1251,7 @@ input[type="file"] {
 
 .doc-method-card {
   padding: 18px;
-  background-color: #f8f9fa;
+  background-color: var(--doc-panel);
   border-radius: 8px;
   border: 1px solid #e5e5e5;
 }
@@ -1247,7 +1299,7 @@ input[type="file"] {
 .doc-action-note {
   margin-top: 16px;
   padding: 12px 16px;
-  background-color: #f8f9fa;
+  background-color: var(--doc-panel);
   border-radius: 6px;
   font-size: 0.95em;
 }
@@ -1255,7 +1307,7 @@ input[type="file"] {
 .doc-action-badge {
   display: inline-block;
   padding: 4px 10px;
-  background-color: #357a53;
+  background-color: var(--app-accent);
   color: white;
   border-radius: 12px;
   font-size: 0.85em;
@@ -1278,7 +1330,7 @@ input[type="file"] {
   margin: 24px auto 28px auto;
   text-align: center;
   padding: 24px 20px;
-  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  background: linear-gradient(135deg, var(--doc-panel) 0%, #ffffff 100%);
   border-radius: 12px;
   max-width: 100%;
   overflow-x: auto;
@@ -1760,7 +1812,7 @@ body.dark-mode .close-btn {
 }
 
 .success-button {
-  background-color: #357a53; /* Match banner green */
+  background-color: var(--app-accent); /* Match banner green */
   position: relative;
   padding-right: 28px; /* Make room for right triangle */
 }
@@ -1838,8 +1890,8 @@ button.success-button::after,
 
 .advanced-options-button {
   background-color: transparent;
-  border: 2px solid #357a53;
-  color: #357a53;
+  border: 2px solid var(--app-accent);
+  color: var(--app-accent);
   padding: 10px 20px;
   border-radius: 4px;
   cursor: pointer;
@@ -1871,7 +1923,7 @@ button.success-button::after,
   padding: 10px 20px;
   font-size: 1rem ;
   /* margin-left: 10%; */
-  background-color: #357a53; /* Match banner green */
+  background-color: var(--app-accent); /* Match banner green */
 }
 
 .inference-row {
@@ -2074,13 +2126,13 @@ body.dark-mode #loading {
 .progress-overall {
   margin-bottom: 30px;
   padding: 20px;
-  background-color: #f8f9fa;
+  background-color: var(--app-sunken);
   border-radius: 8px;
 }
 
 .progress-overall h3 {
   margin: 0 0 10px 0;
-  color: #357a53;
+  color: var(--app-accent);
   font-size: 1.2em;
 }
 
@@ -2096,7 +2148,7 @@ body.dark-mode #loading {
 
 .progress-bar {
   height: 100%;
-  background: linear-gradient(90deg, #357a53 0%, #4a9d6e 100%);
+  background: linear-gradient(90deg, var(--app-accent) 0%, #4a9d6e 100%);
   transition: width 0.3s ease;
   border-radius: 12px;
 }
@@ -2162,7 +2214,7 @@ body.dark-mode #loading {
 
 .progress-stage-percent {
   font-weight: 600;
-  color: #357a53;
+  color: var(--app-accent);
   min-width: 50px;
   text-align: right;
 }
@@ -2263,7 +2315,7 @@ body.dark-mode .doc-simple {
 
 body.dark-mode .doc-advanced {
   background-color: #1a2d1f;
-  border-color: #357a53;
+  border-color: var(--app-accent);
 }
 
 body.dark-mode .doc-approach-header h4 {
@@ -2280,7 +2332,7 @@ body.dark-mode .doc-modeling-type-card {
 }
 
 body.dark-mode .doc-modeling-type-card:hover {
-  border-color: #357a53;
+  border-color: var(--app-accent);
 }
 
 body.dark-mode .doc-modeling-type-card h4 {
@@ -2295,7 +2347,7 @@ body.dark-mode .doc-modeling-type-card p {
   margin-top: 12px;
   padding: 10px 14px;
   background-color: #f0f7f3;
-  border-left: 3px solid #357a53;
+  border-left: 3px solid var(--app-accent);
   border-radius: 4px;
   font-size: 0.9em;
   color: #2c3e50;
@@ -2322,7 +2374,7 @@ body.dark-mode .doc-modeling-type-card p {
 .doc-not-supported-list li {
   padding: 12px 16px;
   margin-bottom: 10px;
-  background-color: #f8f9fa;
+  background-color: var(--doc-panel);
   border-left: 3px solid #9e9e9e;
   border-radius: 4px;
   color: #555;
@@ -2334,7 +2386,7 @@ body.dark-mode .doc-modeling-type-card p {
 
 body.dark-mode .doc-type-example {
   background-color: #1a2d1f;
-  border-left-color: #357a53;
+  border-left-color: var(--app-accent);
   color: #b0b0b0;
 }
 
@@ -2362,13 +2414,13 @@ body.dark-mode .doc-feature-list li {
 
 body.dark-mode .doc-note {
   background-color: #3a3a3a;
-  border-left-color: #357a53;
+  border-left-color: var(--app-accent);
   color: #b0b0b0;
 }
 
 body.dark-mode .doc-concept-item {
   background-color: #3a3a3a;
-  border-left-color: #357a53;
+  border-left-color: var(--app-accent);
 }
 
 body.dark-mode .doc-concept-item strong {
@@ -2381,7 +2433,7 @@ body.dark-mode .doc-concept-item p {
 
 body.dark-mode .doc-tip-item {
   background-color: #3a3a3a;
-  border-left-color: #357a53;
+  border-left-color: var(--app-accent);
 }
 
 body.dark-mode .doc-tip-item strong {
@@ -2473,7 +2525,7 @@ body.dark-mode .doc-action-note {
 }
 
 body.dark-mode .doc-action-badge {
-  background-color: #357a53;
+  background-color: var(--app-accent);
   color: #ffffff;
 }
 
@@ -2509,12 +2561,12 @@ body.dark-mode input[type="text"]:focus,
 body.dark-mode input[type="number"]:focus,
 body.dark-mode select:focus,
 body.dark-mode textarea:focus {
-  border-color: #357a53;
+  border-color: var(--app-accent);
   background-color: #444;
 }
 
 body.dark-mode button:not(.dark-mode-toggle):not(.documentation-button) {
-  background-color: #357a53;
+  background-color: var(--app-accent);
   color: #ffffff;
 }
 
@@ -2523,7 +2575,7 @@ body.dark-mode button:not(.dark-mode-toggle):not(.documentation-button):hover {
 }
 
 body.dark-mode .welcomebutton {
-  background-color: #357a53;
+  background-color: var(--app-accent);
   color: #ffffff;
 }
 
@@ -2603,7 +2655,7 @@ body.dark-mode .progress-bar-container {
 }
 
 body.dark-mode .progress-bar {
-  background: linear-gradient(90deg, #357a53 0%, #4a9d6e 100%);
+  background: linear-gradient(90deg, var(--app-accent) 0%, #4a9d6e 100%);
 }
 
 body.dark-mode .progress-time {
@@ -3096,13 +3148,16 @@ body.dark-mode .documentation .doc-warning-content p {
    what people who work in that environment already know how to read. The mode
    sections keep their own markup and ids; this only places them.
    -------------------------------------------------------------------------- */
-.narrative-wrap {
+/* The page: one rail, then the views. The rail is a sibling of the view column
+   rather than a child of any view, which is what lets it exist from a cold load. */
+.narrative-page {
     display: grid;
     grid-template-columns: 288px minmax(0, 1fr);
     gap: 20px;
     align-items: start;
+    padding: 0 12px;
 }
-.narrative-main {
+.narrative-views {
     min-width: 0;
 }
 
@@ -3113,6 +3168,78 @@ body.dark-mode .documentation .doc-warning-content p {
     flex-direction: column;
     gap: 16px;
     max-height: calc(100vh - var(--header-offset, 88px) - 32px);
+}
+
+/* Navigation, at the top of the rail. The buttons are the old tab bar's own
+   nodes, so they arrive carrying .tab-button; the rail restates them as rows. */
+.narrative-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px;
+    background-color: var(--app-panel);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius);
+}
+.narrative-nav .tab-button {
+    width: 100%;
+    text-align: left;
+    padding: 7px 10px;
+    font-size: 0.9em;
+    font-weight: 600;
+    color: var(--app-ink);
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--app-radius-sm);
+    opacity: 1;
+    cursor: pointer;
+}
+.narrative-nav .tab-button:hover:not(:disabled) {
+    background-color: var(--app-panel-head);
+}
+.narrative-nav .tab-button.active {
+    color: var(--app-on-accent);
+    background-color: var(--app-accent);
+    border-color: var(--app-accent);
+}
+/* A gated entry says why in its title and does not fire. */
+.narrative-nav .tab-button:disabled,
+.narrative-nav .tab-button.is-gated {
+    color: var(--app-muted);
+    background-color: transparent;
+    border-color: transparent;
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+.narrative-nav-aside {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--app-hairline);
+}
+.narrative-nav-aside .tab-button.documentation-button {
+    background-color: transparent !important;
+    border-color: transparent !important;
+    color: var(--app-muted) !important;
+}
+.narrative-nav-aside .tab-button.documentation-button:hover {
+    background-color: var(--app-panel-head) !important;
+    color: var(--app-ink) !important;
+}
+.narrative-nav-aside .tab-button.documentation-button.active {
+    background-color: var(--app-accent) !important;
+    border-color: var(--app-accent) !important;
+    color: var(--app-on-accent) !important;
+}
+
+/* The bar the buttons came from keeps its node, because core.js addresses it. */
+.app-tabs.is-retired {
+    display: none;
+}
+
+/* An entry in the catalog before a task type is known. */
+.narrative-app.is-inert {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 .narrative-panel {
     display: flex;
@@ -3217,7 +3344,7 @@ body.dark-mode .documentation .doc-warning-content p {
 }
 .narrative-app.is-selected {
     background-color: #eaf1ec;
-    border-color: #357a53;
+    border-color: var(--app-accent);
 }
 .narrative-app-name {
     font-size: 0.9em;
@@ -3233,7 +3360,7 @@ body.dark-mode .documentation .doc-warning-content p {
     font-size: 0.72em;
     font-weight: 700;
     color: #ffffff;
-    background-color: #357a53;
+    background-color: var(--app-accent);
     border-radius: 5px;
 }
 .narrative-item-data strong {
@@ -3294,12 +3421,12 @@ body.dark-mode .documentation .doc-warning-content p {
     border-radius: 50%;
 }
 .narrative-step.is-done {
-    color: #357a53;
+    color: var(--app-accent);
 }
 .narrative-step.is-done .narrative-step-num {
     color: #ffffff;
-    background-color: #357a53;
-    border-color: #357a53;
+    background-color: var(--app-accent);
+    border-color: var(--app-accent);
 }
 .narrative-step.is-current {
     color: #24503d;
@@ -3312,7 +3439,7 @@ body.dark-mode .documentation .doc-warning-content p {
 }
 
 @media (max-width: 1100px) {
-    .narrative-wrap {
+    .narrative-page {
         grid-template-columns: minmax(0, 1fr);
     }
     .narrative-rail {
@@ -3383,7 +3510,7 @@ body.dark-mode .narrative-step-num {
     color: #24503d;
     font-weight: 600;
     background-color: #eaf1ec;
-    border-color: #357a53;
+    border-color: var(--app-accent);
 }
 .narrative-stage.is-done {
     color: #4a544d;
@@ -3391,7 +3518,7 @@ body.dark-mode .narrative-step-num {
 }
 .narrative-stage.is-done::before {
     content: "\2713\00a0";
-    color: #357a53;
+    color: var(--app-accent);
 }
 body.dark-mode .narrative-stages {
     border-top-color: #3a3a3a;
@@ -3405,4 +3532,286 @@ body.dark-mode .narrative-stage.is-running {
     color: #8fbfa3;
     background-color: #2b3a30;
     border-color: #4f9d72;
+}
+
+/* ============================================================================
+   One treatment across the views.
+
+   The narrative work reached the Modeling page only, because narrative.js builds
+   inside #columnSelection. The panel, rail, type and spacing it established are
+   named as tokens at the top of this file; this section hands the same tokens to
+   the header, the tab bar, and the cards that upload, preprocessing, modeling and
+   inference already share, so the application reads as one thing rather than
+   three. The Documentation view keeps its own --doc-* palette and is untouched.
+
+   These rules come last on purpose: they retune existing classes at equal
+   specificity, so no !important is needed to reach the old values.
+   ========================================================================== */
+
+/* --- The panels the inline styles used to draw ---------------------------- */
+
+/* An aside with an accent rail. This replaces four inline
+   "background: #f8f9fa; border-left: 3px solid #357a53" blocks that no
+   stylesheet change could reach. */
+.app-note {
+    margin-bottom: var(--app-gap);
+    padding: 12px;
+    background-color: var(--app-sunken);
+    border-radius: var(--app-radius-sm);
+    border-left: 3px solid var(--app-accent);
+    color: var(--app-ink);
+}
+.app-note--tight {
+    margin-bottom: 12px;
+    padding: 10px 12px;
+}
+
+.app-panel {
+    background-color: var(--app-panel);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius);
+    color: var(--app-ink);
+}
+.app-panel--accent {
+    padding: var(--app-gap);
+    margin: 12px 0;
+    background-color: var(--app-accent-wash);
+    border: 2px solid var(--app-accent);
+}
+.app-panel--run {
+    margin-top: 20px;
+    padding: var(--app-gap);
+    background-color: var(--app-sunken);
+}
+.app-panel--status {
+    margin-top: 20px;
+    padding: 20px;
+    max-width: 100%;
+    background-color: var(--app-sunken);
+}
+
+/* --- The shared cards, retuned to the narrative panel --------------------- */
+
+/* Every view builds from these, so aligning them is what carries the treatment
+   to upload, preprocessing and inference without touching their markup. The
+   narrative panel's border, radius and flat surface replace the old 12px card
+   with its shadow. */
+.preprocess-card,
+.model-card,
+.exploration-card,
+.section-header,
+.results-header {
+    background-color: var(--app-panel);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius);
+    box-shadow: none;
+    color: var(--app-ink);
+}
+
+.preprocess-card,
+.model-card,
+.exploration-card {
+    padding: 12px var(--app-pad);
+    margin-bottom: 12px;
+}
+
+/* The heading strip of a card reads as the narrative panel head does. */
+.section-header,
+.results-header {
+    padding: 10px var(--app-pad);
+    background-color: var(--app-panel-head);
+    border-radius: var(--app-radius) var(--app-radius) 0 0;
+}
+
+.section-header h2,
+.results-header h2,
+.preprocess-card > h2,
+.model-card > h2,
+.exploration-card > h2 {
+    font-size: 1.02em;
+    font-weight: 600;
+    color: var(--app-heading);
+}
+
+.preprocess-section-title {
+    border-top: 1px solid var(--app-rule);
+    color: var(--app-heading);
+}
+
+.field-note {
+    color: var(--app-muted);
+}
+
+.modeling-selection-note {
+    color: var(--app-soft);
+}
+
+/* --- The header and the tab bar ------------------------------------------ */
+
+.header {
+    background-color: var(--app-accent);
+    color: var(--app-on-accent);
+}
+
+.header .tab-button {
+    border-radius: var(--app-radius-sm);
+    font-weight: 600;
+    opacity: 0.72;
+    transition: opacity 120ms ease, border-color 120ms ease;
+}
+.header .tab-button:hover {
+    opacity: 1;
+}
+.header .tab-button.active {
+    background-color: rgba(255, 255, 255, 0.16);
+    border-color: var(--app-on-accent);
+    opacity: 1;
+}
+
+/* Off the header the tab bar sits on the page, so it takes page tokens. */
+.app-tabs {
+    background-color: var(--app-panel-head);
+    border-bottom: 1px solid var(--app-border);
+}
+.tab-button {
+    border: 1px solid var(--app-rule);
+    background-color: var(--app-panel);
+    border-radius: var(--app-radius-sm);
+    color: var(--app-ink);
+}
+.tab-button.active {
+    background-color: var(--app-accent);
+    border-color: var(--app-accent);
+    color: var(--app-on-accent);
+    opacity: 1;
+}
+
+/* --- The single navigation band on the Modeling page ---------------------- */
+
+/* narrative.js moves the page's .section-header into the run strip, so the
+   title, its actions and the five steps are one band instead of three stacked
+   ones. The strip keeps its own border; the header inside it gives up card
+   chrome and becomes a title row. */
+.narrative-flow .section-header {
+    margin: 0 0 10px;
+    padding: 0 0 10px;
+    background-color: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--app-hairline);
+    border-radius: 0;
+    box-shadow: none;
+    min-height: 0;
+}
+.narrative-flow .section-header h2 {
+    font-size: 1.05em;
+}
+.narrative-flow .section-header-content {
+    width: 100%;
+    justify-content: space-between;
+}
+
+/* --- Dark mode ------------------------------------------------------------ */
+
+body.dark-mode .preprocess-card,
+body.dark-mode .model-card,
+body.dark-mode .exploration-card,
+body.dark-mode .section-header,
+body.dark-mode .results-header,
+body.dark-mode .app-panel {
+    background-color: var(--app-panel);
+    border-color: var(--app-border);
+    color: var(--app-ink);
+}
+body.dark-mode .section-header,
+body.dark-mode .results-header {
+    background-color: var(--app-panel-head);
+}
+body.dark-mode .app-note,
+body.dark-mode .app-panel--run,
+body.dark-mode .app-panel--status {
+    background-color: var(--app-sunken);
+    color: var(--app-ink);
+}
+body.dark-mode .app-panel--accent {
+    background-color: var(--app-accent-wash);
+}
+body.dark-mode .narrative-flow .section-header {
+    background-color: transparent;
+    border-bottom-color: var(--app-hairline);
+}
+
+/* --- The two views that carried no card class ----------------------------- */
+
+/* Upload and inference were built from a bare form and an .upload-card, so the
+   retune above did not reach them. They take the same panel and the same head
+   band by id and class, without a markup change, so every element keeps its id. */
+.upload-card,
+form#uploadPredictDf {
+    display: block;
+    background-color: var(--app-panel);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius);
+    box-shadow: none;
+    padding: 0 0 var(--app-pad);
+    margin-bottom: 12px;
+    color: var(--app-ink);
+    overflow: hidden;
+}
+
+/* The title-and-actions row of each reads as a panel head. */
+.upload-card > .RedoButton,
+form#uploadPredictDf > h3 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 0 0 var(--app-pad);
+    padding: 10px var(--app-pad);
+    background-color: var(--app-panel-head);
+    border-bottom: 1px solid var(--app-border);
+}
+
+.upload-card > .RedoButton > h2,
+#uploadPredictDf > h3,
+#uploadHeader {
+    margin: 0;
+    font-size: 1.02em;
+    font-weight: 600;
+    color: var(--app-heading);
+}
+
+.upload-card > form,
+.upload-card > .exploration-panel,
+form#uploadPredictDf > input,
+form#uploadPredictDf > div {
+    margin-left: var(--app-pad);
+    margin-right: var(--app-pad);
+}
+
+/* --- Controls ------------------------------------------------------------- */
+
+/* The default button was #007bff, which read as a second accent beside the
+   green header. One accent is what makes the views look like one application.
+   Buttons that carry their own class (secondary, success, tab, toggle) set
+   their own colour and win on specificity, so this reaches only the plain ones. */
+button {
+    background-color: var(--app-accent);
+    border-radius: var(--app-radius-sm);
+}
+
+input:checked + .slider {
+    background-color: var(--app-accent);
+}
+
+body.dark-mode .upload-card,
+body.dark-mode #uploadPredictDf {
+    background-color: var(--app-panel);
+    border-color: var(--app-border);
+    color: var(--app-ink);
+}
+body.dark-mode .upload-card > .RedoButton,
+body.dark-mode #uploadPredictDf > h3 {
+    background-color: var(--app-panel-head);
+    border-bottom-color: var(--app-border);
 }
