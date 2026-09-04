@@ -52,7 +52,7 @@ Data checks run before dispatch (`python_scripts/preprocessing/guardrails.py`). 
 
 `core/state.py` holds at most `DIGITERRA_MAX_SESSIONS` (32) session dictionaries and, with each, the `memory_usage(deep=True)` size of its frame and the serialized size of its fitted objects (measured by a counting joblib dump after each run). An upload is admitted only when the total across sessions stays within `DIGITERRA_MAX_TOTAL_FRAME_MB` (default 1024, 0 disables; the desktop launcher disables it). The check runs twice: before the parse against the decoded size taken from metadata (`core.helpers.estimate_decoded_bytes`: file size for CSV, the sum of zip members' inflated sizes for Excel, the sum of row-group byte sizes for Parquet), and after the parse against the measured frame. The oldest sessions without a run in flight are evicted first; when only sessions with running jobs remain, the upload is refused with 429. The session-count eviction also skips sessions with a run in flight.
 
-After a run the fitted objects are serialized to a counting sink to measure them and charged with `admit_model`, which evicts idle sessions and raises when the model does not fit; the caller then drops the fitted objects and the result carries a note that inference is unavailable for that run, so an over-budget model is not retained. Measuring after the fit is weaker than a memory limit on the process that does the fit. The budget covers frames and fitted objects, not transient allocations inside a parse or a training run, and the process is not isolated: two runs at their core budget with large intermediates can exceed it. Parsing and training in a separate worker under a memory and time limit is the remaining control and is not done; the container memory limit is the outer bound.
+After a run the fitted objects are serialized to a counting sink to measure them and charged with `admit_model`, which counts the model beside the frame it was trained on, evicts idle sessions, and raises when the pair does not fit (a measurement failure is treated the same way); the caller then drops the fitted objects and the result carries a note that inference is unavailable for that run, so an over-budget model is not retained. Measuring after the fit is weaker than a memory limit on the process that does the fit. The budget covers frames and fitted objects, not transient allocations inside a parse or a training run, and the process is not isolated: two runs at their core budget with large intermediates can exceed it. Parsing and training in a separate worker under a memory and time limit is the remaining control and is not done; the container memory limit is the outer bound.
 
 ## Compressed inputs
 
@@ -86,6 +86,5 @@ There is no rate limiting, so a client can still send requests that are rejected
 
 ## Open items
 
-- HTML-escape the filename and column names in the upload response, and make `escapeHtml` in `static/js/core.js` escape quotes.
 - Add CSRF protection, authentication, and rate limiting before a multi-user deployment.
 - Put the app behind HTTPS and a reverse proxy for any network deployment.

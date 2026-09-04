@@ -159,6 +159,61 @@ def test_model_bytes_count_toward_the_budget(monkeypatch):
         state.clear_session_storage(sid)
 
 
+def test_a_model_is_charged_beside_its_own_frame(monkeypatch):
+    """The reproduction from the 2026-09-04 audit: frame plus model passed the budget together.
+
+    _make_room excludes the whole session, which is right for a frame (it
+    replaces what the session held) and wrong for a model (it is held beside the
+    frame), so both were admitted and the recorded total ran past the limit.
+    """
+    state.clear_session_storage("pair-1")
+    monkeypatch.setattr(state, "MAX_TOTAL_FRAME_MB", 1.0)  # 1 MiB
+    state.admit_frame("pair-1", _frame(0.66))
+    frame_charge = state.total_data_bytes()
+    assert frame_charge > 0.6 * (1 << 20)
+    with pytest.raises(state.MemoryBudgetExceeded):
+        state.admit_model("pair-1", int(0.66 * (1 << 20)))
+    assert state.total_data_bytes() == frame_charge  # the refusal charged nothing
+    # A model that fits beside the frame is admitted and both are counted.
+    state.admit_model("pair-1", 1000)
+    assert state.total_data_bytes() == frame_charge + 1000
+    state.clear_session_storage("pair-1")
+
+
+def test_a_model_that_cannot_be_measured_is_discarded(monkeypatch):
+    """A size that cannot be computed cannot be charged, so the model is not kept."""
+    import pandas as pd
+
+    import python_scripts.app_model_training as amt
+    from python_scripts import config
+    from python_scripts.app_model_training import run_model_training
+    from python_scripts.preprocessing.progress_tracker import get_result, remove_tracker
+    from tests.unit.test_pipelines import BASE
+
+    def _raise(_store):
+        raise RuntimeError("no size for this estimator")
+
+    monkeypatch.setattr(amt, "serialized_size", _raise)
+    sid = "unmeasurable-model"
+    state.clear_session_storage(sid)
+    store = state.get_session_storage(sid)
+    store["data"] = pd.read_csv("examples/diabetes.csv")
+    n = len(store["data"].columns)
+    payload = dict(BASE, indicators=list(range(n - 1)), predictors=[n - 1], models="Linear")
+    token = config.set_session_scope(sid)
+    try:
+        run_model_training(sid, payload, sid, lambda s: state.get_session_storage(s))
+        result = get_result(sid)
+    finally:
+        config.reset_session_scope(token)
+    remove_tracker(sid)
+    assert result is not None and "error" not in result
+    assert result["model_retained"] is False
+    assert "could not be measured" in result["capacity_note"]
+    assert state.get_session_storage(sid).get("model") is None
+    state.clear_session_storage(sid)
+
+
 def test_an_oversized_model_is_not_retained(monkeypatch):
     """The fit succeeds, the scores stand, the model is dropped rather than kept over budget."""
     import pandas as pd
@@ -170,12 +225,15 @@ def test_an_oversized_model_is_not_retained(monkeypatch):
 
     sid = "oversized-model"
     state.clear_session_storage(sid)
+    state.get_session_storage(sid)
+    # Charged through admit_frame, as an upload is, so the frame counts against
+    # the budget when the model is measured.
+    state.admit_frame(sid, pd.read_csv("examples/diabetes.csv"))
     store = state.get_session_storage(sid)
-    store["data"] = pd.read_csv("examples/diabetes.csv")
     n = len(store["data"].columns)
     payload = dict(BASE, indicators=list(range(n - 1)), predictors=[n - 1], models="Linear")
-    # A budget smaller than any fitted model, with the frame already charged.
-    monkeypatch.setattr(state, "MAX_TOTAL_FRAME_MB", 0.001)
+    # A budget below the frame alone, so the frame plus any fitted model is over it.
+    monkeypatch.setattr(state, "MAX_TOTAL_FRAME_MB", 0.01)
     token = config.set_session_scope(sid)
     try:
         run_model_training(sid, payload, sid, lambda s: state.get_session_storage(s))

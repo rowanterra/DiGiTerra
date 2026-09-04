@@ -70,13 +70,20 @@ def _budget_bytes() -> int:
     return int(MAX_TOTAL_FRAME_MB * 1024 * 1024) if MAX_TOTAL_FRAME_MB > 0 else 0
 
 
-def _make_room(session_id: str, nbytes: int) -> None:
-    """Evict idle sessions until nbytes fits beside the rest, or raise."""
+def _make_room(session_id: str, own_after_bytes: int) -> None:
+    """Evict idle sessions until this session's own total fits beside the rest, or raise.
+
+    The caller passes what the session will hold AFTER the operation, not the
+    size of the thing being added, because the two differ: a new frame replaces
+    whatever the session held, while a fitted model is charged on top of the
+    frame it was trained on. Excluding the whole session and then adding only the
+    model was how a frame plus a model could pass the budget together.
+    """
     budget = _budget_bytes()
     if not budget:
         return
     protect = _active() | {session_id}
-    while total_data_bytes(exclude=session_id) + nbytes > budget:
+    while total_data_bytes(exclude=session_id) + own_after_bytes > budget:
         if not _evict_one(protect):
             raise MemoryBudgetExceeded(
                 f"The server is holding its maximum of {MAX_TOTAL_FRAME_MB:.0f} MB of uploaded data. Try again shortly."
@@ -91,6 +98,8 @@ def reserve_frame(session_id: str, estimated_bytes: int) -> None:
     parse allocates anything. admit_frame then records the measured size.
     """
     with _LOCK:
+        # A new upload replaces this session's frame and its model, so the estimate
+        # is the whole of what the session will hold.
         get_session_storage(session_id)
         _make_room(session_id, int(estimated_bytes))
 
@@ -111,7 +120,9 @@ def admit_model(session_id: str, nbytes: int) -> None:
         if store is None:
             return
         store.pop(MODEL_BYTES_KEY, None)
-        _make_room(session_id, nbytes)
+        # The model is held beside the frame it was trained on, so both count.
+        frame_charge = int(store.get(DATA_BYTES_KEY, 0) or 0)
+        _make_room(session_id, frame_charge + nbytes)
         store[MODEL_BYTES_KEY] = nbytes
 
 

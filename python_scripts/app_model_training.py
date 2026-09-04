@@ -1111,16 +1111,21 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
         try:
             admit_model(storage_session_id, serialized_size(store))
             result["model_retained"] = True
-        except MemoryBudgetExceeded as budget_err:
+        except Exception as budget_err:
+            # A model whose size cannot be measured cannot be charged either, so
+            # it is treated as a refusal rather than kept uncharged.
             discard_model(storage_session_id)
             result["model_retained"] = False
+            reason = (
+                str(budget_err)
+                if isinstance(budget_err, MemoryBudgetExceeded)
+                else "The fitted model could not be measured against the memory budget."
+            )
             result["capacity_note"] = (
-                f"{budget_err} The scores below are from the completed run, but the fitted model was not kept, "
+                f"{reason} The scores below are from the completed run, but the fitted model was not kept, "
                 "so inference on new data is not available for it."
             )
-            logger.warning("Fitted model discarded, over the memory budget: %s", budget_err)
-        except Exception as size_err:
-            logger.debug("Model size not charged: %s", size_err)
+            logger.warning("Fitted model discarded: %s", budget_err)
 
         # Store result for SSE endpoint
         set_result(session_id, result)
