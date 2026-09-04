@@ -57,8 +57,32 @@ function narrativeCurrentMode() {
 }
 
 /** The visible model select for the current mode, whatever the task type. */
+/** The task the run is for, from the choice the app recorded. */
+function narrativeTaskKey() {
+    const el = document.getElementById('outputType1');
+    const value = el && el.value ? el.value : '';
+    if (value === 'Classifier') return 'classification';
+    if (value === 'Cluster') return 'cluster';
+    if (value === 'Numeric') return 'regression';
+    return '';
+}
+
+/**
+ * The model select the catalog reads.
+ *
+ * The task comes from the recorded choice rather than from which select happens to
+ * be on screen. Picking by visibility made the count follow the page: on Modeling a
+ * classification select was visible and the chip read 23, and on Documentation
+ * nothing was visible so the first entry won and the same session read 31.
+ */
 function narrativeActiveSelect() {
     const byTask = MODEL_SELECTS[narrativeCurrentMode()] || {};
+    const task = narrativeTaskKey();
+    if (task && byTask[task]) {
+        const el = document.getElementById(byTask[task]);
+        if (el) return el;
+    }
+    // No task chosen yet. The regression select is the empty state the rail shows.
     for (const id of Object.values(byTask)) {
         const el = document.getElementById(id);
         if (el && el.offsetParent !== null) return el;

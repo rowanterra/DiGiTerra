@@ -376,7 +376,7 @@
                     <h3>Modeling Approaches</h3>
                 </summary>
                 <div class="doc-section-body">
-                    <p>The registry holds 32 trainable regression estimators. The Simple and Advanced selects each offer 31 of them, which is the count the rail catalog shows. The estimator they omit is <code>LassoLars</code>.</p>
+                    <p>The registry holds 67 trainable estimators: 32 for regression, 23 for classification and 12 for clustering. Every mode offers all of them for its task, so the rail catalog reads 32, 23 or 12 with the task type. <code>tests/unit/test_catalog_reachable.py</code> reads the sweep record and fails when an estimator trains but no select offers it.</p>
             <p class="doc-intro-text">Regression and classification offer three modeling modes after Model Preprocessing.</p>
             <div class="doc-approach-grid">
                 <div class="doc-approach-card doc-automl">
@@ -1325,6 +1325,7 @@
                             <option value="LARS">LARS</option>
                             <option value="LARSCV">LARS CV</option>
                             <option value="LassoCV">Lasso CV</option>
+                            <option value="LassoLars">Lasso Lars</option>
                             <option value="LinearSVR">Linear SVR</option>
                             <option value="NuSVR">Nu-SVR</option>
                             <option value="OMP">Orthogonal Matching Pursuit</option>
@@ -2726,6 +2727,7 @@
                                         <option value="LARS">LARS</option>
                                         <option value="LARSCV">LARS CV</option>
                                         <option value="LassoCV">Lasso CV</option>
+                                        <option value="LassoLars">Lasso Lars</option>
                                         <option value="LinearSVR">Linear SVR</option>
                                         <option value="NuSVR">Nu-SVR</option>
                                         <option value="OMP">Orthogonal Matching Pursuit</option>
@@ -6093,6 +6095,7 @@
                                         <option value="LARS">LARS</option>
                                         <option value="LARSCV">LARS CV</option>
                                         <option value="LassoCV">Lasso CV</option>
+                                        <option value="LassoLars">Lasso Lars</option>
                                         <option value="LinearSVR">Linear SVR</option>
                                         <option value="NuSVR">Nu-SVR</option>
                                         <option value="OMP">Orthogonal Matching Pursuit</option>

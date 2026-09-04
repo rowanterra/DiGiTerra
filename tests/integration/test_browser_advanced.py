@@ -440,3 +440,21 @@ def test_the_rail_carries_a_run_from_a_cold_load(live_session):
     _rail_entry(s, "historic").click()
     p.wait_for_timeout(350)
     assert s.visible("predictionDiv") == "visible"
+
+
+def test_the_catalog_count_does_not_change_with_the_page(session):
+    """The chip followed whichever select was visible, so it read 23 on Modeling and
+    31 on Documentation in one session. It now follows the recorded task."""
+    p = session.page
+    session.upload_and_preprocess("iris.csv", "Classification", "A-D", "E")
+    on_modeling = p.inner_text("#narrativeAppsCount").strip()
+    assert on_modeling == "23", f"classification catalog reads {on_modeling}"
+
+    p.click('.header-links [data-tab="documentation"]')
+    p.wait_for_timeout(500)
+    assert p.inner_text("#narrativeAppsCount").strip() == on_modeling, "the catalog count changed when the page did"
+
+    _rail_entry(session, "modeling").click()
+    p.wait_for_timeout(400)
+    assert p.inner_text("#narrativeAppsCount").strip() == on_modeling
+    assert not session.errors, session.errors
