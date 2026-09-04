@@ -147,7 +147,7 @@ def test_model_bytes_count_toward_the_budget(monkeypatch):
         state.clear_session_storage(sid)
     monkeypatch.setattr(state, "MAX_TOTAL_FRAME_MB", 2.5)
     state.admit_frame("mb-1", _frame(1))
-    state.record_model_bytes("mb-1", 1 << 20)
+    state.admit_model("mb-1", 1 << 20)
     assert state.total_data_bytes() >= 2 << 20
     monkeypatch.setattr(state, "_active_sessions_provider", lambda: {"mb-1"})
     with pytest.raises(state.MemoryBudgetExceeded):
@@ -157,3 +157,35 @@ def test_model_bytes_count_toward_the_budget(monkeypatch):
     assert state.total_data_bytes() < 1 << 20
     for sid in ("mb-1", "mb-2"):
         state.clear_session_storage(sid)
+
+
+def test_an_oversized_model_is_not_retained(monkeypatch):
+    """The fit succeeds, the scores stand, the model is dropped rather than kept over budget."""
+    import pandas as pd
+
+    from python_scripts import config
+    from python_scripts.app_model_training import run_model_training
+    from python_scripts.preprocessing.progress_tracker import get_result, remove_tracker
+    from tests.unit.test_pipelines import BASE
+
+    sid = "oversized-model"
+    state.clear_session_storage(sid)
+    store = state.get_session_storage(sid)
+    store["data"] = pd.read_csv("examples/diabetes.csv")
+    n = len(store["data"].columns)
+    payload = dict(BASE, indicators=list(range(n - 1)), predictors=[n - 1], models="Linear")
+    # A budget smaller than any fitted model, with the frame already charged.
+    monkeypatch.setattr(state, "MAX_TOTAL_FRAME_MB", 0.001)
+    token = config.set_session_scope(sid)
+    try:
+        run_model_training(sid, payload, sid, lambda s: state.get_session_storage(s))
+        result = get_result(sid)
+    finally:
+        config.reset_session_scope(token)
+    remove_tracker(sid)
+    assert result is not None and "error" not in result
+    assert result["valscore"]  # the run itself completed
+    assert result["model_retained"] is False
+    assert "not available" in result["capacity_note"]
+    assert state.get_session_storage(sid).get("model") is None
+    state.clear_session_storage(sid)

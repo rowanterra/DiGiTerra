@@ -6346,6 +6346,9 @@ function renderRunNotes(data) {
             parts.push(`<p class="run-note field-note">Data checks passed on ${escapeHtml(String(checks.n_rows))} rows and ${escapeHtml(String(checks.n_features))} features.</p>`);
         }
     }
+    if (data && data.capacity_note) {
+        parts.push(`<p class="run-note run-note-warn"><strong>Model not kept.</strong> ${escapeHtml(String(data.capacity_note))}</p>`);
+    }
     if (data && data.split_note) {
         parts.push(`<p class="run-note field-note">${escapeHtml(String(data.split_note))}</p>`);
     }

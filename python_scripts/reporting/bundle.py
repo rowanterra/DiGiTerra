@@ -39,6 +39,12 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 BUNDLE_FORMAT = "digiterra-bundle/1"
+# A bundle is a small, known set of files. Anything else in the zip, or a part
+# larger than these caps, is refused from the directory before a byte is
+# inflated, because the signature can only be checked after model.joblib is read.
+MAX_BUNDLE_MEMBERS = 32
+MAX_BUNDLE_MEMBER_MB = float(os.environ.get("DIGITERRA_MAX_BUNDLE_MEMBER_MB", "512") or 512)
+MAX_BUNDLE_TOTAL_MB = float(os.environ.get("DIGITERRA_MAX_BUNDLE_TOTAL_MB", "1024") or 1024)
 MANIFEST_NAME = "manifest.json"
 CARD_HTML_NAME = "model_card.html"
 CARD_JSON_NAME = "model_card.json"
@@ -484,8 +490,20 @@ class _CountingSink:
         self.n += len(b)
         return len(b)
 
+    def tell(self) -> int:
+        return self.n
+
     def flush(self) -> None:
         pass
+
+    def close(self) -> None:
+        pass
+
+    def seekable(self) -> bool:
+        return False
+
+    def writable(self) -> bool:
+        return True
 
 
 def serialized_size(store: dict) -> int:
@@ -540,14 +558,61 @@ class BundleError(ValueError):
     pass
 
 
+# Files a bundle may hold. write_bundle adds the run's workbook and plot pages;
+# anything outside this set means the zip was not written by DiGiTerra.
+ALLOWED_BUNDLE_NAMES = {
+    MANIFEST_NAME,
+    CARD_JSON_NAME,
+    CARD_HTML_NAME,
+    MODEL_NAME,
+    "model_results.xlsx",
+    "visualizations.pdf",
+}
+# A manifest is a few kilobytes of JSON; nothing legitimate approaches this.
+MAX_MANIFEST_BYTES = 4 << 20
+
+
+def preflight_bundle(bundle_path):
+    """Refuse an oversized or unexpected bundle zip before any member is inflated."""
+    from core.helpers import ZipTooLarge, preflight_zip
+
+    if hasattr(bundle_path, "seek"):
+        bundle_path.seek(0)
+    try:
+        preflight_zip(
+            bundle_path,
+            max_total_bytes=int(MAX_BUNDLE_TOTAL_MB * 1024 * 1024),
+            max_member_bytes=int(MAX_BUNDLE_MEMBER_MB * 1024 * 1024),
+            max_members=MAX_BUNDLE_MEMBERS,
+            allowed_names=ALLOWED_BUNDLE_NAMES,
+            label="bundle",
+        )
+    except ZipTooLarge as e:
+        raise BundleError(str(e)) from e
+    except zipfile.BadZipFile as e:
+        raise BundleError("The file is not a readable zip.") from e
+
+
 def read_manifest(bundle_path: str | Path) -> dict:
+    from core.helpers import ZipTooLarge, read_zip_member_bounded
+
+    preflight_bundle(bundle_path)
+    if hasattr(bundle_path, "seek"):
+        bundle_path.seek(0)
     with zipfile.ZipFile(bundle_path) as z:
         try:
-            manifest = json.loads(z.read(MANIFEST_NAME).decode("utf-8"))
+            raw = read_zip_member_bounded(z, MANIFEST_NAME, MAX_MANIFEST_BYTES, label="bundle")
         except KeyError as e:
             raise BundleError("The zip has no manifest.json; it is not a DiGiTerra bundle.") from e
-    if manifest.get("format") != BUNDLE_FORMAT:
-        raise BundleError(f"Unsupported bundle format {manifest.get('format')!r}; expected {BUNDLE_FORMAT}.")
+        except ZipTooLarge as e:
+            raise BundleError(str(e)) from e
+        try:
+            manifest = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as e:
+            raise BundleError("manifest.json is not readable JSON; it is not a DiGiTerra bundle.") from e
+    if not isinstance(manifest, dict) or manifest.get("format") != BUNDLE_FORMAT:
+        fmt = manifest.get("format") if isinstance(manifest, dict) else None
+        raise BundleError(f"Unsupported bundle format {fmt!r}; expected {BUNDLE_FORMAT}.")
     return manifest
 
 
@@ -565,12 +630,22 @@ def load_bundle(bundle_path: str | Path, *, force: bool = False, trust_unsigned:
             "Bundle import is disabled on this deployment. Set DIGITERRA_ALLOW_BUNDLE_IMPORT=1 to enable it "
             "where the bundles come from a trusted source."
         )
+    from core.helpers import ZipTooLarge, read_zip_member_bounded
+
+    # read_manifest preflights the directory; the streaming read below enforces the
+    # same cap on the bytes that actually arrive, since a directory can lie.
     manifest = read_manifest(bundle_path)
+    if hasattr(bundle_path, "seek"):
+        bundle_path.seek(0)
     with zipfile.ZipFile(bundle_path) as z:
         try:
-            model_bytes = z.read(MODEL_NAME)
+            model_bytes = read_zip_member_bounded(
+                z, MODEL_NAME, int(MAX_BUNDLE_MEMBER_MB * 1024 * 1024), label="bundle"
+            )
         except KeyError as e:
             raise BundleError("The bundle has no model.joblib.") from e
+        except ZipTooLarge as e:
+            raise BundleError(str(e)) from e
     artifact = manifest.get("artifact") or {}
     expected = artifact.get("sha256")
     actual = sha256_bytes(model_bytes)

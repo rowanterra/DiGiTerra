@@ -204,7 +204,16 @@ def test_import_rejects_a_zip_without_a_manifest(client, monkeypatch):
     out.seek(0)
     r = client.post("/import-bundle", data={"bundle": (out, "x.zip")})
     assert r.status_code == 400
-    assert "manifest" in r.get_json()["error"]
+    # The directory check names the stray file before any member is read.
+    assert "unexpected parts" in r.get_json()["error"]
+
+    # A zip holding only allowed names but no manifest is refused on the manifest.
+    only_card = io.BytesIO()
+    with zipfile.ZipFile(only_card, "w") as z:
+        z.writestr("model_card.html", "<p>no manifest</p>")
+    only_card.seek(0)
+    r = client.post("/import-bundle", data={"bundle": (only_card, "y.zip")})
+    assert r.status_code == 400 and "manifest" in r.get_json()["error"]
 
 
 def test_model_card_escapes_markup():
@@ -258,3 +267,79 @@ def test_score_and_rerun_scripts(client, tmp_path):
         timeout=60,
     )
     assert proc.returncode == 2 and "hash mismatch" in proc.stderr
+
+
+def _zip_bomb_bundle(good_bundle: bytes, member: str, inflated_mb: int) -> io.BytesIO:
+    """The manifest of a real bundle with one member replaced by a compressible run."""
+    src = zipfile.ZipFile(io.BytesIO(good_bundle))
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as z:
+        for name in src.namelist():
+            payload = b"\x00" * (inflated_mb << 20) if name == member else src.read(name)
+            z.writestr(name, payload)
+    out.seek(0)
+    return out
+
+
+def test_compressed_bundle_is_refused_before_the_payload_is_inflated(client, monkeypatch):
+    """The signature can only be checked after model.joblib is read, so the zip is bounded first."""
+    import tracemalloc
+
+    import python_scripts.reporting.bundle as bundle_mod
+
+    sid = uuid.uuid4().hex
+    _train_in_session(sid)
+    client.set_cookie("digiterra_session", sid)
+    good = client.get("/export-bundle").data
+    monkeypatch.setenv("DIGITERRA_ALLOW_BUNDLE_IMPORT", "1")
+
+    bomb = _zip_bomb_bundle(good, "model.joblib", inflated_mb=64)
+    assert len(bomb.getvalue()) < 1 << 20  # a small file that declares 64 MB
+    tracemalloc.start()
+    with pytest.raises(BundleError, match="is 64 MB|inflates|larger than"):
+        load_bundle(bomb, force=True)
+    _, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    assert peak < 8 << 20, f"peak {peak / 2**20:.1f} MB"
+
+    # The same refusal reaches the route, and the manifest read is bounded too.
+    bomb.seek(0)
+    r = client.post("/import-bundle", data={"bundle": (bomb, "b.zip")})
+    assert r.status_code == 400
+    assert "model.joblib" in r.get_json()["error"]
+
+    manifest_bomb = _zip_bomb_bundle(good, "manifest.json", inflated_mb=64)
+    with pytest.raises(BundleError, match="inflates|is 64 MB|larger than"):
+        bundle_mod.read_manifest(manifest_bomb)
+
+
+def test_bundle_with_an_unexpected_member_is_refused(client):
+    sid = uuid.uuid4().hex
+    _train_in_session(sid)
+    client.set_cookie("digiterra_session", sid)
+    good = client.get("/export-bundle").data
+    src = zipfile.ZipFile(io.BytesIO(good))
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w") as z:
+        for name in src.namelist():
+            z.writestr(name, src.read(name))
+        z.writestr("../../etc/passwd", b"root:x:0:0:")
+    out.seek(0)
+    with pytest.raises(BundleError, match="unexpected parts"):
+        load_bundle(out, force=True)
+
+
+def test_a_declared_size_that_lies_is_still_bounded_while_streaming(client, monkeypatch):
+    """The directory is data from the file; the streaming read enforces the cap again."""
+    import python_scripts.reporting.bundle as bundle_mod
+
+    sid = uuid.uuid4().hex
+    _train_in_session(sid)
+    client.set_cookie("digiterra_session", sid)
+    good = client.get("/export-bundle").data
+    bomb = _zip_bomb_bundle(good, "model.joblib", inflated_mb=32)
+    # Preflight passes at a generous member cap; the byte cap still stops the read.
+    monkeypatch.setattr(bundle_mod, "MAX_BUNDLE_MEMBER_MB", 4)
+    monkeypatch.setattr(bundle_mod, "MAX_BUNDLE_TOTAL_MB", 4096)
+    with pytest.raises(BundleError, match="4 MB"):
+        load_bundle(bomb, force=True)

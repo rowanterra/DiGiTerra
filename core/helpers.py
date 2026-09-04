@@ -69,27 +69,84 @@ def estimate_decoded_bytes(filepath) -> int:
     return int(sum(md.row_group(i).total_byte_size for i in range(md.num_row_groups)))
 
 
-def _preflight_zip(filepath, max_decoded_bytes: int):
-    """Refuse a workbook whose members would inflate past the budget, before opening it."""
+class ZipTooLarge(FrameTooLarge):
+    """A zip's directory describes more data than the caller is allowed to inflate."""
+
+
+def preflight_zip(
+    source,
+    *,
+    max_total_bytes: int = 0,
+    max_member_bytes: int = 0,
+    max_members: int = MAX_ZIP_MEMBERS,
+    max_ratio: int = MAX_ZIP_RATIO,
+    allowed_names: set[str] | None = None,
+    label: str = "file",
+) -> list:
+    """Check a zip's central directory before any member is inflated.
+
+    Every consumer of a zip in this application goes through here: a workbook on
+    its way to openpyxl and a model bundle on its way to the signature check. The
+    directory gives member count, declared uncompressed size, and compressed size,
+    so a container that would inflate past the caller's budget is refused while it
+    is still a few kilobytes of directory. The declared sizes come from the file
+    itself and can lie, which is why ``read_zip_member_bounded`` enforces the same
+    cap again while streaming. Returns the member list.
+    """
     import zipfile
 
-    with zipfile.ZipFile(filepath) as z:
+    with zipfile.ZipFile(source) as z:
         infos = z.infolist()
-        if len(infos) > MAX_ZIP_MEMBERS:
-            raise FrameTooLarge(f"The workbook has {len(infos):,} parts; the limit is {MAX_ZIP_MEMBERS:,}.")
+        if len(infos) > max_members:
+            raise ZipTooLarge(f"The {label} has {len(infos):,} parts; the limit is {max_members:,}.")
+        if allowed_names is not None:
+            unexpected = sorted({i.filename for i in infos} - allowed_names)
+            if unexpected:
+                raise ZipTooLarge(f"The {label} holds unexpected parts: {', '.join(unexpected[:5])}.")
         total = 0
         for info in infos:
             total += info.file_size
-            if info.compress_size and info.file_size / info.compress_size > MAX_ZIP_RATIO and info.file_size > 1 << 20:
-                raise FrameTooLarge(
-                    f"Part {info.filename!r} of the workbook inflates {info.file_size / info.compress_size:.0f} times; "
-                    f"the limit is {MAX_ZIP_RATIO}."
+            if max_member_bytes and info.file_size > max_member_bytes:
+                mb, limit_mb = info.file_size / (1024 * 1024), max_member_bytes / (1024 * 1024)
+                raise ZipTooLarge(
+                    f"Part {info.filename!r} of the {label} is {mb:.0f} MB; the limit is {limit_mb:.0f} MB."
                 )
-        if max_decoded_bytes and total > max_decoded_bytes:
-            raise FrameTooLarge(
-                f"The workbook holds {total / (1024 * 1024):.0f} MB of sheet data once inflated; "
-                f"the limit is {max_decoded_bytes / (1024 * 1024):.0f} MB."
-            )
+            if info.compress_size and info.file_size / info.compress_size > max_ratio and info.file_size > 1 << 20:
+                ratio = info.file_size / info.compress_size
+                raise ZipTooLarge(
+                    f"Part {info.filename!r} of the {label} inflates {ratio:.0f} times; the limit is {max_ratio}."
+                )
+        if max_total_bytes and total > max_total_bytes:
+            mb, limit_mb = total / (1024 * 1024), max_total_bytes / (1024 * 1024)
+            raise ZipTooLarge(f"The {label} holds {mb:.0f} MB once inflated; the limit is {limit_mb:.0f} MB.")
+        return infos
+
+
+def read_zip_member_bounded(z, name: str, max_bytes: int, label: str = "file") -> bytes:
+    """Read one member, stopping at max_bytes.
+
+    ``ZipFile.read`` inflates the whole member whatever the directory claimed, so
+    a member whose declared size passed the preflight can still expand without
+    bound. This streams and gives up as soon as the cap is passed.
+    """
+    chunk_size = 1 << 20
+    out = bytearray()
+    with z.open(name) as fh:
+        while True:
+            chunk = fh.read(chunk_size)
+            if not chunk:
+                break
+            out.extend(chunk)
+            if max_bytes and len(out) > max_bytes:
+                del out
+                mb = max_bytes / (1024 * 1024)
+                raise ZipTooLarge(f"Part {name!r} of the {label} is larger than the {mb:.0f} MB limit.")
+    return bytes(out)
+
+
+def _preflight_zip(filepath, max_decoded_bytes: int):
+    """Refuse a workbook whose members would inflate past the budget, before opening it."""
+    preflight_zip(filepath, max_total_bytes=max_decoded_bytes, label="workbook")
 
 
 def _preflight_parquet(pf, max_decoded_bytes: int):

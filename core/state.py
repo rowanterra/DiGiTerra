@@ -95,11 +95,35 @@ def reserve_frame(session_id: str, estimated_bytes: int) -> None:
         _make_room(session_id, int(estimated_bytes))
 
 
-def record_model_bytes(session_id: str, nbytes: int) -> None:
+def admit_model(session_id: str, nbytes: int) -> None:
+    """Charge a fitted model against the budget, or raise MemoryBudgetExceeded.
+
+    Unlike a frame, a model cannot be measured before it exists, so this runs
+    after the fit: it makes room by evicting idle sessions and refuses when the
+    model does not fit beside what the running sessions hold. The caller drops
+    the fitted objects on a refusal, so an over-budget model is not retained.
+    Measuring after the fact is a weaker control than a worker with a memory
+    limit, which is the remaining step.
+    """
+    nbytes = int(nbytes)
     with _LOCK:
         store = _STORE.get(session_id)
-        if store is not None:
-            store[MODEL_BYTES_KEY] = int(nbytes)
+        if store is None:
+            return
+        store.pop(MODEL_BYTES_KEY, None)
+        _make_room(session_id, nbytes)
+        store[MODEL_BYTES_KEY] = nbytes
+
+
+def discard_model(session_id: str) -> None:
+    """Drop the fitted objects and their charge, leaving the uploaded frame."""
+    with _LOCK:
+        store = _STORE.get(session_id)
+        if store is None:
+            return
+        store.pop(MODEL_BYTES_KEY, None)
+        for key in ("model", "X_scaler", "y_scaler", "feature_order", "model_type"):
+            store.pop(key, None)
 
 
 def _evict_one(protect: set) -> bool:

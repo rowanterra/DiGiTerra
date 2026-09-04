@@ -13,6 +13,7 @@ import pandas as pd
 
 from core import constants as _constants
 from core.constants import MAX_CV_FOLDS, MAX_SEARCH_CV_FOLDS, MAX_SEARCH_ITERATIONS, MAX_TEST_SIZE, MIN_TEST_SIZE
+from core.state import MemoryBudgetExceeded, admit_model, discard_model
 from python_scripts import config as _config
 from python_scripts.helpers import (
     preprocess_data,
@@ -1096,17 +1097,30 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
             store["last_training_request"] = dict(data)
             manifest = build_manifest(store, data, result, store["model_type"], modelName)
             write_run_record(_config.VIS_DIR.current(), manifest)
-            # The fitted objects count against the process budget beside the frame.
-            try:
-                from core.state import record_model_bytes
-
-                record_model_bytes(storage_session_id, serialized_size(store))
-            except Exception as size_err:
-                logger.debug("Model size not recorded: %s", size_err)
             result["model_card_url"] = "/user-visualizations/model_card.html"
             result["bundle_url"] = "/export-bundle"
         except Exception as record_err:
             logger.warning("Run record not written (model results unchanged): %s", record_err)
+
+        # The fitted objects are charged against the process budget beside the frame.
+        # The scores are already computed and stay valid, so a model that does not fit
+        # is dropped and the result says inference is unavailable rather than the run
+        # being thrown away. This runs after the fit because a model cannot be measured
+        # before it exists; a worker with a memory limit is the stronger control and is
+        # not done.
+        try:
+            admit_model(storage_session_id, serialized_size(store))
+            result["model_retained"] = True
+        except MemoryBudgetExceeded as budget_err:
+            discard_model(storage_session_id)
+            result["model_retained"] = False
+            result["capacity_note"] = (
+                f"{budget_err} The scores below are from the completed run, but the fitted model was not kept, "
+                "so inference on new data is not available for it."
+            )
+            logger.warning("Fitted model discarded, over the memory budget: %s", budget_err)
+        except Exception as size_err:
+            logger.debug("Model size not charged: %s", size_err)
 
         # Store result for SSE endpoint
         set_result(session_id, result)

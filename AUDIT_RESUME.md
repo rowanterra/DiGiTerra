@@ -6,7 +6,7 @@ Branch `audit-fixes`, off `147d313` (ADA Boost, 2026-03-25).
 
 Verification scripts live in /tmp (regenerate if the container was recycled):
 `verify_ml.py` (11 unit checks, all pass) and `e2e.py` (upload → preprocess →
-train → predict through the Flask test client). `pytest tests/` is 106 green as of the seventh pass,
+train → predict through the Flask test client). `pytest tests/` is 112 green as of the eighth pass,
 `npm run lint` is clean.
 
 ML correctness
@@ -78,6 +78,20 @@ Frontend
   clean. `npm run lint` now builds the bundle, lints the split files, and lints the
   bundle with `no-undef` on. `npm run check-bundle` fails if the committed bundle
   has drifted.
+
+## Eighth pass, 2026-09-04: the re-audit follow-up at 0c98f06
+
+Three findings, all sound. A bundle's zip was expanded before the signature could be
+checked, which is unavoidable in order (the signature is over the bytes) and therefore
+had to be bounded instead: one preflight now serves the workbook reader and the bundle
+loader, and every member is streamed against the same cap because a zip directory is
+data from the file. The model accounting was observational; `admit_model` now evicts or
+refuses, and a model that does not fit is dropped with a note on the result rather than
+kept. Measuring it revealed that the counting sink lacked `tell`, so the previous
+release charged nothing at all. The published security review contradicted the desktop
+limits; it is rewritten, and `tests/unit/test_docs.py` fails when a `DIGITERRA_*`
+variable or a desktop limit is not stated in the docs. Not done: a pickle-free model
+format and worker isolation. `pytest tests/` is 112 green.
 
 ## Seventh pass, 2026-09-04: the implementation re-audit at bfaca2a
 
