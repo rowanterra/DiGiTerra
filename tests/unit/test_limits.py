@@ -132,3 +132,113 @@ def test_stale_session_directories_are_swept(monkeypatch):
     assert removed >= 1
     assert not old.exists() and fresh.exists()
     fresh.rmdir()
+
+
+def test_bounded_reader_stops_at_the_budget(tmp_path):
+    """The reader must not parse the whole file before deciding it is too large."""
+    import tracemalloc
+
+    from core.helpers import FrameTooLarge, read_csv_bounded
+
+    path = tmp_path / "wide.csv"
+    pd.DataFrame({f"c{i}": range(60_000) for i in range(10)}).to_csv(path, index=False)
+
+    tracemalloc.start()
+    with pytest.raises(FrameTooLarge):
+        read_csv_bounded(str(path), max_cells=10_000)
+    bounded_peak = tracemalloc.get_traced_memory()[1]
+    tracemalloc.stop()
+
+    tracemalloc.start()
+    pd.read_csv(path)
+    full_peak = tracemalloc.get_traced_memory()[1]
+    tracemalloc.stop()
+
+    assert bounded_peak < full_peak / 4
+    assert read_csv_bounded(str(path), max_cells=10_000_000).shape == (60_000, 10)
+
+
+def test_bounded_reader_rejects_a_frame_over_the_byte_budget(tmp_path):
+    from core.helpers import FrameTooLarge, read_csv_bounded
+
+    path = tmp_path / "strings.csv"
+    pd.DataFrame({"a": ["x" * 500] * 2000}).to_csv(path, index=False)
+    with pytest.raises(FrameTooLarge, match="once parsed"):
+        read_csv_bounded(str(path), max_cells=0, max_frame_mb=0.2)
+
+
+def test_out_of_range_value_is_refused_before_a_thread_starts(client):
+    """The route answers 400 without creating a training id."""
+    r = client.post("/upload", data={"file": (_csv_bytes(rows=30, cols=4), "d.csv")})
+    assert r.status_code == 200
+    r = client.post("/preprocess", json={"indicators": [0, 1, 2], "predictors": [3], "stratify": 0})
+    assert r.status_code == 200
+    from tests.unit.test_pipelines import BASE
+
+    payload = dict(BASE, indicators=[0, 1, 2], predictors=[3], models="Linear", searchNIter=100000)
+    r = client.post("/process", json=payload)
+    assert r.status_code == 400
+    assert "searchNIter" in r.get_json()["error"]
+    assert "session_id" not in r.get_json()
+
+
+def test_second_concurrent_run_for_a_session_is_refused():
+    from core import jobs
+
+    jobs.acquire("session-a", "run-1")
+    try:
+        with pytest.raises(jobs.SlotUnavailable, match="already training"):
+            jobs.acquire("session-a", "run-2")
+        assert jobs.active_sessions() == {"session-a"}
+    finally:
+        jobs.release("session-a", "run-1")
+    assert jobs.active_sessions() == set()
+
+
+def test_global_training_slots_are_capped(monkeypatch):
+    from core import jobs
+
+    monkeypatch.setattr(jobs, "MAX_CONCURRENT_TRAINING", 2)
+    jobs.acquire("s1", "r1")
+    jobs.acquire("s2", "r2")
+    try:
+        with pytest.raises(jobs.SlotUnavailable, match="maximum number"):
+            jobs.acquire("s3", "r3")
+    finally:
+        jobs.release("s1", "r1")
+        jobs.release("s2", "r2")
+
+
+def test_sweep_keeps_a_directory_whose_session_is_running(monkeypatch):
+    base = config.VIS_DIR.base
+    running = base / ("e" * 32)
+    idle = base / ("f" * 32)
+    for d in (running, idle):
+        d.mkdir(exist_ok=True)
+        two_days_ago = time.time() - 48 * 3600
+        os.utime(d, (two_days_ago, two_days_ago))
+    monkeypatch.setattr(config, "STALE_SESSION_HOURS", 24.0)
+    monkeypatch.setattr(config, "_active_session_provider", [lambda: {"e" * 32}])
+    try:
+        config.sweep_stale_outputs(force=True)
+        assert running.exists(), "a session with a run in flight was swept"
+        assert not idle.exists()
+    finally:
+        if running.exists():
+            running.rmdir()
+
+
+def test_using_a_session_directory_refreshes_its_age(monkeypatch):
+    base = config.VIS_DIR.base
+    used = base / ("1" * 32)
+    used.mkdir(exist_ok=True)
+    two_days_ago = time.time() - 48 * 3600
+    os.utime(used, (two_days_ago, two_days_ago))
+    monkeypatch.setattr(config, "_last_touch", {})
+    token = config.set_session_scope("1" * 32)
+    try:
+        _ = config.VIS_DIR / "anything.png"
+        assert used.stat().st_mtime > two_days_ago + 3600
+    finally:
+        config.reset_session_scope(token)
+        used.rmdir()

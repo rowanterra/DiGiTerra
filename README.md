@@ -23,7 +23,7 @@ Then run one of the two entry points:
 
 Both entry points import the application from `core/`, `routes/`, and `python_scripts/`.
 
-Tests: `pip install -r requirements-dev.txt` then `MPLBACKEND=Agg pytest tests/ -q`, or `make test`. Production web server: `gunicorn --workers 1 app:app` (see `deploy/README.md`). `make dev` installs the Python and npm dependencies, and `make check` runs lint, tests, the bundle check, and the requirements check.
+Tests: `pip install -r requirements-dev.txt` then `MPLBACKEND=Agg pytest tests/ -q`, or `make test`. Production web server: `gunicorn --workers 1 --worker-class gthread --threads 8 app:app` (see `deploy/README.md`). `make dev` installs the Python and npm dependencies, and `make check` runs lint, tests, the bundle check, and the requirements check.
 
 ## End-user install without a terminal
 

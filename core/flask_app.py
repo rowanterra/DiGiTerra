@@ -46,9 +46,13 @@ def _configure_logging():
 
 logger = _configure_logging()
 
+from core import jobs  # noqa: E402  logging must be configured before the routes import
 from core.constants import DEFAULT_MAX_UPLOAD_MB  # noqa: E402  logging must be configured before the routes import
 from core.errors import register_error_handlers  # noqa: E402  logging must be configured before the routes import
 from core.state import SESSION_COOKIE_NAME  # noqa: E402  logging must be configured before the routes import
+from python_scripts.preprocessing.progress_tracker import (  # noqa: E402  logging is configured above
+    active_owner_sessions,
+)  # noqa: E402  logging must be configured before the routes import
 from routes import register_blueprints  # noqa: E402  logging must be configured before the routes import
 
 app = Flask(
@@ -104,6 +108,11 @@ def _set_session_cookie(response):
         response.set_cookie(SESSION_COOKIE_NAME, new_id, httponly=True, samesite="Lax", secure=secure)
     return response
 
+
+# The sweep skips a session with a run in flight, and runs on a timer as well as
+# when a new session cookie is issued.
+config.set_active_session_provider(lambda: active_owner_sessions() | jobs.active_sessions())
+config.start_sweep_timer()
 
 register_blueprints(app)
 register_error_handlers(app)

@@ -4,6 +4,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
+import pytest
 from sklearn.model_selection import train_test_split
 
 from python_scripts.helpers import preprocess_data
@@ -44,10 +45,10 @@ def test_fill_plan_defers_mean_and_fits_on_train_rows_only():
 
     train_idx, _ = train_test_split(out.index, test_size=0.2, random_state=7)
     filled = plan.fit_transform_by_index(out, train_idx)
-    train_only_mean = out.loc[train_idx, "x3"].mean()
-    whole_file_mean = out["x3"].mean()
-    assert plan.nan_fills["x3"] == float(train_only_mean)
-    assert plan.nan_fills["x3"] != float(whole_file_mean)
+    train_only_mean = float(out.loc[train_idx, "x3"].mean())
+    whole_file_mean = float(out["x3"].mean())
+    assert plan.nan_fills["x3"] == pytest.approx(train_only_mean, rel=1e-12)
+    assert abs(plan.nan_fills["x3"] - whole_file_mean) > 1e-6
     assert filled["x3"].isna().sum() == 0
 
 
@@ -63,8 +64,12 @@ def test_training_run_records_train_split_fills_and_reuses_them(tmp_path):
     # pipeline used, not the whole-file mean.
     rows = df.dropna(subset=["x1", "x2", "y"])
     train_idx, _ = train_test_split(rows.index, test_size=0.2, random_state=42)
-    assert fills["x3"] == float(rows.loc[train_idx, "x3"].mean())
-    assert fills["x3"] != float(rows["x3"].mean())
+    train_mean = float(rows.loc[train_idx, "x3"].mean())
+    whole_file_mean = float(rows["x3"].mean())
+    # The two means differ by far more than float noise, so an exact comparison is
+    # not what makes this test meaningful; approx keeps it from failing on the last bit.
+    assert fills["x3"] == pytest.approx(train_mean, rel=1e-12)
+    assert abs(fills["x3"] - whole_file_mean) > 1e-6
     # Inference on a file with its own gaps uses the stored value.
     new = pd.DataFrame({"x1": [0.0, 1.0], "x2": [0.0, 1.0], "x3": [np.nan, 4.0]})
     filled = preprocess_data(

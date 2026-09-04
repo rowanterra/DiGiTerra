@@ -1,6 +1,7 @@
 """Main page and progress SSE."""
 
 import json
+import logging
 import os
 import time
 
@@ -17,6 +18,8 @@ from core.helpers import with_prefix
 from core.state import get_session_id
 from python_scripts import config
 from python_scripts.preprocessing.progress_tracker import get_result, peek_tracker, remove_tracker
+
+logger = logging.getLogger(__name__)
 
 bp = Blueprint("main", __name__)
 
@@ -49,7 +52,10 @@ def progress_stream(session_id):
         start_time = time.time()
         while True:
             if time.time() - start_time > PROGRESS_STREAM_TIMEOUT_SECONDS:
-                yield f"data: {json.dumps({'error': 'Progress stream timeout'})}\n\n"
+                # End the stream without an error payload. EventSource reconnects on
+                # its own, the tracker is still there, and the run continues. This
+                # keeps one long run from holding a worker thread indefinitely.
+                logger.info("Progress stream for %s reached its time limit; the client may reconnect.", session_id)
                 break
             try:
                 progress = tracker.get_progress()

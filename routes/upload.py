@@ -18,9 +18,10 @@ from core.constants import (
     FILENAME_DISPLAY_LENGTH,
     HTTP_BAD_REQUEST,
     MAX_CELLS,
+    MAX_FRAME_MB,
     MAX_UPLOAD_MB,
 )
-from core.helpers import allowed_file
+from core.helpers import FrameTooLarge, allowed_file, read_csv_bounded
 from core.state import get_session_storage
 
 bp = Blueprint("upload", __name__)
@@ -67,7 +68,9 @@ def upload_file():
         )
 
         try:
-            data = pd.read_csv(filepath)
+            data = read_csv_bounded(filepath, max_cells=MAX_CELLS, max_frame_mb=MAX_FRAME_MB)
+        except FrameTooLarge as e:
+            return jsonify({"error": str(e)}), HTTP_BAD_REQUEST
         except pd.errors.EmptyDataError:
             return jsonify({"error": "The uploaded file is empty."}), HTTP_BAD_REQUEST
         except pd.errors.ParserError as e:
@@ -84,19 +87,6 @@ def upload_file():
 
     if data.empty:
         return jsonify({"error": "The uploaded file contains no data."}), HTTP_BAD_REQUEST
-
-    if MAX_CELLS and data.size > MAX_CELLS:
-        rows, cols = data.shape
-        del data
-        return (
-            jsonify(
-                {
-                    "error": f"The file has {rows:,} rows and {cols} columns ({rows * cols:,} cells); "
-                    f"the limit is {MAX_CELLS:,} cells."
-                }
-            ),
-            HTTP_BAD_REQUEST,
-        )
 
     if data.columns.duplicated().any():
         logger.warning("Duplicate column names detected in uploaded file. Renaming duplicates.")

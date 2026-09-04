@@ -192,6 +192,21 @@ def remove_tracker(session_id: str):
             del _results[session_id]
 
 
+def active_owner_sessions() -> set:
+    """Browser sessions with a run that has not finished or failed.
+
+    The output sweep asks for this so a job longer than the stale-session age
+    does not have its directory removed underneath it.
+    """
+    with _tracker_lock:
+        trackers = list(_progress_trackers.values())
+    active = set()
+    for t in trackers:
+        if t.owner_session_id and not t.failed and t.overall_progress < 100:
+            active.add(str(t.owner_session_id))
+    return active
+
+
 def set_result(session_id: str, result: dict):
     """Store the final result for a session."""
     with _results_lock:

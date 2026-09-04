@@ -79,6 +79,37 @@ Frontend
   bundle with `no-undef` on. `npm run check-bundle` fails if the committed bundle
   has drifted.
 
+## Fifth pass, 2026-09-03 night (commit 9): the re-audit
+
+The second reviewer re-audited commit 8 and filed `RE_AUDIT.md`: three high
+findings and one medium, all sound, plus one verification failure that was a
+real defect in my own test.
+
+- The test compared floating-point means with exact equality. It now uses
+  pytest.approx for the equality and a tolerance for the inequality.
+- Unbounded job creation. `validate_training_request` now runs in the request
+  handler before any thread exists, and `core/jobs.py` allows one run per
+  session and two across the process, returning 429 past either.
+- The cell cap ran after `pd.read_csv` had already parsed the file.
+  `read_csv_bounded` in `core/helpers.py` reads the header for the column count,
+  caps the rows it parses at the cell budget, and measures the parsed frame
+  against a byte budget. A rejected read peaks far below a full parse, which the
+  tests assert. Served defaults dropped to 32 MB body and 5,000,000 cells.
+- One stream starved the only synchronous worker. The container now runs
+  gunicorn with `--worker-class gthread --threads 8`, one process, so session
+  state stays put while an open stream coexists with other requests.
+  `scripts/check_stream_starvation.py` measures it: the synchronous worker did
+  not answer an unrelated request within ten seconds, the threaded worker
+  answered in 0.01 s. The stream also ends after 15 minutes without an error
+  payload, so the browser reconnects and a longer run still delivers.
+- The sweep could delete a running job's directory. It now skips a session with
+  a run in flight, refreshes a directory's age as it is used, and runs on a
+  timer.
+
+Still not done, and still correct as the reviewer's conclusion: authentication,
+CSRF tokens, rate limiting, a durable job queue, and out-of-process session
+state. Without those the network deployment is not for untrusted users.
+
 ## Fourth pass, 2026-09-03 late (commit 8): the external review handoff
 
 A second reviewer left `audit_handoff_2026-09-03/` beside the repo with four

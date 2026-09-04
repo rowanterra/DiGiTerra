@@ -15,13 +15,15 @@ ENFORCE_UPLOAD_LIMIT = os.environ.get("DIGITERRA_ENFORCE_UPLOAD_LIMIT", "false")
 CELL_COUNT_WARNING_LARGE = 1_000_000
 CELL_COUNT_WARNING_MODERATE = 500_000
 # A parsed frame is kept in process memory for the session, and a DataFrame can
-# take several times the bytes of its CSV. A frame above this many cells is
-# rejected before it is stored. 0 disables the cap (the desktop entry point sets
-# a large value, since a local user's own machine is not an attack surface).
-MAX_CELLS = int(os.environ.get("DIGITERRA_MAX_CELLS", "25000000") or 0)
-# Request bodies above this size are rejected before they are read. The desktop
-# entry point raises it; a network deployment keeps the smaller default.
-DEFAULT_MAX_UPLOAD_MB = 64
+# take several times the bytes of its CSV. Three limits apply in order: the
+# request body size, the number of cells the reader is allowed to parse, and the
+# measured size of the parsed frame. 0 disables a limit. desktop_app.py disables
+# the cell and frame limits and raises the body limit, since a local user's own
+# machine is not an attack surface.
+MAX_CELLS = int(os.environ.get("DIGITERRA_MAX_CELLS", "5000000") or 0)
+MAX_FRAME_MB = float(os.environ.get("DIGITERRA_MAX_FRAME_MB", "256") or 0)
+# Request bodies above this size are rejected before they are read.
+DEFAULT_MAX_UPLOAD_MB = float(os.environ.get("DIGITERRA_DEFAULT_MAX_UPLOAD_MB", "32") or 32)
 BYTES_PER_MB = 1024 * 1024
 
 # Display
@@ -42,7 +44,9 @@ MAX_SEARCH_CV_FOLDS = int(os.environ.get("DIGITERRA_MAX_SEARCH_CV_FOLDS", "10") 
 MAX_SEARCH_ITERATIONS = int(os.environ.get("DIGITERRA_MAX_SEARCH_ITERATIONS", "100") or 100)
 
 # Progress (SSE)
-PROGRESS_STREAM_TIMEOUT_SECONDS = 3600
+# An open stream occupies a worker thread. Training that runs longer than this
+# still finishes; the client reconnects to the same id and receives the result.
+PROGRESS_STREAM_TIMEOUT_SECONDS = float(os.environ.get("DIGITERRA_PROGRESS_TIMEOUT_SECONDS", "900") or 900)
 PROGRESS_UPDATE_INTERVAL_SECONDS = 0.5
 PROGRESS_FINAL_UPDATE_DELAY_SECONDS = 0.5
 PROGRESS_COMPLETE_THRESHOLD = 100
@@ -52,4 +56,5 @@ HTTP_OK = 200
 HTTP_ACCEPTED = 202
 HTTP_BAD_REQUEST = 400
 HTTP_NOT_FOUND = 404
+HTTP_TOO_MANY_REQUESTS = 429
 HTTP_INTERNAL_SERVER_ERROR = 500

@@ -18,7 +18,7 @@ docker run --rm -p 5000:5000 digiterra:local
 
 The app answers at `http://localhost:5000`. The image sets `URL_PREFIX=digiterra`, so the app also answers at `http://localhost:5000/digiterra/`. Both the root and the prefixed routes serve the page, so health checks and reverse proxies can use either.
 
-The Dockerfile `CMD` binds gunicorn to port 5000 with one worker.
+The Dockerfile `CMD` binds gunicorn to port 5000 with one worker process and eight threads.
 
 ## Kubernetes with Helm
 
@@ -77,7 +77,7 @@ helm upgrade --install digiterra deploy/helm/digiterra \
 
 ## Production settings
 
-- Workers: one gunicorn worker, because session state is in process memory.
+- Workers: one gunicorn worker process, because session state is in process memory, with `--worker-class gthread --threads 8` so an open progress stream does not hold up other requests. The thread count is the ceiling on concurrent requests, including open streams.
 - HTTPS: a reverse proxy or an Ingress with TLS in front of the app.
 - Secrets: none in the repository. Credentials, if any, come from environment variables or a secret manager.
 - Logging: `LOG_LEVEL=INFO`, or `DEBUG` for troubleshooting. Logs go to stderr and, when the directory is writable, to `LOG_DIR` from `python_scripts/config.py`.

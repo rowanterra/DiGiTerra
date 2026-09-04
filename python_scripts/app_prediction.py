@@ -13,6 +13,8 @@ from pathlib import Path
 import pandas as pd
 from werkzeug.utils import secure_filename
 
+from core.constants import MAX_CELLS, MAX_FRAME_MB
+from core.helpers import FrameTooLarge, read_csv_bounded
 from python_scripts.helpers import prediction, preprocess_data
 
 logger = logging.getLogger(__name__)
@@ -46,7 +48,9 @@ def run_predict(
     filepath = os.path.join(upload_folder, stored_filename)
     file.save(filepath)
     try:
-        data = pd.read_csv(filepath)
+        data = read_csv_bounded(filepath, max_cells=MAX_CELLS, max_frame_mb=MAX_FRAME_MB)
+    except FrameTooLarge as e:
+        return ({"error": str(e)}, 400)
     except pd.errors.EmptyDataError:
         return ({"error": "The uploaded file is empty."}, 400)
     except pd.errors.ParserError as e:

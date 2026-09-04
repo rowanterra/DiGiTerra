@@ -7,6 +7,7 @@ import os
 import platform
 import re
 import shutil
+import threading
 import time
 from contextvars import ContextVar
 from pathlib import Path
@@ -99,6 +100,8 @@ class _ScopedVisDir:
         scope = _session_scope.get()
         path = self._base if scope is None else self._base / scope
         path.mkdir(parents=True, exist_ok=True)
+        if scope is not None:
+            touch_session_dir(path)
         return path
 
     def __truediv__(self, other) -> Path:
@@ -159,18 +162,57 @@ _VIS_BASE.mkdir(parents=True, exist_ok=True)
 
 # Stale-directory sweep. Session output directories and upload leftovers are
 # never removed by the session that made them, so a long-running server fills
-# its disk. The sweep runs from the request path at most once per interval and
-# removes only session directories (32 hex characters) older than the age limit.
+# its disk. Removal is limited to session directories (32 hex characters) whose
+# last use is older than the age limit and whose session has no run in flight.
 STALE_SESSION_HOURS = float(os.environ.get("DIGITERRA_STALE_SESSION_HOURS", "24") or 0)
 _SWEEP_INTERVAL_SECONDS = 600.0
 _last_sweep = [0.0]
 _SESSION_DIR_NAME = re.compile(r"[0-9a-f]{32}")
 
+# A run longer than the age limit would otherwise have its output directory
+# removed by an unrelated visitor's sweep. The application registers a callable
+# that names the sessions with work in flight; those are never removed.
+_active_session_provider: list = [None]
+# Directories are touched as they are used, throttled so the syscall does not
+# run on every path lookup during a plot.
+_TOUCH_INTERVAL_SECONDS = 60.0
+_last_touch: dict = {}
+
+
+def set_active_session_provider(provider) -> None:
+    """Register a callable returning the session ids that must not be swept."""
+    _active_session_provider[0] = provider
+
+
+def _protected_sessions() -> set:
+    provider = _active_session_provider[0]
+    if provider is None:
+        return set()
+    try:
+        return {str(s) for s in provider()}
+    except Exception:
+        # A sweep must never remove a directory because the provider failed.
+        return {"*"}
+
+
+def touch_session_dir(path: Path, now: float | None = None) -> None:
+    """Mark a session directory as in use so the sweep leaves it alone."""
+    now = time.time() if now is None else now
+    key = str(path)
+    if now - _last_touch.get(key, 0.0) < _TOUCH_INTERVAL_SECONDS:
+        return
+    _last_touch[key] = now
+    try:
+        os.utime(path, (now, now))
+    except OSError:
+        pass
+
 
 def sweep_stale_outputs(now: float | None = None, force: bool = False) -> int:
     """Remove session output directories and stray uploads older than the age limit.
 
-    Returns the number of entries removed. A zero age limit disables the sweep.
+    A session with a run in flight is skipped whatever its age. Returns the number
+    of entries removed. A zero age limit disables the sweep.
     """
     if STALE_SESSION_HOURS <= 0:
         return 0
@@ -179,12 +221,19 @@ def sweep_stale_outputs(now: float | None = None, force: bool = False) -> int:
         return 0
     _last_sweep[0] = now
     cutoff = now - STALE_SESSION_HOURS * 3600
+    protected = _protected_sessions()
+    if "*" in protected:
+        return 0
     removed = 0
     try:
         for child in _VIS_BASE.iterdir():
-            if child.is_dir() and _SESSION_DIR_NAME.fullmatch(child.name) and child.stat().st_mtime < cutoff:
-                shutil.rmtree(child, ignore_errors=True)
-                removed += 1
+            if not (child.is_dir() and _SESSION_DIR_NAME.fullmatch(child.name)):
+                continue
+            if child.name in protected or child.stat().st_mtime >= cutoff:
+                continue
+            shutil.rmtree(child, ignore_errors=True)
+            _last_touch.pop(str(child), None)
+            removed += 1
     except OSError:
         pass
     try:
@@ -195,6 +244,22 @@ def sweep_stale_outputs(now: float | None = None, force: bool = False) -> int:
     except OSError:
         pass
     return removed
+
+
+def start_sweep_timer() -> None:
+    """Run the sweep on a timer so cleanup does not depend on a visitor arriving."""
+    if STALE_SESSION_HOURS <= 0:
+        return
+
+    def _tick():
+        while True:
+            time.sleep(_SWEEP_INTERVAL_SECONDS)
+            try:
+                sweep_stale_outputs(force=True)
+            except Exception:
+                pass
+
+    threading.Thread(target=_tick, name="digiterra-sweep", daemon=True).start()
 
 
 def update_vis_dir(new_path: Path):

@@ -8,9 +8,11 @@ Only `.csv` files are accepted. `allowed_file` in `core/helpers.py` checks the e
 
 Uploaded filenames pass through `werkzeug.utils.secure_filename` before the file is written under `UPLOAD_DIR`.
 
-`MAX_CONTENT_LENGTH` is set in `core/flask_app.py`. The limit is `DIGITERRA_MAX_UPLOAD_MB` when that variable is a positive number, and 64 MB otherwise. `desktop_app.py` sets 1024 MB before the application module is imported, since a local user's own machine is not an attack surface. An oversized request body is rejected before the file is read, and the handler in `core/errors.py` answers with a JSON 413.
+Three limits apply in order. `MAX_CONTENT_LENGTH` in `core/flask_app.py` rejects an oversized request body before the file is read, and `core/errors.py` answers with a JSON 413; the value is `DIGITERRA_MAX_UPLOAD_MB` when that variable is positive and 32 MB otherwise. `read_csv_bounded` in `core/helpers.py` then reads the header to learn the column count and caps the rows it parses at `DIGITERRA_MAX_CELLS` divided by that width (default 5,000,000 cells), so a file over the budget is refused without the whole file being parsed into memory. The parsed frame is measured with `memory_usage(deep=True)` and refused above `DIGITERRA_MAX_FRAME_MB` (default 256), which catches object columns that hold far more bytes per cell than numeric ones. `tests/unit/test_limits.py` asserts the memory behavior by comparing the peak allocation of a rejected read against a full parse of the same file.
 
-A parsed frame is kept in process memory for the session. `routes/upload.py` rejects a frame with more than `DIGITERRA_MAX_CELLS` cells (default 25,000,000; 0 disables the cap, and `desktop_app.py` sets 0) before it is stored. The upload file on disk is removed once it has been read, on every exit path, in both `routes/upload.py` and `python_scripts/app_prediction.py`.
+`desktop_app.py` sets a 1024 MB body limit and disables the cell and frame limits before the application module is imported, since a local user's own machine is not an attack surface.
+
+The upload file on disk is removed once it has been read, on every exit path, in both `routes/upload.py` and `python_scripts/app_prediction.py`.
 
 `routes/upload.py` also displays a warning for files larger than `FILE_SIZE_WARNING_MB` (`DIGITERRA_WARN_UPLOAD_MB`, default 1 MB) and for high cell counts. The warning does not block the upload. A second, application-level size check against `DIGITERRA_MAX_UPLOAD_MB` runs only when `DIGITERRA_ENFORCE_UPLOAD_LIMIT` is true (`core/constants.py`).
 
@@ -28,15 +30,21 @@ Generated files are written under a per-session subdirectory. `config.set_sessio
 
 Session state is in process memory. `core/state.py` bounds the store to `DIGITERRA_MAX_SESSIONS` entries (default 32), evicts the oldest entry past that bound, and guards the store with a lock. Because the state is in one process, gunicorn must run with one worker. The bound is a count, not a byte total, so the worst case is the session count times the cell cap.
 
-Session output directories older than `DIGITERRA_STALE_SESSION_HOURS` (default 24; 0 disables) and stray upload files of the same age are removed by `config.sweep_stale_outputs`, which runs when a new session is issued and at most once per ten minutes.
+Session output directories older than `DIGITERRA_STALE_SESSION_HOURS` (default 24; 0 disables) and stray upload files of the same age are removed by `config.sweep_stale_outputs`. A directory is marked as in use whenever a path is built from it, and a session with a run in flight is skipped whatever its age, so a job longer than the age limit does not lose its output to an unrelated visitor's sweep. The sweep runs on a timer started in `core/flask_app.py` and also when a new session cookie is issued.
 
 ## Progress streams
 
-`GET /progress/<id>` in `routes/main.py` returns 404 for an id that has no tracker and for an id that a different browser session started; each tracker records the session cookie that created it. Trackers are capped at 256 (`MAX_TRACKED_SESSIONS` in `python_scripts/preprocessing/progress_tracker.py`). A stream for a valid id stays open for up to `PROGRESS_STREAM_TIMEOUT_SECONDS` (3600), which on a single synchronous worker blocks other requests for that time.
+`GET /progress/<id>` in `routes/main.py` returns 404 for an id that has no tracker and for an id that a different browser session started; each tracker records the session cookie that created it. Trackers are capped at 256 (`MAX_TRACKED_SESSIONS` in `python_scripts/preprocessing/progress_tracker.py`).
 
-## Training request bounds
+A stream occupies a worker thread while it is open. The Dockerfile runs gunicorn with one worker process and `--worker-class gthread --threads 8`, which keeps session state in one process while letting an open stream coexist with other requests; the default synchronous worker does not. `scripts/check_stream_starvation.py` measures both: recorded on 2026-09-03, an unrelated request was not answered within ten seconds under the synchronous worker and was answered in 0.01 s under the threaded worker. The thread count is the ceiling on concurrent requests including open streams. A stream ends after `DIGITERRA_PROGRESS_TIMEOUT_SECONDS` (900) without an error payload, so the browser's EventSource reconnects and a longer run still delivers its result.
 
-Values in the training request that schedule work are bounded in `core/constants.py` and checked in `python_scripts/app_model_training.py` before any training starts: `testSize` in [`DIGITERRA_MIN_TEST_SIZE`, `DIGITERRA_MAX_TEST_SIZE`] (0.05 to 0.90), cross-validation folds 2 to `DIGITERRA_MAX_CV_FOLDS` (20), search folds 2 to `DIGITERRA_MAX_SEARCH_CV_FOLDS` (10), and search iterations 1 to `DIGITERRA_MAX_SEARCH_ITERATIONS` (100). A value outside its range ends the run with an error the client displays. The search and cross-validation paths use every core (`n_jobs=-1`), so these bounds cap what one request can schedule; they do not limit how many requests run at once.
+## Training request bounds and admission control
+
+`validate_training_request` in `python_scripts/app_model_training.py` runs in the request handler, before `routes/modeling.py` creates a thread, so a malformed or out-of-range request costs a JSON parse. It checks the required fields, that the named model is in the registry, and the ranges held in `core/constants.py`: `testSize` in [`DIGITERRA_MIN_TEST_SIZE`, `DIGITERRA_MAX_TEST_SIZE`] (0.05 to 0.90), cross-validation folds 2 to `DIGITERRA_MAX_CV_FOLDS` (20), search folds 2 to `DIGITERRA_MAX_SEARCH_CV_FOLDS` (10), and search iterations 1 to `DIGITERRA_MAX_SEARCH_ITERATIONS` (100). A value outside its range returns 400.
+
+`core/jobs.py` limits how many runs exist at once: one per browser session, and `DIGITERRA_MAX_CONCURRENT_TRAINING` (default 2) across the process. A request past either limit returns 429 without starting a thread. The search and cross-validation paths use every core (`n_jobs=-1`), so this is the ceiling on the CPU one client can occupy.
+
+There is no rate limiting, so a client can still send requests that are rejected cheaply, and no queue, so a refused run is not deferred. Those need an external limiter and a job queue.
 
 ## Error responses
 

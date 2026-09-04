@@ -28,6 +28,10 @@ Model training and inference
 
 Web layer
 
+- The CSV reader takes the column count from the header and caps the rows it parses at the cell budget, so a file over the limit is refused without being parsed into memory first, and the parsed frame is refused above `DIGITERRA_MAX_FRAME_MB`. The served body limit is 32 MB and the cell budget 5,000,000.
+- The training request is validated in the request handler, before a thread exists, and `core/jobs.py` allows one run per session and `DIGITERRA_MAX_CONCURRENT_TRAINING` across the process. A request past either returns 429.
+- The container runs gunicorn with one worker process and eight threads. An open progress stream no longer blocks other requests; `scripts/check_stream_starvation.py` measures both worker classes. A stream ends after 15 minutes without an error payload so the browser reconnects.
+- The output sweep skips a session with a run in flight, refreshes a directory's age as it is used, and runs on a timer rather than only when a new session cookie is issued.
 - Uploaded CSVs are removed from disk once parsed, in both the upload and prediction routes, and session output directories older than `DIGITERRA_STALE_SESSION_HOURS` (default 24) are swept when a new session is issued.
 - A frame above `DIGITERRA_MAX_CELLS` cells (default 25,000,000) is rejected before it is stored; the default request-body limit is 64 MB for a served deployment, and `desktop_app.py` raises both for local use.
 - `testSize`, cross-validation folds, search folds, and search iterations are bounded server-side (`core/constants.py`), and the UI inputs carry the same ranges. An out-of-range value ends the run with an error instead of scheduling unbounded work.

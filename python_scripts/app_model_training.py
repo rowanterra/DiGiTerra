@@ -43,6 +43,55 @@ def _int_in_range(raw_value, name: str, minimum: int, maximum: int, default: int
     return value
 
 
+REQUIRED_TRAINING_FIELDS = [
+    "indicators",
+    "predictors",
+    "hyperparameters",
+    "models",
+    "nonreq",
+    "scaler",
+    "units",
+    "sigfig",
+    "seedValue",
+    "testSize",
+    "stratifyBool",
+    "dropMissing",
+    "imputeStrategy",
+    "dropZero",
+    "quantileBinDict",
+    "useTransformer",
+    "transformerCols",
+]
+
+
+def validate_training_request(data: dict) -> None:
+    """Check the cheap request fields. Raises ValueError with a message for the client.
+
+    The route calls this before it creates a thread, so a request with an
+    out-of-range value costs nothing but the parse.
+    """
+    missing = [f for f in REQUIRED_TRAINING_FIELDS if f not in data]
+    if missing:
+        raise ValueError(f"Missing required fields: {', '.join(missing)}")
+    model_name = data.get("models")
+    if model_name is None or (isinstance(model_name, str) and not model_name.strip()):
+        raise ValueError("No model selected. Choose a model from the list before running.")
+    if model_name == "TerraFORMER" or model_name not in MODEL_REGISTRY or MODEL_REGISTRY[model_name][0] is None:
+        raise ValueError(f"Invalid or unsupported model: {model_name!r}.")
+    _float_in_range(data.get("testSize", "0.20"), "testSize", MIN_TEST_SIZE, MAX_TEST_SIZE, 0.2)
+    _int_in_range(
+        data.get("crossValidationFolds", DEFAULT_CV_FOLDS), "crossValidationFolds", 2, MAX_CV_FOLDS, DEFAULT_CV_FOLDS
+    )
+    _int_in_range(data.get("searchCVFolds", 5), "searchCVFolds", 2, MAX_SEARCH_CV_FOLDS, 5)
+    _int_in_range(
+        data.get("searchNIter", DEFAULT_SEARCH_ITERATIONS),
+        "searchNIter",
+        1,
+        MAX_SEARCH_ITERATIONS,
+        DEFAULT_SEARCH_ITERATIONS,
+    )
+
+
 def _float_in_range(raw_value, name: str, minimum: float, maximum: float, default: float) -> float:
     """Parse a request number and reject one outside [minimum, maximum]."""
     if raw_value in (None, ""):
@@ -184,26 +233,7 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
 
     try:
         # Input validation
-        required_fields = [
-            "indicators",
-            "predictors",
-            "hyperparameters",
-            "models",
-            "nonreq",
-            "scaler",
-            "units",
-            "sigfig",
-            "seedValue",
-            "testSize",
-            "stratifyBool",
-            "dropMissing",
-            "imputeStrategy",
-            "dropZero",
-            "quantileBinDict",
-            "useTransformer",
-            "transformerCols",
-        ]
-        missing_fields = [field for field in required_fields if field not in data]
+        missing_fields = [field for field in REQUIRED_TRAINING_FIELDS if field not in data]
         if missing_fields:
             raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
 
