@@ -93,3 +93,5 @@ static/exploration_graphics_*.pdf
 static/*_graphics_*.pdf
 
 # Local tooling working files, not part of the published repository
+# Manuscript working files, kept beside the code and out of the repository
+paper/
