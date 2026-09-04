@@ -11,6 +11,14 @@ taking the machine, and with a wall clock, so a fit that never converges is kill
 rather than held. The parent gets an answer, a refusal, or a timeout, and its own
 memory is untouched either way.
 
+RLIMIT_AS is not honored everywhere. On Darwin it is a second name for RLIMIT_RSS,
+which the kernel does not implement, so setrlimit refuses every value and no
+ceiling can be set at any size. Where the ceiling cannot be set, a step that asks
+for one is refused before a child is started rather than run without it: an
+unbounded child is the thing this module exists to prevent, and running one while
+reporting success would be worse than not running it at all. In practice that
+means the server profile requires Linux.
+
 The child is started with the spawn method so it does not inherit the parent's
 loaded state, and the two ends exchange data through a file rather than a pipe,
 because a pipe deadlocks when a result is larger than its buffer and the parent is
@@ -23,6 +31,7 @@ import logging
 import multiprocessing as mp
 import os
 import pickle
+import sys
 import tempfile
 import traceback
 from pathlib import Path
@@ -66,24 +75,87 @@ class WorkerTimeout(WorkerError):
     """The child ran past its wall clock."""
 
 
-def _apply_limits(memory_mb: float) -> None:
-    """Set the child's address-space limit. POSIX only; a no-op elsewhere."""
+class WorkerLimitUnavailable(WorkerError):
+    """The platform will not apply a memory limit, so no child was started."""
+
+
+# Platforms whose kernel implements RLIMIT_AS as an enforced ceiling on a process's
+# address space. Linux does, and so does the BSD line, where it is RLIMIT_VMEM under
+# a second name. Darwin does not: there RLIMIT_AS is a second name for RLIMIT_RSS,
+# which the kernel does not apply. Measured on macOS 26 (Darwin 25.6, arm64),
+# setrlimit returns EINVAL for every value below roughly 512 GiB -- so for every
+# budget a step would actually ask for -- and the astronomical values above that
+# which it does accept bound nothing. A platform not named here is treated as
+# unable to enforce the limit, because a ceiling that might not hold is not one.
+_PLATFORMS_ENFORCING_RLIMIT_AS = ("linux", "freebsd", "openbsd", "netbsd")
+
+
+def memory_limit_supported() -> tuple[bool, str]:
+    """Whether this platform holds a process to an address-space ceiling.
+
+    This is a property of the kernel rather than something a syscall will report.
+    A probe cannot stand in for it: on Darwin setrlimit accepts an astronomical
+    value and refuses a usable one, and enforces neither, so an attempt that
+    succeeds proves nothing. The question is therefore answered by platform, and
+    an unrecognized platform is answered no.
+    """
+    try:
+        import resource  # noqa: F401 - present only where the limit could be set at all
+    except ImportError:
+        return False, f"{sys.platform} has no resource module, so RLIMIT_AS cannot be set"
+    if sys.platform.startswith(_PLATFORMS_ENFORCING_RLIMIT_AS):
+        return True, ""
+    if sys.platform == "darwin":
+        return False, (
+            "darwin does not enforce RLIMIT_AS: it is a second name for RLIMIT_RSS, which the "
+            "kernel does not apply, and setrlimit refuses every value small enough to bound a step"
+        )
+    return False, f"{sys.platform} is not known to enforce RLIMIT_AS"
+
+
+def _refusal(reason: str) -> str:
+    """The one message both ends give when the ceiling cannot be set."""
+    return (
+        f"The step was not started because its memory limit cannot be enforced here: {reason}. "
+        "Isolated work needs a platform that honors RLIMIT_AS, which in practice means Linux, "
+        "so the server profile requires one. Set DIGITERRA_ISOLATE_WORK=0 to run the step in "
+        "this process with no memory limit instead."
+    )
+
+
+def _apply_limits(memory_mb: float) -> tuple[bool, str]:
+    """Set this process's address-space ceiling and report whether it took.
+
+    Returns whether the ceiling is in force and, when it is not, why. Nothing is
+    logged and nothing continues on a failure: what an unenforceable limit means
+    is the caller's decision, and every caller here refuses to do the work.
+    """
     if not memory_mb or memory_mb <= 0:
-        return
+        return False, "no memory limit was asked for"
     try:
         import resource
-
+    except ImportError:
+        return False, f"{sys.platform} has no resource module, so RLIMIT_AS cannot be set"
+    try:
         limit = int(memory_mb * 1024 * 1024)
         soft, hard = resource.getrlimit(resource.RLIMIT_AS)
         ceiling = limit if hard == resource.RLIM_INFINITY else min(limit, hard)
         resource.setrlimit(resource.RLIMIT_AS, (ceiling, hard))
-    except (ImportError, ValueError, OSError) as e:
-        logger.warning("Worker memory limit not applied: %s", e)
+    except (ValueError, OSError) as e:
+        return False, f"{sys.platform} refuses setrlimit(RLIMIT_AS): {e}"
+    return True, ""
 
 
 def _child(func, args, kwargs, out_path: str, memory_mb: float) -> None:
     """Entry point of the child: apply the limits, run, write the outcome."""
-    _apply_limits(memory_mb)
+    applied, reason = _apply_limits(memory_mb)
+    if not applied and memory_mb and memory_mb > 0:
+        # The parent asked the same question before it started this process. Asking
+        # again here is what makes the answer a guarantee rather than a forecast:
+        # this is the process that would do the allocating.
+        with open(out_path, "wb") as fh:
+            pickle.dump({"ok": False, "kind": "no_limit", "detail": reason}, fh)
+        return
     payload: dict
     try:
         payload = {"ok": True, "value": func(*args, **(kwargs or {}))}
@@ -114,9 +186,18 @@ def run_isolated(func, *args, memory_mb: float | None = None, timeout_s: float |
     application's own data, and the file between the two processes is written by
     the child and read only by the parent that created it. The limits are there to
     bound the work, not to contain an attacker.
+
+    A step that asks for a memory ceiling this platform will not apply raises
+    WorkerLimitUnavailable and no child is started. A caller that wants the work
+    done without a ceiling asks for one of zero, which is a decision rather than a
+    silent degradation.
     """
     memory_mb = DEFAULT_MEMORY_MB if memory_mb is None else memory_mb
     timeout_s = DEFAULT_TIMEOUT_S if timeout_s is None else timeout_s
+    if memory_mb and memory_mb > 0:
+        supported, reason = memory_limit_supported()
+        if not supported:
+            raise WorkerLimitUnavailable(_refusal(reason))
     ctx = mp.get_context("spawn")
     fd, out_path = tempfile.mkstemp(prefix="dgt_worker_", suffix=".pkl")
     os.close(fd)
@@ -145,6 +226,8 @@ def run_isolated(func, *args, memory_mb: float | None = None, timeout_s: float |
             return payload["value"]
         if payload.get("kind") == "memory":
             raise WorkerMemoryExceeded(payload.get("detail", "The step ran out of memory."))
+        if payload.get("kind") == "no_limit":
+            raise WorkerLimitUnavailable(_refusal(payload.get("detail", "the ceiling was not applied")))
         logger.warning("Isolated step failed: %s", payload.get("traceback") or payload.get("detail"))
         raise WorkerError(payload.get("detail", "The step failed."))
     finally:

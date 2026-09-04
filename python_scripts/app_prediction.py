@@ -15,7 +15,7 @@ from werkzeug.utils import secure_filename
 
 from core.constants import MAX_CELLS, MAX_FRAME_MB
 from core.helpers import FrameTooLarge
-from core.worker import WorkerError, read_table_isolated
+from core.worker import WorkerError, WorkerLimitUnavailable, read_table_isolated
 from python_scripts.helpers import prediction, preprocess_data
 
 logger = logging.getLogger(__name__)
@@ -52,6 +52,9 @@ def run_predict(
         data = read_table_isolated(filepath, max_cells=MAX_CELLS, max_frame_mb=MAX_FRAME_MB)
     except FrameTooLarge as e:
         return ({"error": str(e)}, 400)
+    except WorkerLimitUnavailable as e:
+        logger.error("Isolated parse unavailable on this platform: %s", e)
+        return ({"error": "This installation cannot run an upload within a memory limit, so it did not run one."}, 500)
     except WorkerError as e:
         return ({"error": f"The file could not be read within the limits for one upload. {e}"}, 400)
     except pd.errors.EmptyDataError:

@@ -84,6 +84,11 @@ def test_a_shared_secret_authenticates_where_there_is_no_proxy(client, monkeypat
 def test_csrf_is_required_for_a_write_and_not_for_a_read(client, monkeypatch):
     monkeypatch.setenv("DIGITERRA_PROFILE", "server")
     monkeypatch.setenv("DIGITERRA_TRUSTED_PROXIES", "127.0.0.1/32")
+    # The subject here is the token, not the parse. The server profile would send the
+    # upload through the isolated worker, which refuses outright on a platform that
+    # does not enforce RLIMIT_AS, so a real 403 and a platform refusal would be
+    # indistinguishable at the status code. tests/unit/test_worker.py owns that.
+    monkeypatch.setenv("DIGITERRA_ISOLATE_WORK", "0")
     headers = {"X-Forwarded-User": "rowan"}
     r = client.get("/", headers=headers)
     assert r.status_code == 200
@@ -132,6 +137,9 @@ def test_a_run_costs_more_of_the_budget_than_a_page_view(client, monkeypatch):
     monkeypatch.setenv("DIGITERRA_REQUIRE_CSRF", "0")
     monkeypatch.setenv("DIGITERRA_RATE_PER_MINUTE", "600")
     monkeypatch.setenv("DIGITERRA_RATE_BURST", "12")
+    # The subject is what a run costs the bucket; the parse is only the vehicle. See
+    # the note in test_csrf_is_required_for_a_write_and_not_for_a_read.
+    monkeypatch.setenv("DIGITERRA_ISOLATE_WORK", "0")
     headers = {"X-Forwarded-User": "rowan"}
     # Two uploads take 20 of a 12-token bucket, so the second is refused while the
     # index page, at one token, still answers before them.

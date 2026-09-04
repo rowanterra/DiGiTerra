@@ -88,11 +88,23 @@ The rate-limit buckets are still per process. Two workers therefore each allow t
 
 ## Isolated work
 
-A budget enforced inside the process doing the allocating cannot bound that process: by the time a frame or a fitted model is large enough to measure, the memory is already taken. `core/worker.py` runs a step in a child process started with the spawn method, under `RLIMIT_AS` and a wall clock, and the two ends exchange data through a file rather than a pipe, which would deadlock on a result larger than its buffer. An allocation past the limit raises `MemoryError` in the child or has it killed; either way the parent gets a refusal and its own memory is untouched.
+A budget enforced inside the process doing the allocating cannot bound that process: by the time a frame or a fitted model is large enough to measure, the memory is already taken. `core/worker.py` runs a step in a child process started with the spawn method, under `RLIMIT_AS` and a wall clock, and the two ends exchange data through a file rather than a pipe, which would deadlock on a result larger than its buffer. An allocation past the limit raises `MemoryError` in the child or has it killed; either way the parent gets a refusal and its own memory is untouched. This holds only where the kernel enforces `RLIMIT_AS`, which is Linux and the BSDs and is not macOS; the next section says what happens elsewhere.
 
 `RLIMIT_AS` counts address space, not resident pages, and a Python child spends several hundred megabytes of it on the interpreter, numpy, pandas and scikit-learn before it touches any data; measured here, about 512 MB before a small CSV is read. A step's limit is therefore `DIGITERRA_WORKER_BASE_MB` (768) plus what its data may take, and a limit below that baseline would refuse every step whatever its size.
 
-Parsing goes through the worker under the server profile, or wherever `DIGITERRA_ISOLATE_WORK` says so; on the desktop it does not, since the machine belongs to the person using it. Training does not yet, because the fitted objects have to come back across the process boundary and that path is being built on the artifact format below. `tests/unit/test_worker.py` runs an allocation of four gigabytes and an endless loop and checks that the child stops, the parent survives, and the next step still runs.
+Parsing goes through the worker under the server profile, or wherever `DIGITERRA_ISOLATE_WORK` says so; on the desktop it does not, since the machine belongs to the person using it. Training does not yet, because the fitted objects have to come back across the process boundary and that path is being built on the artifact format below.
+
+### Where the memory bound holds
+
+`RLIMIT_AS` is enforced by the Linux kernel and by the BSDs. It is not enforced on macOS: there `RLIMIT_AS` is a second name for `RLIMIT_RSS`, which the Darwin kernel does not apply. Measured on macOS 26 (Darwin 25.6, arm64), `setrlimit` returns `EINVAL` for every value below roughly 512 GiB, which is every budget a step would ask for, and the astronomical values above that which it does accept bound nothing. Windows has no equivalent and no `resource` module at all.
+
+**The server profile therefore requires Linux.** On macOS, and on any platform not known to enforce the limit, `core/worker.py` refuses: `run_isolated` raises `WorkerLimitUnavailable` before a child process is started, and the message names the platform and the reason. A server-profile upload on macOS is answered with a 500 saying this installation cannot run an upload within a memory limit, rather than running the parse with no ceiling and reporting success. The refusal is checked in the parent, which is where it saves the work, and again in the child, which is the process that would do the allocating; a step that asks for a ceiling of zero is opting out deliberately and still runs.
+
+This is the same rule the rest of the application follows: a fitted model whose size cannot be measured is discarded rather than kept uncharged (see Session memory), and a bundle whose signature cannot be verified is refused rather than imported. A limit that cannot be enforced is reported as absent, not assumed.
+
+The desktop profile does not isolate work at all, so nothing about it changes on macOS: the machine belongs to the person using it, and `desktop_app.py` is unaffected.
+
+`tests/unit/test_worker.py` asserts the outcome each platform actually offers rather than skipping on the one that cannot make the promise. Where the ceiling holds, an allocation of four gigabytes under a 768 MB budget stops the child while the parent survives and the next step still runs. Where it cannot be set, the same call is refused before any child starts. One test spawns a child that asks for the real budget and reports whether the kernel gave it, so the platform reading in the code cannot drift from what the allocating process finds; another simulates an unenforceable limit on any platform and checks that no child is created. The CI matrix runs `ubuntu-latest` and `macos-latest`, because an ubuntu-only matrix is what let the macOS behavior go untested.
 
 ## Run records and model bundles
 
@@ -120,7 +132,7 @@ There is no rate limiting, so a client can still send requests that are rejected
 
 ## Container
 
-`deploy/docker/Dockerfile` builds from `python:3.11-slim`, creates an `app` user, and switches to that user before the `CMD`. Gunicorn binds `0.0.0.0:5000` with one worker.
+`deploy/docker/Dockerfile` builds from `python:3.11-slim`, creates an `app` user, and switches to that user before the `CMD`. Gunicorn binds `0.0.0.0:5000` with one worker. The image is Linux, which is what the memory bound on isolated work requires; running the server profile directly on a macOS host instead is a configuration the application refuses rather than serves.
 
 ## Open items
 

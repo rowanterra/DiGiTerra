@@ -9,11 +9,17 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # Both platforms, because they do not make the same promises. RLIMIT_AS is
+    # enforced on Linux and not on macOS, so the isolated worker takes a memory
+    # ceiling on one and refuses to start a step on the other. An ubuntu-only
+    # matrix ran green while the macOS behavior was untested.
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest, macos-latest]
         python-version: ["3.11", "3.12"]
+    name: ${{ matrix.os }} / Python ${{ matrix.python-version }}
     steps:
       - uses: actions/checkout@v4
 

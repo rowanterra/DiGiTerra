@@ -18,6 +18,7 @@ from core.constants import (
     FILE_SIZE_WARNING_MB,
     FILENAME_DISPLAY_LENGTH,
     HTTP_BAD_REQUEST,
+    HTTP_INTERNAL_SERVER_ERROR,
     HTTP_TOO_MANY_REQUESTS,
     MAX_CELLS,
     MAX_FRAME_MB,
@@ -25,7 +26,7 @@ from core.constants import (
 )
 from core.helpers import FrameTooLarge, allowed_file, estimate_decoded_bytes
 from core.state import MemoryBudgetExceeded, admit_frame, get_session_id, get_session_storage, reserve_frame
-from core.worker import WorkerError, read_table_isolated
+from core.worker import WorkerError, WorkerLimitUnavailable, read_table_isolated
 from python_scripts.reporting.bundle import sha256_file
 
 bp = Blueprint("upload", __name__)
@@ -92,6 +93,13 @@ def upload_file():
             data = read_table_isolated(filepath, max_cells=MAX_CELLS, max_frame_mb=MAX_FRAME_MB)
         except FrameTooLarge as e:
             return jsonify({"error": str(e)}), HTTP_BAD_REQUEST
+        except WorkerLimitUnavailable as e:
+            # Not the file's fault and not the caller's: this installation cannot
+            # bound a parse, so it declines to run one. The operator has to move it.
+            logger.error("Isolated parse unavailable on this platform: %s", e)
+            return jsonify(
+                {"error": "This installation cannot run an upload within a memory limit, so it did not run one."}
+            ), HTTP_INTERNAL_SERVER_ERROR
         except WorkerError as e:
             logger.warning("Isolated parse refused %s: %s", stored_filename, e)
             return jsonify(
