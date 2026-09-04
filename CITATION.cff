@@ -12,10 +12,23 @@ abstract: >-
   application for macOS, Windows, and Linux.
 type: software
 authors:
+  - family-names: DiGirolamo
+    given-names: Paige E.
+    affiliation: Stevens Institute of Technology
+    orcid: 'https://orcid.org/0009-0007-9028-3401'
   - family-names: Terra
     given-names: Rowan R.
     email: rowan.r.terra@gmail.com
+    affiliation: Duquesne University
     orcid: 'https://orcid.org/0009-0001-3890-705X'
+  - family-names: Gulliver
+    given-names: Djuna M.
+    affiliation: National Energy Technology Laboratory
+    orcid: 'https://orcid.org/0000-0003-4219-5849'
+  - family-names: Trun
+    given-names: Nancy J.
+    affiliation: Duquesne University
+    orcid: 'https://orcid.org/0000-0003-0149-3874'
 version: 0.1.0
 date-released: '2026-09-03'
 license: MIT

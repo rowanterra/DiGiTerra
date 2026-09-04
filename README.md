@@ -181,6 +181,38 @@ Docker and Helm assets are under `deploy/`. `deploy/README.md` describes the Doc
 
 The page uses ARIA attributes, keyboard navigation with a skip link, screen reader announcements through live regions, and labeled form controls. The Accessibility section of `docs/documentation.md` lists the details.
 
+## Acknowledgements
+
+DiGiTerra is built on the scientific Python stack and would not exist without it: scikit-learn (Pedregosa et al., 2011) for every estimator, preprocessing step, and metric the application offers; NumPy (Harris et al., 2020), pandas (McKinney, 2010), and SciPy (Virtanen et al., 2020) for the array, frame, and statistical foundations; matplotlib (Hunter, 2007) and seaborn (Waskom, 2021) for the figures; SHAP (Lundberg & Lee, 2017) for the model explanations; and Flask and Werkzeug (Pallets, 2026) for the web layer. `THIRD_PARTY_NOTICES.md` lists every runtime dependency with its version and license.
+
+The example datasets in `examples/` are static copies of the datasets distributed with scikit-learn. Their original sources are the iris measurements of Fisher (1936), the diabetes progression data of Efron et al. (2004), and the wine, breast cancer (WDBC), and Linnerud datasets held by the UCI Machine Learning Repository; `synthetic_regression.csv` was generated once with `sklearn.datasets.make_regression`. `examples/README.md` gives the column setup for each file.
+
+The Documentation view's styling — the evergreen masthead, warm off-white paper, forest-green headings, and journal-style tables — follows the comparison page of the corrplotpy package (Terra, 2026).
+
+## References
+
+Efron, B., Hastie, T., Johnstone, I., & Tibshirani, R. (2004). Least angle regression. *The Annals of Statistics, 32*(2), 407–499.
+
+Fisher, R. A. (1936). The use of multiple measurements in taxonomic problems. *Annals of Eugenics, 7*(2), 179–188.
+
+Harris, C. R., Millman, K. J., van der Walt, S. J., Gommers, R., Virtanen, P., Cournapeau, D., Wieser, E., Taylor, J., Berg, S., Smith, N. J., Kern, R., Picus, M., Hoyer, S., van Kerkwijk, M. H., Brett, M., Haldane, A., del Río, J. F., Wiebe, M., Peterson, P., … Oliphant, T. E. (2020). Array programming with NumPy. *Nature, 585*(7825), 357–362.
+
+Hunter, J. D. (2007). Matplotlib: A 2D graphics environment. *Computing in Science & Engineering, 9*(3), 90–95.
+
+Lundberg, S. M., & Lee, S.-I. (2017). A unified approach to interpreting model predictions. *Advances in Neural Information Processing Systems, 30*, 4765–4774.
+
+McKinney, W. (2010). Data structures for statistical computing in Python. In S. van der Walt & J. Millman (Eds.), *Proceedings of the 9th Python in Science Conference* (pp. 56–61).
+
+Pallets. (2026). *Flask* (Version 3.1.3) [Computer software]. https://flask.palletsprojects.com
+
+Pedregosa, F., Varoquaux, G., Gramfort, A., Michel, V., Thirion, B., Grisel, O., Blondel, M., Prettenhofer, P., Weiss, R., Dubourg, V., Vanderplas, J., Passos, A., Cournapeau, D., Brucher, M., Perrot, M., & Duchesnay, É. (2011). Scikit-learn: Machine learning in Python. *Journal of Machine Learning Research, 12*, 2825–2830.
+
+Terra, R. R. (2026). *corrplotpy* (Version 1.0.4) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.22287087
+
+Virtanen, P., Gommers, R., Oliphant, T. E., Haberland, M., Reddy, T., Cournapeau, D., Burovski, E., Peterson, P., Weckesser, W., Bright, J., van der Walt, S. J., Brett, M., Wilson, J., Millman, K. J., Mayorov, N., Nelson, A. R. J., Jones, E., Kern, R., Larson, E., … Vázquez-Baeza, Y. (2020). SciPy 1.0: Fundamental algorithms for scientific computing in Python. *Nature Methods, 17*(3), 261–272.
+
+Waskom, M. L. (2021). seaborn: statistical data visualization. *Journal of Open Source Software, 6*(60), 3021.
+
 ## License
 
 MIT. See `LICENSE`.
