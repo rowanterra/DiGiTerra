@@ -24,6 +24,7 @@ from python_scripts.preprocessing.hyperparameter_search import _estimate_param_c
 from python_scripts.preprocessing.outlier_handling import apply_outlier_handling
 from python_scripts.preprocessing.split_fill import apply_fill_plan_to_split, get_fill_plan
 from python_scripts.preprocessing.splitting import get_split_plan, split_indices
+from python_scripts.preprocessing.uncertainty import record_conformal
 from python_scripts.preprocessing.utilities import (
     _scale_pairs,
     get_feature_names,
@@ -653,6 +654,10 @@ def run_regression(
 
     if progress_tracker:
         progress_tracker.update_stage("model_training", "running", 85, "Calculating performance metrics...")
+
+    # The interval a later prediction carries, from the residuals on these same
+    # validation rows and in the same units a reader sees.
+    record_conformal(y_test, y_te_pred)
 
     # Metrics
     metrics_train = regression_report(y_train_actual, y_tr_pred, target_names=list(y.columns))

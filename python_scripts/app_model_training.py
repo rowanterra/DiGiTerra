@@ -29,6 +29,7 @@ from python_scripts.preprocessing.guardrails import run_guardrails
 from python_scripts.preprocessing.progress_tracker import get_tracker, set_result
 from python_scripts.preprocessing.split_fill import FillPlan, reset_fill_plan, set_fill_plan
 from python_scripts.preprocessing.splitting import SplitPlan, reset_split_plan, set_split_plan
+from python_scripts.preprocessing.uncertainty import get_conformal
 from python_scripts.reporting.bundle import build_manifest, serialized_size, write_run_record
 
 DEFAULT_CV_FOLDS = 5
@@ -1066,6 +1067,8 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
         # How far a new row sits from the training rows. Fitted by the pipeline while
         # the training matrix was in scope; None when it could not be measured.
         store["applicability"] = get_applicability()
+        # The half-width of a 90 percent interval, for a regression run.
+        store["conformal"] = get_conformal()
         # Store predictor names for use in prediction (handles multi-target regression)
         store["predictor_names"] = predictor_names
         # Store model type and training visualization for inference results page

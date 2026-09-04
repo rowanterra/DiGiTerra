@@ -165,9 +165,11 @@ def run_predict(
             feature_order=required_features,
             target_names=target_names,
             applicability=store.get("applicability"),
+            conformal=store.get("conformal"),
         )
         pred_path = user_vis_dir / "predictions.csv"
         applicability_summary = None
+        uncertainty_summary = None
         summary = []
         predictions_preview = {}
         pred_df = None
@@ -186,6 +188,23 @@ def run_predict(
                             if out_of_range is not None
                             else 0
                         ),
+                    }
+                # An interval half-width, or the least confident class probability.
+                lower = [c for c in pred_df.columns if c.startswith("lower_90")]
+                upper = [c for c in pred_df.columns if c.startswith("upper_90")]
+                if lower and upper:
+                    widths = (pred_df[upper[0]] - pred_df[lower[0]]) / 2.0
+                    uncertainty_summary = {
+                        "kind": "interval",
+                        "half_width": float(widths.dropna().iloc[0]) if widths.notna().any() else None,
+                        "coverage": 90,
+                        "units": str(store.get("inference_config", {}).get("units") or ""),
+                    }
+                elif "max_probability" in pred_df.columns:
+                    lowest = pd.to_numeric(pred_df["max_probability"], errors="coerce").dropna()
+                    uncertainty_summary = {
+                        "kind": "probability",
+                        "lowest": float(lowest.min()) if not lowest.empty else None,
                     }
                 pred_cols = [c for c in pred_df.columns if c.startswith("Predicted_")]
                 for col in pred_cols:
@@ -273,6 +292,7 @@ def run_predict(
                 "filename": filename,
                 "summary": summary,
                 "applicability_summary": applicability_summary,
+                "uncertainty_summary": uncertainty_summary,
                 "predictions_preview": predictions_preview,
                 "model_type": model_type,
                 "training_visualization": training_visualization,

@@ -8582,6 +8582,7 @@ predictionForm.addEventListener('submit', async (e) => {
                 </div>
             `
             showApplicabilityLine(data.applicability_summary)
+            showUncertaintyLine(data.uncertainty_summary)
             // The example rows were drawn from a known species each, so the page can
             // say how many came back the way they were drawn. Only for those rows:
             // a person's own file has no key to compare against.
@@ -8810,6 +8811,28 @@ function showApplicabilityLine(summary) {
     line.textContent = summary.novel === 0
         ? `No row scores as unlike the training data. ${outOfRange}`
         : `${summary.novel} of ${summary.rows} rows score as unlike the training data. ${outOfRange}`
+    host.appendChild(line)
+}
+
+
+/* One line on how much to trust a single prediction: the interval's half-width for a
+   regression run, or the least confident prediction for a classifier. */
+function showUncertaintyLine(summary) {
+    if (!summary) return
+    const host = document.querySelector('.inference-summary-section')
+    if (!host) return
+    let text = ''
+    if (summary.kind === 'interval' && summary.half_width !== null && summary.half_width !== undefined) {
+        const units = summary.units ? ` ${summary.units}` : ''
+        text = `${summary.coverage}% intervals are half-width ${summary.half_width.toPrecision(4)}${units}.`
+    } else if (summary.kind === 'probability' && summary.lowest !== null && summary.lowest !== undefined) {
+        text = `Lowest class probability among predictions is ${summary.lowest.toFixed(3)}.`
+    }
+    if (!text) return
+    const line = document.createElement('p')
+    line.id = 'uncertaintySummary'
+    line.className = 'field-note'
+    line.textContent = text
     host.appendChild(line)
 }
 

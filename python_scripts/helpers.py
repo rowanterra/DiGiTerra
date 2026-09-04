@@ -892,6 +892,7 @@ def prediction(
     feature_order,
     target_names=None,
     applicability=None,
+    conformal=None,
 ):
 
     logger.info("Starting prediction function")
@@ -1002,7 +1003,38 @@ def prediction(
         y_pred_flat = y_pred.ravel()
         df_clean["Predicted_Target"] = y_pred_flat
 
-    # --- 8. How far each row sits from the rows the model was trained on ---
+    # --- 8. How much to trust each prediction ---
+    #
+    # Regression carries a 90 percent interval from the residuals on the validation
+    # rows, in target units. Classification carries the probability of each class,
+    # which is the per-row statement a classifier already makes. A classifier without
+    # predict_proba carries neither, and the model card says why.
+    try:
+        if conformal is not None and conformal.half_width:
+            pred_columns = [c for c in df_clean.columns if c.startswith("Predicted_")]
+            for column in pred_columns:
+                name = column[len("Predicted_") :]
+                width = conformal.half_width.get(name)
+                if width is None and len(conformal.half_width) == 1:
+                    width = next(iter(conformal.half_width.values()))
+                if width is None:
+                    continue
+                values = pd.to_numeric(df_clean[column], errors="coerce")
+                suffix = "" if len(pred_columns) == 1 else f"_{name}"
+                df_clean[f"lower_90{suffix}"] = values - width
+                df_clean[f"upper_90{suffix}"] = values + width
+        elif hasattr(model_for_attrs, "predict_proba"):
+            probabilities = model_for_attrs.predict_proba(X_new_scaled)
+            classes = list(getattr(model_for_attrs, "classes_", []))
+            if int_to_label is not None:
+                classes = [int_to_label.get(int(c), c) for c in classes]
+            for index, label in enumerate(classes):
+                df_clean[f"probability_{label}"] = probabilities[:, index]
+            df_clean["max_probability"] = probabilities.max(axis=1)
+    except Exception as e:
+        logger.warning("Uncertainty not written: %s", e)
+
+    # --- 9. How far each row sits from the rows the model was trained on ---
     #
     # A model returns a prediction for any row whose columns parse. These three
     # columns say which of those predictions rest on data the model has seen.
@@ -1020,7 +1052,7 @@ def prediction(
         except Exception as e:
             logger.warning("Novelty not scored: %s", e)
 
-    # --- 9. Save ---
+    # --- 10. Save ---
     df_clean.to_csv(VIS_DIR / "predictions.csv", index=False)
 
     logger.info("Predictions complete. Saved to predictions.csv")

@@ -259,6 +259,23 @@ def _applicability_record(store: dict) -> dict | None:
     }
 
 
+def _uncertainty_record(store: dict) -> dict | None:
+    """What a reader needs to judge one prediction's interval or probability."""
+    conformal = store.get("conformal")
+    if conformal is None:
+        model = store.get("model")
+        has_proba = hasattr(model, "predict_proba") or hasattr(getattr(model, "best_estimator_", None), "predict_proba")
+        return {"method": "class probabilities" if has_proba else "none", "per_row": bool(has_proba)}
+    return {
+        "method": "split conformal",
+        "alpha": float(conformal.alpha),
+        "coverage": 1.0 - float(conformal.alpha),
+        "n_validation": int(conformal.n_validation),
+        "half_width": {k: float(v) for k, v in conformal.half_width.items()},
+        "per_row": True,
+    }
+
+
 def build_manifest(store: dict, request: dict, result: dict, problem_type: str, model_name: str) -> dict:
     """Assemble the run record from the session store, the request, and the result."""
     metrics = {k: result.get(k) for k in _METRIC_KEYS.get(problem_type, []) if k in result}
@@ -291,6 +308,7 @@ def build_manifest(store: dict, request: dict, result: dict, problem_type: str, 
             "outliers": result.get("outlier_info"),
         },
         "applicability": _applicability_record(store),
+        "uncertainty": _uncertainty_record(store),
         "metrics": metrics,
         "cross_validation": cv,
         "baseline": result.get("baseline"),
@@ -347,6 +365,31 @@ def render_model_card(manifest: dict) -> str:
         applicability_html = (
             "<p>This run recorded no applicability measure, so a prediction carries no statement of how far "
             "its row sits from the training rows.</p>"
+        )
+
+    uncertainty = m.get("uncertainty") or {}
+    if uncertainty.get("method") == "split conformal":
+        widths = ", ".join(
+            f"{html.escape(str(k))} plus or minus {v:.4g}" for k, v in uncertainty.get("half_width", {}).items()
+        )
+        uncertainty_html = (
+            f"<p>Each prediction carries a {uncertainty['coverage'] * 100:.0f} percent interval from split "
+            f"conformal, with alpha {uncertainty['alpha']:.2f}. The half-width is the quantile of the absolute "
+            f"residuals on the {uncertainty['n_validation']} validation rows, in target units: {widths}.</p>"
+            "<p>Split conformal assumes the new rows are exchangeable with the validation rows. Where they are "
+            "not, the interval does not hold. The novelty score under Applicability is the check on that "
+            "assumption: a row reported as unlike the training data is a row whose interval should not be "
+            "relied on.</p>"
+        )
+    elif uncertainty.get("method") == "class probabilities":
+        uncertainty_html = (
+            "<p>Each prediction carries the probability of each class and the highest of them, which is what "
+            "this estimator reports per row.</p>"
+        )
+    else:
+        uncertainty_html = (
+            "<p>This estimator reports no probability, and an interval is defined for a regression target "
+            "rather than a class, so a prediction from this run carries no per-row measure of uncertainty.</p>"
         )
 
     title = f"{model.get('name', 'model')} on {data.get('filename', 'uploaded data')}"
@@ -484,6 +527,9 @@ scikit-learn {html.escape(str(env.get("scikit-learn")))}, Python {html.escape(st
 <h2>Applicability</h2>
 {applicability_html}
 
+<h2>Uncertainty</h2>
+{uncertainty_html}
+
 <h2>Intended use and limits</h2>
 <p>{intended}</p>
 
@@ -531,6 +577,7 @@ STORE_KEYS = (
     "y_train_std",
     "training_visualization",
     "applicability",
+    "conformal",
 )
 
 

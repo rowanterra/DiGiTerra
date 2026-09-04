@@ -35,6 +35,7 @@ OWN_TRUSTED_TYPES = (
     "numpy.dtype",
     "numpy.ufunc",
     "python_scripts.preprocessing.applicability.Applicability",
+    "python_scripts.preprocessing.uncertainty.Conformal",
 )
 
 # Type names from these modules are the estimators, transformers, and arrays a run
