@@ -21,7 +21,7 @@ from core.constants import (
     MAX_FRAME_MB,
     MAX_UPLOAD_MB,
 )
-from core.helpers import FrameTooLarge, allowed_file, read_csv_bounded
+from core.helpers import FrameTooLarge, allowed_file, read_table_bounded
 from core.state import get_session_storage
 
 bp = Blueprint("upload", __name__)
@@ -44,7 +44,9 @@ def upload_file():
         return jsonify({"error": "No file selected"}), HTTP_BAD_REQUEST
     logger.info("Processing file upload: %s", file.filename)
     if not allowed_file(file.filename):
-        return jsonify({"error": "Invalid file type. Only CSV files are allowed."}), HTTP_BAD_REQUEST
+        return jsonify(
+            {"error": "Invalid file type. Accepted types are .csv, .xlsx, .xlsm, and .parquet."}
+        ), HTTP_BAD_REQUEST
     safe_filename_val = secure_filename(file.filename)
     if not safe_filename_val:
         return jsonify({"error": "Invalid filename."}), HTTP_BAD_REQUEST
@@ -68,16 +70,16 @@ def upload_file():
         )
 
         try:
-            data = read_csv_bounded(filepath, max_cells=MAX_CELLS, max_frame_mb=MAX_FRAME_MB)
+            data = read_table_bounded(filepath, max_cells=MAX_CELLS, max_frame_mb=MAX_FRAME_MB)
         except FrameTooLarge as e:
             return jsonify({"error": str(e)}), HTTP_BAD_REQUEST
         except pd.errors.EmptyDataError:
             return jsonify({"error": "The uploaded file is empty."}), HTTP_BAD_REQUEST
         except pd.errors.ParserError as e:
-            logger.error("CSV parsing error: %s", e)
-            return jsonify({"error": f"Error parsing CSV file: {str(e)}"}), HTTP_BAD_REQUEST
+            logger.error("Parsing error: %s", e)
+            return jsonify({"error": f"Error parsing file: {str(e)}"}), HTTP_BAD_REQUEST
         except Exception as e:
-            logger.error("Error reading CSV file: %s", e, exc_info=True)
+            logger.error("Error reading file: %s", e, exc_info=True)
             return jsonify({"error": f"Error reading file: {str(e)}"}), HTTP_BAD_REQUEST
     finally:
         try:

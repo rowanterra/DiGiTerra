@@ -11,7 +11,6 @@ from sklearn.metrics import (
     classification_report,
     confusion_matrix,
 )
-from sklearn.model_selection import train_test_split
 
 import python_scripts.plotting.plot_style  # noqa: F401 - apply soft seaborn-like style
 from python_scripts.config import VIS_DIR
@@ -20,6 +19,7 @@ from python_scripts.preprocessing.feature_selection import apply_feature_selecti
 from python_scripts.preprocessing.hyperparameter_search import apply_hyperparameter_search
 from python_scripts.preprocessing.outlier_handling import apply_outlier_handling
 from python_scripts.preprocessing.split_fill import apply_fill_plan_to_split, get_fill_plan
+from python_scripts.preprocessing.splitting import get_split_plan, split_indices
 from python_scripts.preprocessing.utilities import (
     _scale_pairs,
     get_feature_names,
@@ -108,6 +108,7 @@ def run_classification(
         catp = transformer_cols
     textp = []
 
+    _split_source = train_data  # frame with every column, for a split column that is not a feature
     use_cols = nump + catp + textp + list(target_variables)
     # A column the fill plan will impute keeps its NaN rows; every other NaN drops the row.
     fill_plan = get_fill_plan()
@@ -172,7 +173,15 @@ def run_classification(
         # Convert to Series if it's an array-like
         y = pd.Series(y, index=ddf.index) if len(ddf) == len(y) else y
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=testSize, stratify=strat, random_state=seed)
+    # The active split plan selects random, time-ordered, or grouped rows. The
+    # split column is read from the frame the pipeline received when the column
+    # is not a feature. The default plan is the former train_test_split call.
+    split_plan = get_split_plan()
+    train_idx, test_idx = split_indices(
+        X, testSize, seed, strat=strat, plan=split_plan, source=_split_source, feature_columns=X.columns
+    )
+    X_train, X_test = X.loc[train_idx], X.loc[test_idx]
+    y_train, y_test = y.loc[train_idx], y.loc[test_idx]
     # Statistical fills are fitted on the training rows only and applied to both halves.
     ddf, _plan = apply_fill_plan_to_split(ddf, X_train.index)
     if _plan is not None:

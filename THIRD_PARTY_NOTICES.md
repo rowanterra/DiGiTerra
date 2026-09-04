@@ -2,7 +2,7 @@
 
 DiGiTerra is MIT licensed (see `LICENSE`). The application imports the packages below at
 runtime, and a PyInstaller build copies them into the distributed application. The
-license column was read from each package's installed metadata on 2026-09-03 with
+license column was read from each package's installed metadata on 2026-09-04 with
 `importlib.metadata`; the full license text of each package is in its own distribution.
 
 | Package | Version | License | Source |
@@ -21,6 +21,7 @@ license column was read from each package's installed metadata on 2026-09-03 wit
 | werkzeug | 3.1.8 | BSD-3-Clause | https://github.com/pallets/werkzeug/ |
 | xlsxwriter | 3.2.9 | BSD-2-Clause | https://github.com/jmcnamara/XlsxWriter |
 | pywebview | 5.4 | BSD License | https://pywebview.flowrl.com/ |
+| pyarrow | 25.0.1 | Apache-2.0 | https://arrow.apache.org/ |
 
 The frontend has no runtime JavaScript dependency. ESLint is a development
 dependency only (see `package.json`).

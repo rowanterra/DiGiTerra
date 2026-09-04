@@ -68,7 +68,7 @@ function resetToWelcomeScreen() {
     
     // Restore upload section to initial state so "Start Modeling" shows the upload page again
     const uploadHeader = document.getElementById('uploadHeader');
-    if (uploadHeader) uploadHeader.textContent = 'Upload Data from CSV';
+    if (uploadHeader) uploadHeader.textContent = 'Upload Data';
     const uploadCard = document.querySelector('.upload-card');
     if (uploadCard) uploadCard.classList.remove('section-header');
     const uploadFormEl = document.getElementById('uploadForm');

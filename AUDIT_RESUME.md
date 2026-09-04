@@ -91,7 +91,7 @@ real defect in my own test.
   handler before any thread exists, and `core/jobs.py` allows one run per
   session and two across the process, returning 429 past either.
 - The cell cap ran after `pd.read_csv` had already parsed the file.
-  `read_csv_bounded` in `core/helpers.py` reads the header for the column count,
+  `read_table_bounded` in `core/helpers.py` reads the header for the column count,
   caps the rows it parses at the cell budget, and measures the parsed frame
   against a byte budget. A rejected read peaks far below a full parse, which the
   tests assert. Served defaults dropped to 32 MB body and 5,000,000 cells.

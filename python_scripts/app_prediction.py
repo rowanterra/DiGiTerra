@@ -14,7 +14,7 @@ import pandas as pd
 from werkzeug.utils import secure_filename
 
 from core.constants import MAX_CELLS, MAX_FRAME_MB
-from core.helpers import FrameTooLarge, read_csv_bounded
+from core.helpers import FrameTooLarge, read_table_bounded
 from python_scripts.helpers import prediction, preprocess_data
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ def run_predict(
     if file.filename == "":
         return ({"error": "No file selected"}, 400)
     if not allowed_file_fn(file.filename):
-        return ({"error": "Invalid file type. Only CSV files are allowed."}, 400)
+        return ({"error": "Invalid file type. Accepted types are .csv, .xlsx, .xlsm, and .parquet."}, 400)
     safe_filename_str = secure_filename(file.filename)
     if not safe_filename_str:
         return ({"error": "Invalid filename."}, 400)
@@ -48,16 +48,16 @@ def run_predict(
     filepath = os.path.join(upload_folder, stored_filename)
     file.save(filepath)
     try:
-        data = read_csv_bounded(filepath, max_cells=MAX_CELLS, max_frame_mb=MAX_FRAME_MB)
+        data = read_table_bounded(filepath, max_cells=MAX_CELLS, max_frame_mb=MAX_FRAME_MB)
     except FrameTooLarge as e:
         return ({"error": str(e)}, 400)
     except pd.errors.EmptyDataError:
         return ({"error": "The uploaded file is empty."}, 400)
     except pd.errors.ParserError as e:
-        logger.error("CSV parsing error: %s", e)
-        return ({"error": f"Error parsing CSV file: {str(e)}"}, 400)
+        logger.error("Parsing error: %s", e)
+        return ({"error": f"Error parsing file: {str(e)}"}, 400)
     except Exception as e:
-        logger.error("Error reading CSV file: %s", e, exc_info=True)
+        logger.error("Error reading file: %s", e, exc_info=True)
         return ({"error": f"Error reading file: {str(e)}"}, 400)
     finally:
         # Read once into memory; the copy on disk has no further use.

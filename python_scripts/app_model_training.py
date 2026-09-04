@@ -24,6 +24,7 @@ from python_scripts.helpers import (
 from python_scripts.model_registry import CLUSTER_MODELS, MODEL_REGISTRY, get_model_kwargs
 from python_scripts.preprocessing.progress_tracker import get_tracker, set_result
 from python_scripts.preprocessing.split_fill import FillPlan, reset_fill_plan, set_fill_plan
+from python_scripts.preprocessing.splitting import SplitPlan, reset_split_plan, set_split_plan
 
 DEFAULT_CV_FOLDS = 5
 DEFAULT_SEARCH_ITERATIONS = 50
@@ -449,6 +450,24 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
                     "split. Choose a different column to stratify by."
                 )
 
+        # Train/test split method. A time-ordered or grouped holdout keeps rows that
+        # share a period or a site out of both halves; the pipeline reads the plan.
+        split_method = str(data.get("splitMethod") or "random").strip().lower()
+        split_column_raw = data.get("splitColumn", "")
+        split_column = None
+        if split_method != "random":
+            if split_column_raw in ("", None):
+                raise ValueError(f"Missing required field: splitColumn (required when splitMethod is {split_method!r})")
+            if isinstance(split_column_raw, (int, np.integer)) or (
+                isinstance(split_column_raw, str) and split_column_raw.isdigit()
+            ):
+                split_column = df.columns[int(split_column_raw)]
+            elif split_column_raw in df.columns:
+                split_column = str(split_column_raw)
+            else:
+                raise ValueError(f"splitColumn {split_column_raw!r} is not a column of the uploaded file")
+        split_plan = SplitPlan(method=split_method, column=split_column)
+
         if seed:  # if user gives seed add to storage
             store["seed"] = seed
         else:  # no seed given
@@ -477,6 +496,7 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
             fill_plan_out=fill_plan,
         )
         fill_plan_token = set_fill_plan(fill_plan)
+        split_plan_token = set_split_plan(split_plan)
         store["impute_fill_values"] = impute_fills
         store["zero_fill_values"] = {}
         tracker.update_stage("data_preprocessing", "completed", 100, "Data preprocessing complete")
@@ -598,6 +618,8 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
             store["zero_fill_values"] = dict(fill_plan.zero_fills)
         reset_fill_plan(fill_plan_token)
         fill_plan_token = None
+        reset_split_plan(split_plan_token)
+        split_plan_token = None
 
         fmt = f".{sigfig}f"
 
@@ -1018,12 +1040,15 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
 
         # Mark all stages complete
         tracker.complete()
+        result["split_note"] = split_plan.note
         result["session_id"] = session_id  # Include session ID in response
 
         # Store result for SSE endpoint
         set_result(session_id, result)
 
     except Exception as e:
+        if locals().get("split_plan_token") is not None:
+            reset_split_plan(locals()["split_plan_token"])
         if locals().get("fill_plan_token") is not None:
             reset_fill_plan(locals()["fill_plan_token"])
         # Ensure tracker is cleaned up on error

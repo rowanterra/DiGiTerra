@@ -2143,6 +2143,19 @@ processForm.addEventListener('submit', async (e) => {
     }
     // Simple mode: all remain 'none' (defaults above)
     
+    // Split method and column are Advanced-mode controls. The column is a
+    // column letter, converted to a 0-based index like stratifyColumn; the server
+    // resolves the name.
+    let splitMethod = 'random';
+    let splitColumn = '';
+    if (currentMode === 'advanced') {
+        const splitMethodEl = document.getElementById('advancedSplitMethod');
+        const splitColumnEl = document.getElementById('advancedSplitColumn');
+        splitMethod = splitMethodEl ? splitMethodEl.value : 'random';
+        const splitLetter = splitColumnEl ? splitColumnEl.value.trim() : '';
+        splitColumn = splitLetter !== '' ? columnToIndex(splitLetter.toUpperCase()) : '';
+    }
+
     //sending all the data to the backend
     const requestData = {
         filename: uploadedFileName,
@@ -2155,6 +2168,8 @@ processForm.addEventListener('submit', async (e) => {
         units: unitStr,
         sigfig: parseInt(sigfig),
         stratifyColumn: stratifyColumnNumber,
+        splitMethod: splitMethod,
+        splitColumn: splitColumn,
         stratifyBool: stratifyBool,
         seedValue: parseInt(seedValue),
         testSize: parseFloat(testSize),

@@ -1572,14 +1572,15 @@ uploadForm.addEventListener('submit', async (e) => {
     // Validate file is selected
     const fileInput = document.getElementById('file');
     if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-        alert('No CSV file is selected.');
+        alert('No file is selected.');
         return;
     }
     
     // Validate file extension
-    const fileName = fileInput.files[0].name;
-    if (!fileName.toLowerCase().endsWith('.csv')) {
-        alert('Only .csv files are accepted.');
+    const fileName = fileInput.files[0].name.toLowerCase();
+    const accepted = ['.csv', '.xlsx', '.xlsm', '.parquet'];
+    if (!accepted.some(ext => fileName.endsWith(ext))) {
+        alert('Accepted file types are .csv, .xlsx, .xlsm, and .parquet.');
         return;
     }
     
@@ -5741,6 +5742,19 @@ processForm.addEventListener('submit', async (e) => {
     }
     // Simple mode: all remain 'none' (defaults above)
     
+    // Split method and column are Advanced-mode controls. The column is a
+    // column letter, converted to a 0-based index like stratifyColumn; the server
+    // resolves the name.
+    let splitMethod = 'random';
+    let splitColumn = '';
+    if (currentMode === 'advanced') {
+        const splitMethodEl = document.getElementById('advancedSplitMethod');
+        const splitColumnEl = document.getElementById('advancedSplitColumn');
+        splitMethod = splitMethodEl ? splitMethodEl.value : 'random';
+        const splitLetter = splitColumnEl ? splitColumnEl.value.trim() : '';
+        splitColumn = splitLetter !== '' ? columnToIndex(splitLetter.toUpperCase()) : '';
+    }
+
     //sending all the data to the backend
     const requestData = {
         filename: uploadedFileName,
@@ -5753,6 +5767,8 @@ processForm.addEventListener('submit', async (e) => {
         units: unitStr,
         sigfig: parseInt(sigfig),
         stratifyColumn: stratifyColumnNumber,
+        splitMethod: splitMethod,
+        splitColumn: splitColumn,
         stratifyBool: stratifyBool,
         seedValue: parseInt(seedValue),
         testSize: parseFloat(testSize),
@@ -7695,7 +7711,7 @@ function resetToWelcomeScreen() {
     
     // Restore upload section to initial state so "Start Modeling" shows the upload page again
     const uploadHeader = document.getElementById('uploadHeader');
-    if (uploadHeader) uploadHeader.textContent = 'Upload Data from CSV';
+    if (uploadHeader) uploadHeader.textContent = 'Upload Data';
     const uploadCard = document.querySelector('.upload-card');
     if (uploadCard) uploadCard.classList.remove('section-header');
     const uploadFormEl = document.getElementById('uploadForm');

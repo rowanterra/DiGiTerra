@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-forestgreen.svg)](https://github.com/rowanterra/DiGiTerra/blob/main/LICENSE)
 ![Python 3.11 to 3.12](https://img.shields.io/badge/python-3.11%20to%203.12-forestgreen.svg)
 
-A Flask application for data exploration, preprocessing, model training, and inference on CSV data, with a desktop wrapper for macOS, Windows, and Linux.
+A Flask application for data exploration, preprocessing, model training, and inference on tabular data (CSV, Excel, and Parquet files), with a desktop wrapper for macOS, Windows, and Linux.
 
 ## Install and run
 

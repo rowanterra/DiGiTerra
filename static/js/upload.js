@@ -10,14 +10,15 @@ uploadForm.addEventListener('submit', async (e) => {
     // Validate file is selected
     const fileInput = document.getElementById('file');
     if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-        alert('No CSV file is selected.');
+        alert('No file is selected.');
         return;
     }
     
     // Validate file extension
-    const fileName = fileInput.files[0].name;
-    if (!fileName.toLowerCase().endsWith('.csv')) {
-        alert('Only .csv files are accepted.');
+    const fileName = fileInput.files[0].name.toLowerCase();
+    const accepted = ['.csv', '.xlsx', '.xlsm', '.parquet'];
+    if (!accepted.some(ext => fileName.endsWith(ext))) {
+        alert('Accepted file types are .csv, .xlsx, .xlsm, and .parquet.');
         return;
     }
     

@@ -19,7 +19,7 @@ Indicators are the input columns. Targets are the output columns to predict or c
 
 ## File format and column entry
 
-DiGiTerra reads CSV files only. An Excel sheet is exported with File, Save As, CSV.
+DiGiTerra reads CSV, Excel (.xlsx and .xlsm, first sheet only), and Parquet files. The first row of a CSV or Excel file is the header, and the Parquet schema names the columns.
 
 Columns are selected with spreadsheet-style letters (A, B, C, ...). A range is written `A-D`, and several selections are separated with commas, for example `A-D, F, H`.
 

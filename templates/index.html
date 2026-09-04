@@ -105,8 +105,8 @@
             <div class="doc-tips-list">
                 <div class="doc-tip-item">
                     <div>
-                        <strong>CSV only</strong>
-                        <p>DiGiTerra accepts CSV files. Excel exports a sheet as <code>.csv</code> through <em>File, Save As</em>.</p>
+                        <strong>Accepted files</strong>
+                        <p>DiGiTerra reads <code>.csv</code>, <code>.xlsx</code>, <code>.xlsm</code>, and <code>.parquet</code>. An Excel workbook contributes its first sheet.</p>
                     </div>
                 </div>
                 <div class="doc-tip-item">
@@ -397,14 +397,14 @@
     <div id="fileuploaddiv" class="uploadform hidden">
         <div class="upload-card">
             <div class="RedoButton">
-                <h2 id="uploadHeader">Upload Data from CSV</h2>
+                <h2 id="uploadHeader">Upload Data</h2>
                 <div id="redobutton" class="hidden">
                     <button class="secondary-button" onclick="openResetPopup()">Restart with New Dataset</button>
                     <button class="success-button" type="button" onclick="moveToModelPreprocess()">Move Forward to Model Preprocessing</button>
                 </div>
             </div>
             <form id="uploadForm" enctype="multipart/form-data">
-                <input type="file" name="file" id="file" accept=".csv" required>
+                <input type="file" name="file" id="file" accept=".csv,.xlsx,.xlsm,.parquet" required>
 
                 <div><br></div>
                 <div id="uploadButton">
@@ -417,7 +417,7 @@
             <div class="processing-layout">
                 <div class="exploration-panel">
                     <div class="exploration-card">
-                        <h2>Columns in Uploaded CSV</h2>
+                        <h2>Columns in the Uploaded File</h2>
 
                         <div class="column-list" id="columnList">
                             <!-- Column headers will be displayed here -->
@@ -5724,6 +5724,22 @@
                                     </select>
                                 </div>
 
+                                <h4 style="margin-top: 24px; margin-bottom: 12px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 1.1em; font-weight: 600; color: #000000;">Train/Test Split</h4>
+                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">A random split leaks when rows are ordered in time or when several rows come from one site or sample.</p>
+                                <div class="scaling-container">
+                                    <label for="advancedSplitMethod">Split Method</label>
+                                    <select name="advancedSplitMethod" id="advancedSplitMethod">
+                                        <option value="random">Random</option>
+                                        <option value="time">Time-ordered holdout</option>
+                                        <option value="group">Grouped holdout</option>
+                                    </select>
+                                </div>
+                                <div class="scaling-container">
+                                    <label for="advancedSplitColumn">Split Column</label>
+                                    <input type="text" id="advancedSplitColumn" name="advancedSplitColumn" placeholder="Ex: A">
+                                    <p class="field-note" style="margin-top: 6px;">Column letter of the date column for a time-ordered holdout, or of the site, well, or sample id for a grouped holdout. Stratification is not applied by these two methods.</p>
+                                </div>
+
                                 <h4 style="margin-top: 24px; margin-bottom: 12px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 1.1em; font-weight: 600; color: #000000;">Hyperparameter Search</h4>
                                 <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Searches hyperparameter values in place of the manual settings. Run time grows with the grid.</p>
                                 <div class="scaling-container">
@@ -6056,8 +6072,8 @@
             </div>
         </div>
         <form id="uploadPredictDf" enctype="multipart/form-data">
-            <h3>Upload New Data CSV File to Predict With</h3>
-            <input type="file" name="predictFile" id="predictFile" accept=".csv" required>
+            <h3>Upload New Data File to Predict With</h3>
+            <input type="file" name="predictFile" id="predictFile" accept=".csv,.xlsx,.xlsm,.parquet" required>
             <div id="uploadPredictDFButton">
                 <button type="submit">Upload</button>
             </div>

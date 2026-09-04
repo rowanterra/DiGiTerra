@@ -41,6 +41,28 @@ def download_visualization(filename):
     return send_file(file_path, as_attachment=True, download_name=download_name)
 
 
+@bp.route("/download/predictions.xlsx")
+def download_predictions_xlsx():
+    """Write this session's predictions.csv as a workbook and serve the workbook.
+
+    The CSV is converted with openpyxl on each request, so the workbook is
+    current with the last inference run. 404 when no predictions.csv exists.
+    """
+    vis_dir = ensure_user_vis_dir()
+    csv_path = vis_dir / "predictions.csv"
+    if not csv_path.is_file():
+        return jsonify({"error": "No predictions have been written for this session."}), HTTP_NOT_FOUND
+    xlsx_path = vis_dir / "predictions.xlsx"
+    try:
+        frame = pd.read_csv(csv_path)
+        with pd.ExcelWriter(xlsx_path, engine="openpyxl") as writer:
+            frame.to_excel(writer, sheet_name="Predictions", index=False)
+    except Exception as e:
+        logger.error("Error writing predictions workbook: %s", str(e))
+        return jsonify({"error": str(e)}), HTTP_INTERNAL_SERVER_ERROR
+    return send_file(xlsx_path, as_attachment=True, download_name="predictions.xlsx")
+
+
 @bp.route("/downloadAdditionalInfo", methods=["POST"])
 def download_additional_info():
     """Generate and download additional information Excel file."""
