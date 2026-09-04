@@ -61,13 +61,29 @@ body.dark-mode {
   --app-accent-wash: #2b3a30;
 }
 
-html,
-body {
+html {
   width: 100%;
   margin: 0;
   padding: 0;
   overflow-x: hidden;
   overflow-y: auto;
+}
+
+/* body must not scroll on its own. html already scrolls, and because html's
+   overflow is not visible the body's own value stays on the body instead of
+   propagating to the viewport, which made body a scroll container. A sticky child
+   then measured its offset from body's content edge, which already starts one
+   header-offset down, so the rail sat a header lower than the views beside it and
+   went behind the fixed header on scroll. Measured on the page: rail top 216
+   against views top 102 at rest, and 67 against an 86px header once scrolled.
+
+   overflow-x on its own is what did it: a box with one axis not visible computes
+   the other axis to auto rather than visible, so overflow-x: hidden alone made the
+   body a scroller. html keeps the horizontal clamp; body sets neither axis. */
+body {
+  width: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 body {
@@ -3165,7 +3181,7 @@ body.dark-mode .documentation .doc-warning-content p {
 
 .narrative-rail {
     position: sticky;
-    top: calc(var(--header-offset, 88px) + 12px);
+    top: var(--header-offset, 88px);
     display: flex;
     flex-direction: column;
     gap: 16px;

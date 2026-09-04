@@ -79,6 +79,34 @@ Frontend
   bundle with `no-undef` on. `npm run check-bundle` fails if the committed bundle
   has drifted.
 
+## Tenth pass, 2026-09-04: the rail offset, and a screenshot that was misread
+
+The rail rendered a header lower than the column beside it, and went behind the fixed
+header once the page scrolled. Measured on the page: rail top 216 against views top
+102 at rest, and 67 against an 86 px header after scrolling 400 px.
+
+The cause was not the 12 px gap in the sticky offset. A box with one overflow axis set
+to something other than visible computes the other axis to auto rather than visible, so
+`overflow-x: hidden` on `body` alone made the body a scroll container. A sticky child
+then measured its offset from the body's content edge, which already starts one
+header-offset down because of the body padding, and the two offsets added. With the
+body no longer scrolling and the sticky offset set to one header-offset exactly, the
+rail starts at 102 against views at 102 and holds at 102 while scrolled, clear of the
+86 px header.
+
+A screenshot of the Documentation view showed a "No file chosen" box over the contents
+panel, which read as a file input escaping a hidden view. It is not one. The box is the
+browser's own tooltip for a file input, left over from a pointer that rested on the
+Upload view before the switch. Three signs separate it from a page element: it draws in
+the system UI font rather than the page stack, it is flat grey with a hairline border
+and no corner radius, and it has no layout relationship to what it covers. Playwright
+does not draw native tooltips, which is why no scripted path reproduced it. Measurement
+of the element settled it: `#file` reports a zero-sized box with `offsetParent` null and
+`#fileuploaddiv` at `display: none` on every path, so `.hidden` still matches after the
+views moved into `#narrativeViews`. A screenshot records what the compositor drew,
+including chrome the page does not own, so an element that looks wrong in one is worth
+measuring before it is worth fixing.
+
 ## Ninth pass, 2026-09-04: the memory bound on isolated work, and where it holds
 
 The isolated worker's memory ceiling was enforced on Linux and silently absent on macOS.
