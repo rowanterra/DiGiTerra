@@ -134,6 +134,20 @@ def _group_by_map(series: pd.Series, mapping: dict[str, str], regex: bool = True
     return series.astype(str).apply(_map_one)
 
 
+def apply_group_map(Xdf: pd.DataFrame, group_maps: dict[str, dict[str, str]] | None = None) -> pd.DataFrame:
+    """Relabel categorical values by the regex maps in group_maps.
+
+    Module level, with the maps passed as kw_args, so a fitted preprocessor can be
+    pickled; a closure over group_maps cannot.
+    """
+    Xdf = Xdf.copy()
+    if group_maps:
+        for col, m in group_maps.items():
+            if col in Xdf.columns:
+                Xdf[col] = _group_by_map(Xdf[col], m, regex=True)
+    return Xdf
+
+
 def make_preprocessor(
     numeric_cols: list[str],
     categorical_cols: list[str] | None = None,
@@ -141,14 +155,6 @@ def make_preprocessor(
     cat_mode: str = "onehot",
     group_maps: dict[str, dict[str, str]] | None = None,
 ) -> Pipeline:
-    def apply_group_map(Xdf: pd.DataFrame):
-        Xdf = Xdf.copy()
-        if group_maps:
-            for col, m in group_maps.items():
-                if col in Xdf.columns:
-                    Xdf[col] = _group_by_map(Xdf[col], m, regex=True)
-        return Xdf
-
     transformers = []
     if numeric_cols:
         transformers.append(("num", "passthrough", numeric_cols))
@@ -164,7 +170,8 @@ def make_preprocessor(
         raise ValueError("No columns were provided to the preprocessor. The predictor lists are empty.")
 
     coltx = ColumnTransformer(transformers, remainder="drop", sparse_threshold=0.3)
-    return Pipeline(steps=[("group_map", FunctionTransformer(apply_group_map)), ("columns", coltx)])
+    group_step = FunctionTransformer(apply_group_map, kw_args={"group_maps": group_maps})
+    return Pipeline(steps=[("group_map", group_step), ("columns", coltx)])
 
 
 def get_feature_names(preprocessor: Pipeline, input_df: pd.DataFrame) -> list[str]:

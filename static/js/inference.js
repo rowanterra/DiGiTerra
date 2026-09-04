@@ -401,3 +401,32 @@ function wireAdvancedOptimizationFormSubmit(form) {
 }
 wireAdvancedOptimizationFormSubmit(document.getElementById('advancedOptimizationForm'));
 wireAdvancedOptimizationFormSubmit(document.getElementById('advancedOptimizationLegacyForm'));
+
+
+// Bundle import is available where the server allows it (desktop builds). The
+// form stays hidden until a probe of /import-bundle says the route accepts uploads.
+(function wireBundleImport() {
+    const form = document.getElementById('importBundleForm');
+    if (!form) return;
+    fetch('/import-bundle', { method: 'POST', body: new FormData() })
+        .then(r => { if (r.status !== 403) form.classList.remove('hidden'); })
+        .catch(() => {});
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const status = document.getElementById('importBundleStatus');
+        status.textContent = 'Loading bundle...';
+        try {
+            const response = await fetch('/import-bundle', { method: 'POST', body: new FormData(form) });
+            const data = await response.json();
+            if (!response.ok) {
+                status.textContent = data.error || 'The bundle could not be loaded.';
+                return;
+            }
+            const model = data.model || {};
+            const features = Array.isArray(model.features) ? model.features.join(', ') : '';
+            status.textContent = `Loaded ${model.name || 'model'} (${model.problem_type || ''}) trained ${data.created_at || ''}. Features: ${features}. ${data.note || ''}`;
+        } catch (err) {
+            status.textContent = 'The bundle could not be loaded.';
+        }
+    });
+})();

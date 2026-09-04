@@ -26,6 +26,7 @@ from python_scripts.preprocessing.guardrails import run_guardrails
 from python_scripts.preprocessing.progress_tracker import get_tracker, set_result
 from python_scripts.preprocessing.split_fill import FillPlan, reset_fill_plan, set_fill_plan
 from python_scripts.preprocessing.splitting import SplitPlan, reset_split_plan, set_split_plan
+from python_scripts.reporting.bundle import build_manifest, write_run_record
 
 DEFAULT_CV_FOLDS = 5
 DEFAULT_SEARCH_ITERATIONS = 50
@@ -1063,6 +1064,18 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
         result["data_checks"]["allow_unsafe"] = bool(allow_unsafe)
         result["baseline"] = baseline_info
         result["session_id"] = session_id  # Include session ID in response
+
+        # The run record: what ran, on which bytes, with which versions, and what came out.
+        try:
+            store["seed"] = seed
+            store["model_name"] = modelName
+            store["last_training_request"] = dict(data)
+            manifest = build_manifest(store, data, result, store["model_type"], modelName)
+            write_run_record(_config.VIS_DIR.current(), manifest)
+            result["model_card_url"] = "/user-visualizations/model_card.html"
+            result["bundle_url"] = "/export-bundle"
+        except Exception as record_err:
+            logger.warning("Run record not written (model results unchanged): %s", record_err)
 
         # Store result for SSE endpoint
         set_result(session_id, result)

@@ -914,7 +914,9 @@ def prediction(df_clean, best_model, training_features, X_scaler, y_scaler, feat
     # Training order is scale -> feature selection, so the scaler was fit on the
     # full transformed frame. Subsetting to the selected columns first would hand
     # the scaler fewer columns than it was fit with.
-    scaler_features = list(getattr(X_scaler, "feature_names_in_", []) or [])
+    # feature_names_in_ is an ndarray; `arr or []` raises for more than one column.
+    _names = getattr(X_scaler, "feature_names_in_", None)
+    scaler_features = [str(n) for n in _names] if _names is not None and len(_names) > 0 else []
     if X_scaler is not None:
         if scaler_features:
             missing_for_scaler = sorted(set(scaler_features) - set(X_new.columns))

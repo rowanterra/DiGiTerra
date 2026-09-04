@@ -6092,6 +6092,16 @@
         <div id="predictionResults" class="hidden">
         </div>
         <div id="predictionErrorDiv" class="hidden"></div>
+
+        <form id="importBundleForm" enctype="multipart/form-data" class="hidden">
+            <h3>Load a Saved Model Bundle</h3>
+            <p class="field-note">A bundle (.zip) exported from an earlier run replaces the model in this session. The prediction file then needs the same feature columns the bundle lists.</p>
+            <input type="file" name="bundle" id="bundleFile" accept=".zip" required>
+            <div>
+                <button type="submit">Load Bundle</button>
+            </div>
+            <div id="importBundleStatus" class="field-note"></div>
+        </form>
     </div>
 
 

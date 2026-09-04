@@ -1,5 +1,6 @@
 """File upload route."""
 
+import datetime as _dt
 import logging
 import os
 import uuid
@@ -23,6 +24,7 @@ from core.constants import (
 )
 from core.helpers import FrameTooLarge, allowed_file, read_table_bounded
 from core.state import get_session_storage
+from python_scripts.reporting.bundle import sha256_file
 
 bp = Blueprint("upload", __name__)
 logger = logging.getLogger(__name__)
@@ -69,6 +71,10 @@ def upload_file():
             else None
         )
 
+        # The hash is taken from the bytes on disk before the file is removed, so
+        # the run manifest can name the exact file that was modeled.
+        file_bytes = os.path.getsize(filepath)
+        file_sha256 = sha256_file(filepath)
         try:
             data = read_table_bounded(filepath, max_cells=MAX_CELLS, max_frame_mb=MAX_FRAME_MB)
         except FrameTooLarge as e:
@@ -117,6 +123,17 @@ def upload_file():
         cell_warning = None
 
     store["data"] = data
+    store["data_fingerprint"] = {
+        "filename": safe_filename_val,
+        "sha256": file_sha256,
+        "bytes": int(file_bytes),
+        "rows": int(len(data)),
+        "columns": int(len(data.columns)),
+        "uploaded_at": _dt.datetime.now(_dt.UTC).replace(microsecond=0).isoformat(),
+    }
+    # A new file invalidates the previous run's record.
+    for stale in ("manifest_written",):
+        store.pop(stale, None)
     columns = data.columns.tolist()
     firstcol = columns[0][:COLUMN_NAME_DISPLAY_LENGTH]
     if len(columns[0]) > COLUMN_NAME_DISPLAY_LENGTH - 1:

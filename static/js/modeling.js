@@ -2730,7 +2730,7 @@ function renderRunNotes(data) {
         const verdict = better === true ? 'The model beats the baseline.' : (better === false ? 'The model does not beat the baseline; the result carries no information beyond the target distribution.' : '');
         parts.push(`<p class="run-note ${better === false ? 'run-note-warn' : 'field-note'}"><strong>Baseline.</strong> ${escapeHtml(base.description)} scores ${escapeHtml(String(base.baseline_value))} ${escapeHtml(base.metric)} on the validation split against ${escapeHtml(String(base.model_value))} for the model. ${verdict}</p>`);
     }
-    if (data && Array.isArray(data.cards) === false && data.model_card_url) {
+    if (data && data.model_card_url) {
         parts.push(`<p class="run-note field-note"><a href="${escapeHtml(data.model_card_url)}" target="_blank" rel="noopener">Model card</a> and <a href="${escapeHtml(data.bundle_url)}">model bundle (.zip)</a> for this run.</p>`);
     }
     return parts.length ? `<div class="run-notes">${parts.join('')}</div>` : '';
