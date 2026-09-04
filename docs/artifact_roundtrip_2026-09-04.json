@@ -44,8 +44,8 @@
   {
     "model": "CategoricalNB_classifier",
     "task": "classification",
-    "status": "train_failed",
-    "detail": "index 1 is out of bounds for axis 1 with size 1"
+    "status": "ok",
+    "bytes": 104848
   },
   {
     "model": "ComplementNB_classifier",
@@ -194,14 +194,14 @@
   {
     "model": "MLP",
     "task": "regression",
-    "status": "train_failed",
-    "detail": "The 'solver' parameter of MLPRegressor must be a str among {'lbfgs', 'adam', 'sgd'}. Got None instead."
+    "status": "ok",
+    "bytes": 759822
   },
   {
     "model": "MLP_classifier",
     "task": "classification",
-    "status": "train_failed",
-    "detail": "The 'solver' parameter of MLPClassifier must be a str among {'lbfgs', 'adam', 'sgd'}. Got None instead."
+    "status": "ok",
+    "bytes": 419856
   },
   {
     "model": "MultinomialNB_classifier",

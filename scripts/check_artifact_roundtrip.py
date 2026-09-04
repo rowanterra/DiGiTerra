@@ -11,6 +11,7 @@ Usage:
 """
 
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -98,6 +99,27 @@ BASE = {
 }
 
 
+def _sha256(path) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _as_record(values) -> list:
+    """Predictions as JSON at full precision, so a reader can compare them by hand."""
+    out = []
+    for v in np.ravel(np.asarray(values, dtype=object))[:8]:
+        if isinstance(v, (np.floating, float)):
+            out.append(float(v))
+        elif isinstance(v, (np.integer, int)):
+            out.append(int(v))
+        else:
+            out.append(str(v))
+    return out
+
+
 def _outputs(objects, X):
     """What the model produces: predictions, or the labels of a fit that has none.
 
@@ -148,28 +170,39 @@ def check(name: str, task: str) -> dict:
     remove_tracker(sid)
     if result is None or "error" in result:
         return {"model": name, "task": task, "status": "train_failed", "detail": (result or {}).get("error")}
+    row = {
+        "model": name,
+        "task": task,
+        "estimator": type(store.get("model")).__name__,
+        "dataset": csv,
+        "dataset_sha256": _sha256(EXAMPLES / csv),
+        "rows": int(len(df)),
+        "seed": BASE["seedValue"],
+        "test_size": BASE["testSize"],
+    }
     objects = fitted_objects(store)
     try:
         data = artifact.dumps(objects)
     except artifact.ArtifactError as e:
-        status = (
-            "unsupported" if type(store.get("model")).__name__ in artifact.UNSUPPORTED_ESTIMATORS else "write_failed"
-        )
-        return {"model": name, "task": task, "status": status, "detail": str(e)}
+        status = "unsupported" if row["estimator"] in artifact.UNSUPPORTED_ESTIMATORS else "write_failed"
+        return {**row, "status": status, "detail": str(e)}
     refused = artifact.untrusted_types(data)
     if refused:
-        return {"model": name, "task": task, "status": "untrusted_types", "detail": refused}
+        return {**row, "status": "untrusted_types", "detail": refused}
     back = artifact.loads(data)
     X = df.iloc[:8, indicators]
     try:
-        same = np.array_equal(_outputs(objects, X), _outputs(back, X))
+        before, after = _outputs(objects, X), _outputs(back, X)
     except Exception as e:
-        return {"model": name, "task": task, "status": "predict_failed", "detail": f"{type(e).__name__}: {e}"}
+        return {**row, "status": "predict_failed", "detail": f"{type(e).__name__}: {e}"}
     return {
-        "model": name,
-        "task": task,
-        "status": "ok" if same else "predictions_differ",
+        **row,
+        "status": "ok" if np.array_equal(before, after) else "predictions_differ",
         "bytes": len(data),
+        "artifact_sha256": hashlib.sha256(data).hexdigest(),
+        "compared": "predict" if hasattr(objects["model"], "predict") else "labels_",
+        "output_before": _as_record(before),
+        "output_after": _as_record(after),
     }
 
 
@@ -214,7 +247,33 @@ def main() -> int:
     for r in bad:
         print(f"  FORMAT: {r['model']}: {r['status']} {str(r.get('detail'))[:200]}")
     if args.json:
-        Path(args.json).write_text(json.dumps(rows, indent=2, default=str))
+        import datetime as _dt
+        from importlib import metadata
+
+        def _version(pkg):
+            try:
+                return metadata.version(pkg)
+            except metadata.PackageNotFoundError:
+                return None
+
+        record = {
+            "written_at": _dt.datetime.now(_dt.UTC).replace(microsecond=0).isoformat(),
+            "how_to_read_this": (
+                "output_before is what the model in memory predicted for the first eight rows of the dataset; "
+                "output_after is what the same model predicted after being written to the artifact format and "
+                "read back. They are compared exactly, not within a tolerance. Rerun one row with "
+                "'MPLBACKEND=Agg .venv/bin/python scripts/check_artifact_roundtrip.py --only <model>'."
+            ),
+            "environment": {p: _version(p) for p in ("skops", "scikit-learn", "numpy", "pandas", "scipy", "joblib")},
+            "summary": {
+                "trained": len(rows) - len(untrainable),
+                "round_tripped": len(ok),
+                "unsupported": [r["model"] for r in unsupported],
+                "not_trained": [r["model"] for r in untrainable],
+            },
+            "rows": rows,
+        }
+        Path(args.json).write_text(json.dumps(record, indent=2, default=str))
     return 0 if not bad else 1
 
 
