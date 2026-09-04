@@ -245,7 +245,7 @@ def handle_corr(
             .reset_index()
             .rename(columns={"index": "column"})
         )
-        stats_df["column"] = stats_df["column"].astype(str).str.slice(0, 10)
+        stats_df["column"] = stats_df["column"].astype(str)
         stats_df = stats_df[["column", "n", "min", "max", "mean", "std", "25", "50", "75", "100"]].round(4)
         descriptive_stats = stats_df.to_dict(orient="records")
     numeric_columns = df_corr.columns.tolist()

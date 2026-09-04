@@ -4727,3 +4727,21 @@ label:has(input[type="radio"][name="modelingMode"]:checked) { background: none; 
 .narrative-views .download-buttons { display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .narrative-views .download-buttons a { display: inline-block; }
 .narrative-views .download-buttons .export-button { margin: 0; }
+
+/* The descriptive statistics table sent column names cut to ten characters, so
+   bill_length_mm read as bill_lengt. The name is whole now, and the first column
+   takes the width it needs while the numeric columns stay on one line. */
+.stats-table td:first-child,
+.stats-table th:first-child,
+.model-stats-table td:first-child,
+.model-stats-table th:first-child {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    min-width: 12ch;
+    max-width: 28ch;
+    text-align: left;
+}
+.stats-table td:not(:first-child),
+.model-stats-table td:not(:first-child) {
+    white-space: nowrap;
+}
