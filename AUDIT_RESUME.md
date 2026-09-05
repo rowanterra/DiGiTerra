@@ -79,6 +79,27 @@ Frontend
   bundle with `no-undef` on. `npm run check-bundle` fails if the committed bundle
   has drifted.
 
+## Where the work stands, 2026-09-05
+
+`audit-fixes` is green. `pytest tests/` and `make lint` both pass at the head of this
+branch.
+
+`docs/COMMIT_REVIEW_2026-09-04.md` is a second-reader review of the fifteen commits after
+16cbcc7. It records eight findings with file and line, how each was confirmed, and the
+smallest fix. F1 is fixed and committed. F2, F3, F4, F6 and F7 are not.
+
+The work in progress on F2 and F3 is **committed on the branch
+`wip/f2-f3-ranges-and-blanks`**, not stashed, so that `audit-fixes` stays green. That
+branch has one failing test, which the commit message on it describes: an untouched
+row's empty `blank_columns` reads back from the CSV as `nan`, which needs a
+normalisation in the test rather than a change to the code. Anyone resuming should
+start from that branch, not from a clean checkout.
+
+Two decisions are waiting there. The review expected a training range of 32.1 for
+`bill_length_mm`; that is the whole file, while 33.1 is the training split, and the
+training split is what the model saw. And the manifest and model card wording was
+changed for the new units but has not been read end to end since.
+
 ## Tenth pass, 2026-09-04: the rail offset, and a screenshot that was misread
 
 The rail rendered a header lower than the column beside it, and went behind the fixed
