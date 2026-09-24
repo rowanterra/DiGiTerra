@@ -1446,21 +1446,20 @@ if (trainSizeInput && testSizeInput) {
     testSizeInput.addEventListener('blur', () => syncTrainTest(testSizeInput));
 }
 
-// Enable/disable "Continue to Modeling" button based on modeling type selection
-const modelingTypeSelect = document.getElementById('modelingType');
+// "Continue to Modeling" waits for a task type. The select is #outputType1 (an
+// earlier #modelingType never existed on the page, so this ran for nothing and the
+// form went to the server empty, to be refused there).
+const modelingTypeSelect = document.getElementById('outputType1');
 const continueToModelingButton = document.getElementById('continueToModelingButton');
 if (modelingTypeSelect && continueToModelingButton) {
-    // Initially disable the button
-    continueToModelingButton.disabled = true;
-    
-    // Enable/disable button when modeling type changes
-    modelingTypeSelect.addEventListener('change', function() {
-        if (this.value) {
-            continueToModelingButton.disabled = false;
-        } else {
-            continueToModelingButton.disabled = true;
-        }
-    });
+    const gate = () => {
+        const ready = Boolean(modelingTypeSelect.value);
+        continueToModelingButton.disabled = !ready;
+        if (ready) continueToModelingButton.removeAttribute('title');
+        else continueToModelingButton.setAttribute('title', 'Choose a modeling task type first.');
+    };
+    gate();
+    modelingTypeSelect.addEventListener('change', gate);
 }
 
 // Initialize tab button event listeners

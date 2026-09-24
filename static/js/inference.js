@@ -228,12 +228,12 @@ predictionForm.addEventListener('submit', async (e) => {
             const modelGraphicSectionHtml = trainingViz ? `
                 <h3 style="margin: 0 0 8px 0;">Model used (training performance)</h3>
                 <p style="margin: 0 0 12px 0; font-size: 0.95rem; color: #666;">Performance graphic from the trained model.</p>
-                <img src="${trainingPerfUrl || trainingVizUrl}" alt="Training performance" class="inference-model-graphic-img" style="display: block; max-height: 400px; width: auto; object-fit: contain;">
+                <img src="${trainingPerfUrl || trainingVizUrl}" alt="Training performance" class="inference-model-graphic-img" style="display: block; max-height: calc(100vh - var(--header-offset, 88px) - 360px); width: auto; max-width: 100%; object-fit: contain;">
             ` : '';
             const rightPanelHtml = (trainingSummaryTableHtml || modelGraphicSectionHtml) ? `
                 <div class="inference-model-graphic" style="flex: 0 0 calc(50% - 12px); min-width: 200px; overflow: auto; align-self: flex-start;">
-                    ${trainingSummaryTableHtml}
                     ${modelGraphicSectionHtml}
+                    ${trainingSummaryTableHtml}
                 </div>
             ` : '';
 

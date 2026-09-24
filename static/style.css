@@ -3817,6 +3817,11 @@ form#uploadPredictDf {
     color: var(--app-ink);
     overflow: hidden;
 }
+/* The id selector above outranks .hidden, so the form has to be hidden by id too;
+   inference.js hides it once a result is on the page. */
+form#uploadPredictDf.hidden {
+    display: none;
+}
 
 /* The title-and-actions row of each reads as a panel head. */
 .upload-card > .RedoButton,
@@ -4741,6 +4746,36 @@ label:has(input[type="radio"][name="modelingMode"]:checked) { background: none; 
 .narrative-views .exploration-results select { margin: 2px 8px 6px 0; }
 .narrative-views .exploration-results h3 { font-size: 1em; margin: 6px 0 4px; }
 .narrative-views .exploration-results img { max-width: 100%; height: auto; }
+/* Figures fit the window. The two exploration figures stay side by side and are
+   capped to the height left under the header and the results heading, so both are
+   in view when they arrive; the statistics table below them is its own bounded
+   region. The same cap applies to the modeling figures, which move to the top of
+   the results so they are the first thing shown, and to the inference figure. */
+.narrative-views .exploration-graphic-row { flex-wrap: nowrap; }
+.narrative-views .exploration-graphic { min-width: 0; }
+.narrative-views .exploration-graphic img {
+    width: auto;
+    max-width: 100%;
+    max-height: calc(100vh - var(--header-offset, 88px) - 340px);
+    min-height: 120px;
+    object-fit: contain;
+    margin: 0;
+}
+.narrative-views .exploration-table { margin-top: 10px; }
+.narrative-views [id$="ResultDiv"] { display: flex; flex-direction: column; }
+.narrative-views [id$="ResultDiv"] > h3 { order: -2; margin: 0 0 4px; }
+.narrative-views [id$="ResultDiv"] > .result-graphic-row-train-test { order: -1; flex-wrap: nowrap !important; margin-bottom: 10px; }
+.narrative-views .result-graphic-box { min-width: 0 !important; }
+.narrative-views .result-graphic-box br { display: none; }
+.narrative-views .result-graphic-box select { display: block; margin: 2px 0 6px; max-width: 100%; }
+.narrative-views .result-graphic-box img {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    max-height: calc(100vh - var(--header-offset, 88px) - 360px);
+    min-height: 120px;
+    object-fit: contain;
+}
 .narrative-views .matrix-heading { gap: 6px 8px; margin-bottom: 4px; }
 .narrative-views .matrix-heading h3 { margin: 0 6px 0 0; }
 .narrative-views .matrix-heading select { margin: 0; max-width: 150px; }

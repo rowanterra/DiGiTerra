@@ -443,6 +443,18 @@ def test_the_rail_carries_a_run_from_a_cold_load(live_session):
     assert s.visible("predictionDiv") == "visible"
 
 
+def _figures_in_view(p, selector):
+    """Every visible image matching the selector ends above the bottom of the window."""
+    boxes = p.evaluate(
+        "(sel) => Array.from(document.querySelectorAll(sel)).filter(e => e.offsetParent)"
+        ".map(e => { const r = e.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom)]; })",
+        selector,
+    )
+    inner = p.evaluate("window.innerHeight")
+    assert boxes, f"no visible figure for {selector}"
+    assert all(b <= inner and t >= 0 for t, b in boxes), f"{selector} at {boxes} against a {inner}px window"
+
+
 def test_the_rail_carries_the_forward_step(session):
     """The continue button of each view is offered at the foot of the rail, with the
     view's own label and enabled state, and the in-page original is hidden."""
@@ -459,11 +471,15 @@ def test_the_rail_carries_the_forward_step(session):
     assert session.visible(VIEW_OF_TAB["model-preprocessing"]) == "visible"
     assert p.text_content("#narrativeNext").strip() == "Continue to Modeling"
 
-    # The proxy follows the original's enabled state without a page change.
-    p.evaluate("() => { document.getElementById('continueToModelingButton').disabled = true; }")
+    # Continue to Modeling waits for a task type, and the proxy follows without a
+    # page change, title included.
+    p.evaluate(
+        "() => { const t=document.getElementById('outputType1'); t.value=''; t.dispatchEvent(new Event('change')); }"
+    )
     p.wait_for_timeout(200)
     assert p.is_disabled("#narrativeNext")
-    p.evaluate("() => { document.getElementById('continueToModelingButton').disabled = false; }")
+    assert "task type" in (p.get_attribute("#narrativeNext", "title") or "")
+    p.select_option("#outputType1", "Classifier")
     p.wait_for_timeout(200)
     assert p.is_enabled("#narrativeNext")
 
@@ -504,6 +520,12 @@ def test_try_an_example_loads_penguins_and_opens_exploration(session):
     # The rail arrives with the data, as it does for a chosen file.
     assert p.evaluate("() => document.getElementById('narrativeRail').offsetParent !== null")
     assert p.inner_text("#narrativeDataCount").strip() == "1"
+    # Evaluate draws the two figures side by side, both in the window.
+    with p.expect_response(lambda r: r.url.endswith("/correlationMatrices"), timeout=60000):
+        p.click("#columnsection button[type=submit]")
+    p.wait_for_selector("#pairplotImage", timeout=60000)
+    p.wait_for_timeout(800)
+    _figures_in_view(p, ".exploration-graphic img")
     assert not session.errors, session.errors
 
 
@@ -609,13 +631,14 @@ def test_the_example_path_runs_from_the_welcome_screen_to_a_prediction(live_sess
         p.click("#processButton", force=True)
     assert run.value.status in (200, 202), run.value.text()[:300]
     p.wait_for_selector('#narrativeFlow .narrative-step[data-step="results"].is-current', timeout=300000)
+    p.wait_for_timeout(800)
+    # The figures are the first thing in the results and both are in the window.
+    _figures_in_view(p, ".result-graphic-box img")
 
     # The way on appears only once there is a model to apply. The page's own button
     # is hidden; the rail repeats it as the one forward step, with the same label.
     p.wait_for_selector("#continueToInferenceButton", state="attached", timeout=30000)
-    p.wait_for_function(
-        "document.getElementById('narrativeNext').textContent === 'Continue to Inference on New Data'"
-    )
+    p.wait_for_function("document.getElementById('narrativeNext').textContent === 'Continue to Inference on New Data'")
     assert p.is_visible("#narrativeNext")
     assert not p.is_visible("#continueToInferenceButton")
     p.click("#narrativeNext")
@@ -626,6 +649,11 @@ def test_the_example_path_runs_from_the_welcome_screen_to_a_prediction(live_sess
     with p.expect_response(lambda r: r.url.endswith("/predict"), timeout=180000) as pred:
         p.click("#usePenguinRowsButton")
     assert pred.value.status == 200, pred.value.text()[:300]
+    # The upload form gives way to the result, and the training figure is in the window.
+    p.wait_for_selector(".inference-model-graphic-img", timeout=60000)
+    p.wait_for_timeout(500)
+    assert p.is_hidden("#uploadPredictDf")
+    _figures_in_view(p, ".inference-model-graphic-img")
     p.wait_for_selector("#exampleRowAgreement", timeout=60000)
 
     line = p.inner_text("#exampleRowAgreement")
