@@ -17,6 +17,8 @@ from werkzeug.utils import secure_filename
 import python_scripts.plotting.plot_style  # noqa: F401 - apply soft seaborn-like style
 from python_scripts.helpers import preprocess_data
 
+DESCRIPTIVE_DECIMALS = 6
+
 logger = logging.getLogger(__name__)
 
 IMAGE_DPI = 150
@@ -258,7 +260,12 @@ def handle_corr(
             .rename(columns={"index": "column"})
         )
         stats_df["column"] = stats_df["column"].astype(str)
-        stats_df = stats_df[["column", "n", "min", "max", "mean", "std", "25", "50", "75", "100"]].round(4)
+        stats_df = stats_df[["column", "n", "min", "max", "mean", "std", "25", "50", "75", "100"]]
+        # Six decimals rather than four: four hid every centered column of the
+        # diabetes example (means printed as -0.0). Adding 0.0 turns a rounded
+        # negative zero into 0.0.
+        value_cols = [c for c in stats_df.columns if c != "column"]
+        stats_df[value_cols] = stats_df[value_cols].astype(float).round(DESCRIPTIVE_DECIMALS) + 0.0
         descriptive_stats = stats_df.to_dict(orient="records")
     numeric_columns = df_corr.columns.tolist()
     return (

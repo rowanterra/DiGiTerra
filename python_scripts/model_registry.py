@@ -220,6 +220,49 @@ def _hidden_layer_sizes_tuple(h: dict[str, Any]) -> str:
     return "(" + ",".join(sizes) + ",)"
 
 
+# Classifiers whose trainer reads the form's own key names through kwargs.get.
+# Before 2026-09-24 every one of these returned {} here, so a value typed on
+# the Advanced form never reached the estimator while the manifest still
+# recorded the request (E1 finding F3). The form and trainer key names were
+# checked against each other model by model; the form sends nothing for
+# ExtraTrees, GaussianNB and SGD, and sends a few keys no trainer reads
+# (MultinomialNB affinity-propagation fields, CategoricalNB min_category_count,
+# NuSVC C), which pass through unread as before.
+_PASSTHROUGH_CLASSIFIERS = frozenset(
+    [
+        "AdaBoost_classifier",
+        "Bagging_classifier",
+        "BernoulliNB_classifier",
+        "CategoricalNB_classifier",
+        "ComplementNB_classifier",
+        "DecisionTree_classifier",
+        "ExtraTrees_classifier",
+        "GaussianNB_classifier",
+        "GradientBoosting_classifier",
+        "HistGradientBoosting_classifier",
+        "KNeighbors_classifier",
+        "LDA_classifier",
+        "LinearSVC_classifier",
+        "MultinomialNB_classifier",
+        "NuSVC_classifier",
+        "PassiveAggressive_classifier",
+        "QDA_classifier",
+        "Ridge_classifier",
+        "SGD_classifier",
+    ]
+)
+
+
+def _passthrough(h: dict) -> dict[str, Any]:
+    """Every form value that is present, with blank and 'None' strings dropped."""
+    out = {}
+    for k, v in h.items():
+        if v is None or v == "" or (isinstance(v, str) and v.strip().lower() == "none"):
+            continue
+        out[k] = v
+    return out
+
+
 def get_model_kwargs(
     modelName: str,
     hyperparameters: dict[str, Any],
@@ -229,6 +272,8 @@ def get_model_kwargs(
     """Return model-specific kwargs (no feature_selection_method/outlier_method/progress_tracker/modeling_mode)."""
     h, n = hyperparameters, nonreq
 
+    if modelName in _PASSTHROUGH_CLASSIFIERS:
+        return _passthrough(h or {})
     if modelName == "Linear":
         return {}
     if modelName == "BayesianRidge":
@@ -492,12 +537,6 @@ def get_model_kwargs(
                 "Class_Logisticl1Ratio": _o(h, "Class_Logisticl1Ratio"),
             }
         return {}
-    if modelName == "ExtraTrees_classifier":
-        return {}
-    if modelName == "GaussianNB_classifier":
-        return {}
-    if modelName == "SGD_classifier":
-        return {}
     if modelName == "MLP_classifier":
         hl = _hidden_layer_sizes_tuple(h)
         if n:
@@ -573,38 +612,6 @@ def get_model_kwargs(
                 }
             )
         return base
-    if modelName == "AdaBoost_classifier":
-        return {}
-    if modelName == "Bagging_classifier":
-        return {}
-    if modelName == "BernoulliNB_classifier":
-        return {}
-    if modelName == "CategoricalNB_classifier":
-        return {}
-    if modelName == "ComplementNB_classifier":
-        return {}
-    if modelName == "DecisionTree_classifier":
-        return {}
-    if modelName == "GradientBoosting_classifier":
-        return {}
-    if modelName == "HistGradientBoosting_classifier":
-        return {}
-    if modelName == "KNeighbors_classifier":
-        return {}
-    if modelName == "LDA_classifier":
-        return {}
-    if modelName == "LinearSVC_classifier":
-        return {}
-    if modelName == "MultinomialNB_classifier":
-        return {}
-    if modelName == "NuSVC_classifier":
-        return {}
-    if modelName == "PassiveAggressive_classifier":
-        return {}
-    if modelName == "QDA_classifier":
-        return {}
-    if modelName == "Ridge_classifier":
-        return {}
     # Cluster
     if modelName == "kmeans":
         if n:

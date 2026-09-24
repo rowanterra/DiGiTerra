@@ -666,8 +666,11 @@ def run_regression(
     record_conformal(y_test, y_te_pred)
 
     # Metrics
-    metrics_train = regression_report(y_train_actual, y_tr_pred, target_names=list(y.columns))
-    metrics_test = regression_report(y_test, y_te_pred, target_names=list(y.columns))
+    # The request's decimal setting reaches the metric table here. Without it the
+    # report's own default of three decimals applied, and the page then printed
+    # that rounded value padded to the requested width (E1, 2026-09-24).
+    metrics_train = regression_report(y_train_actual, y_tr_pred, target_names=list(y.columns), sigfig=sigfig)
+    metrics_test = regression_report(y_test, y_te_pred, target_names=list(y.columns), sigfig=sigfig)
     # The mean of the training rows the model saw, scored on the same validation rows.
     try:
         from sklearn.metrics import r2_score as _r2
