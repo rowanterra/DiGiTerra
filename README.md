@@ -22,7 +22,7 @@ Then run one of the two entry points:
 | The guided page | `python app.py`, then open http://127.0.0.1:5000/guided |
 | Desktop window | `python desktop_app.py` |
 
-The guided page is one column of five steps with a Guided and a Full mode; Full opens every setting the training route accepts and a hyperparameter table filled from the estimator itself. `docs/SIMPLE_INTERFACE_DESIGN.md` says why it looks the way it does, and `docs/guided_page_guided_mode.png` and `docs/guided_page_full_mode.png` show it.
+The guided page is four steps, one on screen at a time with no scrolling, with a Guided and a Full mode and an explanation on every control; Full opens every setting the training route accepts and a hyperparameter table filled from the estimator itself. `docs/SIMPLE_INTERFACE_DESIGN.md` says why it looks the way it does, and `docs/guided_page_guided_mode.png` and `docs/guided_page_full_mode.png` show it.
 
 Both entry points import the application from `core/`, `routes/`, and `python_scripts/`.
 

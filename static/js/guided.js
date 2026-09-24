@@ -1,16 +1,78 @@
 /* The guided page. One script, no framework.
  *
- * Five steps in one direction: upload, target, model, run, result. The Guided
- * and Full modes show the same steps; Full also shows every setting the
- * training route accepts. Each step is enabled when the one before it has
- * produced what it needs, and keyboard focus moves to the new step's heading.
- * Errors go to one alert region; progress goes to a polite live region.
+ * Four steps, one on screen at a time, each filling the window: upload,
+ * target, model and run, result. The Guided and Full modes show the same
+ * steps; Full also shows every setting the training route accepts. A step
+ * opens when the one before it has produced what it needs; the step buttons
+ * in the header and the Back and Next buttons move between opened steps, and
+ * focus lands on the shown step's heading. Every control has an explanation
+ * that opens on hover or focus of its help button (and is read by a screen
+ * reader through aria-describedby), dismissed with Escape. Errors go to one
+ * alert region; progress goes to a polite live region.
  */
 (function () {
   'use strict';
   const API = (window.DIGITERRA_API_ROOT || '').replace(/\/$/, '');
   const $ = (id) => document.getElementById(id);
-  const state = { columns: [], types: [], target: null, predictors: [], task: null, model: null, models: null, hyper: {}, resultSession: null };
+  const state = { columns: [], types: [], target: null, predictors: [], task: null, model: null, models: null, hyper: {}, opened: 1, current: 1 };
+
+  // ---- explanations, one per control (plain language, one or two sentences)
+  const HELP = {
+    modeGroup: 'Guided fills every setting with a default and shows only the four steps. Full opens every setting the training route accepts, in the same steps. The choice is remembered in this browser.',
+    file: 'A table with one header row. CSV, Excel (.xlsx, .xlsm) and Parquet are read. Nothing is sent anywhere except this server.',
+    target: 'The column the model predicts. A text column or a number with few distinct values is treated as a class; other numbers as a quantity to regress.',
+    predictors: 'The columns the model reads. All columns except the target are used unless changed here. Identifier columns and anything that leaks the target should be removed.',
+    task: 'Classification predicts a class label. Regression predicts a number. Clustering groups rows without a target. The page proposes one from the target column; change it if the proposal is wrong.',
+    model: 'The estimator to fit, from scikit-learn. The Guided default is a random forest, which needs little tuning. Every model in the list is trained through the same route.',
+    hyperTable: 'The parameters of the chosen estimator, read from scikit-learn itself. A blank keeps the default shown. A value typed here reaches the estimator and is recorded in the run manifest.',
+    splitMethod: 'How rows are divided into training and test halves. Random is the usual choice. Time-ordered keeps the latest rows for the test. Grouped keeps every row of a group on one side, for data where several rows come from one site or sample.',
+    splitColumn: 'The column a time-ordered or grouped split reads. Not used by the random split.',
+    testSize: 'The fraction of rows held out as the test set. 0.20 keeps one row in five for testing.',
+    stratify: 'Keeps the class mix of the chosen column the same in both halves of a random split. Off unless a column is chosen.',
+    scaler: 'Rescales the predictors before fitting. Trees do not need it; distance and linear models often do. Standard centres to mean zero and unit variance; min-max maps to 0 to 1; robust uses the median and quartiles; quantile maps to a uniform distribution.',
+    dropMissing: 'What to do with rows that have a blank in a modeling column: remove them, or fill the blank with the column mean, median or mode computed on the training rows only.',
+    zeroHandle: 'What to do with zeros in the modeling columns, for data where zero means "not measured": keep them, remove the rows, or fill them with the mean or median.',
+    seed: 'The random seed. The same seed and settings give the same split and the same fit. It is written to the run record.',
+    sigfig: 'Decimal places shown for the metrics. The predictions file is always written at full precision.',
+    featureSelection: 'Keeps a subset of predictors before fitting: the k with the strongest univariate score, recursive elimination, or the ones a model weights. The chosen columns are named in the result.',
+    featureK: 'How many predictors to keep when feature selection is on.',
+    outlierMethod: 'Finds and removes outlying training rows before fitting, by interquartile range, z-score, an isolation forest or the local outlier factor. The count removed is reported.',
+    cvType: 'Cross-validation on the training rows, reported beside the single test score. Stratified K-fold keeps the class mix in every fold.',
+    cvFolds: 'How many folds the cross-validation uses.',
+    search: 'Searches over hyperparameter values with cross-validation and keeps the best set. Randomized tries a sample of combinations; grid tries all of them. The chosen values are written to the run record.',
+    runBtn: 'Fits the model with the settings on this page. A blocking data check stops the run and says why.',
+    result: 'The metrics on the held-out test rows, the baseline on the same rows, the data checks, and the parameters as fitted. The bundle link downloads the run record and the model.',
+    predictFile: 'A table with the same predictor columns as the training file. Predictions are written with a novelty score and a note for rows outside the training range.',
+    stepsNav: 'The four steps. A step opens when the one before it is done; any opened step can be revisited.',
+  };
+  const MODEL_HELP = {
+    classification: 'Predicts a class label from the predictors.',
+    regression: 'Predicts a number from the predictors.',
+    cluster: 'Groups rows by similarity; the number of groups is a setting of the model.',
+  };
+  const PARAM_HELP = {
+    n_estimators: 'Number of trees or rounds. More is slower and usually a little better, with diminishing returns.',
+    max_depth: 'Deepest a tree may grow. Smaller values fit less closely to the training rows.',
+    n_neighbors: 'How many nearest rows vote for a prediction. Small values follow the training rows closely.',
+    weights: 'uniform gives every neighbour one vote; distance gives nearer neighbours more.',
+    learning_rate: 'How much each boosting round changes the model. Smaller needs more rounds.',
+    C: 'Inverse regularization strength. Smaller values regularize more.',
+    alpha: 'Regularization strength. Larger values regularize more.',
+    max_iter: 'Cap on solver iterations.',
+    tol: 'Stopping tolerance for the solver.',
+    random_state: 'Seed for this estimator. The run seed is used when blank.',
+    class_weight: 'Reweights classes; balanced counters an uneven class mix.',
+    criterion: 'The split quality measure the trees use.',
+    min_samples_leaf: 'Fewest rows a leaf may hold; larger values smooth the tree.',
+    min_samples_split: 'Fewest rows a node needs before it can split.',
+    kernel: 'The kernel function of the support vector machine.',
+    gamma: 'Kernel width for rbf, poly and sigmoid kernels.',
+    solver: 'The optimization routine; the default suits most data.',
+    penalty: 'The regularization type.',
+    n_jobs: 'CPU cores to use; blank means one.',
+    p: 'Power of the Minkowski distance: 1 is Manhattan, 2 is Euclidean.',
+    metric: 'The distance measure between rows.',
+  };
 
   // ---- helpers
   function csrfHeaders() {
@@ -29,18 +91,69 @@
     if (!r.ok || j.error) throw new Error(j.error || ('HTTP ' + r.status));
     return j;
   }
-  function showError(msg) { const e = $('errors'); e.textContent = msg; e.classList.remove('hidden'); e.focus && e.focus(); }
+  function showError(msg) { const e = $('errors'); e.textContent = msg; e.classList.remove('hidden'); e.focus(); }
   function clearError() { const e = $('errors'); e.textContent = ''; e.classList.add('hidden'); }
-  // Focus moves only where the user's own action opened the next step: after an
-  // upload (to step 2) and after a result (to step 5). The defaults that fill
-  // steps 2 to 4 on their own do not pull focus down the page.
-  function enableStep(n, focus) {
-    const s = $('step' + n); s.setAttribute('aria-disabled', 'false');
-    s.querySelectorAll('select, input, button').forEach((el) => { el.disabled = false; });
+  function esc(t) { return String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+  // ---- help buttons and tooltips (WCAG 1.4.13: hoverable, dismissible with Escape, persistent)
+  let tipCounter = 0;
+  function attachHelp(target, text, labelText) {
+    if (!target || !text) return null;
+    const id = 'tip' + (++tipCounter);
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'help'; btn.textContent = '?';
+    btn.setAttribute('aria-label', 'What is ' + labelText + '?');
+    btn.setAttribute('aria-describedby', id);
+    const tip = document.createElement('span');
+    tip.className = 'tip'; tip.id = id; tip.setAttribute('role', 'tooltip'); tip.textContent = text;
+    const wrap = document.createElement('span'); wrap.className = 'helpwrap';
+    wrap.appendChild(btn); wrap.appendChild(tip);
+    target.appendChild(wrap);
+    btn.addEventListener('click', (ev) => { ev.preventDefault(); wrap.classList.toggle('open'); });
+    return id;
+  }
+  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') document.querySelectorAll('.helpwrap.open').forEach((w) => w.classList.remove('open')); });
+  function helpForControl(id) {
+    const ctl = $(id); if (!ctl) return;
+    const label = document.querySelector('label[for="' + id + '"]') || (ctl.tagName === 'BUTTON' ? ctl : null);
+    const tipId = attachHelp(label || ctl.parentElement, HELP[id], label ? label.textContent.replace('?', '').trim() : id);
+    if (tipId && ctl.tagName !== 'BUTTON') ctl.setAttribute('aria-describedby', tipId);
+  }
+  ['file', 'target', 'predictors', 'model', 'splitMethod', 'splitColumn', 'testSize', 'stratify', 'scaler', 'dropMissing', 'zeroHandle',
+    'seed', 'sigfig', 'featureSelection', 'featureK', 'outlierMethod', 'cvType', 'cvFolds', 'search', 'runBtn', 'predictFile'].forEach(helpForControl);
+  attachHelp(document.querySelector('#modeGroup'), HELP.modeGroup, 'the mode');
+  attachHelp(document.querySelector('#step3 fieldset legend'), HELP.task, 'the task');
+  attachHelp(document.querySelector('#hyperBox h3'), HELP.hyperTable, 'the hyperparameter table');
+  attachHelp(document.querySelector('#step4 h2'), HELP.result, 'the result');
+  attachHelp(document.querySelector('nav.steps'), HELP.stepsNav, 'the step list');
+
+  // ---- steps
+  function showStep(n, focus) {
+    state.current = n;
+    document.querySelectorAll('section.step').forEach((s) => s.classList.toggle('current', s.id === 'step' + n));
+    document.querySelectorAll('nav.steps button').forEach((b) => {
+      const k = Number(b.dataset.step);
+      b.disabled = k > state.opened;
+      if (k === n) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
+      b.classList.toggle('done', k < state.opened);
+    });
+    clearError();
     if (focus) $('h' + n + 's').focus();
   }
-  function markDone(n) { $('step' + n).classList.add('done'); }
-  function esc(t) { return String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+  function openStep(n) {
+    if (n > state.opened) state.opened = n;
+    document.querySelectorAll('button.next[data-go]').forEach((b) => { b.disabled = Number(b.dataset.go) > state.opened; });
+    document.querySelectorAll('nav.steps button').forEach((b) => { b.disabled = Number(b.dataset.step) > state.opened; });
+  }
+  document.querySelectorAll('nav.steps button, button.back, button.next').forEach((b) => {
+    b.addEventListener('click', () => {
+      const n = Number(b.dataset.step || b.dataset.go);
+      if (b.classList.contains('back') && b.dataset.go === '1' && b.textContent.startsWith('Start over')) {
+        state.opened = 1; openStep(1); $('file').value = ''; $('uploadStatus').textContent = '';
+      }
+      if (n <= state.opened) showStep(n, true);
+    });
+  });
 
   // ---- mode
   function setMode(mode) {
@@ -67,7 +180,8 @@
       state.types = t.columns;
       $('uploadStatus').textContent = j.filename + ': ' + j.rows + ' rows, ' + j.numcols + ' columns.' + (j.warnings ? ' ' + j.warnings.join(' ') : '');
       fillColumns();
-      markDone(1); enableStep(2, true);
+      openStep(3);   // target and model are filled with proposals, so both open at once
+      showStep(2, true);
     } catch (e) { showError('Upload failed. ' + e.message); }
   });
 
@@ -82,7 +196,7 @@
       const s = document.createElement('option'); s.value = c.index; s.textContent = c.name; split.appendChild(s);
       const st = document.createElement('option'); st.value = c.index; st.textContent = c.name; strat.appendChild(st);
     });
-    // Propose the last column as the target, which is where most files keep it.
+    // The last column is proposed as the target, which is where most files keep it.
     target.value = String(state.types.length - 1);
     target.dispatchEvent(new Event('change'));
   }
@@ -99,14 +213,13 @@
     document.querySelectorAll('input[name=task]').forEach((r) => { r.checked = r.value === task; });
     state.task = task;
     ensureModels().then(fillModels);
-    enableStep(3); markDone(2);
   });
   $('predictors').addEventListener('change', () => {
     state.predictors = Array.from($('predictors').selectedOptions).map((o) => Number(o.value)).filter((i) => i !== state.target);
   });
   document.querySelectorAll('input[name=task]').forEach((r) => r.addEventListener('change', () => { state.task = r.value; fillModels(); }));
 
-  // ---- step 3: model and hyperparameters
+  // ---- step 3: model, hyperparameters, run
   async function ensureModels() { if (!state.models) state.models = await getJSON('/models'); }
   const GUIDED_DEFAULT = { classification: 'RF_classifier', regression: 'RF', cluster: 'kmeans' };
   function fillModels() {
@@ -120,12 +233,12 @@
   $('model').addEventListener('change', async () => {
     state.model = $('model').value; state.hyper = {};
     $('runBtn').disabled = !state.model;
-    if (state.model) { enableStep(4); markDone(3); }
     try {
       const d = await getJSON('/model-defaults/' + encodeURIComponent(state.model));
       const tb = $('hyperTable').querySelector('tbody'); tb.innerHTML = '';
-      if (!d.editable) { $('hyperNote').textContent = d.note || ''; $('hyperTable').classList.add('hidden'); return; }
-      $('hyperNote').textContent = d.estimator + ' parameters, from scikit-learn. A blank value keeps the default.';
+      const family = MODEL_HELP[state.task] || '';
+      if (!d.editable) { $('hyperNote').textContent = (d.note || '') + ' ' + family; $('hyperTable').classList.add('hidden'); return; }
+      $('hyperNote').textContent = d.estimator + ' parameters, from scikit-learn. A blank value keeps the default. ' + family;
       d.params.forEach((p) => {
         const tr = document.createElement('tr');
         const id = 'hp_' + p.name;
@@ -139,12 +252,14 @@
           state.hyper[p.name] = p.kind === 'bool' ? (v === 'true') : (p.kind === 'int' ? parseInt(v, 10) : (p.kind === 'float' ? parseFloat(v) : v));
         });
         tr.lastElementChild.appendChild(input); tb.appendChild(tr);
+        const text = PARAM_HELP[p.name] || ('Parameter ' + p.name + ' of ' + d.estimator + '; the scikit-learn default is shown.');
+        const tipId = attachHelp(tr.firstElementChild, text, p.name);
+        input.setAttribute('aria-describedby', tipId);
       });
       $('hyperTable').classList.remove('hidden');
     } catch (e) { $('hyperNote').textContent = 'Hyperparameters could not be read: ' + e.message; }
   });
 
-  // ---- step 4: run
   function buildRequest() {
     const full = document.body.dataset.mode === 'full';
     const missing = full ? $('dropMissing').value : 'none';
@@ -177,20 +292,20 @@
       // The preprocess route wants a stratify column that is not the target; the
       // first predictor stands in, and the run only stratifies when asked to.
       await postJSON('/preprocess', { indicators: state.predictors, predictors: state.task === 'cluster' ? [] : [state.target], stratify: state.predictors[0] });
-      const req = buildRequest();
-      const j = await postJSON('/process', req);
+      const j = await postJSON('/process', buildRequest());
       if (j.status === 'queued') $('progressText').textContent = j.message || 'Queued.';
       listen(j.session_id);
     } catch (e) { showError('The run did not start. ' + e.message); $('runBtn').disabled = false; }
   });
   function listen(sid) {
     const es = new EventSource(API + '/progress/' + sid);
+    let finished = false;
     es.onmessage = (ev) => {
       let d;
       try { d = JSON.parse(ev.data); } catch (e) { es.close(); showError('The progress stream sent something that is not JSON: ' + e.message); $('runBtn').disabled = false; return; }
-      if (d.error) { es.close(); showError(d.error); $('runBtn').disabled = false; return; }
+      if (d.error) { finished = true; es.close(); showError(d.error); $('runBtn').disabled = false; return; }
       if (d.type === 'result') {
-        es.close();
+        finished = true; es.close();
         try { showResult(d.data); } catch (e) { showError('The result could not be shown: ' + e.message); $('runBtn').disabled = false; }
         return;
       }
@@ -200,22 +315,37 @@
       const msg = d.message || (d.stages && stage && d.stages[stage] && d.stages[stage].message) || '';
       $('progressText').textContent = pct + '%' + (stage ? ', ' + stage.replace(/_/g, ' ') : '') + (msg ? ': ' + msg : '');
     };
-    es.onerror = () => { /* EventSource reconnects on its own; the run continues on the server */ };
+    es.onerror = () => { if (finished) es.close(); /* otherwise EventSource reconnects on its own; the run continues on the server */ };
   }
 
-  // ---- step 5: result
+  // ---- step 4: result
   const METRIC_LABELS = {
     valscore: 'Test R²', valrmse: 'Test RMSE', valmae: 'Test MAE', trainscore: 'Train R²', trainrmse: 'Train RMSE', trainmae: 'Train MAE',
     accuracy: 'Accuracy', precision: 'Precision (weighted)', recall: 'Recall (weighted)', f1score: 'F1 (weighted)',
     test_silhouette: 'Test silhouette', train_silhouette: 'Train silhouette', test_davies_bouldin: 'Test Davies-Bouldin', test_calinski_harabasz: 'Test Calinski-Harabasz',
   };
+  const METRIC_HELP = {
+    valscore: 'R² on the test rows: 1 is a perfect fit, 0 is no better than the mean, negative is worse than the mean.',
+    valrmse: 'Root mean squared error on the test rows, in the units of the target.',
+    valmae: 'Mean absolute error on the test rows, in the units of the target.',
+    trainscore: 'R² on the training rows. Much higher than the test value means the model fits the training rows too closely.',
+    trainrmse: 'Root mean squared error on the training rows.', trainmae: 'Mean absolute error on the training rows.',
+    accuracy: 'Share of test rows whose class was predicted correctly.',
+    precision: 'Of the rows predicted as each class, the share that were that class, averaged by class size.',
+    recall: 'Of the rows of each class, the share that were found, averaged by class size.',
+    f1score: 'The harmonic mean of precision and recall, averaged by class size.',
+    test_silhouette: 'How well separated the clusters are, from -1 to 1; higher is better.',
+    train_silhouette: 'Silhouette on the training rows.',
+    test_davies_bouldin: 'Ratio of within-cluster spread to between-cluster distance; lower is better.',
+    test_calinski_harabasz: 'Ratio of between-cluster to within-cluster dispersion; higher is better.',
+  };
   function showResult(res) {
-    $('runBtn').disabled = false; markDone(4); enableStep(5, true);
+    $('runBtn').disabled = false;
     const out = [];
     const rows = Object.keys(METRIC_LABELS).filter((k) => res[k] !== undefined && res[k] !== null && res[k] !== 'N/A');
     if (rows.length) {
       out.push('<table><caption>Metrics</caption><thead><tr><th scope="col">Metric</th><th scope="col" class="num">Value</th></tr></thead><tbody>');
-      rows.forEach((k) => out.push('<tr><th scope="row">' + METRIC_LABELS[k] + '</th><td class="num">' + esc(res[k]) + '</td></tr>'));
+      rows.forEach((k) => out.push('<tr><th scope="row" data-metric="' + k + '">' + METRIC_LABELS[k] + '</th><td class="num">' + esc(res[k]) + '</td></tr>'));
       out.push('</tbody></table>');
     }
     if (res.train_n !== undefined) out.push('<p>' + esc(res.train_n) + ' training rows, ' + esc(res.test_n) + ' test rows.' + (res.split_note ? ' ' + esc(res.split_note) : '') + '</p>');
@@ -239,8 +369,10 @@
     }
     out.push('<p><a href="' + API + '/export-bundle">Download the run record and model (bundle)</a>' + (res.model_card_url ? ' &middot; <a href="' + esc(res.model_card_url) + '">Model card</a>' : '') + '</p>');
     $('result').innerHTML = out.join('');
+    $('result').querySelectorAll('th[data-metric]').forEach((th) => attachHelp(th, METRIC_HELP[th.dataset.metric], th.textContent.replace('?', '').trim()));
     $('resultRaw').textContent = JSON.stringify(res, null, 1);
     $('predictFile').disabled = false; $('predictBtn').disabled = false;
+    openStep(4); showStep(4, true);
   }
 
   // ---- predict
@@ -258,4 +390,6 @@
       $('predictStatus').innerHTML = 'Predictions written for ' + esc(a.rows !== undefined ? a.rows : '') + ' rows' + (a.out_of_range ? ', ' + esc(a.out_of_range) + ' outside the training range' : '') + '. <a href="' + API + '/download/predictions.csv">Download predictions.csv</a>';
     } catch (e) { showError('Prediction failed. ' + e.message); $('predictStatus').textContent = ''; }
   });
+
+  showStep(1, false);
 })();
