@@ -13,6 +13,9 @@ hiddenimports = (
     + collect_submodules("openpyxl")
     + collect_submodules("seaborn")
     + collect_submodules("shap")
+    # scikit-learn 1.9 indexes frames through narwhals, whose interchange module is
+    # imported inside a function (narwhals/translate.py), so the analysis misses it
+    + collect_submodules("narwhals")
 )
 
 datas = [

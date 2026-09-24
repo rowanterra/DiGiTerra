@@ -75,7 +75,7 @@ A unit and integration suite runs on Linux and macOS across both supported Pytho
 
 # Research impact statement
 
-The Department of Energy's National Energy Technology Laboratory has agreed to host DiGiTerra on its internal Energy Data eXchange platform (EDX), where it is intended for laboratory staff who model geochemical and materials data without writing code. [AUTHORS: add any external users, publications that used DiGiTerra, or integrations before submission; nothing in the repository records one as of 24 September 2026.]
+The Department of Energy's National Energy Technology Laboratory hosts DiGiTerra on its internal Energy Data eXchange platform (EDX) as a laboratory-approved executable for staff who model geochemical and materials data without writing code. EDX is not reachable from outside the laboratory, so the deployment cannot be linked here; the Phase 2 application under which it was accepted into the EDX Incubator ships in the repository (`docs/EDX_Incubator_Phase2_Application_Answers.pdf`) and records the hosting terms, the initial user group of laboratory scientists with administrator and viewer roles, and the beta testers who held access to the repository before release. The hosted copy is the same code as the public release, so a result produced inside the laboratory and one produced by a reviewer from the public repository carry the same run record and can be compared line by line.
 
 
 # Author contributions

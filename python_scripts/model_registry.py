@@ -94,8 +94,14 @@ from python_scripts.models.regression_models.train_svr import train_svr
 from python_scripts.models.regression_models.train_theilsen_regressor import train_theilsen_regressor
 
 
-def _b(h: dict, k: str, default: bool = True) -> bool:
-    """Bool from h: true unless value is 'false'."""
+def _b(h: dict, k: str, default: bool | None = None) -> bool | None:
+    """Bool from h: true unless value is 'false'; None when the form did not send it.
+
+    The default was True, which made a missing boolean (dual, warm_start,
+    positive) come out True whatever the estimator's own default, and lbfgs
+    then refused dual=True. None is dropped by get_model_kwargs with nonreq
+    on, so the trainer's default applies (E1 follow-up F6, 2026-09-24).
+    """
     v = h.get(k)
     if v is None or v == "":
         return default
@@ -264,6 +270,29 @@ def _passthrough(h: dict) -> dict[str, Any]:
 
 
 def get_model_kwargs(
+    modelName: str,
+    hyperparameters: dict[str, Any],
+    nonreq: bool,
+    seed: int | None,
+) -> dict[str, Any]:
+    """Model-specific kwargs for the trainer, with the non-required set cleaned.
+
+    With nonreq on, the Advanced form sends every field of the model, and a
+    field the user cleared arrives as null (parseFloat of an empty string).
+    A None that reaches a trainer as a present key defeats its kwargs.get
+    default and scikit-learn then rejects it (intercept_scaling=None on
+    LogisticRegression; E1 finding F5, 2026-09-24). Those keys are dropped
+    here so the trainer's default applies. With nonreq off the None keys are
+    kept, because the sweep harness reads them to know which required
+    parameters an empty form leaves blank.
+    """
+    out = _model_kwargs(modelName, hyperparameters, nonreq, seed)
+    if nonreq:
+        return {k: v for k, v in out.items() if v is not None}
+    return out
+
+
+def _model_kwargs(
     modelName: str,
     hyperparameters: dict[str, Any],
     nonreq: bool,

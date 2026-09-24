@@ -108,7 +108,10 @@
     tip.className = 'tip'; tip.id = id; tip.setAttribute('role', 'tooltip'); tip.textContent = text;
     const wrap = document.createElement('span'); wrap.className = 'helpwrap';
     wrap.appendChild(btn); wrap.appendChild(tip);
-    target.appendChild(wrap);
+    // A label's text is the control's accessible name, so the help button goes
+    // after a label, never inside it; other targets (legends, headings, table
+    // header cells) take it as their last child.
+    if (target.tagName === 'LABEL') target.insertAdjacentElement('afterend', wrap); else target.appendChild(wrap);
     btn.addEventListener('click', (ev) => { ev.preventDefault(); wrap.classList.toggle('open'); });
     return id;
   }

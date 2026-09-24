@@ -98,11 +98,11 @@ def test_every_control_has_an_explanation(server, page):
         assert desc, f"#{i} has no explanation"
         assert page.locator(f"#{desc}[role=tooltip]").count() == 1
         assert len(page.text_content(f"#{desc}")) > 20
-    btn = page.locator("label[for=file] button.help")
+    btn = page.locator("label[for=file] + .helpwrap button.help")
     btn.focus()
-    assert page.locator("label[for=file] .tip").is_visible()
+    assert page.locator("label[for=file] + .helpwrap .tip").is_visible()
     page.locator("h1").click()
-    assert not page.locator("label[for=file] .tip").is_visible()
+    assert not page.locator("label[for=file] + .helpwrap .tip").is_visible()
     page.check("input[name=mode][value=guided]")
 
 
@@ -137,6 +137,8 @@ def test_full_run_and_typed_hyperparameter_reaches_the_estimator(server, page):
     assert page.locator("#result table caption").first.text_content() == "Metrics"
     assert page.evaluate("document.activeElement.id") == "h4s"
     assert page.locator("#result th[data-metric=accuracy] button.help").count() == 1
+    # a control's accessible name is its label alone, not the help button beside it
+    assert page.evaluate("document.getElementById('file').labels[0].textContent.trim()") == "CSV, Excel or Parquet file"
 
 
 def test_no_step_needs_scrolling(server, page):

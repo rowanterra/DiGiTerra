@@ -87,3 +87,28 @@ def test_knn_classifier_form_values_reach_the_estimator():
     model = store["model"]
     est = getattr(model, "_digiterra_model", model)
     assert est.get_params()["n_neighbors"] == 3
+
+
+def test_cleared_advanced_fields_do_not_reach_the_estimator_as_none():
+    """E1 finding F5: a cleared Advanced field arrives as null and must fall back to the default."""
+    from python_scripts.model_registry import get_model_kwargs
+    from tests.unit.test_pipelines import _train
+
+    kw = get_model_kwargs("Logistic_classifier", {"Class_CLogistic": 0.5, "Class_LogisticMaxIterations": 500}, True, 0)
+    assert None not in kw.values()
+    assert kw["Class_CLogistic"] == 0.5 and kw["Class_LogisticMaxIterations"] == 500
+    # with the non-required switch off, the None keys stay for the sweep harness
+    assert None in get_model_kwargs("Ridge", {}, False, 0).values()
+    store = {}
+    _train(
+        store,
+        "examples/iris.csv",
+        [0, 1, 2, 3],
+        [4],
+        "Logistic_classifier",
+        hyperparameters={"Class_CLogistic": 0.5, "Class_LogisticMaxIterations": 500, "Class_LogisticTol": None},
+        nonreq=True,
+        modelingMode="advanced",
+    )
+    est = getattr(store["model"], "_digiterra_model", store["model"])
+    assert est.get_params()["C"] == 0.5 and est.get_params()["max_iter"] == 500

@@ -43,7 +43,9 @@
   .col { min-height: 0; display: flex; flex-direction: column; gap: .3rem; }
   .actions { flex: none; display: flex; gap: .75rem; align-items: center; padding-top: .5rem; border-top: 1px solid var(--rule); margin-top: .5rem; }
   .actions .spacer { flex: 1; }
-  label.block { display: block; margin: .35rem 0 .15rem; }
+  label.block { display: inline-block; margin: .35rem 0 .15rem; }
+  label.block + .helpwrap { margin-left: .3rem; }
+  label.block ~ input, label.block ~ select { display: block; }
   input[type=text], input[type=number], select { font: inherit; padding: .2rem .35rem; border: 1px solid var(--rule); background: var(--field); min-width: 9rem; max-width: 100%; }
   input[type=file] { font: inherit; }
   button { font: inherit; padding: .35rem .9rem; border: 1px solid var(--ink); background: var(--field); cursor: pointer; }
