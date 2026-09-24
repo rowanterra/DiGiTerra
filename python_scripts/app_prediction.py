@@ -17,6 +17,7 @@ from core.constants import MAX_CELLS, MAX_FRAME_MB
 from core.helpers import FrameTooLarge
 from core.worker import WorkerError, WorkerLimitUnavailable, read_table_isolated
 from python_scripts.helpers import prediction, preprocess_data
+from python_scripts.plotting.plot_predictor_spread import SPREAD_FILE, plot_predictor_spread
 
 logger = logging.getLogger(__name__)
 
@@ -284,12 +285,27 @@ def run_predict(
                     inference_visualization_version = str(int(__import__("time").time() * 1000))
             except Exception as e:
                 logger.debug("Could not regenerate inference plot: %s", e)
+        # The spread of every predictor in the training rows against the rows just
+        # predicted, with the rows the novelty detector marked drawn as points.
+        spread_visualization = None
+        spread_visualization_version = None
+        if pred_df is not None and (user_vis_dir / SPREAD_FILE).exists():
+            try:
+                novel = pred_df["novel_row"] if "novel_row" in pred_df.columns else None
+                out_path = user_vis_dir / "predictor_spread.png"
+                if plot_predictor_spread(user_vis_dir / SPREAD_FILE, pred_df, novel, out_path) is not None:
+                    spread_visualization = "predictor_spread.png"
+                    spread_visualization_version = str(int(__import__("time").time() * 1000))
+            except Exception as e:
+                logger.debug("Could not draw the predictor spread: %s", e)
         filename = safe_filename_str[:31]
         if len(safe_filename_str) > 30:
             filename += "..."
         return (
             {
                 "results": with_prefix_fn("/download/predictions.csv"),
+                "spread_visualization": spread_visualization,
+                "spread_visualization_version": spread_visualization_version,
                 "filename": filename,
                 "summary": summary,
                 "applicability_summary": applicability_summary,

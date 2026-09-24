@@ -118,7 +118,9 @@ def upload_file():
             return jsonify({"error": f"DiGiTerra cannot parse the file. {str(e)}"}), HTTP_BAD_REQUEST
         except Exception as e:
             logger.error("Error reading file: %s", e, exc_info=True)
-            return jsonify({"error": f"DiGiTerra cannot read the file. {str(e)}"}), HTTP_BAD_REQUEST
+            return jsonify(
+                {"error": f"DiGiTerra cannot read the file. {type(e).__name__}: {str(e)[:200]}"}
+            ), HTTP_BAD_REQUEST
     finally:
         try:
             os.remove(filepath)

@@ -32,7 +32,7 @@ warnings.filterwarnings("ignore")
 import pandas as pd  # noqa: E402
 
 from python_scripts.app_model_training import run_model_training  # noqa: E402
-from python_scripts.model_registry import MODEL_REGISTRY, get_model_kwargs  # noqa: E402
+from python_scripts.model_registry import MODEL_REGISTRY, _model_kwargs  # noqa: E402
 from python_scripts.preprocessing.progress_tracker import get_result, remove_tracker  # noqa: E402
 
 EXAMPLES = ROOT / "examples"
@@ -106,7 +106,7 @@ def dataset_for(problem_type, name):
 
 def hyperparameters_for(name):
     """Return (hyperparameters dict, list of filled keys) so get_model_kwargs sees no None."""
-    empty = get_model_kwargs(name, {}, False, 42)
+    empty = _model_kwargs(name, {}, False, 42)  # keeps the None keys an empty form leaves
     filled = {}
     for key, value in empty.items():
         if value is None and key in DEFAULT_FILLS and DEFAULT_FILLS[key] is not None:

@@ -225,10 +225,25 @@ predictionForm.addEventListener('submit', async (e) => {
                 <p style="margin: 0 0 12px 0; font-size: 0.95rem; color: #666;">Spread the model was built on.</p>
                 <div class="model-stats-table-wrapper" style="margin-bottom: 20px;">${renderSummaryTable(trainingSummaryForPanel, numericKeysForPanels)}</div>
             ` : '';
-            const modelGraphicSectionHtml = trainingViz ? `
-                <h3 style="margin: 0 0 8px 0;">Model used (training performance)</h3>
-                <p style="margin: 0 0 12px 0; font-size: 0.95rem; color: #666;">Performance graphic from the trained model.</p>
-                <img src="${trainingPerfUrl || trainingVizUrl}" alt="Training performance" class="inference-model-graphic-img" style="display: block; max-height: calc(100vh - var(--header-offset, 88px) - 360px); width: auto; max-width: 100%; object-fit: contain;">
+            // Two graphics share one frame: the trained model's performance, and the
+            // spread of every predictor in the training rows against the rows just
+            // predicted (the check that the new data lies where the model was fitted).
+            const spreadUrl = data.spread_visualization
+                ? withApiRoot('/user-visualizations/' + data.spread_visualization) + '?v=' + encodeURIComponent(data.spread_visualization_version || Date.now())
+                : '';
+            const perfUrl = trainingViz ? (trainingPerfUrl || trainingVizUrl) : '';
+            const graphicChoices = [
+                spreadUrl ? { key: 'spread', label: 'Predictor spread: training rows against new rows', url: spreadUrl, alt: 'Predictor spread of training rows and new rows' } : null,
+                perfUrl ? { key: 'performance', label: 'Model used (training performance)', url: perfUrl, alt: 'Training performance' } : null,
+            ].filter(Boolean);
+            const imgStyle = 'display: block; max-height: calc(100vh - var(--header-offset, 88px) - 360px); width: auto; max-width: 100%; object-fit: contain;';
+            const modelGraphicSectionHtml = graphicChoices.length ? `
+                <h3 style="margin: 0 0 8px 0;">Graphic</h3>
+                <label for="inferenceGraphicSelect" class="sr-only">Select graphic</label>
+                <select id="inferenceGraphicSelect" style="margin: 0 0 8px 0; max-width: 100%;">
+                    ${graphicChoices.map(g => `<option value="${g.key}">${escapeHtml(g.label)}</option>`).join('')}
+                </select>
+                <img id="inferenceGraphic" src="${graphicChoices[0].url}" alt="${escapeHtml(graphicChoices[0].alt)}" class="inference-model-graphic-img" style="${imgStyle}">
             ` : '';
             const rightPanelHtml = (trainingSummaryTableHtml || modelGraphicSectionHtml) ? `
                 <div class="inference-model-graphic" style="flex: 0 0 calc(50% - 12px); min-width: 200px; overflow: auto; align-self: flex-start;">
@@ -267,6 +282,14 @@ predictionForm.addEventListener('submit', async (e) => {
             if (window.digiterraExampleRows) {
                 window.digiterraExampleRows = false
                 showExampleRowAgreement(preview)
+            }
+            const graphicSelect = document.getElementById('inferenceGraphicSelect')
+            if (graphicSelect) {
+                graphicSelect.addEventListener('change', () => {
+                    const g = graphicChoices.find(x => x.key === graphicSelect.value)
+                    const img = document.getElementById('inferenceGraphic')
+                    if (g && img) { img.src = g.url; img.alt = g.alt }
+                })
             }
             uploadPredictDf.classList.add('hidden')
         }

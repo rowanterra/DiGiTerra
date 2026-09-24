@@ -236,21 +236,16 @@ processForm.addEventListener('submit', async (e) => {
         }
     } else if (currentMode === 'automl') {
         // Use AutoML model selectors (optional - can be empty to let AutoML choose)
+        // A blank model is a request for AutoML to compare its candidates by
+        // cross-validation and train the one that scores best; the server does
+        // that when models is blank and taskType names the task.
         if (selectedOutputType === 'Numeric'){
             model1 = document.getElementById('automlNModels');
             selectedModel1 = model1 ? model1.value : ''
-            // If no model selected in AutoML, use a sensible default (Random Forest tolerates unscaled and mixed features)
-            if (!selectedModel1 || selectedModel1 === '') {
-                selectedModel1 = 'RF';
-            }
         }
         else if (selectedOutputType === 'Classifier'){
             model1 = document.getElementById('automlClassModels');
             selectedModel1 = model1 ? model1.value : ''
-            // If no model selected in AutoML, use a sensible default (Random Forest Classifier)
-            if (!selectedModel1 || selectedModel1 === '') {
-                selectedModel1 = 'RF_classifier';
-            }
         }
         else if (selectedOutputType === 'Cluster'){
             model1 = document.getElementById('automlClModels');
@@ -2177,6 +2172,7 @@ processForm.addEventListener('submit', async (e) => {
         indicators: indicatorCols,
         predictors: predictorCols,
         models: selectedModel,
+        taskType: selectedOutputType,
         scaler: scaler.value,
         hyperparameters: hyperparameters,
         nonreq: nonreq,
@@ -2736,6 +2732,11 @@ function renderRunNotes(data) {
         if (blocking.length === 0 && warnings.length === 0) {
             parts.push(`<p class="run-note field-note">Data checks passed on ${escapeHtml(String(checks.n_rows))} rows and ${escapeHtml(String(checks.n_features))} features.</p>`);
         }
+    }
+    const cmp = data && data.model_comparison;
+    if (cmp && cmp.chosen) {
+        const rows = Array.isArray(cmp.summary) ? cmp.summary.map(r => `${escapeHtml(String(r.model).replace('_classifier', ''))} ${Number(r.mean).toFixed(3)} ± ${Number(r.std).toFixed(3)}`).join('; ') : '';
+        parts.push(`<p class="run-note field-note"><strong>AutoML chose ${escapeHtml(String(cmp.chosen).replace('_classifier', ''))}.</strong> ${escapeHtml(String(cmp.note || ''))} Mean ± SD over ${escapeHtml(String(cmp.folds))} folds and ${escapeHtml(String(cmp.seeds))} seed${cmp.seeds === 1 ? '' : 's'}: ${rows}. The comparison is drawn under Graphics.</p>`);
     }
     if (data && data.capacity_note) {
         parts.push(`<p class="run-note run-note-warn"><strong>Model not kept.</strong> ${escapeHtml(String(data.capacity_note))}</p>`);
@@ -3553,6 +3554,16 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                 
                 const classifierImageSelector = document.getElementById('classifierImageSelector');
                 const classifierImageSelector2 = document.getElementById('classifierImageSelector2');
+                // The candidate comparison exists only for an AutoML run with no model named.
+                if (data.model_comparison && data.model_comparison.figure) {
+                    [classifierImageSelector, classifierImageSelector2].forEach((sel, i) => {
+                        if (!sel) return;
+                        const o = document.createElement('option');
+                        o.value = 'model_comparison'; o.textContent = 'Candidate model comparison';
+                        sel.insertBefore(o, sel.firstChild);
+                        if (i === 1) sel.value = 'model_comparison';
+                    });
+                }
                 const classifierGraphic = document.getElementById('classifierGraphic');
                 const classifierGraphic2 = document.getElementById('classifierGraphic2');
                 const classifierGraphicUrl = (value) => withApiRoot(`/user-visualizations/${value}.png?t=${Date.now()}`);

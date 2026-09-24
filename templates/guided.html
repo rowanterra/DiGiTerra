@@ -76,6 +76,7 @@
   button.help { width: 1.25rem; height: 1.25rem; padding: 0; border-radius: 50%; border: 1px solid var(--muted); color: var(--muted); background: var(--field); font-size: .8rem; line-height: 1; cursor: help; }
   .tip { display: none; position: absolute; left: 1.5rem; top: -.3rem; z-index: 5; width: 22rem; max-width: 60vw; padding: .5rem .65rem; background: #fffdf7; border: 1px solid var(--ink); box-shadow: 0 2px 6px rgba(0,0,0,.15); font-size: .85rem; line-height: 1.35; color: var(--ink); font-weight: normal; }
   .helpwrap:hover .tip, .helpwrap:focus-within .tip, .helpwrap.open .tip, .tip:hover { display: block; }
+  .helpwrap.dismissed .tip { display: none; }
   .hidden { display: none !important; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
   @media (max-width: 900px) { body { overflow: auto; height: auto; } main { overflow: visible; } body[data-mode="full"] #step3 .body, body[data-mode="full"] #step4 .body { grid-template-columns: 1fr; } }

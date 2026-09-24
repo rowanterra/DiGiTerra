@@ -6,6 +6,12 @@ from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
 
 
+def _is_binary(col: pd.Series) -> bool:
+    """True for a column whose non-missing values are all 0 or 1 (a one-hot or flag)."""
+    vals = pd.unique(col.dropna())
+    return len(vals) <= 2 and all(v in (0, 1, 0.0, 1.0, True, False) for v in vals)
+
+
 def apply_outlier_handling(
     X_train: pd.DataFrame,
     X_test: pd.DataFrame,
@@ -33,24 +39,32 @@ def apply_outlier_handling(
 
     outlier_mask = np.ones(len(X_train), dtype=bool)
 
+    # The per-column rules read only columns that carry a spread. A one-hot or
+    # other binary column has Q1 = Q3 = 0 for any category under 25 percent, so
+    # the IQR rule called every row of that category an outlier and removed the
+    # category from training (pipeline review of 2026-09-24). Binary columns are
+    # skipped by the IQR and z-score rules; the model-based rules see every column.
+    spread = [c for c in X_train.columns if not _is_binary(X_train[c])]
+    X_spread = X_train[spread]
+
     if method == "IQR":
         # Interquartile Range method
-        Q1 = X_train.quantile(0.25)
-        Q3 = X_train.quantile(0.75)
+        Q1 = X_spread.quantile(0.25)
+        Q3 = X_spread.quantile(0.75)
         IQR = Q3 - Q1
         lower_bound = Q1 - 1.5 * IQR
         upper_bound = Q3 + 1.5 * IQR
 
         # Mark outliers (any feature outside bounds)
-        outlier_mask = ((X_train >= lower_bound) & (X_train <= upper_bound)).all(axis=1)
+        outlier_mask = ((X_spread >= lower_bound) & (X_spread <= upper_bound)).all(axis=1) if spread else outlier_mask
 
     elif method == "ZScore":
         # Z-Score method (3 sigma rule)
-        mean = X_train.mean()
-        std = X_train.std()
-        z_scores = np.abs((X_train - mean) / std)
+        mean = X_spread.mean()
+        std = X_spread.std().replace(0, np.nan)
+        z_scores = np.abs((X_spread - mean) / std).fillna(0)
         # Mark as outlier if any feature has |z| > 3
-        outlier_mask = (z_scores < 3).all(axis=1)
+        outlier_mask = (z_scores < 3).all(axis=1) if spread else outlier_mask
 
     elif method == "IsolationForest":
         iso_forest = IsolationForest(contamination=0.1, random_state=seed)
@@ -89,11 +103,14 @@ def apply_outlier_handling(
             lower_bound = X_train.quantile(0.01)
             upper_bound = X_train.quantile(0.99)
 
+        # Binary columns keep their values: clipping a one-hot to [0, 0] would erase it.
+        lower_bound = lower_bound.drop([c for c in lower_bound.index if c not in spread], errors="ignore")
+        upper_bound = upper_bound.drop([c for c in upper_bound.index if c not in spread], errors="ignore")
         X_train_processed = X_train.copy()
-        X_train_processed = X_train_processed.clip(lower=lower_bound, upper=upper_bound, axis=1)
+        X_train_processed[spread] = X_train_processed[spread].clip(lower=lower_bound, upper=upper_bound, axis=1)
 
         X_test_processed = X_test.copy()
-        X_test_processed = X_test_processed.clip(lower=lower_bound, upper=upper_bound, axis=1)
+        X_test_processed[spread] = X_test_processed[spread].clip(lower=lower_bound, upper=upper_bound, axis=1)
     else:
         raise ValueError(f"Unknown action: {action}")
 

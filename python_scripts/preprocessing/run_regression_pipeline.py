@@ -13,6 +13,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 from python_scripts.config import VIS_DIR
 from python_scripts.plotting.bundles import export_plots
+from python_scripts.plotting.plot_predictor_spread import write_training_spread
 from python_scripts.plotting.plot_shap_summary_graphic import plot_shap_summary
 from python_scripts.plotting.plot_style import apply_plot_style
 from python_scripts.plotting.visualize_predictions import visualize_predictions
@@ -87,7 +88,10 @@ def run_regression(
     nump = X.select_dtypes(include=np.number).columns.tolist()
     catp = []
     if useTransformer == "Yes":
-        catp = transformer_cols
+        catp = list(transformer_cols)
+        # A numeric column chosen for encoding is a category, not a number, so it
+        # leaves the numeric list; listing it twice raised a duplicate-column error.
+        nump = [c for c in nump if c not in catp]
     textp = []
 
     _split_source = train_data  # frame with every column, for a split column that is not a feature
@@ -191,6 +195,8 @@ def run_regression(
         y_test = y.loc[y_test.index]
     # RAW splits for transformer
     X_train_raw = ddf.loc[X_train.index, nump + catp + textp].copy()
+    # The spread of each raw predictor in the training rows, for the inference page.
+    write_training_spread(X_train_raw[nump], VIS_DIR)
     X_test_raw = ddf.loc[X_test.index, nump + catp + textp].copy()
 
     if progress_tracker:

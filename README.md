@@ -67,6 +67,12 @@ matching bundle round-trip record: 66 of 67 identical, birch unsupported.
 `docs/differential_test_E1/` is a black-box comparison of the same rows, settings and
 splits against Orange, RapidMiner AI Studio and R with plain scikit-learn as the arbiter;
 its `RESULT_2026-09-24_partial.txt` names the three defects it found and their fixes.
+`scripts/adversarial_check.py` replays every probe of the adversarial review of 2026-09-24
+(a crafted artifact, path traversal, a foreign session, formula cells, a CSV with markup in its
+headers through both pages, cleared fields, a model-change race, Escape on a focused
+tooltip, figures in a 720 px window, and the review's pipeline tests) and prints one line
+per probe; `docs/adversarial_check_2026-09-24.json` is its record, 10 of 10. Run it before
+a release and after any change to the routes, the pipeline or the two pages.
 `tests/integration/test_browser_advanced.py` drives the page in Chromium through Playwright
 and checks that values typed into Advanced-mode controls reach the training request; the
 test skips itself when Playwright or the browser is absent.
@@ -82,11 +88,12 @@ a bundle without the web app; `scripts/rerun_bundle.py BUNDLE.zip DATA.csv` chec
 hash, replays the recorded request, and reports whether the metrics reproduce. Loading a
 bundle builds fitted objects from a file, so the artifact is written in a format that
 stores them as data with their types named and refuses to build a type outside an
-allowlist, and every bundle is signed under the installation's key as well: import refuses
+exact allowlist (`python_scripts/reporting/artifact_allowlist.txt`, written by
+`scripts/artifact_type_census.py` from every registered estimator), and every bundle is signed under the installation's key as well: import refuses
 one that is unsigned, altered, or signed elsewhere, and installations that share
 `DIGITERRA_BUNDLE_KEY` can exchange bundles. `scripts/check_artifact_roundtrip.py` trains
 every registered estimator and compares its predictions before and after the round trip;
-`docs/artifact_roundtrip_2026-09-04.json` is the record, with the numbers in it. The in-app
+`docs/artifact_roundtrip_2026-09-24.json` is the record, with the numbers in it. The in-app
 import (`POST /import-bundle`) is on in the desktop build and off in the container unless
 `DIGITERRA_ALLOW_BUNDLE_IMPORT` is set.
 

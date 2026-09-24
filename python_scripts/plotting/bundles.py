@@ -447,6 +447,9 @@ def plot_classification_bundle(art: dict, svctrue: bool):
 
         # 3) PR curves using scikit-learn's PrecisionRecallDisplay
         try:
+            # The positive class is the estimator's second class, whatever the labels
+            # are called; without it string labels raised "pos_label=1 is not a valid
+            # label" and the curve was never drawn (review of 2026-09-24).
             plot_precision_recall_curve_from_estimator(
                 model,
                 X_test,
@@ -455,6 +458,7 @@ def plot_classification_bundle(art: dict, svctrue: bool):
                 pdf_pages=None,
                 plot_chance_level=True,
                 despine=True,
+                pos_label=(list(getattr(model, "classes_", [None, None]))[1] if len(classes) == 2 else None),
             )
         except Exception as e:
             logger.warning(f"Could not generate PR curve using Display class: {e}")

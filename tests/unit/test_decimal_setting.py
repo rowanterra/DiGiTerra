@@ -97,8 +97,11 @@ def test_cleared_advanced_fields_do_not_reach_the_estimator_as_none():
     kw = get_model_kwargs("Logistic_classifier", {"Class_CLogistic": 0.5, "Class_LogisticMaxIterations": 500}, True, 0)
     assert None not in kw.values()
     assert kw["Class_CLogistic"] == 0.5 and kw["Class_LogisticMaxIterations"] == 500
-    # with the non-required switch off, the None keys stay for the sweep harness
-    assert None in get_model_kwargs("Ridge", {}, False, 0).values()
+    # the sweep harness reads the private form, which keeps the None keys
+    from python_scripts.model_registry import _model_kwargs
+
+    assert None in _model_kwargs("Ridge", {}, False, 0).values()
+    assert None not in get_model_kwargs("Ridge", {}, False, 0).values()
     store = {}
     _train(
         store,

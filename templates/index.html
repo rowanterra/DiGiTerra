@@ -1080,7 +1080,7 @@
             
             <!-- AutoML Mode Model Selection -->
             <div id="headerAutomlNumericModels" class="hidden">
-                <label for="headerAutomlNModels" style="display: block; margin-bottom: 8px; font-weight: 600;">Regression Model (Optional - AutoML will try multiple if not specified):</label>
+                <label for="headerAutomlNModels" style="display: block; margin-bottom: 8px; font-weight: 600;">Regression Model (optional; blank compares nine candidates by cross-validation and trains the best):</label>
                 <select name="headerAutomlNModels" id="headerAutomlNModels" style="width: 100%; max-width: 400px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
                     <option value="" selected>Let AutoML choose</option>
                     <optgroup label="Most Common">
@@ -1123,9 +1123,9 @@
             </div>
             
             <div id="headerAutomlClusterModels" class="hidden">
-                <label for="headerAutomlClModels" style="display: block; margin-bottom: 8px; font-weight: 600;">Clustering Model (Optional):</label>
+                <label for="headerAutomlClModels" style="display: block; margin-bottom: 8px; font-weight: 600;">Clustering Model (KMeans unless another is chosen; candidates are not compared for clustering):</label>
                 <select name="headerAutomlClModels" id="headerAutomlClModels" style="width: 100%; max-width: 400px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                    <option value="" selected>Let AutoML choose</option>
+                    <option value="" selected>Default (KMeans)</option>
                     <optgroup label="Most Common">
                         <option value="kmeans">K-Means</option>
                         <option value="dbscan">DBSCAN</option>
@@ -1146,7 +1146,7 @@
             </div>
             
             <div id="headerAutomlClassifierModels" class="hidden">
-                <label for="headerAutomlClassModels" style="display: block; margin-bottom: 8px; font-weight: 600;">Classification Model (Optional):</label>
+                <label for="headerAutomlClassModels" style="display: block; margin-bottom: 8px; font-weight: 600;">Classification Model (optional; blank compares seven candidates by cross-validation and trains the best):</label>
                 <select name="headerAutomlClassModels" id="headerAutomlClassModels" style="width: 100%; max-width: 400px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
                     <option value="" selected>Let AutoML choose</option>
                     <optgroup label="Most Common">
@@ -5933,7 +5933,7 @@
                             <p class="field-note" style="margin-bottom: 16px;">A model, or blank for AutoML to select one.</p>
                             
                             <div id="automlNumericModels" class="hidden">
-                                <label for="automlNModels" style="display: block; margin-bottom: 8px; font-weight: 600;">Regression Model (Optional - AutoML will try multiple if not specified):</label>
+                                <label for="automlNModels" style="display: block; margin-bottom: 8px; font-weight: 600;">Regression Model (optional; blank compares nine candidates by cross-validation and trains the best):</label>
                                 <select name="automlNModels" id="automlNModels" style="width: 100%; max-width: 400px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
                                     <option value="" selected>Let AutoML choose</option>
                                     <optgroup label="Most Common">
@@ -5976,9 +5976,9 @@
                             </div>
                             
                             <div id="automlClusterModels" class="hidden">
-                                <label for="automlClModels" style="display: block; margin-bottom: 8px; font-weight: 600;">Clustering Model (Optional):</label>
+                                <label for="automlClModels" style="display: block; margin-bottom: 8px; font-weight: 600;">Clustering Model (KMeans unless another is chosen; candidates are not compared for clustering):</label>
                                 <select name="automlClModels" id="automlClModels" style="width: 100%; max-width: 400px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                                    <option value="" selected>Let AutoML choose</option>
+                                    <option value="" selected>Default (KMeans)</option>
                                     <optgroup label="Most Common">
                                         <option value="kmeans">K-Means</option>
                                         <option value="dbscan">DBSCAN</option>
@@ -5999,7 +5999,7 @@
                             </div>
                             
                             <div id="automlClassifierModels" class="hidden">
-                                <label for="automlClassModels" style="display: block; margin-bottom: 8px; font-weight: 600;">Classification Model (Optional):</label>
+                                <label for="automlClassModels" style="display: block; margin-bottom: 8px; font-weight: 600;">Classification Model (optional; blank compares seven candidates by cross-validation and trains the best):</label>
                                 <select name="automlClassModels" id="automlClassModels" style="width: 100%; max-width: 400px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
                                     <option value="" selected>Let AutoML choose</option>
                                     <optgroup label="Most Common">

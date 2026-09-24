@@ -40,6 +40,7 @@ OBJECT_KEYS = (
 META_NAME = "meta.json"
 FRAME_NAME = "data.parquet"
 OBJECTS_NAME = "objects.skops"
+OBJECTS_SIG_NAME = "objects.skops.sig"
 
 
 def backend_name() -> str:
@@ -132,9 +133,19 @@ class DiskBackend:
         objects_path = d / OBJECTS_NAME
         if objects_path.is_file():
             from python_scripts.reporting import artifact
+            from python_scripts.reporting.bundle import signature_valid, signing_key
 
+            # The objects file is read only when it carries the signature this
+            # installation wrote at save time, so a file put in place by anything
+            # else is refused before a single object is built (review of 2026-09-24).
             try:
-                mapping.update(artifact.loads(objects_path.read_bytes()))
+                data = objects_path.read_bytes()
+                sig_path = d / OBJECTS_SIG_NAME
+                sig = sig_path.read_text(encoding="utf-8").strip() if sig_path.is_file() else None
+                if not signature_valid(data, sig, signing_key(create=False)):
+                    logger.warning("Session %s objects not read: the signature does not verify", session_id)
+                else:
+                    mapping.update(artifact.loads(data))
             except Exception as e:
                 logger.warning("Session %s objects not read: %s", session_id, e)
         return mapping
@@ -160,14 +171,22 @@ class DiskBackend:
             (d / FRAME_NAME).unlink()
         if objects and objects.get("model") is not None:
             from python_scripts.reporting import artifact
+            from python_scripts.reporting.bundle import sign_bytes, signing_key
 
             try:
                 payload = artifact.dumps(objects)
+                key = signing_key(create=True)
+                if key is None:
+                    raise RuntimeError("no signing key")
+                signature = sign_bytes(payload, key)
                 self._write_atomic(d / OBJECTS_NAME, lambda p: p.write_bytes(payload))
+                self._write_atomic(d / OBJECTS_SIG_NAME, lambda p: p.write_text(signature, encoding="utf-8"))
             except Exception as e:
                 logger.warning("Session %s objects not written: %s", session_id, e)
         elif (d / OBJECTS_NAME).exists():
             (d / OBJECTS_NAME).unlink()
+            if (d / OBJECTS_SIG_NAME).exists():
+                (d / OBJECTS_SIG_NAME).unlink()
 
     def delete(self, session_id: str) -> None:
         shutil.rmtree(self._dir(session_id), ignore_errors=True)

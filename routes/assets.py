@@ -61,7 +61,7 @@ def download_predictions_xlsx():
             frame.to_excel(writer, sheet_name="Predictions", index=False)
     except Exception as e:
         logger.error("Error writing predictions workbook: %s", str(e))
-        return jsonify({"error": str(e)}), HTTP_INTERNAL_SERVER_ERROR
+        return jsonify({"error": "The predictions workbook could not be written."}), HTTP_INTERNAL_SERVER_ERROR
     return send_file(xlsx_path, as_attachment=True, download_name="predictions.xlsx")
 
 
@@ -74,6 +74,13 @@ def download_additional_info():
         sheet_name = data.get("sheet_name", "Additional Information")
         if not table_data:
             return jsonify({"error": "No table data provided"}), HTTP_BAD_REQUEST
+
+        # A cell that starts with = + - @ is a formula to a spreadsheet; a leading
+        # apostrophe keeps it as text (review of 2026-09-24).
+        def _text(v):
+            return "'" + v if isinstance(v, str) and v[:1] in ("=", "+", "-", "@") else v
+
+        table_data = [[_text(v) for v in row] for row in table_data]
         if len(table_data[0]) == 2:
             df = pd.DataFrame(table_data, columns=["Property", "Value"])
         elif len(table_data[0]) == 3:
@@ -87,7 +94,7 @@ def download_additional_info():
         return jsonify({"filename": filename})
     except Exception as e:
         logger.error("Error generating additional info Excel: %s", str(e))
-        return jsonify({"error": str(e)}), HTTP_INTERNAL_SERVER_ERROR
+        return jsonify({"error": "The workbook could not be written."}), HTTP_INTERNAL_SERVER_ERROR
 
 
 @bp.route("/export-bundle")

@@ -4333,21 +4333,16 @@ processForm.addEventListener('submit', async (e) => {
         }
     } else if (currentMode === 'automl') {
         // Use AutoML model selectors (optional - can be empty to let AutoML choose)
+        // A blank model is a request for AutoML to compare its candidates by
+        // cross-validation and train the one that scores best; the server does
+        // that when models is blank and taskType names the task.
         if (selectedOutputType === 'Numeric'){
             model1 = document.getElementById('automlNModels');
             selectedModel1 = model1 ? model1.value : ''
-            // If no model selected in AutoML, use a sensible default (Random Forest tolerates unscaled and mixed features)
-            if (!selectedModel1 || selectedModel1 === '') {
-                selectedModel1 = 'RF';
-            }
         }
         else if (selectedOutputType === 'Classifier'){
             model1 = document.getElementById('automlClassModels');
             selectedModel1 = model1 ? model1.value : ''
-            // If no model selected in AutoML, use a sensible default (Random Forest Classifier)
-            if (!selectedModel1 || selectedModel1 === '') {
-                selectedModel1 = 'RF_classifier';
-            }
         }
         else if (selectedOutputType === 'Cluster'){
             model1 = document.getElementById('automlClModels');
@@ -6274,6 +6269,7 @@ processForm.addEventListener('submit', async (e) => {
         indicators: indicatorCols,
         predictors: predictorCols,
         models: selectedModel,
+        taskType: selectedOutputType,
         scaler: scaler.value,
         hyperparameters: hyperparameters,
         nonreq: nonreq,
@@ -6833,6 +6829,11 @@ function renderRunNotes(data) {
         if (blocking.length === 0 && warnings.length === 0) {
             parts.push(`<p class="run-note field-note">Data checks passed on ${escapeHtml(String(checks.n_rows))} rows and ${escapeHtml(String(checks.n_features))} features.</p>`);
         }
+    }
+    const cmp = data && data.model_comparison;
+    if (cmp && cmp.chosen) {
+        const rows = Array.isArray(cmp.summary) ? cmp.summary.map(r => `${escapeHtml(String(r.model).replace('_classifier', ''))} ${Number(r.mean).toFixed(3)} ± ${Number(r.std).toFixed(3)}`).join('; ') : '';
+        parts.push(`<p class="run-note field-note"><strong>AutoML chose ${escapeHtml(String(cmp.chosen).replace('_classifier', ''))}.</strong> ${escapeHtml(String(cmp.note || ''))} Mean ± SD over ${escapeHtml(String(cmp.folds))} folds and ${escapeHtml(String(cmp.seeds))} seed${cmp.seeds === 1 ? '' : 's'}: ${rows}. The comparison is drawn under Graphics.</p>`);
     }
     if (data && data.capacity_note) {
         parts.push(`<p class="run-note run-note-warn"><strong>Model not kept.</strong> ${escapeHtml(String(data.capacity_note))}</p>`);
@@ -7650,6 +7651,16 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                 
                 const classifierImageSelector = document.getElementById('classifierImageSelector');
                 const classifierImageSelector2 = document.getElementById('classifierImageSelector2');
+                // The candidate comparison exists only for an AutoML run with no model named.
+                if (data.model_comparison && data.model_comparison.figure) {
+                    [classifierImageSelector, classifierImageSelector2].forEach((sel, i) => {
+                        if (!sel) return;
+                        const o = document.createElement('option');
+                        o.value = 'model_comparison'; o.textContent = 'Candidate model comparison';
+                        sel.insertBefore(o, sel.firstChild);
+                        if (i === 1) sel.value = 'model_comparison';
+                    });
+                }
                 const classifierGraphic = document.getElementById('classifierGraphic');
                 const classifierGraphic2 = document.getElementById('classifierGraphic2');
                 const classifierGraphicUrl = (value) => withApiRoot(`/user-visualizations/${value}.png?t=${Date.now()}`);
@@ -8628,10 +8639,25 @@ predictionForm.addEventListener('submit', async (e) => {
                 <p style="margin: 0 0 12px 0; font-size: 0.95rem; color: #666;">Spread the model was built on.</p>
                 <div class="model-stats-table-wrapper" style="margin-bottom: 20px;">${renderSummaryTable(trainingSummaryForPanel, numericKeysForPanels)}</div>
             ` : '';
-            const modelGraphicSectionHtml = trainingViz ? `
-                <h3 style="margin: 0 0 8px 0;">Model used (training performance)</h3>
-                <p style="margin: 0 0 12px 0; font-size: 0.95rem; color: #666;">Performance graphic from the trained model.</p>
-                <img src="${trainingPerfUrl || trainingVizUrl}" alt="Training performance" class="inference-model-graphic-img" style="display: block; max-height: calc(100vh - var(--header-offset, 88px) - 360px); width: auto; max-width: 100%; object-fit: contain;">
+            // Two graphics share one frame: the trained model's performance, and the
+            // spread of every predictor in the training rows against the rows just
+            // predicted (the check that the new data lies where the model was fitted).
+            const spreadUrl = data.spread_visualization
+                ? withApiRoot('/user-visualizations/' + data.spread_visualization) + '?v=' + encodeURIComponent(data.spread_visualization_version || Date.now())
+                : '';
+            const perfUrl = trainingViz ? (trainingPerfUrl || trainingVizUrl) : '';
+            const graphicChoices = [
+                spreadUrl ? { key: 'spread', label: 'Predictor spread: training rows against new rows', url: spreadUrl, alt: 'Predictor spread of training rows and new rows' } : null,
+                perfUrl ? { key: 'performance', label: 'Model used (training performance)', url: perfUrl, alt: 'Training performance' } : null,
+            ].filter(Boolean);
+            const imgStyle = 'display: block; max-height: calc(100vh - var(--header-offset, 88px) - 360px); width: auto; max-width: 100%; object-fit: contain;';
+            const modelGraphicSectionHtml = graphicChoices.length ? `
+                <h3 style="margin: 0 0 8px 0;">Graphic</h3>
+                <label for="inferenceGraphicSelect" class="sr-only">Select graphic</label>
+                <select id="inferenceGraphicSelect" style="margin: 0 0 8px 0; max-width: 100%;">
+                    ${graphicChoices.map(g => `<option value="${g.key}">${escapeHtml(g.label)}</option>`).join('')}
+                </select>
+                <img id="inferenceGraphic" src="${graphicChoices[0].url}" alt="${escapeHtml(graphicChoices[0].alt)}" class="inference-model-graphic-img" style="${imgStyle}">
             ` : '';
             const rightPanelHtml = (trainingSummaryTableHtml || modelGraphicSectionHtml) ? `
                 <div class="inference-model-graphic" style="flex: 0 0 calc(50% - 12px); min-width: 200px; overflow: auto; align-self: flex-start;">
@@ -8670,6 +8696,14 @@ predictionForm.addEventListener('submit', async (e) => {
             if (window.digiterraExampleRows) {
                 window.digiterraExampleRows = false
                 showExampleRowAgreement(preview)
+            }
+            const graphicSelect = document.getElementById('inferenceGraphicSelect')
+            if (graphicSelect) {
+                graphicSelect.addEventListener('change', () => {
+                    const g = graphicChoices.find(x => x.key === graphicSelect.value)
+                    const img = document.getElementById('inferenceGraphic')
+                    if (g && img) { img.src = g.url; img.alt = g.alt }
+                })
             }
             uploadPredictDf.classList.add('hidden')
         }

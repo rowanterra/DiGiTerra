@@ -110,8 +110,12 @@ def preprocess_data(
         else:
             impute_scope = []
 
+        # The target is never filled: a made-up target would be trained on and then
+        # scored as truth in the test split (pipeline review of 2026-09-24). Rows
+        # with a blank target are dropped by the pipeline instead.
+        impute_scope = [c for c in impute_scope if c not in (target_cols or [])]
         supplied = dict(fill_values or {})
-        deferred = fill_plan_out is not None and impute_strategy in ("mean", "median")
+        deferred = fill_plan_out is not None and impute_strategy in ("mean", "median", "mode")
         if deferred:
             # The pipeline fits these on its training split; see preprocessing/split_fill.py.
             fill_plan_out.nan_strategy = impute_strategy
@@ -125,6 +129,9 @@ def preprocess_data(
                 fill = df_clean[col].mean()
             elif impute_strategy == "median":
                 fill = df_clean[col].median()
+            elif impute_strategy == "mode":
+                modes = df_clean[col].dropna().mode()
+                fill = modes.iloc[0] if len(modes) else float("nan")
             elif isinstance(impute_strategy, (int, float)):
                 fill = impute_strategy
             else:
@@ -163,13 +170,16 @@ def preprocess_data(
     elif zero_handle_norm == "drop":
         if drop_zero == "all":
             df_clean = df_clean[(df_clean != 0).any(axis=1)]
+        # A row goes when any scoped column is zero, which is what the option says
+        # ("Remove rows with zeros in selected columns"); all(axis=1) removed only
+        # rows that were zero in every column (review of 2026-09-24).
         elif drop_zero == "indicator":
-            df_clean = df_clean[~(df_clean[indicator_cols].eq(0).all(axis=1))]
+            df_clean = df_clean[~(df_clean[indicator_cols].eq(0).any(axis=1))]
         elif drop_zero == "target" and target_cols:
-            df_clean = df_clean[~(df_clean[target_cols].eq(0).all(axis=1))]
+            df_clean = df_clean[~(df_clean[target_cols].eq(0).any(axis=1))]
         elif drop_zero == "indicatorAndTarget":
             subset = indicator_cols + target_cols
-            df_clean = df_clean[~(df_clean[subset].eq(0).all(axis=1))]
+            df_clean = df_clean[~(df_clean[subset].eq(0).any(axis=1))]
     else:
         zcols = _numeric_columns_for_zero_scope(df_clean)
         zsupplied = dict(zero_fill_values or {})
@@ -802,15 +812,38 @@ def run_cross_validation(
     seed: int,
     problem_type: str,
     y_scaler_type: str = "none",
+    fill_plan=None,
+    split_plan=None,
 ):
+    """Cross-validate the model on the frame the run used, with the run's own choices.
+
+    fill_plan: the run's FillPlan; a mean, median or mode fill is fitted inside
+    each fold (an imputer step), so the folds see the same treatment the holdout
+    did and an estimator that refuses NaN does not fail after the model trained.
+    Rows with a blank target are dropped, as the pipeline drops them.
+    split_plan: the run's SplitPlan; a grouped run uses GroupKFold on its column
+    and a time-ordered run uses TimeSeriesSplit in that column's order, so the
+    folds answer the same question the holdout did (review of 2026-09-24: a
+    grouped holdout of R2 -2.2 came with a shuffled-KFold CV of 0.95).
+    """
     if cv_type == "None" or cv_folds is None:
         return None, None
 
     if problem_type not in {"regression", "classification"}:
         return None, None
 
-    X_raw = df[indicator_names].copy()
-    y_raw = df[predictor_names].copy()
+    frame = df
+    plan_column = getattr(split_plan, "column", None) if split_plan is not None and not split_plan.is_random() else None
+    keep = list(dict.fromkeys(list(indicator_names) + list(predictor_names) + ([plan_column] if plan_column else [])))
+    frame = frame[keep].copy()
+    frame = frame.dropna(subset=list(predictor_names))
+    nan_strategy = getattr(fill_plan, "nan_strategy", None)
+    if not nan_strategy:
+        frame = frame.dropna(subset=list(indicator_names))
+    if plan_column and getattr(split_plan, "method", "") == "time":
+        frame = frame.sort_values(plan_column, kind="stable")
+    X_raw = frame[indicator_names].copy()
+    y_raw = frame[predictor_names].copy()
 
     if problem_type == "classification" and y_raw.shape[1] != 1:
         return None, None
@@ -819,9 +852,14 @@ def run_cross_validation(
     categorical_cols = []
     if useTransformer == "Yes" and transformer_cols is not None:
         categorical_cols = [c for c in transformer_cols if c in X_raw.columns]
+        numeric_cols = [c for c in numeric_cols if c not in categorical_cols]
 
     preprocessor = make_preprocessor(numeric_cols=numeric_cols, categorical_cols=categorical_cols, cat_mode="onehot")
     steps = [("preprocess", preprocessor)]
+    if nan_strategy:
+        from sklearn.impute import SimpleImputer
+
+        steps.append(("impute", SimpleImputer(strategy="most_frequent" if nan_strategy == "mode" else nan_strategy)))
     scaler_obj = _get_scaler(scaler)
     if scaler_obj is not None:
         steps.append(("scaler", scaler_obj))
@@ -836,7 +874,18 @@ def run_cross_validation(
     pipeline = Pipeline(steps)
 
     folds = cv_folds if cv_folds and cv_folds >= 2 else 5
-    if cv_type == "StratifiedKFold" and problem_type == "classification":
+    groups = None
+    if plan_column and getattr(split_plan, "method", "") == "group":
+        from sklearn.model_selection import GroupKFold
+
+        groups = frame[plan_column].astype(str).values
+        folds = min(folds, len(pd.unique(groups)))
+        cv = GroupKFold(n_splits=max(folds, 2))
+    elif plan_column and getattr(split_plan, "method", "") == "time":
+        from sklearn.model_selection import TimeSeriesSplit
+
+        cv = TimeSeriesSplit(n_splits=folds)
+    elif cv_type == "StratifiedKFold" and problem_type == "classification":
         cv = StratifiedKFold(n_splits=folds, shuffle=True, random_state=seed)
     elif cv_type == "RepeatedKFold":
         cv = RepeatedKFold(n_splits=folds, n_repeats=2, random_state=seed)
@@ -863,8 +912,10 @@ def run_cross_validation(
             "mae": "neg_mean_absolute_error",
         }
 
-    y_values = y_raw.iloc[:, 0] if isinstance(y_raw, pd.DataFrame) else y_raw
-    results = cross_validate(pipeline, X_raw, y_values, scoring=scoring, cv=cv)
+    # Every target is scored: a multi-target run is averaged over its targets
+    # (sklearn's uniform average), not read from the first one alone.
+    y_values = y_raw.iloc[:, 0] if isinstance(y_raw, pd.DataFrame) and y_raw.shape[1] == 1 else y_raw
+    results = cross_validate(pipeline, X_raw, y_values, scoring=scoring, cv=cv, groups=groups)
     summary_df, fold_df = _build_cv_summary(results, scoring)
     file_path = write_cross_validation_results(summary_df, fold_df, cv_type, folds)
     # Return both file path and summary data for frontend display
@@ -1054,7 +1105,17 @@ def prediction(
         try:
             from python_scripts.preprocessing.applicability import score_rows
 
-            scored = score_rows(applicability, pd.DataFrame(X_new_scaled, columns=applicability.feature_order))
+            # The novelty record was fitted on the scaled frame before feature
+            # selection, so it is scored on that frame, by column name, not on the
+            # narrower matrix the model reads (review of 2026-09-24: with feature
+            # selection on, the shapes disagreed and novelty was never written).
+            app_frame = (
+                X_scaled_full.reindex(columns=applicability.feature_order)
+                if isinstance(X_scaled_full, pd.DataFrame)
+                and set(applicability.feature_order).issubset(X_scaled_full.columns)
+                else pd.DataFrame(X_new_scaled, columns=applicability.feature_order)
+            )
+            scored = score_rows(applicability, app_frame)
             df_clean["novelty_score"] = scored["novelty_score"]
             df_clean["novel_row"] = scored["novel_row"]
             df_clean["out_of_range_columns"] = scored["out_of_range_columns"]

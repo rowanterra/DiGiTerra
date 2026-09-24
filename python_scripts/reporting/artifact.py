@@ -7,9 +7,10 @@ at all about a file from before signing existed.
 
 skops writes the same objects as data with their types named, and refuses to
 build a type the caller has not allowed. This module holds the allowlist: the
-scikit-learn and numpy types DiGiTerra actually fits, plus the one function of its
-own that a fitted preprocessor refers to. A file naming anything else is refused
-before a single object is built, and the message names what it asked for.
+exact scikit-learn, numpy, scipy and pandas type names a census of every
+registered estimator produced (artifact_allowlist.txt), plus the few types of
+this project that a fitted preprocessor refers to. A file naming anything else is
+refused before a single object is built, and the message names what it asked for.
 
 Format v2 bundles carry model.skops and load through here. Format v1 bundles carry
 model.joblib; they are read only when DIGITERRA_ALLOW_LEGACY_PICKLE is set, since
@@ -27,27 +28,48 @@ logger = logging.getLogger(__name__)
 ARTIFACT_NAME = "model.skops"
 LEGACY_ARTIFACT_NAME = "model.joblib"
 
-# The one callable of this project that a fitted object refers to: the group-map
-# step of the preprocessor. Anything else named by a file is refused.
+# The types a DiGiTerra artifact may name. The list is exact, not a prefix: it was
+# taken from a census of every registered estimator written through this module
+# (scripts/artifact_type_census.py writes artifact_allowlist.txt), plus the few
+# types of this project that a fitted preprocessor refers to. A prefix test was
+# what the review of 2026-09-24 defeated: "builtins." admitted builtins.eval, and
+# the loader then handed skops the file's own type list as trusted, so a crafted
+# file ran code on load. Now the file is read against this list and skops is given
+# this list, never the file's.
+_ALLOWLIST_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "artifact_allowlist.txt")
+
 OWN_TRUSTED_TYPES = (
     "python_scripts.preprocessing.utilities.apply_group_map",
     "python_scripts.models.regression_models.train_radius_neighbors_regressor.RadiusNeighborsWithFallback",
-    "numpy.dtype",
-    "numpy.ufunc",
     "python_scripts.preprocessing.applicability.Applicability",
     "python_scripts.preprocessing.uncertainty.Conformal",
 )
 
-# Type names from these modules are the estimators, transformers, and arrays a run
-# fits. skops reports each unknown type by its dotted path, so a prefix test is
-# what decides, and it is deliberately narrow: nothing outside these trees loads.
-TRUSTED_PREFIXES = (
-    "sklearn.",
-    "numpy.",
-    "scipy.",
-    "pandas.",
-    "collections.OrderedDict",
-    "builtins.",
+
+def _read_allowlist() -> frozenset[str]:
+    names = set(OWN_TRUSTED_TYPES)
+    try:
+        with open(_ALLOWLIST_FILE, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    names.add(line)
+    except OSError as e:
+        logger.error("Artifact allowlist not read (%s); only the project's own types load", e)
+    return frozenset(names)
+
+
+TRUSTED_TYPES: frozenset[str] = _read_allowlist()
+
+# Names that never load whatever a census says: each is a way to run code.
+_NEVER = (
+    "builtins.eval",
+    "builtins.exec",
+    "builtins.__import__",
+    "builtins.compile",
+    "builtins.open",
+    "os.",
+    "subprocess.",
 )
 
 
@@ -66,9 +88,9 @@ def legacy_pickle_allowed() -> bool:
 
 
 def _is_trusted(name: str) -> bool:
-    if name in OWN_TRUSTED_TYPES:
-        return True
-    return any(name.startswith(prefix) for prefix in TRUSTED_PREFIXES)
+    if any(name == n or name.startswith(n) for n in _NEVER):
+        return False
+    return name in TRUSTED_TYPES
 
 
 def dumps(objects: dict) -> bytes:
@@ -108,8 +130,8 @@ def loads(data: bytes) -> dict:
             "The artifact asks for types this application does not load: " + ", ".join(refused[:5]) + "."
         )
     try:
-        asked = sio.get_untrusted_types(data=data)
-        objects = sio.loads(data, trusted=asked)
+        # skops is given the allowlist, never the file's own type list.
+        objects = sio.loads(data, trusted=sorted(TRUSTED_TYPES))
     except Exception as e:
         raise ArtifactError(f"The artifact could not be read: {e}") from e
     if not isinstance(objects, dict) or "model" not in objects:

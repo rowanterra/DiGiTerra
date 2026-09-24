@@ -97,11 +97,16 @@ def calculate_classification_metrics(y_true, y_pred, y_score=None, classes=None,
             n_classes = len(classes)
 
             if n_classes == 2:
-                # Binary classification
-                metrics["roc_auc"] = roc_auc_score(y_true, y_score[:, 1] if y_score.shape[1] > 1 else y_score[:, 0])
-                metrics["average_precision"] = average_precision_score(
-                    y_true, y_score[:, 1] if y_score.shape[1] > 1 else y_score[:, 0]
-                )
+                # Binary classification. The positive class is classes[1], the class
+                # of the score's second column; y_bin says which rows are that class.
+                # Scoring against the string labels let sklearn pick the positive
+                # class by sort order, which inverted the AUC whenever that order
+                # differed from the class order, and made average precision fail
+                # on string labels (pipeline review of 2026-09-24).
+                positive = y_bin[:, 0] if y_bin.ndim == 2 else y_bin
+                score = y_score[:, 1] if y_score.shape[1] > 1 else y_score[:, 0]
+                metrics["roc_auc"] = roc_auc_score(positive, score)
+                metrics["average_precision"] = average_precision_score(positive, score)
             else:
                 # Multi-class
                 metrics["roc_auc_macro"] = roc_auc_score(y_bin, y_score, average="macro", multi_class="ovr")

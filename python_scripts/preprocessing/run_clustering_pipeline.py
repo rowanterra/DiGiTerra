@@ -18,6 +18,7 @@ from sklearn.model_selection import train_test_split
 import python_scripts.plotting.plot_style  # noqa: F401
 from python_scripts.config import VIS_DIR
 from python_scripts.plotting.bundles import export_plots
+from python_scripts.plotting.plot_predictor_spread import write_training_spread
 from python_scripts.preprocessing.applicability import record_applicability, set_applicability
 from python_scripts.preprocessing.outlier_handling import apply_outlier_handling
 from python_scripts.preprocessing.split_fill import apply_fill_plan_to_split, get_fill_plan
@@ -185,7 +186,10 @@ def run_clustering(
     nump = X.select_dtypes(include=np.number).columns.tolist()
     catp = []
     if useTransformer == "Yes":
-        catp = transformer_cols
+        catp = list(transformer_cols)
+        # A numeric column chosen for encoding is a category, not a number, so it
+        # leaves the numeric list; listing it twice raised a duplicate-column error.
+        nump = [c for c in nump if c not in catp]
     textp = []
 
     indicator_cols = nump + catp + textp
@@ -235,6 +239,8 @@ def run_clustering(
             X_train_raw = (
                 pd.DataFrame(X_train_raw) if hasattr(X_train_raw, "__array__") else pd.DataFrame([X_train_raw])
             )
+        # The spread of each raw predictor in the training rows, for the inference page.
+        write_training_spread(X_train_raw[[c for c in nump if c in X_train_raw.columns]], VIS_DIR)
         if not isinstance(X_test_raw, pd.DataFrame):
             X_test_raw = pd.DataFrame(X_test_raw) if hasattr(X_test_raw, "__array__") else pd.DataFrame([X_test_raw])
     else:

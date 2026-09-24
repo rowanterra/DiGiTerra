@@ -112,10 +112,17 @@
     // after a label, never inside it; other targets (legends, headings, table
     // header cells) take it as their last child.
     if (target.tagName === 'LABEL') target.insertAdjacentElement('afterend', wrap); else target.appendChild(wrap);
-    btn.addEventListener('click', (ev) => { ev.preventDefault(); wrap.classList.toggle('open'); });
+    btn.addEventListener('click', (ev) => { ev.preventDefault(); wrap.classList.remove('dismissed'); wrap.classList.toggle('open'); });
     return id;
   }
-  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') document.querySelectorAll('.helpwrap.open').forEach((w) => w.classList.remove('open')); });
+  // Escape closes an open tooltip, whether it was opened by click or by focus
+  // (WCAG 1.4.13): a focused wrap takes .dismissed until focus leaves it.
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'Escape') return;
+    document.querySelectorAll('.helpwrap.open').forEach((w) => w.classList.remove('open'));
+    document.querySelectorAll('.helpwrap:focus-within').forEach((w) => w.classList.add('dismissed'));
+  });
+  document.addEventListener('focusout', (ev) => { const w = ev.target.closest && ev.target.closest('.helpwrap'); if (w) w.classList.remove('dismissed'); });
   function helpForControl(id) {
     const ctl = $(id); if (!ctl) return;
     const label = document.querySelector('label[for="' + id + '"]') || (ctl.tagName === 'BUTTON' ? ctl : null);
@@ -179,7 +186,8 @@
       const j = await r.json();
       if (!r.ok || j.error) throw new Error(j.error || ('HTTP ' + r.status));
       state.columns = j.columns;
-      const t = await getJSON('/column-types');
+      let t;
+      try { t = await getJSON('/column-types'); } catch (e2) { throw new Error('The file was received, but its columns could not be read. ' + e2.message); }
       state.types = t.columns;
       $('uploadStatus').textContent = j.filename + ': ' + j.rows + ' rows, ' + j.numcols + ' columns.' + (j.warnings ? ' ' + j.warnings.join(' ') : '');
       fillColumns();
@@ -215,12 +223,12 @@
     $('targetHint').textContent = c.name + ' has ' + c.distinct + ' distinct values' + (c.missing ? ', ' + c.missing + ' missing' : '') + '. Proposed task: ' + task + '.';
     document.querySelectorAll('input[name=task]').forEach((r) => { r.checked = r.value === task; });
     state.task = task;
-    ensureModels().then(fillModels);
+    ensureModels().then(fillModels).catch((e) => { showError('The model list could not be read. ' + e.message); $('runBtn').disabled = true; });
   });
   $('predictors').addEventListener('change', () => {
     state.predictors = Array.from($('predictors').selectedOptions).map((o) => Number(o.value)).filter((i) => i !== state.target);
   });
-  document.querySelectorAll('input[name=task]').forEach((r) => r.addEventListener('change', () => { state.task = r.value; fillModels(); }));
+  document.querySelectorAll('input[name=task]').forEach((r) => r.addEventListener('change', () => { state.task = r.value; ensureModels().then(fillModels).catch((e) => showError('The model list could not be read. ' + e.message)); }));
 
   // ---- step 3: model, hyperparameters, run
   async function ensureModels() { if (!state.models) state.models = await getJSON('/models'); }
@@ -233,11 +241,26 @@
     if (list.some((m) => m.name === wanted)) sel.value = wanted;
     sel.dispatchEvent(new Event('change'));
   }
+  // A typed value is sent as the estimator expects it: a whole number, a decimal,
+  // a boolean or None, and otherwise the text. Parameters whose default is None
+  // (max_depth, random_state, n_jobs) take numbers this way; min_samples_leaf
+  // keeps a fraction rather than being truncated to a whole number.
+  function typedValue(v) {
+    const t = String(v).trim();
+    if (t === '') return undefined;
+    if (/^-?\d+$/.test(t)) return parseInt(t, 10);
+    if (/^-?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/.test(t)) return parseFloat(t);
+    if (t === 'true' || t === 'false') return t === 'true';
+    if (t.toLowerCase() === 'none') return null;
+    return t;
+  }
   $('model').addEventListener('change', async () => {
     state.model = $('model').value; state.hyper = {};
     $('runBtn').disabled = !state.model;
+    const asked = state.model;
     try {
-      const d = await getJSON('/model-defaults/' + encodeURIComponent(state.model));
+      const d = await getJSON('/model-defaults/' + encodeURIComponent(asked));
+      if (asked !== state.model) return;   // a later choice has taken over; its own response fills the table
       const tb = $('hyperTable').querySelector('tbody'); tb.innerHTML = '';
       const family = MODEL_HELP[state.task] || '';
       if (!d.editable) { $('hyperNote').textContent = (d.note || '') + ' ' + family; $('hyperTable').classList.add('hidden'); return; }
@@ -248,11 +271,12 @@
         tr.innerHTML = '<th scope="row"><label for="' + id + '">' + esc(p.name) + '</label></th><td>' + esc(p.default === null ? 'None' : p.default) + '</td><td></td>';
         let input;
         if (p.kind === 'bool') { input = document.createElement('select'); ['', 'true', 'false'].forEach((v) => { const o = document.createElement('option'); o.value = v; o.textContent = v || '(default)'; input.appendChild(o); }); }
-        else { input = document.createElement('input'); input.type = p.kind === 'int' || p.kind === 'float' ? 'number' : 'text'; if (p.kind === 'float') input.step = 'any'; }
+        else { input = document.createElement('input'); input.type = p.kind === 'int' || p.kind === 'float' ? 'number' : 'text'; if (p.kind !== 'bool') input.step = 'any'; }
         input.id = id; input.addEventListener('change', () => {
           const v = input.value;
-          if (v === '') { delete state.hyper[p.name]; return; }
-          state.hyper[p.name] = p.kind === 'bool' ? (v === 'true') : (p.kind === 'int' ? parseInt(v, 10) : (p.kind === 'float' ? parseFloat(v) : v));
+          const typed = p.kind === 'bool' ? (v === '' ? undefined : v === 'true') : typedValue(v);
+          if (typed === undefined) { delete state.hyper[p.name]; return; }
+          state.hyper[p.name] = typed;
         });
         tr.lastElementChild.appendChild(input); tb.appendChild(tr);
         const text = PARAM_HELP[p.name] || ('Parameter ' + p.name + ' of ' + d.estimator + '; the scikit-learn default is shown.');
@@ -263,6 +287,9 @@
     } catch (e) { $('hyperNote').textContent = 'Hyperparameters could not be read: ' + e.message; }
   });
 
+  // A cleared number field is sent as null, so the route applies its default;
+  // Number('') is 0, which read as seed 0, no decimal places, or zero folds.
+  function numOrNull(v) { return String(v).trim() === '' ? null : Number(v); }
   function buildRequest() {
     const full = document.body.dataset.mode === 'full';
     const missing = full ? $('dropMissing').value : 'none';
@@ -270,14 +297,14 @@
     const req = {
       indicators: state.predictors, predictors: state.task === 'cluster' ? [] : [state.target], models: state.model,
       hyperparameters: full ? state.hyper : {}, nonreq: full && Object.keys(state.hyper).length > 0,
-      scaler: full ? $('scaler').value : 'none', units: '', sigfig: full ? Number($('sigfig').value) : 3,
-      seedValue: full ? Number($('seed').value) : 42, testSize: full ? String($('testSize').value) : '0.20',
-      stratifyBool: full && $('stratify').value !== '' && Number($('stratify').value) !== state.target,
+      scaler: full ? $('scaler').value : 'none', units: '', sigfig: full ? numOrNull($('sigfig').value) : 3,
+      seedValue: full ? numOrNull($('seed').value) : 42, testSize: full ? String($('testSize').value) : '0.20',
+      stratifyBool: full && $('stratify').value !== '',
       dropMissing: 'indicatorAndTarget', imputeStrategy: missing === 'none' ? 'none' : missing,
       dropZero: zeros === 'none' ? 'none' : 'indicatorAndTarget', zeroHandle: zeros === 'none' ? 'none' : (zeros === 'drop' ? 'drop' : zeros),
       quantileBinDict: { quantile: 0, bin: 0, binsLabel: '' }, useTransformer: 'No', transformerCols: [],
       filename: ($('file').files[0] || {}).name || 'upload', modelingMode: full ? 'advanced' : 'simple',
-      crossValidationType: full ? $('cvType').value : 'None', crossValidationFolds: full ? Number($('cvFolds').value) : 5,
+      crossValidationType: full ? $('cvType').value : 'None', crossValidationFolds: full ? numOrNull($('cvFolds').value) : 5,
       hyperparameterSearch: full ? $('search').value : 'none',
       featureSelectionMethod: full ? $('featureSelection').value : 'none', featureSelectionK: full ? Number($('featureK').value) : null,
       outlierMethod: full ? $('outlierMethod').value : 'none', outlierAction: 'remove',
@@ -318,7 +345,14 @@
       const msg = d.message || (d.stages && stage && d.stages[stage] && d.stages[stage].message) || '';
       $('progressText').textContent = pct + '%' + (stage ? ', ' + stage.replace(/_/g, ' ') : '') + (msg ? ': ' + msg : '');
     };
-    es.onerror = () => { if (finished) es.close(); /* otherwise EventSource reconnects on its own; the run continues on the server */ };
+    let dropped = 0;
+    es.onerror = () => {
+      if (finished) { es.close(); return; }
+      // EventSource reconnects on its own and the run continues on the server; after
+      // several failures in a row the page says so rather than showing "Starting." forever.
+      dropped += 1;
+      if (dropped >= 5) { es.close(); showError('The progress stream stopped. The run may still be going on the server; reload the page and run again if no result appears.'); $('runBtn').disabled = false; }
+    };
   }
 
   // ---- step 4: result

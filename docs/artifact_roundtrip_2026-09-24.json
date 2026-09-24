@@ -1,5 +1,5 @@
 {
-  "written_at": "2026-09-24T19:38:22+00:00",
+  "written_at": "2026-09-24T23:45:25+00:00",
   "how_to_read_this": "output_before is what the model in memory predicted for the first eight rows of the dataset; output_after is what the same model predicted after being written to the artifact format and read back. They are compared exactly, not within a tolerance. Rerun one row with 'MPLBACKEND=Agg .venv/bin/python scripts/check_artifact_roundtrip.py --only <model>'.",
   "environment": {
     "skops": "0.14.0",
@@ -29,7 +29,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3443268,
-      "artifact_sha256": "e20d32c8d7efee489ecff24f009a48c2ddc9f1f6fe2341b0f0a26e6069e37f6a",
+      "artifact_sha256": "a543abe677dc8e0391ca2acc9a166a0a6ddcdd0c10171d278042aa8460fd1f3b",
       "compared": "predict",
       "output_before": [
         0.7202366496661833,
@@ -63,7 +63,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 4321817,
-      "artifact_sha256": "a0d0a17559599c4a9f01e9b9478bcd3208fa392165ddde0a560305098e318fd4",
+      "artifact_sha256": "4dbedba19cbb9a47e98c1821d97670e749f87b82a6808d9a4829d6393b595902",
       "compared": "predict",
       "output_before": [
         0.7254637924474163,
@@ -97,7 +97,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3882412,
-      "artifact_sha256": "15eaab9b945d06e0a4464a7b122540d1d45b12559b3b3f3dc454771c5d303302",
+      "artifact_sha256": "4a67411d66c685d1e303af3bf5458b469a9640e99fccbcb98686ccf2c1085571",
       "compared": "predict",
       "output_before": [
         0,
@@ -131,7 +131,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3927344,
-      "artifact_sha256": "67b4be1dd33b55ce773236a6f4f602b7900c9d8a24c8ea940f6fa5f301b19629",
+      "artifact_sha256": "de743c320909e301eb4dd6e43df0ed759759af66f5d658775faa64e70d39dc6f",
       "compared": "predict",
       "output_before": [
         0.7923343481496443,
@@ -165,7 +165,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3164954,
-      "artifact_sha256": "b53b8146c795fbc99794f75732ee35bf684c0497bfcbd7217f7afd8594adba71",
+      "artifact_sha256": "7266f9dc9f6fc945b0112e2064d3c2f4c57f85303c5f380dd06d833be7bb1646",
       "compared": "predict",
       "output_before": [
         0,
@@ -199,7 +199,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3443742,
-      "artifact_sha256": "1abc854aa4f2c37828b4e90d369a24b8c150da4142e056bc6f98cdf710bd763a",
+      "artifact_sha256": "f7bf8d00949286a60640579c7435b881615924b0bf8bc323d73f822bde2be5ef",
       "compared": "predict",
       "output_before": [
         0.6770220714567378,
@@ -233,7 +233,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 2955865,
-      "artifact_sha256": "2dd2f5abebffeb830883e51652c58bb2097fbfd41e9f08c9a5dc44ee28f27ade",
+      "artifact_sha256": "7f7ff695b444bc18bab7d83ed84c7878936db7fe672c5d6a712d342cd50736e0",
       "compared": "predict",
       "output_before": [
         0,
@@ -267,7 +267,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 2854694,
-      "artifact_sha256": "f4076d0a1a4d8c41292ed18c1f8f68cc5b33299cdf9cfd40f88d89d130c73055",
+      "artifact_sha256": "a8add8643e123a208974d670acfa19e52beb37e732674d565dfdafde2e5bfac7",
       "compared": "predict",
       "output_before": [
         0,
@@ -301,7 +301,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 2958120,
-      "artifact_sha256": "83089f3a02213ed7c80e3993f9c8e70a59591944b0496472a553f66d9a84296f",
+      "artifact_sha256": "2968e9506a4338cfc9c8e4f6de01b5f54ec028726851faac46b3591544aaf5e0",
       "compared": "predict",
       "output_before": [
         0,
@@ -335,7 +335,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3493333,
-      "artifact_sha256": "400050de3a5a935e616fb76e40e751bcbc55d0d421de39ead8571fa1f5b03ef2",
+      "artifact_sha256": "4066d8a428d72adbb60fb51fd4289e3ee435e6b30cd1621671b26d4978874d44",
       "compared": "predict",
       "output_before": [
         0.31126447388610023,
@@ -369,7 +369,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 2964441,
-      "artifact_sha256": "a53bf7086ef73a9e0b1eb60ff083217548280cfd6a87e0028a35a00fd76d6ca8",
+      "artifact_sha256": "3cf8e188d1f8ffd1d36a841f273108d12434db545e07e61095f9b9dcb30f2390",
       "compared": "predict",
       "output_before": [
         0,
@@ -403,7 +403,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3439285,
-      "artifact_sha256": "35e56c68b1aa753bb946b8694aa98cde24911a1a9f22f86faa214ee7b3add8cc",
+      "artifact_sha256": "9f1cefb3a1bf062700493e1b52c536010eb2d97509bad883989ff31a0621e160",
       "compared": "predict",
       "output_before": [
         0.08862229986703551,
@@ -437,7 +437,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3448031,
-      "artifact_sha256": "963fc201909571f85617b655260802fa6f5208dbe782e4802f1d37d8d5143289",
+      "artifact_sha256": "5a77e9f24b4cf8d1406fbb5dcf8d43a9e9dea3e49fd55d2ec37b634004e47c84",
       "compared": "predict",
       "output_before": [
         0.6766377840121743,
@@ -471,7 +471,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 10167045,
-      "artifact_sha256": "94f15c1d2821d2f373289d63d7ec480bd0a8101e22304658903470c7ab18e3c7",
+      "artifact_sha256": "3f7371109cc3dddb3f69508ea04da1cc7d43765c0729782918721a084eab3488",
       "compared": "predict",
       "output_before": [
         0.6732855899318921,
@@ -505,7 +505,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 5169854,
-      "artifact_sha256": "4da2d71781bd1f01b25119b5a368032920039c71637707e52b7e5d19cf18bae6",
+      "artifact_sha256": "163c47644676a4603afd9c409bce5c3153aa48aa093fd0554e303df8b7c2ca82",
       "compared": "predict",
       "output_before": [
         0,
@@ -539,7 +539,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 2955287,
-      "artifact_sha256": "a49fa6a2643bf7290f2e074cd1db57e7b37b4c05d4a159bf4ff358265f7cb1d5",
+      "artifact_sha256": "01926998c614adc7b34873a2935d896bb2917d6dcbf57e8f101367add45d6840",
       "compared": "predict",
       "output_before": [
         0,
@@ -573,7 +573,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 11098834,
-      "artifact_sha256": "8c57da84e1e59fdd41ef6c54283f5993611070190e3385ff5b2f99d28e365f1d",
+      "artifact_sha256": "0859d2670fabba373147af7a38319ee9a62816e9836b1ae3899417e9e8405f79",
       "compared": "predict",
       "output_before": [
         0,
@@ -607,7 +607,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 4038447,
-      "artifact_sha256": "b7c9eee31eab6f0c40bc1f64a61d7afdd2ea37515ba5ca0733f5206133dd7ddd",
+      "artifact_sha256": "e6f36d721f7d6a81ed01cdd8d54c8b7d471b5dbe8855320d16c3ecef6c8c0b9c",
       "compared": "predict",
       "output_before": [
         1.1550097171226452,
@@ -641,7 +641,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 4274887,
-      "artifact_sha256": "b9f0ba5c8825ced16871a3f978afb8e7002cc79e2e110439314b6f83ac55bec9",
+      "artifact_sha256": "b0996cd0d01a983cb6d4e0ccb8c19fcc1e36b34e11be6e930e05386ad2f12a25",
       "compared": "predict",
       "output_before": [
         0,
@@ -675,7 +675,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3438226,
-      "artifact_sha256": "b8aea4c8d2bb5846025801511bc3912abb4f42f078c8ddd5a201b8257d92a911",
+      "artifact_sha256": "082ce74a14a87d9ef40d1081b3432e1c16a5ac40694596bf49064363fc83a8c4",
       "compared": "predict",
       "output_before": [
         0.723092754942973,
@@ -709,7 +709,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3482777,
-      "artifact_sha256": "f917e586498fbfbe56450b6aef895c16f923d34ac543676120bdb75f1982938f",
+      "artifact_sha256": "2dad1c2cc12611b00216d4d4e188cb2c560b1e5a300bbf3239f41be64ed7bfe3",
       "compared": "predict",
       "output_before": [
         0.2830417079293056,
@@ -743,7 +743,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 2971085,
-      "artifact_sha256": "f77a8ccd74d0e0f22964736f0178ce687db62f86b32eeaa343b5870a7ed323e0",
+      "artifact_sha256": "441bb69134746a28f720b360b6b5d306915f3137f40114f1bce07263c354b7a5",
       "compared": "predict",
       "output_before": [
         0,
@@ -777,7 +777,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3446180,
-      "artifact_sha256": "5a1d8012c790cdee89d8d0dd433d1e9ca14fb2e2e2f418164333101c4f465282",
+      "artifact_sha256": "b9a37cf72a98c0b27c942f1b8bae6d1b589357870c49363f3dff6fa7db27071f",
       "compared": "predict",
       "output_before": [
         1.4366732788825263,
@@ -811,7 +811,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3451248,
-      "artifact_sha256": "a7a6f0642682311e2f5cda5d08f7950618670b02edff6e57edfa991abfba5e43",
+      "artifact_sha256": "1cadf0c8d9da81287e4ed196779c976c13c2b2f982920e1cdda45caaaf7a41a6",
       "compared": "predict",
       "output_before": [
         0.687431583266543,
@@ -845,7 +845,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 2959684,
-      "artifact_sha256": "721755c874435f2196b75697a335442cfab25e967e0e4351c64fb3a1ef695184",
+      "artifact_sha256": "4e132b9a84ee5057c46ef1674415a83c8db535382938901c74975837377637e8",
       "compared": "predict",
       "output_before": [
         0,
@@ -879,7 +879,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3439280,
-      "artifact_sha256": "483c38f96e8d34b3a41b97a126d68be56f5997d2a0eb77c54d1b2377bd5cab36",
+      "artifact_sha256": "d6b29f9e8cdc4040df79359c6ae3d1817b56c3dd19e429c5f4a08aaf28ad4b8b",
       "compared": "predict",
       "output_before": [
         -1.8115820458472809e-16,
@@ -913,7 +913,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3446927,
-      "artifact_sha256": "0d66adf7fc42ab0d48b6a95e609d47e8db0f93ca4c771fceb9be06769ce24a22",
+      "artifact_sha256": "d614ed984a38776eed2bc0badebfb6a83b673bcd36a7b263ee0b9d86374df96b",
       "compared": "predict",
       "output_before": [
         0.6863949057492886,
@@ -947,7 +947,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3440665,
-      "artifact_sha256": "de706e3486273cd0ce6e1c2dfb508d7a6bc8156fa293df8c8aabb6e669dbcf10",
+      "artifact_sha256": "c28ee038051b7f21fc71299cb0305ea2768705b97cc3c24ac4b41cd14165ab38",
       "compared": "predict",
       "output_before": [
         -1.8115820458472809e-16,
@@ -981,7 +981,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3436841,
-      "artifact_sha256": "575317642241b1907c38c100a80129f7137c0fb69291ec9f441b92e42d91b99c",
+      "artifact_sha256": "3a658553505b21e41bfed9dbe8e16740f418bba07d0bd0990465cf9181dc96c5",
       "compared": "predict",
       "output_before": [
         0.7312973756387005,
@@ -1015,7 +1015,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 2957699,
-      "artifact_sha256": "04b40263d33f9286a2c686ed43ef24481274730aefa7700d7abbd74a26c1b26e",
+      "artifact_sha256": "fa2f8cad9f3e5f532cd956144e23d1fcaafb719279a005ff850ac107176073bc",
       "compared": "predict",
       "output_before": [
         0,
@@ -1049,7 +1049,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3438185,
-      "artifact_sha256": "3578670b8b0eb6b6054b040a1b1a501830a14b040e60fcc1bee6125d1589b99d",
+      "artifact_sha256": "40f0ba3d851b7c44646b3af75bf8d35bc4374da558e1c794bec74f6db99e7639",
       "compared": "predict",
       "output_before": [
         0.6475371384325087,
@@ -1083,7 +1083,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 2958764,
-      "artifact_sha256": "f97518704e85268127da8fdc4cf3031fc355acf852f284e01b04ce610dc67f8a",
+      "artifact_sha256": "5884e18482ae531a000f30de7674be5a3e32b01571529231b4b26a1f83e279ec",
       "compared": "predict",
       "output_before": [
         0,
@@ -1117,7 +1117,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 4068227,
-      "artifact_sha256": "3f1283d74cfa1ff4b90a9f2081e868a253b4af6d13bf67af3ae9af8d1e9724af",
+      "artifact_sha256": "dd2f2fee10c1e86b8ab727cac53fbb06c4ed7e2491a46e0acc43d2885affed22",
       "compared": "predict",
       "output_before": [
         0.8773660356896592,
@@ -1151,7 +1151,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3277037,
-      "artifact_sha256": "38c4a1ad6d38487dc48f7da1050295f8ba87099416b2964cb253fa4b60bae14c",
+      "artifact_sha256": "812fd803d5565dd55167c06afcd4e43f9e8ffa2dd1c9b2df8be866b5af7dfcff",
       "compared": "predict",
       "output_before": [
         0,
@@ -1185,7 +1185,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 2957002,
-      "artifact_sha256": "64eea787bf3f96e2f4fc40ad817d68b9d571bc5248946e235a15d40c921cc803",
+      "artifact_sha256": "65a0db306aa00a1ace011bc7951b9aeb96c6fb43efaa57e87ce0eba93a2ec9a0",
       "compared": "predict",
       "output_before": [
         0,
@@ -1219,7 +1219,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 2972918,
-      "artifact_sha256": "b0efc32cef7a862b8d41ceb94bb10d538e51566b2fc38dc9d6ffa1f010291641",
+      "artifact_sha256": "c784baf7e7ece166a50061f2a959b0bf73a242f9f9ea4980fd8d666b8ff36e96",
       "compared": "predict",
       "output_before": [
         0,
@@ -1253,7 +1253,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3468057,
-      "artifact_sha256": "12001827da68b8965953ef2af10b42884734ff52b6dd714061e624b57f99cec7",
+      "artifact_sha256": "b05d41e6d016705454fc4ec7a50a25c6ad2d5daae4d66058f43a689cd572f235",
       "compared": "predict",
       "output_before": [
         1.0167885310204499,
@@ -1287,7 +1287,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3436115,
-      "artifact_sha256": "b25412e45a43e1d8dee94d249faa71554b589720d26a588f8b937e79cdba53ff",
+      "artifact_sha256": "9725c4ec7dd26a32c6feec6b10f49315da4e0c30d8b51dcb7f0ee2daa8d0838d",
       "compared": "predict",
       "output_before": [
         0.7681116403334575,
@@ -1321,7 +1321,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3442784,
-      "artifact_sha256": "05676c9ce3f1765612b8e6663f4ebe525d63d57fe776181b1b4c7cc1e4f1e647",
+      "artifact_sha256": "7863f43b445a24c34efa29a18a316820ba654acaaaa7864f558c1fea1d6878a3",
       "compared": "predict",
       "output_before": [
         1.8934662341767143,
@@ -1355,7 +1355,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 2964442,
-      "artifact_sha256": "5f71d2f8c843c342f32046626df471b7ffbf6965b93ee63436fae2e4c0a42e6c",
+      "artifact_sha256": "43e8ac3b1b649e808b208df17af3049573221341ebcedaae54628fbd1b82eb4f",
       "compared": "predict",
       "output_before": [
         0,
@@ -1389,7 +1389,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 2959640,
-      "artifact_sha256": "ec6c46e8e10fbe12885052c6da936e5ac364f161e8ac60d257e536d58a101956",
+      "artifact_sha256": "b5fe40588c797ffee0b1c97d821ffead5ea1eaaa0df5e566f42df88baac4e95c",
       "compared": "predict",
       "output_before": [
         0,
@@ -1423,7 +1423,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3436127,
-      "artifact_sha256": "1b33b894958d7894e072bb7922bbe759be458d2a111b5b5ef8e3424ad2b77d61",
+      "artifact_sha256": "4abc26b5fe997a3c5c97cb78482091557051a86afa00e082e473e7252ae7716f",
       "compared": "predict",
       "output_before": [
         -0.150562605406902,
@@ -1457,7 +1457,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3450702,
-      "artifact_sha256": "b7303d22fa9d128bf43b3cb0111b72184ec2077ad8ae535cf21b41c51cd92bd5",
+      "artifact_sha256": "6faffcd4b1ec70e491f36cc58907fd2c2c1854db16125566651d5c95be3e1e5f",
       "compared": "predict",
       "output_before": [
         0.33676318329678223,
@@ -1491,7 +1491,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 4421771,
-      "artifact_sha256": "dd432688f97902129ab4f1befa8d536edb778447d1e2ad37589de997b091d817",
+      "artifact_sha256": "c4b31e59d87471bab95b20898f724c23ea7135a9ed558c63af6f6dfa4b0d2a12",
       "compared": "predict",
       "output_before": [
         1.0347935647784703,
@@ -1525,7 +1525,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3373570,
-      "artifact_sha256": "1983d2a7cc7708e272a84394d6d226a57297de38f0c028109663f91616b37c81",
+      "artifact_sha256": "a847fae98f5d5d470c888eaee4ecc5b2992292e458c3bc78813efb84d25e2354",
       "compared": "predict",
       "output_before": [
         0,
@@ -1559,7 +1559,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3534440,
-      "artifact_sha256": "9c51dbecaa661400c7eafa257ece9bd4035ff9325022187aef3a1c839926ec3c",
+      "artifact_sha256": "81df36891cbefd4475d10f4400acc8e6983ddde1b567c96e8cf5143e3df3351b",
       "compared": "predict",
       "output_before": [
         0.9142053829630754,
@@ -1593,7 +1593,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3437752,
-      "artifact_sha256": "4628fb28dd636ef99ae61a391e6977cfc6e3b597da307d5f46b1129954a0940d",
+      "artifact_sha256": "0d6dc4bf67ebcf8d5d582da1db02193e6575c2ca981fd0abd549c46ece70eba3",
       "compared": "predict",
       "output_before": [
         0.720505309661886,
@@ -1627,7 +1627,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3438389,
-      "artifact_sha256": "f037300a5f85e0c3f3d9d3086f5bea5fc82acc14a7ab8cce0073bfb330258b75",
+      "artifact_sha256": "6e0bbfab9193d6c65fca9ebe77f5757c995c312361c8c4e409549963282b1fac",
       "compared": "predict",
       "output_before": [
         0.7205053096618818,
@@ -1661,7 +1661,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 2961287,
-      "artifact_sha256": "8c44aba55275e75540da23b076b67b1d40283824d7711f4dc64fc2970fcff441",
+      "artifact_sha256": "0395041ccfd375816ea62d5d3927a9cc587695088dfddf629f868ac201f9dd4c",
       "compared": "predict",
       "output_before": [
         0,
@@ -1695,7 +1695,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3442375,
-      "artifact_sha256": "987f713d35b0dfe1ad7ad26d6a7bfa72a83c9882014ff44d3e7d54f97e9ba5e2",
+      "artifact_sha256": "1b0242f2863bb16ab60e1e9e0ee3079ca1e9e4b201d03372c505e7f06454dbbe",
       "compared": "predict",
       "output_before": [
         0.7025208467922082,
@@ -1729,7 +1729,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 2964030,
-      "artifact_sha256": "f5172b2c7737c1f5ca3a0c07c851a9b32115cb71ee2edac1747b14be2c71e5db",
+      "artifact_sha256": "767cde03497f7121cfc31c4049e7a0c5134b64f8c7b21f53d274ccc3abccb7c5",
       "compared": "predict",
       "output_before": [
         0,
@@ -1763,7 +1763,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 2970836,
-      "artifact_sha256": "1e6bfdd5620c31144d1d3238b9c118140a0f6d9b8b1adb7492907b298ab2909e",
+      "artifact_sha256": "403e35a70e97a6fd3f67c4d1a0be0699bef3874975f65d2c315a8cf886d6f15a",
       "compared": "predict",
       "output_before": [
         0,
@@ -1797,7 +1797,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3476703,
-      "artifact_sha256": "eac3a86b9d100561e951314687e562a30503af1b4bc83b688ea62aff89955fef",
+      "artifact_sha256": "e7f4b2e6c7cbece08866ad27231aa2519efab68f1a6aeb258f0bf031be5a5254",
       "compared": "predict",
       "output_before": [
         1.036107811237189,
@@ -1831,7 +1831,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3438216,
-      "artifact_sha256": "9f3001d158dd6efc9567a3763c5632d42b8e198172f22282713826e9767e537b",
+      "artifact_sha256": "6535a948d8d5907bfb24f9cb9e9af6a557762ff09ade53939bfe49c267cfc6d7",
       "compared": "predict",
       "output_before": [
         0.709555972079433,
@@ -1865,7 +1865,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3068459,
-      "artifact_sha256": "00c33b70df6f434ebc79f96f89b206c06c2d1180c7a132cf9102659ac45d47f9",
+      "artifact_sha256": "db168aa8de9448bb682d6de0d7d1ca50569e9b1ede97ec1aafc4c64103d0cd2b",
       "compared": "predict",
       "output_before": [
         1,
@@ -1899,7 +1899,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 2954332,
-      "artifact_sha256": "746bcabd5b720dd8aae82ee4c6d367abad781f27be2f415f856014b4fb5ab409",
+      "artifact_sha256": "7e0fbe04a2d578115aca11985fafbfcb3de8e2f3c2db93aeda90ff0fce2f421a",
       "compared": "labels_",
       "output_before": [
         1,
@@ -1945,7 +1945,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3039135,
-      "artifact_sha256": "a4cee2a52d1699868bf360eb89ccb04b5e2ef251b1887591c72d700b2804cdbd",
+      "artifact_sha256": "11aa84b8ecbbd052ec1481af47c56a12adf154202c75b5b4792d7c1b3678a9ee",
       "compared": "predict",
       "output_before": [
         1,
@@ -1979,7 +1979,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 2954247,
-      "artifact_sha256": "7c2d3e2b0daa0a4763691c5f36b6d4ad3bc97101e35cd34f272b012ca7eb54fb",
+      "artifact_sha256": "217cd6f845931f89f2068b20420a85d0a69455f956cb2e885ab156aafa00f3a9",
       "compared": "labels_",
       "output_before": [
         1,
@@ -2012,8 +2012,8 @@
       "seed": 42,
       "test_size": "0.20",
       "status": "ok",
-      "bytes": 2970884,
-      "artifact_sha256": "c7b7f0a867ea2572320a7af653b08d8e7ffdfb638c9f5b9c6e5107ae53725f50",
+      "bytes": 2970883,
+      "artifact_sha256": "cf376de5003b9be6c518bba16da0fb1fd12b1641588354951eefb2f1a0a27130",
       "compared": "predict",
       "output_before": [
         1,
@@ -2047,7 +2047,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 4014439,
-      "artifact_sha256": "bbe20c9d46c66696ea97a61c709712145c58860eb4dfab6cd9701efbec6f9970",
+      "artifact_sha256": "c99adc7e39f6727011102934d38f4b121bf7c3161d8ea51e3a762436b0f90ff1",
       "compared": "predict",
       "output_before": [
         0.5261295701130674,
@@ -2081,7 +2081,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 2964754,
-      "artifact_sha256": "f27554c0b5014ebab72da32d9543bd1c9d5a0a66c6eddb09d7f6964287842f8e",
+      "artifact_sha256": "2a97d4bc0e4c850f2c7de51d80c90379626e1cff0d37d098b23fc638fb8f3039",
       "compared": "labels_",
       "output_before": [
         0,
@@ -2115,7 +2115,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 2954346,
-      "artifact_sha256": "e5c85b3ca53226edee87600a94dffc1838cd6dfba7a2b2e4a1e1a4fbc6d76304",
+      "artifact_sha256": "596f570356b6a8aafdf4a17dc46edd6baec89771d910fc8314b68a23952a645a",
       "compared": "predict",
       "output_before": [
         1,
@@ -2149,7 +2149,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 2951178,
-      "artifact_sha256": "6349701e1e4fe2ee5ec5dd16a062a29947c40d4568645e3a2a03fa1a1589efb7",
+      "artifact_sha256": "7a5ef5a54ea106637ae9045989a164617c63ca5f0608227e6e9fa26b2658b8c2",
       "compared": "predict",
       "output_before": [
         1,
@@ -2183,7 +2183,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 2958740,
-      "artifact_sha256": "e5a56102b8c950c116dd4ff9957bf612fab86883780a5bc4444e4e6e219130ae",
+      "artifact_sha256": "a61f5548ee01969ec6e6e830b96e09928ecd07c01faef4b61ac30d43fd953ecd",
       "compared": "predict",
       "output_before": [
         2,
@@ -2217,7 +2217,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 2960347,
-      "artifact_sha256": "0b5d0f7ace3442f10189cb37da40ee1d1ed3c5e42801cfa8216f8c68078974b3",
+      "artifact_sha256": "652751c6e10358c7ea160c4952a651dc4766cde319df4112d6cc849520e59037",
       "compared": "labels_",
       "output_before": [
         -1,
@@ -2251,7 +2251,7 @@
       "test_size": "0.20",
       "status": "ok",
       "bytes": 3068747,
-      "artifact_sha256": "86db8d8869e4571a9b9474e771710a141309957b8d56a59f5e7a4f2a907a88ee",
+      "artifact_sha256": "6666bcc78f6874829e0aca0e2e0d28fbbcae26b323b910411e71430c78936297",
       "compared": "labels_",
       "output_before": [
         1,

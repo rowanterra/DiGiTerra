@@ -7,6 +7,29 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+Adversarial review of 2026-09-24 (three reviewers, one each on the routes, the pipeline and the browser side; every item below was reproduced before it was fixed, and each has a regression test in `tests/unit/test_review_2026_09_24.py`, `tests/unit/test_bundle.py` or the browser suites)
+
+- Artifact loading: the type allowlist was a prefix test that admitted `builtins.eval`, and the loader handed skops the file's own type list as trusted, so a crafted `model.skops` ran code on load (behind the bundle signature on import, and with no signature at all in the disk session store). The allowlist is now the exact set of type names from a census of every registered estimator (`python_scripts/reporting/artifact_allowlist.txt`, written by `scripts/artifact_type_census.py`), skops is given that list and never the file's, and the disk session store signs its objects file at save and verifies it at load with the installation key.
+- The guided page's default run failed for 14 of its models: a model with no editable table sent no hyperparameters and `get_model_kwargs` passed `n_estimators=None` and the like to the trainer. None keys are now dropped in both modes; the sweep script reads the private form that keeps them.
+- Mean, median and mode fills included the target column, so a made-up target was trained on and scored as truth. The target is never filled; rows with a blank target are dropped.
+- Binary ROC AUC scored the string labels against the second probability column, which inverted the AUC whenever the string order differed from the class order, and average precision failed on string labels and was silently omitted. Both score the estimator's positive class; the precision-recall plot gets the same positive class.
+- IQR and z-score outlier removal read the one-hot columns and deleted every training row of a category under 25 percent. Binary columns are skipped by those rules.
+- With feature selection on, the novelty score was never written at prediction time (shape mismatch caught and logged). Novelty is scored on the pre-selection frame by column name.
+- Cross-validation ran on a different frame than the model: a deferred mean or median fill was not applied (an estimator that refuses NaN failed after the model trained), only the first of several targets was scored, and a grouped or time-ordered split plan was ignored in favour of shuffled folds (a grouped holdout of R2 -2.2 came with a CV of 0.95). CV now imputes inside each fold, scores every target, and uses GroupKFold or TimeSeriesSplit on the plan's column.
+- Seed 0 was replaced by a random seed; a cleared seed, decimal-places or folds field on the guided page was sent as 0 (seed 0, no decimals, a blocked run). Seed 0 is a seed; a cleared field is sent as null and takes the default; folds are checked only when cross-validation is on.
+- GaussianMixture never received the seed. GradientBoosting `warm_start` was inverted.
+- "Fill with the mode" did nothing and the rows were dropped. Mode is now a deferred fill fitted on the training rows. "Remove rows with zeros" removed only rows that were zero in every scoped column; it removes a row with a zero in any of them.
+- A numeric column chosen for one-hot encoding was listed twice and raised a duplicate-column error.
+- Guided page: hyperparameters whose scikit-learn default is None were sent as strings (`max_depth: "3"`); integer fields truncated 2.5 to 2 and 0.5 to 0; stratifying by the target was silently dropped; two quick model changes could leave the hyperparameter table of the first model under the second; Escape did not close a tooltip opened by keyboard focus; a failed model list or a dead progress stream left the page without a message; a failed column read after a good upload was reported as an upload failure.
+- The AutoML page said a blank model would be chosen by AutoML and the page sent a random forest. A blank model now compares the candidate set by cross-validation over several seeds and trains the one that scores best; the fold scores are drawn as one box per candidate (`model_comparison.png`), and the result says whether the winner is separable from the runner-up.
+- Two workbook routes returned raw exception text; a spreadsheet cell starting with `= + - @` is written as text.
+
+### Added
+
+- Inference page: a predictor-spread figure, one box per predictor for the training rows (filled) and the rows being predicted (hatched), with rows the novelty detector marked drawn as points. The training spread is recorded by every pipeline (`training_predictor_spread.json`).
+- AutoML: candidate model comparison (`python_scripts/preprocessing/model_comparison.py`).
+- `scripts/adversarial_check.py`: every probe of the review as a script, with `docs/adversarial_check_2026-09-24.json` as its record; `scripts/artifact_type_census.py` writes the artifact allowlist.
+
 Model training and inference
 
 - Cross-validation reported RMSE and MAE with a negative sign. The summary now receives the scoring map and undoes the `neg_` prefix.

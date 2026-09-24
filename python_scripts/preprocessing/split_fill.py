@@ -26,7 +26,7 @@ _ACTIVE: ContextVar = ContextVar("digiterra_fill_plan", default=None)
 class FillPlan:
     """Which columns get which statistical fill, and the values once fitted."""
 
-    nan_strategy: str | None = None  # 'mean' or 'median'
+    nan_strategy: str | None = None  # 'mean', 'median' or 'mode'
     nan_columns: list[str] = field(default_factory=list)
     zero_strategy: str | None = None  # 'mean' or 'median' of the non-zero values
     zero_columns: list[str] = field(default_factory=list)
@@ -49,7 +49,13 @@ class FillPlan:
             if col not in train_rows.columns:
                 continue
             s = pd.to_numeric(train_rows[col], errors="coerce")
-            v = s.mean() if self.nan_strategy == "mean" else s.median()
+            if self.nan_strategy == "mean":
+                v = s.mean()
+            elif self.nan_strategy == "mode":
+                modes = s.dropna().mode()
+                v = modes.iloc[0] if len(modes) else float("nan")
+            else:
+                v = s.median()
             if pd.notna(v):
                 self.nan_fills[col] = float(v)
         for col in self.zero_columns:

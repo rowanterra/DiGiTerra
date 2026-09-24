@@ -275,21 +275,20 @@ def get_model_kwargs(
     nonreq: bool,
     seed: int | None,
 ) -> dict[str, Any]:
-    """Model-specific kwargs for the trainer, with the non-required set cleaned.
+    """Model-specific kwargs for the trainer, with every None dropped.
 
-    With nonreq on, the Advanced form sends every field of the model, and a
-    field the user cleared arrives as null (parseFloat of an empty string).
-    A None that reaches a trainer as a present key defeats its kwargs.get
-    default and scikit-learn then rejects it (intercept_scaling=None on
-    LogisticRegression; E1 finding F5, 2026-09-24). Those keys are dropped
-    here so the trainer's default applies. With nonreq off the None keys are
-    kept, because the sweep harness reads them to know which required
+    A field the user cleared arrives as null (parseFloat of an empty string),
+    and a form that never had the field (the guided page for a model it cannot
+    edit) sends nothing at all. A None that reaches a trainer as a present key
+    defeats its kwargs.get default and scikit-learn then rejects it
+    (intercept_scaling=None on LogisticRegression, E1 finding F5; n_estimators=None
+    on RandomForestClassifier from the guided page, review of 2026-09-24). None
+    keys are dropped in both modes so the trainer's default applies. The sweep
+    harness reads _model_kwargs, which keeps them, to know which required
     parameters an empty form leaves blank.
     """
     out = _model_kwargs(modelName, hyperparameters, nonreq, seed)
-    if nonreq:
-        return {k: v for k, v in out.items() if v is not None}
-    return out
+    return {k: v for k, v in out.items() if v is not None}
 
 
 def _model_kwargs(
@@ -481,7 +480,7 @@ def _model_kwargs(
                 "alpha": h.get("GBAlpha"),
                 "verbose": h.get("GBVerbose"),
                 "max_leaf_nodes": h.get("GBMaxLeafNodes"),
-                "warm_start": False if h.get("GBWarmStart") else True,
+                "warm_start": _b(h, "GBWarmStart"),
             }
         return {"n_estimators": h.get("n_estimators"), "learning_rate": h.get("learning_rate"), "random_state": seed}
     if modelName == "AdaBoost":
@@ -671,8 +670,9 @@ def _model_kwargs(
                 "warm_start": _b(h, "warm_start"),
                 "verbose": h.get("verbose"),
                 "verbose_interval": h.get("verbose_interval"),
+                "random_state": seed,
             }
-        return {"n_components": h.get("n_components")}
+        return {"n_components": h.get("n_components"), "random_state": seed}
     if modelName == "agglo":
         n_clusters = _o(h, "n_clusters")
         if n:

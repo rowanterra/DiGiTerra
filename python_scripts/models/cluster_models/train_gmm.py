@@ -33,6 +33,7 @@ def train_gmm(
         warm_start=kwargs.get("warm_start", False),
         verbose=kwargs.get("verbose", 0),
         verbose_interval=kwargs.get("verbose_interval", 10),
+        random_state=kwargs.get("random_state", None),
     )
 
     return run_clustering(

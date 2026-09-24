@@ -75,6 +75,10 @@ def _truthy(value) -> bool:
     return str(value if value is not None else "").strip().lower() in ("1", "true", "yes", "on")
 
 
+def _blank(value) -> bool:
+    return value is None or (isinstance(value, str) and not value.strip())
+
+
 def validate_training_request(data: dict) -> None:
     """Check the cheap request fields. Raises ValueError with a message for the client.
 
@@ -94,14 +98,26 @@ def validate_training_request(data: dict) -> None:
                 f"(at least {_constants.MIN_OVERRIDE_REASON_CHARS} characters)."
             )
     model_name = data.get("models")
-    if model_name is None or (isinstance(model_name, str) and not model_name.strip()):
+    compare = str(data.get("modelingMode", "simple")) == "automl" and _blank(model_name)
+    if _blank(model_name) and not compare:
         raise ValueError("No model selected. Choose a model from the list before running.")
+    if compare:
+        if str(data.get("taskType", "")) not in ("Numeric", "Classifier"):
+            raise ValueError("Choose a model, or a regression or classification task for AutoML to compare candidates.")
+        return
     if model_name == "TerraFORMER" or model_name not in MODEL_REGISTRY or MODEL_REGISTRY[model_name][0] is None:
         raise ValueError(f"Invalid or unsupported model: {model_name!r}.")
     _float_in_range(data.get("testSize", "0.20"), "testSize", MIN_TEST_SIZE, MAX_TEST_SIZE, 0.2)
-    _int_in_range(
-        data.get("crossValidationFolds", DEFAULT_CV_FOLDS), "crossValidationFolds", 2, MAX_CV_FOLDS, DEFAULT_CV_FOLDS
-    )
+    # Folds matter only when cross-validation runs; a cleared field with it off
+    # must not block the run (browser review of 2026-09-24).
+    if str(data.get("crossValidationType", "None")) != "None":
+        _int_in_range(
+            data.get("crossValidationFolds", DEFAULT_CV_FOLDS),
+            "crossValidationFolds",
+            2,
+            MAX_CV_FOLDS,
+            DEFAULT_CV_FOLDS,
+        )
     _int_in_range(data.get("searchCVFolds", 5), "searchCVFolds", 2, MAX_SEARCH_CV_FOLDS, 5)
     _int_in_range(
         data.get("searchNIter", DEFAULT_SEARCH_ITERATIONS),
@@ -265,13 +281,30 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
         selected_predictors = data["predictors"]
         hyperparameters = data["hyperparameters"]
         modelName = data["models"]
-        if modelName is None or (isinstance(modelName, str) and not str(modelName).strip()):
+        modeling_mode_early = str(data.get("modelingMode", "simple"))
+        # AutoML with no model named compares a candidate set by cross-validation
+        # and trains the one that scores best; the comparison is drawn and recorded.
+        compare_models = modeling_mode_early == "automl" and _blank(modelName)
+        if _blank(modelName) and not compare_models:
             raise ValueError("No model selected. Choose a model from the dropdown before running.")
+        if compare_models:
+            # The page sends the task with a blank model; the placeholder names the
+            # registry entry whose task is compared, and the winner replaces it.
+            task_type = str(data.get("taskType", ""))
+            if task_type == "Cluster":
+                raise ValueError(
+                    "Choose a clustering model. Candidate models are compared for regression and classification only."
+                )
+            modelName = "RF" if task_type == "Numeric" else "RF_classifier"
         nonreq = data["nonreq"]
         scaler = data["scaler"]
         units = data["units"]
-        sigfig = data["sigfig"]
+        # A cleared field arrives as "", null or 0 depending on the form; 0 decimal
+        # places is a choice only when typed, so the blank forms fall to the default.
+        sigfig = _int_in_range(data["sigfig"], "sigfig", 0, 15, 3)
         seed = data["seedValue"]
+        # Seed 0 is a seed. Only a blank or null means "draw one" (review of 2026-09-24).
+        seed = None if seed in (None, "") else int(seed)
         testSize = _float_in_range(data.get("testSize", "0.20"), "testSize", MIN_TEST_SIZE, MAX_TEST_SIZE, 0.2)
         stratifyBool = data["stratifyBool"]
         drop_missing = data["dropMissing"]
@@ -290,7 +323,7 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
         transformerCols = data["transformerCols"]
         cross_validation_type = data.get("crossValidationType", "None")
         cross_validation_folds = _int_in_range(
-            data.get("crossValidationFolds", DEFAULT_CV_FOLDS),
+            data.get("crossValidationFolds", DEFAULT_CV_FOLDS) if cross_validation_type != "None" else None,
             "crossValidationFolds",
             2,
             MAX_CV_FOLDS,
@@ -498,7 +531,7 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
                 raise ValueError(f"splitColumn {split_column_raw!r} is not a column of the uploaded file")
         split_plan = SplitPlan(method=split_method, column=split_column)
 
-        if seed:  # if user gives seed add to storage
+        if seed is not None:  # if user gives seed add to storage
             store["seed"] = seed
         else:  # no seed given
             # if 'seed' not in memStorage.keys(): #if seed not already saved then add random seed
@@ -566,6 +599,33 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
                 raise ValueError(guardrail_report.block_message())
             X_data = _safe_select_columns(df, indicator_names)
             y_data = _safe_select_columns(df, predictor_names)
+            model_comparison = None
+            if compare_models and problem_type in ("regression", "classification"):
+                from python_scripts.config import VIS_DIR
+                from python_scripts.preprocessing.model_comparison import compare_candidates
+                from python_scripts.preprocessing.utilities import _get_scaler
+
+                tracker.update_stage("model_training", "running", 0, "Comparing candidate models...")
+                model_comparison = compare_candidates(
+                    X_data,
+                    y_data,
+                    problem_type,
+                    _get_scaler(scaler),
+                    seed=seed,
+                    nan_strategy=fill_plan.nan_strategy if fill_plan.nan_columns else None,
+                    out_dir=VIS_DIR,
+                    progress=lambda pct, msg: tracker.update_stage("model_training", "running", pct // 4, msg),
+                )
+                if model_comparison.get("chosen"):
+                    modelName = model_comparison["chosen"]
+                    train_fn, problem_type = MODEL_REGISTRY[modelName]
+                    hyperparameters = {}
+                    nonreq = False
+                model_comparison = {
+                    k: v for k, v in model_comparison.items() if k in ("chosen", "summary", "note", "seeds", "folds")
+                }
+                if (VIS_DIR / "model_comparison.png").exists():
+                    model_comparison["figure"] = "model_comparison.png"
             base = dict(
                 target_variables=predictor_names,
                 train_data=df,
@@ -709,6 +769,8 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
                     transformer_cols=transformer_names,
                     seed=seed,
                     problem_type="classification",
+                    fill_plan=fill_plan,
+                    split_plan=split_plan,
                 )
                 if cv_result and isinstance(cv_result, tuple) and cv_result[0] is not None:
                     cv_file_path, cv_summary_df = cv_result
@@ -744,6 +806,8 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
                     seed=seed,
                     problem_type="regression",
                     y_scaler_type=scaler,
+                    fill_plan=fill_plan,
+                    split_plan=split_plan,
                 )
                 if cv_result and isinstance(cv_result, tuple) and cv_result[0] is not None:
                     cv_file_path, cv_summary_df = cv_result
@@ -1012,6 +1076,10 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
             for filename, label in regression_candidates:
                 if (vis_dir / filename).exists():
                     regression_visuals.append({"label": label, "file": filename, "type": "default"})
+            if compare_models and model_comparison and model_comparison.get("figure"):
+                regression_visuals.insert(
+                    0, {"label": "Candidate model comparison", "file": "model_comparison.png", "type": "default"}
+                )
 
             result["regression_visuals"] = regression_visuals
             try:
@@ -1115,6 +1183,8 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
         # A run trained past a blocking finding is labeled here and in the model card.
         result["data_checks"]["decision_use"] = "not valid for decision use" if forced else "no blocking findings"
         result["baseline"] = baseline_info
+        result["model_comparison"] = model_comparison if compare_models else None
+        result["model_name"] = modelName
         result["session_id"] = session_id  # Include session ID in response
 
         # The run record: what ran, on which bytes, with which versions, and what came out.

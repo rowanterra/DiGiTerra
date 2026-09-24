@@ -415,6 +415,70 @@ def test_an_artifact_naming_an_unlisted_type_is_refused(monkeypatch):
         artifact.loads(payload)
 
 
+def test_an_artifact_that_calls_a_builtin_is_refused(tmp_path):
+    """The review of 2026-09-24 built a skops file whose root is a reduce node naming
+    builtins.eval; the prefix allowlist admitted it and the loader ran it. The exact
+    allowlist refuses it before anything is built."""
+    import json
+    import zipfile
+
+    from python_scripts.reporting import artifact
+
+    marker = tmp_path / "ran"
+    code = f"__import__('pathlib').Path({str(marker)!r}).write_text('x')"
+
+    def jsonnode(value, i):
+        return {
+            "__class__": "str",
+            "__module__": "builtins",
+            "__loader__": "JsonNode",
+            "content": json.dumps(value),
+            "is_json": True,
+            "__id__": i,
+        }
+
+    eval_node = {
+        "__class__": "eval",
+        "__module__": "builtins",
+        "__loader__": "ConstructorFromReduceNode",
+        "content": {
+            "__class__": "tuple",
+            "__module__": "builtins",
+            "__loader__": "TupleNode",
+            "content": [jsonnode(code, 101)],
+            "__id__": 102,
+        },
+        "__id__": 103,
+    }
+    schema = {
+        "__class__": "dict",
+        "__module__": "builtins",
+        "__loader__": "DictNode",
+        "content": {"model": eval_node},
+        "key_types": {
+            "__class__": "list",
+            "__module__": "builtins",
+            "__loader__": "ListNode",
+            "content": [{"__class__": "str", "__module__": "builtins", "__loader__": "TypeNode", "__id__": 9}],
+            "__id__": 10,
+        },
+        "__id__": 11,
+        "protocol": 2,
+        "_skops_version": "0.14.0",
+    }
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("schema.json", json.dumps(schema))
+    payload = buf.getvalue()
+    refused = artifact.untrusted_types(payload)
+    assert "builtins.eval" in refused
+    with pytest.raises(artifact.ArtifactError):
+        artifact.loads(payload)
+    assert not marker.exists(), "the artifact ran code on load"
+    assert "builtins.eval" not in artifact.TRUSTED_TYPES
+    assert not any(name.endswith(".") for name in artifact.TRUSTED_TYPES), "the allowlist is exact, not prefixes"
+
+
 def test_a_legacy_pickle_bundle_needs_the_flag(monkeypatch, tmp_path):
     """A v1 bundle still opens, but only where the operator says pickles are allowed."""
     import joblib
