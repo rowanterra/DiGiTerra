@@ -1,0 +1,1 @@
+mean, min, max: Orange.statistics.basic_stats.DomainBasicStats. sd (n-1), q1, median, q3: numpy on the Orange column (linear quantile). DomainBasicStats.var is the population variance and is not written.

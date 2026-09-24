@@ -1,0 +1,115 @@
+E1 result, 2026-09-24. PARTIAL SET.
+Done: DiGiTerra (program under test), R, Orange, AI Studio (R1, C1). Not done: Excel; AI Studio D1 D2.
+Machine-generated comparison table: RESULT_2026-09-24.txt and RESULTS.csv
+(scripts/compare.py). Every number below names the file it comes from.
+
+TEST
+Same rows, same predictors, same train and test halves, same settings, in
+each program. Cases: D1, D2 descriptive statistics; R1 OLS on diabetes (353
+train, 89 test); C1 k-NN k=5 on iris (120 train, 30 test); C2 logistic
+regression on iris. PLAN.txt has the design. Oracle: plain scikit-learn
+1.9.0 (oracle_outputs/).
+
+DATA
+data/md5sums.txt. iris source md5 600158651eff3f5bfb01348d5e986a2c, diabetes
+source md5 bf3703e9cb8cab6bdb417738fb83c13a.
+
+CONTROLS
+DiGiTerra: c000_base_a, c001_base_b, c999_base_c. predictions_test.csv,
+coefficients_metrics.csv and metrics_from_predictions.csv byte-identical
+across the three. Manifests differ only in data.uploaded_at, artifact.sha256
+and artifact.signature (expected). PASS.
+R: run 1 and run 2 byte-identical on every file. PASS.
+Orange: run 1 and run 2 byte-identical on every file. PASS.
+AI Studio: run 1 and run 2 byte-identical on every file. PASS.
+
+INPUT CHECK
+Every DiGiTerra manifest and result records the time-ordered holdout on
+"order", 89 (diabetes) or 30 (iris) test rows, scaler none, model params at
+scikit-learn defaults (digiterra_outputs/<case>/manifest.json, result.json).
+PASS.
+
+MAIN RESULT
+DiGiTerra R1: intercept and 10 coefficients (from model.skops in the
+bundle) and all 89 test predictions (from the /predict predictions.csv) are
+the same as the oracle at six significant figures, in all three runs
+(digiterra_outputs/c000_base_a/coefficients_metrics.csv, predictions_test.csv).
+Test RMSE recomputed from the predictions file: 53.808429803715498; R:
+53.808429803715498; Orange: same class; oracle 53.808429803715505 (one unit
+in the last place; summation order).
+DiGiTerra C1: 30 of 30 predicted classes same as oracle, R and Orange.
+DiGiTerra C2: 30 of 30 classes and 90 of 90 probabilities same as oracle.
+R: R1 206 cells same, D1 156 same + 20 near zero, D2 64 same, C1 same.
+Orange: R1 206 same, D1 and D2 same, C1 same, C2 classes same.
+AI Studio: R1 10 coefficients, RMSE, MAE, R2 (from its predictions file) and
+89 predictions same as oracle; C1 30 of 30 classes same. Its exported weights
+carry no intercept, and its squared_correlation (0.5201965) is the squared
+Pearson r, not R2 (0.5195044).
+No cell of any program is classed "other" against the oracle except the
+Orange C2 probabilities (below).
+
+FINDINGS (status after the same-day fixes; see FIXES below)
+F1 (established). DiGiTerra rounds regression metrics to three decimals
+before the significant-figures setting is applied. With sigfig 10 the page
+and the manifest give test RMSE "53.8080000000" and R2 "0.5200000000" for
+values of 53.808429803715498 and 0.51950439781862778
+(digiterra_outputs/c000_base_a/result.json, manifest.json metrics vs
+metrics_from_predictions.csv). Cause: python_scripts/preprocessing/
+run_regression_pipeline.py lines 669 to 670 call regression_report() without
+sigfig, so its default 3 applies; python_scripts/app_model_training.py lines
+887 to 894 then format the rounded value with sigfig decimals. The setting is
+decimals, not significant figures (fmt ".{sigfig}f", line 677). The paper says
+the manifest carries the metrics; it carries them rounded and as strings.
+F2 (established). Descriptive statistics are rounded to four decimals
+(python_scripts/app_exploration.py line 261, .round(4)); the diabetes column
+means print as -0.0 and 0.0 (digiterra_outputs/D1/D1_digiterra.csv). Every
+D1 and D2 cell equals the oracle rounded to four decimals (67 cells), so the
+statistics are right and the display is coarse.
+F3 (established through the /process route, the JSON the Advanced form sends;
+the browser layer itself is still unexercised).
+python_scripts/model_registry.py get_model_kwargs returns {} for
+KNeighbors_classifier, LDA_classifier, LinearSVC_classifier,
+MultinomialNB_classifier, NuSVC_classifier, PassiveAggressive_classifier,
+QDA_classifier, Ridge_classifier, ExtraTrees_classifier,
+GaussianNB_classifier, SGD_classifier and MLP_classifier (lines 495 to 607),
+so form values for those models never reach the estimator. The gap is nineteen classifiers, not twelve (NOTEBOOK.txt). Sent
+n_neighbors 3 through the route: the manifest's request block recorded 3 and
+its model.params recorded 5, so the run record contradicted itself. The
+paper states that every hyperparameter an estimator exposes remains
+editable; before the fix that was false for every one of the nineteen.
+F4 (inferred). Orange C2 probabilities differ from the oracle by up to 7e-3
+relative in all 180 cells while every predicted class agrees. Orange 3.39.0
+bundles scikit-learn 1.5.2 on arm64. scikit-learn 1.5.2 on x86_64 reproduces
+the oracle, not Orange, so the library version is not the cause. Orange's
+learner passes the same parameters (its source, checked). At tol 1e-4 the
+lbfgs solution is loose (a tol 1e-10 fit differs from both), which leaves
+platform arithmetic. To establish: run
+  E1_ANY_VERSION=1 /Applications/Orange.app/Contents/MacOS/python scripts/oracle.py
+on the Mac and compare oracle_outputs_arm64_sklearn1.5.2/C2_oracle_predictions.csv
+with reference_outputs/orange/C2_orange_run1_predictions.csv.
+Not a DiGiTerra finding either way.
+
+FIXES (2026-09-24, in the audit-fixes working tree, uncommitted)
+F1: run_regression_pipeline.py passes sigfig to regression_report(); the
+form label now reads Decimal places. F2: app_exploration.py rounds to
+DESCRIPTIVE_DECIMALS = 6 and writes a rounded negative zero as 0.0. F3:
+model_registry.py passes form values through for the nineteen classifiers
+under the key names the trainers already read. tests/unit/
+test_decimal_setting.py holds four regression tests. pytest tests/: 193
+passed, 1 skipped; ruff clean. E1 rerun on the fixed tree: R1 318 cells
+same with no rounded class, D1 and D2 at six decimals, controls and input
+checks pass. The pre-fix outputs are kept as
+digiterra_outputs_pre_fix_99dea69/. Patch: E1_fixes_2026-09-24.patch;
+commit message: COMMIT_MESSAGE_2026-09-24.txt.
+F5 (route level, inferred for the browser): Logistic_classifier with a
+partial hyperparameter set and nonreq on fails in scikit-learn with
+intercept_scaling None, because get_model_kwargs emits every Logistic key
+with None when the form did not send it. The Advanced form reads every field,
+so a browser run probably sends all keys. Not fixed; browser check pending.
+
+NOT DONE
+AI Studio D1 and D2 (statistics export is not in the process). Excel
+(PROTOCOL.txt). The browser
+layer of DiGiTerra: this run drove the Flask routes with the test client, not
+the page; PROTOCOL.txt keeps the browser run as a separate check, and F3
+needs it.

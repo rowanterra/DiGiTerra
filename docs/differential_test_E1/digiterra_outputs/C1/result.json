@@ -1,0 +1,65 @@
+{
+ "accuracy": "1.0000000000",
+ "precision": "1.0000000000",
+ "recall": "1.0000000000",
+ "f1score": "1.0000000000",
+ "support": "30.0000000000",
+ "macro_precision": "1.0000000000",
+ "macro_recall": "1.0000000000",
+ "macro_f1score": "1.0000000000",
+ "macro_support": "30.0000000000",
+ "indicators": [
+  "sepal length",
+  "sepal width",
+  "petal length",
+  "petal width"
+ ],
+ "predictors": [
+  "species"
+ ],
+ "cross_validation_file": null,
+ "model_params": {
+  "algorithm": "auto",
+  "leaf_size": 30,
+  "metric": "minkowski",
+  "metric_params": null,
+  "n_jobs": null,
+  "n_neighbors": 5,
+  "p": 2,
+  "weights": "uniform"
+ },
+ "feature_selection_info": null,
+ "outlier_info": null,
+ "split_note": "Time-ordered holdout on column 'order': the latest 20% of rows (30 of 150) are the test set.",
+ "data_checks": {
+  "n_rows": 150,
+  "n_features": 4,
+  "blocking": [],
+  "warnings": [
+   {
+    "code": "duplicate_rows",
+    "severity": "warn",
+    "message": "1 rows are exact duplicates across the modeling columns. A duplicate in both sides of the split inflates the test score.",
+    "columns": []
+   }
+  ],
+  "allow_unsafe": false,
+  "forced": false,
+  "override_reason": null,
+  "decision_use": "no blocking findings"
+ },
+ "baseline": {
+  "kind": "classification",
+  "description": "Predicting the most common training class (setosa, 42 of 120 training rows)",
+  "metric": "accuracy",
+  "baseline_value": 0.2667,
+  "model_value": 1.0,
+  "baseline_balanced_accuracy": 0.3333,
+  "majority_class": "setosa",
+  "model_beats_baseline": true
+ },
+ "session_id": "ff85e0f6-d877-4053-af36-f714da0cc044",
+ "model_card_url": "/user-visualizations/model_card.html",
+ "bundle_url": "/export-bundle",
+ "model_retained": true
+}

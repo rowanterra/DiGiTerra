@@ -1,0 +1,16 @@
+2026-09-24T17:36:41Z  uploaded iris_E1_base.csv: {'columns': ['order', 'sepal length', 'sepal width', 'petal length', 'petal width', 'species'], 'filename': 'iris_E1_bas
+2026-09-24T17:36:41Z  /process accepted, session 46c1e0a0-052a-4914-ae7f-1f1aa9b265c1
+2026-09-24T17:36:44Z  result keys 22; split_note: Time-ordered holdout on column 'order': the latest 20% of rows (30 of 150) are the test set.
+2026-09-24T17:36:44Z  bundle members: ['manifest.json', 'model_card.json', 'model_card.html', 'model.skops', 'visualizations.pdf']
+2026-09-24T17:36:44Z  /predict status 200: {'applicability_summary': {'novel': 0, 'out_of_range': 1, 'rows': 30}, 'filename': 'iris_E1_test.csv', 'inference_visualization': None, 'inference_visualization_version': None, 'model_type': 'classifi
+2026-09-24T17:36:44Z  predictions.csv columns ['order', 'sepal length', 'sepal width', 'petal length', 'petal width', 'species', 'Predicted_Target', 'probability_setosa', 'probability_versicolor', 'probability_virginica', 'max_probability', 'novelty_score', 'novel_row', 'out_of_range_columns'] rows 30
+2026-09-24T17:36:44Z  INPUT CHECK FAILED: test_n None != 30
+2026-09-24T17:36:44Z  done
+2026-09-24T17:37:12Z  uploaded iris_E1_base.csv: {'columns': ['order', 'sepal length', 'sepal width', 'petal length', 'petal width', 'species'], 'filename': 'iris_E1_bas
+2026-09-24T17:37:12Z  /process accepted, session 89200f70-9f89-4558-8be6-3b63c8564eef
+2026-09-24T17:37:15Z  result keys 22; split_note: Time-ordered holdout on column 'order': the latest 20% of rows (30 of 150) are the test set.
+2026-09-24T17:37:15Z  bundle members: ['manifest.json', 'model_card.json', 'model_card.html', 'model.skops', 'visualizations.pdf']
+2026-09-24T17:37:15Z  /predict status 200: {'applicability_summary': {'novel': 0, 'out_of_range': 1, 'rows': 30}, 'filename': 'iris_E1_test.csv', 'inference_visualization': None, 'inference_visualization_version': None, 'model_type': 'classifi
+2026-09-24T17:37:15Z  predictions.csv columns ['order', 'sepal length', 'sepal width', 'petal length', 'petal width', 'species', 'Predicted_Target', 'probability_setosa', 'probability_versicolor', 'probability_virginica', 'max_probability', 'novelty_score', 'novel_row', 'out_of_range_columns'] rows 30
+2026-09-24T17:37:15Z  input check passed
+2026-09-24T17:37:15Z  done

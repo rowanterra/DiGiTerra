@@ -1,0 +1,140 @@
+E1 run protocol. One block per application. Save every output to the path
+given, then add a line to NOTEBOOK.txt (UTC time, file, size). Record each
+application's version in NOTEBOOK.txt the first time it opens (Orange: About;
+AI Studio: About; R: the versions file the script writes; Excel: About Excel;
+DiGiTerra: the manifest's package list).
+
+Files every application reads, all in data/:
+  diabetes_E1_train.csv (353 rows)   diabetes_E1_test.csv (89 rows)
+  iris_E1_train.csv (120 rows)       iris_E1_test.csv (30 rows)
+  diabetes_E1_base.csv, iris_E1_base.csv for D1 and D2 only.
+"order" is never a predictor. Nothing is scaled, imputed or dropped.
+
+----------------------------------------------------------------------
+DiGiTerra (program under test)
+----------------------------------------------------------------------
+Start the app from the audit-fixes working tree. Advanced mode.
+Common settings for every case: Upload the _base file. Split method: Time,
+column: order. Test size: 0.20. Stratify: off. Scaler: none. Zero handling:
+none. Missing: none (the files have none). Outliers: off. Feature selection:
+off. Hyperparameter search: off. Cross-validation: off. Seed: 20260924.
+Significant figures: 10.
+  c000_base_a  R1  diabetes_E1_base.csv; predictors age sex bmi bp s1 s2 s3 s4
+               s5 s6; target target; model Linear Regression, defaults.
+               Download the run record (manifest), the model card and the
+               predictions file into digiterra_outputs/c000_base_a/.
+  c001_base_b  R1 again, same settings, new upload. digiterra_outputs/c001_base_b/.
+  C1           iris_E1_base.csv; predictors the four measurements; target
+               species; model K Neighbors Classifier; n_neighbors 5, weights
+               uniform, metric euclidean (or minkowski p 2). Download manifest,
+               model card, predictions. digiterra_outputs/C1/.
+  C2           iris_E1_base.csv; model Logistic Regression; C 1.0, penalty l2,
+               solver lbfgs, max_iter 100. Download manifest, model card,
+               predictions (with class probabilities if offered).
+               digiterra_outputs/C2/.
+  D1           Exploration view on diabetes_E1_base.csv: descriptive
+               statistics table. Download or copy the table to
+               digiterra_outputs/D1/D1_digiterra.csv. Note whether the table
+               is rounded to the significant-figures setting.
+  D2           Same for iris_E1_base.csv. digiterra_outputs/D2/.
+  c999_base_c  R1 a third time, last action of the session.
+               digiterra_outputs/c999_base_c/.
+Every manifest must show split method time, column order, test rows 89 (or
+30), scaler none. A manifest that shows anything else is an input-check
+failure: record it and rerun; do not count the result.
+
+----------------------------------------------------------------------
+Orange (same engine as DiGiTerra: scikit-learn)
+----------------------------------------------------------------------
+Build one workflow and save it as reference_outputs/orange/E1.ows.
+  Widgets: File (train) -> Select Columns; File (test) -> Select Columns.
+  In Select Columns set "order" to Ignored, the target to Target.
+  Learner widgets: Linear Regression (no regularization), kNN (k 5,
+  Euclidean, uniform), Logistic Regression (Ridge L2, C 1).
+  Predictions widget with the test Select Columns on "Data" and each learner
+  on "Predictors" (one Predictions widget per case is simpler).
+  Data Table on the Predictions output -> Save Data as CSV:
+    reference_outputs/orange/R1_orange_run1_predictions.csv
+    reference_outputs/orange/C1_orange_run1_predictions.csv
+    reference_outputs/orange/C2_orange_run1_predictions.csv  (include
+      probabilities: Predictions widget, show probabilities on)
+  Metrics: the Predictions widget's evaluation table (RMSE, MAE, R2 for R1;
+  CA for C1, C2). Copy the values into reference_outputs/orange/
+  <case>_orange_run1_metrics.txt. Orange's Test and Score widget with
+  "Test on test data" gives the same numbers; either is fine, say which.
+  Coefficients: Linear Regression widget -> Coefficients output -> Data Table
+  -> Save as reference_outputs/orange/R1_orange_run1_coefficients.csv.
+  Feature Statistics widget on File (base) for D1 and D2 -> Save as
+  reference_outputs/orange/D1_orange_run1.csv and D2_orange_run1.csv. Orange
+  prints mean, median, dispersion, min, max; record what its "dispersion"
+  is (coefficient of variation for numeric columns, by its documentation)
+  so it is not compared to sd.
+Close Orange, reopen E1.ows, run again, save the same files as run2.
+
+----------------------------------------------------------------------
+RapidMiner AI Studio 2026.0.1 (independent engine)
+----------------------------------------------------------------------
+Process: Read CSV (train) and Read CSV (test), both with "order" set to
+role id (not a regular attribute) and the target set to role label.
+  R1  Linear Regression operator, feature selection none, eliminate
+      colinear features off, ridge 0 (the operator's default ridge is
+      1e-8; set it to 0 and record what was set). Apply Model on test,
+      Performance (Regression) with root_mean_squared_error,
+      absolute_error, squared_correlation. Write CSV of the labelled
+      test set to reference_outputs/aistudio/R1_aistudio_run1_predictions.csv.
+      Save the model's coefficient table (right-click the model result,
+      export or copy) to R1_aistudio_run1_coefficients.csv and the
+      performance vector to R1_aistudio_run1_metrics.txt. Note: AI Studio's
+      squared_correlation is the square of the Pearson correlation between
+      prediction and label, which equals R2 only in-sample; on a test set
+      it differs, so R2 for AI Studio is computed in compare.py from the
+      predictions file instead. Record that.
+  C1  k-NN operator, k 5, weighted vote off, measure MixedEuclideanDistance
+      (numerical only here, so Euclidean). Apply Model, Performance
+      (Classification) accuracy, Write CSV of the labelled test set to
+      C1_aistudio_run1_predictions.csv.
+  C2  Logistic Regression operator. It is a different estimator from
+      scikit-learn's (its solver and regularization differ). Run it, save
+      C2_aistudio_run1_predictions.csv and note in NOTEBOOK.txt that it is
+      recorded, not compared on equality.
+  D1, D2  Statistics view of the base file; export to D1_aistudio_run1.csv.
+Save the process as reference_outputs/aistudio/E1.rmp. Rerun as run2.
+
+----------------------------------------------------------------------
+R (independent engine)
+----------------------------------------------------------------------
+In Terminal, from the E1 folder:
+  Rscript scripts/reference_r.R 1
+  Rscript scripts/reference_r.R 2
+The script writes D1, D2, R1 and C1 files into reference_outputs/r/ and a
+versions file. It does not run C2 (see the comment in the script).
+
+----------------------------------------------------------------------
+Excel (independent engine, D1 D2 R1 only)
+----------------------------------------------------------------------
+Open a new workbook, save as reference_outputs/excel/E1_excel.xlsx.
+  D1  Sheet "D1": paste diabetes_E1_base.csv. For each of the 11 columns:
+      COUNT, AVERAGE, STDEV.S, MIN, QUARTILE.INC(,1), MEDIAN,
+      QUARTILE.INC(,3), MAX.
+  D2  Sheet "D2": same for the 4 iris columns.
+  R1  Sheet "R1": paste diabetes_E1_train.csv. LINEST(target_range,
+      predictor_range, TRUE, TRUE) entered as an array over 5 rows x 11
+      columns. LINEST returns coefficients in reverse column order (s6
+      first, intercept last); label them. Paste diabetes_E1_test.csv on
+      the same sheet and compute predicted = intercept + SUMPRODUCT(coef,
+      row). Then RMSE = SQRT(SUMXMY2(target, predicted)/89),
+      MAE = SUMPRODUCT(ABS(target - predicted))/89,
+      R2 = 1 - SUMXMY2(target, predicted)/DEVSQ(target).
+  Then File > Save As CSV for each sheet: D1_excel_run1.csv,
+  D2_excel_run1.csv, R1_excel_run1_coefficients_metrics.csv (term, value)
+  and R1_excel_run1_predictions.csv (order, target, predicted). Set the cell
+  format to 15 significant digits before saving so the CSV is not rounded.
+  Recalculate (Cmd+=) and save again as run2.
+
+----------------------------------------------------------------------
+Compare
+----------------------------------------------------------------------
+  python3 scripts/compare.py
+reads every file present under digiterra_outputs/, reference_outputs/ and
+oracle_outputs/, writes RESULTS.csv and RESULT_<date>.txt, and marks the set
+partial until every cell is filled.

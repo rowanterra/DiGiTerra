@@ -1,0 +1,4 @@
+Orange 3.39.0
+scikit-learn 1.5.2
+numpy 1.26.4
+python 3.11.8
