@@ -19,7 +19,10 @@ Then run one of the two entry points:
 | Goal | Command |
 |------|---------|
 | Web app in the browser | `python app.py`, then open http://127.0.0.1:5000 |
+| The guided page | `python app.py`, then open http://127.0.0.1:5000/guided |
 | Desktop window | `python desktop_app.py` |
+
+The guided page is one column of five steps with a Guided and a Full mode; Full opens every setting the training route accepts and a hyperparameter table filled from the estimator itself. `docs/SIMPLE_INTERFACE_DESIGN.md` says why it looks the way it does, and `docs/guided_page_guided_mode.png` and `docs/guided_page_full_mode.png` show it.
 
 Both entry points import the application from `core/`, `routes/`, and `python_scripts/`.
 
@@ -56,9 +59,14 @@ The `examples/` directory contains 10 CSV files: 4 classification (Iris, Penguin
 
 `scripts/train_every_model.py` trains every registered estimator on the matching example
 dataset through the same function the `/process` route calls, with the defaults an empty
-hyperparameter form sends. `docs/every_model_sweep_2026-09-03.json` is the record of the
-run on 2026-09-03 with scikit-learn 1.9.0 on Python 3.11: 67 of 69 registry entries
-trained and 2 (Polynomial, Perceptron) are registered without a trainer and were skipped.
+hyperparameter form sends. `docs/every_model_sweep_2026-09-24.json` is the record of the
+run on 2026-09-24 with scikit-learn 1.9.0 on Python 3.11: 67 of 69 registry entries
+trained and 2 (Polynomial, Perceptron) are registered without a trainer and were skipped
+(the 2026-09-03 record is kept beside it). `docs/artifact_roundtrip_2026-09-24.json` is the
+matching bundle round-trip record: 66 of 67 identical, birch unsupported.
+`docs/differential_test_E1/` is a black-box comparison of the same rows, settings and
+splits against Orange, RapidMiner AI Studio and R with plain scikit-learn as the arbiter;
+its `RESULT_2026-09-24_partial.txt` names the three defects it found and their fixes.
 `tests/integration/test_browser_advanced.py` drives the page in Chromium through Playwright
 and checks that values typed into Advanced-mode controls reach the training request; the
 test skips itself when Playwright or the browser is absent.
@@ -179,7 +187,7 @@ Docker and Helm assets are under `deploy/`. `deploy/README.md` describes the Doc
 
 ## Accessibility
 
-The page uses ARIA attributes, keyboard navigation with a skip link, screen reader announcements through live regions, and labeled form controls. The Accessibility section of `docs/documentation.md` lists the details.
+The classic page uses ARIA attributes, keyboard navigation with a skip link, screen reader announcements through live regions, and labeled form controls; the Accessibility section of `docs/documentation.md` lists the details. The guided page is built to WCAG 2.2 AA and tested in Chromium with axe-core; `docs/ACCESSIBILITY.md` states what is checked and what is not claimed.
 
 ## Acknowledgements
 
