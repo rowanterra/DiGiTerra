@@ -15,7 +15,8 @@ filterwarnings = ["ignore:Matplotlib", "ignore:Fontconfig"]
 [tool.ruff]
 line-length = 120
 target-version = "py311"
-exclude = ["node_modules", ".venv", "build", "dist"]
+# docs/differential_test_E1 is a deposited test record, kept as it ran, not repository code.
+exclude = ["node_modules", ".venv", "build", "dist", "docs/differential_test_E1"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]

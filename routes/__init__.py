@@ -4,6 +4,7 @@ from python_scripts import config
 
 from .assets import bp as assets_bp
 from .exploration import bp as exploration_bp
+from .guided import bp as guided_bp
 from .main import bp as main_bp
 from .modeling import bp as modeling_bp
 from .prediction import bp as prediction_bp
@@ -18,7 +19,7 @@ def register_blueprints(app):
     forms of every route answer.
     """
     prefix = config.URL_PREFIX or None
-    blueprints = [main_bp, upload_bp, exploration_bp, preprocess_bp, modeling_bp, prediction_bp, assets_bp]
+    blueprints = [main_bp, upload_bp, exploration_bp, preprocess_bp, modeling_bp, prediction_bp, assets_bp, guided_bp]
     for bp in blueprints:
         app.register_blueprint(bp, url_prefix=None)
         if prefix:

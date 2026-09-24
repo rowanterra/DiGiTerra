@@ -34,7 +34,7 @@ import pandas as pd  # noqa: E402
 
 from python_scripts import config  # noqa: E402
 from python_scripts.app_model_training import run_model_training  # noqa: E402
-from python_scripts.model_registry import MODEL_REGISTRY  # noqa: E402
+from python_scripts.model_registry import _PASSTHROUGH_CLASSIFIERS, MODEL_REGISTRY  # noqa: E402
 from python_scripts.preprocessing.progress_tracker import get_result, remove_tracker  # noqa: E402
 from python_scripts.reporting import artifact  # noqa: E402
 from python_scripts.reporting.bundle import fitted_objects  # noqa: E402
@@ -158,7 +158,11 @@ def check(name: str, task: str) -> dict:
     indicators = list(range(n - 1)) if task != "cluster" else list(range(n))
     predictors = [] if task == "cluster" else [n - 1]
     payload = dict(BASE, indicators=indicators, predictors=predictors, models=name)
-    payload["hyperparameters"] = dict(FILLS)
+    # FILLS is a blanket dict that relied on get_model_kwargs dropping unknown
+    # keys. The classifiers that now pass form values through would receive
+    # solver="adam" and learning_rate=0.1, which their estimators reject, and a
+    # real form never sends another model's fields; they get an empty form.
+    payload["hyperparameters"] = {} if name in _PASSTHROUGH_CLASSIFIERS else dict(FILLS)
     store = {"data": df}
     sid = f"artifact-{name}"
     token = config.set_session_scope(sid)

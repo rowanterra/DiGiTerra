@@ -56,3 +56,7 @@ MPLBACKEND=Agg pytest tests/ -q
 CI (`.github/workflows/tests.yml`) runs on push and pull request to `main` or `master`, on Python 3.11 and 3.12. Each job installs the requirements, runs `scripts/check_requirements.py`, `npm run lint`, `npm run check-bundle`, `ruff check .`, and `pytest tests/`.
 
 The JSON response shape is described in `docs/API_RESPONSES.md`.
+
+## The guided page and accessibility
+
+`/guided` is a second front end on the same routes (`templates/guided.html`, `static/js/guided.js`, `routes/guided.py`). It is plain HTML and one script with no bundle step. `docs/ACCESSIBILITY.md` states what it does for WCAG 2.2 AA. Before a release, one person walks the page with the keyboard alone and once with VoiceOver on macOS (upload, target, model, run, result, predict), and `tests/integration/test_browser_guided.py` runs against a Chromium named in `DIGITERRA_CHROMIUM` with axe-core installed (`npm install axe-core`).

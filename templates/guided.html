@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DiGiTerra guided</title>
+<meta name="description" content="Upload a table, choose the target, fit a model, read the result. Guided and Full modes.">
+<style>
+  :root {
+    --ink: #1f2320; --paper: #fbfaf7; --rule: #cfcac0; --moss: #4f6b4a; --oxblood: #7a2e2e;
+    --ochre: #9a7b1f; --focus: #1f4d8f; --muted: #5d615c; --field: #ffffff;
+  }
+  html { font-family: Georgia, "Times New Roman", serif; color: var(--ink); background: var(--paper); font-size: 17px; }
+  body { margin: 0; }
+  header, main, footer { max-width: 62rem; margin: 0 auto; padding: 0 1rem; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 1rem 2rem; padding-top: 1.25rem; border-bottom: 1px solid var(--rule); padding-bottom: .75rem; }
+  h1 { font-size: 1.5rem; margin: 0; font-weight: normal; }
+  h2 { font-size: 1.2rem; margin: 0 0 .5rem; font-weight: normal; }
+  h3 { font-size: 1rem; margin: 1rem 0 .25rem; font-weight: bold; }
+  .skip { position: absolute; left: -999px; top: 0; background: var(--paper); padding: .5rem; border: 2px solid var(--focus); }
+  .skip:focus { left: 1rem; z-index: 10; }
+  fieldset { border: 0; padding: 0; margin: 0; }
+  fieldset.mode { display: inline-flex; gap: .25rem; align-items: center; }
+  fieldset.mode legend { font-size: .9rem; color: var(--muted); float: left; margin-right: .5rem; }
+  fieldset.mode label { border: 1px solid var(--rule); padding: .2rem .7rem; cursor: pointer; background: var(--field); }
+  fieldset.mode input:checked + span { font-weight: bold; }
+  fieldset.mode label:has(input:checked) { border-color: var(--ink); background: #eee9dc; }
+  section.step { border-left: 3px solid var(--rule); padding: .75rem 0 .75rem 1rem; margin: 1.25rem 0; }
+  section.step[aria-disabled="true"] { opacity: .55; }
+  section.step.done { border-left-color: var(--moss); }
+  .num { display: inline-block; width: 1.6rem; color: var(--muted); }
+  label.block { display: block; margin: .6rem 0 .2rem; }
+  input[type=text], input[type=number], select { font: inherit; padding: .3rem .4rem; border: 1px solid var(--rule); background: var(--field); min-width: 12rem; max-width: 100%; }
+  input[type=file] { font: inherit; }
+  button { font: inherit; padding: .4rem 1rem; border: 1px solid var(--ink); background: var(--field); cursor: pointer; }
+  button.primary { background: var(--moss); color: #fff; border-color: var(--moss); }
+  button:disabled { opacity: .5; cursor: default; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .full-only { display: none; }
+  body[data-mode="full"] .full-only { display: block; }
+  body[data-mode="full"] tr.full-only { display: table-row; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: .5rem 1.5rem; }
+  table { border-collapse: collapse; margin: .5rem 0; font-size: .95rem; }
+  th, td { text-align: left; padding: .25rem .6rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { font-weight: bold; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .status { margin: .5rem 0; }
+  .error { color: var(--oxblood); border: 1px solid var(--oxblood); padding: .5rem .75rem; margin: .5rem 0; background: #fff6f5; }
+  .warn { color: var(--ochre); }
+  .checks li { margin: .2rem 0; }
+  .checks .block-sev { color: var(--oxblood); font-weight: bold; }
+  .checks .warn-sev { color: var(--ochre); font-weight: bold; }
+  progress { width: 100%; height: 1rem; }
+  details summary { cursor: pointer; }
+  footer { border-top: 1px solid var(--rule); margin-top: 2rem; padding: .75rem 1rem 2rem; font-size: .9rem; color: var(--muted); }
+  .hidden { display: none !important; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body data-mode="guided">
+<a class="skip" href="#main">Skip to the steps</a>
+<header>
+  <h1>DiGiTerra</h1>
+  <fieldset class="mode" id="modeGroup">
+    <legend>Mode</legend>
+    <label><input type="radio" name="mode" value="guided" checked> <span>Guided</span></label>
+    <label><input type="radio" name="mode" value="full"> <span>Full</span></label>
+  </fieldset>
+  <nav aria-label="Other pages"><a href="{{ full_page }}">Classic page</a></nav>
+</header>
+
+<main id="main">
+  <p id="modeHelp">Guided shows the five steps and picks sensible defaults. Full opens every setting the training route accepts, in the same five steps.</p>
+  <div id="errors" class="hidden error" role="alert" aria-live="assertive"></div>
+
+  <section class="step" id="step1" aria-labelledby="h1s">
+    <h2 id="h1s"><span class="num">1</span>Upload a table</h2>
+    <form id="uploadForm">
+      <label class="block" for="file">CSV, Excel or Parquet file</label>
+      <input type="file" id="file" name="file" accept=".csv,.xlsx,.xlsm,.parquet" required>
+      <button type="submit" class="primary">Upload</button>
+    </form>
+    <p class="status" id="uploadStatus" aria-live="polite"></p>
+  </section>
+
+  <section class="step" id="step2" aria-labelledby="h2s" aria-disabled="true">
+    <h2 id="h2s" tabindex="-1"><span class="num">2</span>Choose what to predict</h2>
+    <label class="block" for="target">Target column</label>
+    <select id="target" disabled></select>
+    <p id="targetHint" class="status"></p>
+    <div class="full-only">
+      <label class="block" for="predictors">Predictor columns (all other columns unless changed)</label>
+      <select id="predictors" multiple size="6" disabled aria-describedby="predictorsHelp"></select>
+      <p id="predictorsHelp" class="status">Hold Command or Control to choose several.</p>
+    </div>
+  </section>
+
+  <section class="step" id="step3" aria-labelledby="h3s" aria-disabled="true">
+    <h2 id="h3s" tabindex="-1"><span class="num">3</span>Choose the model</h2>
+    <fieldset>
+      <legend>Task</legend>
+      <label><input type="radio" name="task" value="classification" disabled> Classification (the target is a class)</label><br>
+      <label><input type="radio" name="task" value="regression" disabled> Regression (the target is a number)</label><br>
+      <label><input type="radio" name="task" value="cluster" disabled> Clustering (no target)</label>
+    </fieldset>
+    <label class="block" for="model">Model</label>
+    <select id="model" disabled></select>
+    <div class="full-only" id="hyperBox">
+      <h3>Hyperparameters</h3>
+      <p id="hyperNote" class="status"></p>
+      <table id="hyperTable" class="hidden"><caption class="hidden">Hyperparameters of the chosen model</caption>
+        <thead><tr><th scope="col">Parameter</th><th scope="col">Default</th><th scope="col">Value</th></tr></thead>
+        <tbody></tbody></table>
+    </div>
+    <div class="full-only">
+      <h3>Split and preprocessing</h3>
+      <div class="grid">
+        <div><label class="block" for="splitMethod">Split method</label>
+          <select id="splitMethod"><option value="random">Random</option><option value="time">Time-ordered holdout</option><option value="group">Grouped holdout</option></select></div>
+        <div><label class="block" for="splitColumn">Split column (time or group)</label><select id="splitColumn"><option value="">None</option></select></div>
+        <div><label class="block" for="testSize">Test fraction</label><input type="number" id="testSize" value="0.20" min="0.05" max="0.5" step="0.05"></div>
+        <div><label class="block" for="stratify">Stratify the random split by a column</label><select id="stratify"><option value="">No</option></select></div>
+        <div><label class="block" for="scaler">Scaler</label>
+          <select id="scaler"><option value="none">None</option><option value="standard">Standard</option><option value="minmax">Min-max</option><option value="robust">Robust</option><option value="quantile">Quantile</option></select></div>
+        <div><label class="block" for="dropMissing">Rows with blanks</label>
+          <select id="dropMissing"><option value="none">Remove</option><option value="mean">Fill with the mean</option><option value="median">Fill with the median</option><option value="mode">Fill with the mode</option></select></div>
+        <div><label class="block" for="zeroHandle">Zeros</label>
+          <select id="zeroHandle"><option value="none">Keep</option><option value="drop">Remove rows</option><option value="mean">Fill with the mean</option><option value="median">Fill with the median</option></select></div>
+        <div><label class="block" for="seed">Random seed</label><input type="number" id="seed" value="42" min="0" max="1000"></div>
+        <div><label class="block" for="sigfig">Decimal places in the results</label><input type="number" id="sigfig" value="3" min="1" max="10"></div>
+      </div>
+      <h3>Selection, outliers, validation</h3>
+      <div class="grid">
+        <div><label class="block" for="featureSelection">Feature selection</label>
+          <select id="featureSelection"><option value="none">None</option><option value="SelectKBest">Select k best</option><option value="RFE">Recursive elimination</option><option value="SelectFromModel">From a model</option></select></div>
+        <div><label class="block" for="featureK">k for selection</label><input type="number" id="featureK" value="5" min="1"></div>
+        <div><label class="block" for="outlierMethod">Outlier method</label>
+          <select id="outlierMethod"><option value="none">None</option><option value="IQR">IQR</option><option value="ZScore">z-score</option><option value="IsolationForest">Isolation forest</option><option value="LocalOutlierFactor">Local outlier factor</option></select></div>
+        <div><label class="block" for="cvType">Cross-validation</label>
+          <select id="cvType"><option value="None">None</option><option value="KFold">K-fold</option><option value="StratifiedKFold">Stratified K-fold</option></select></div>
+        <div><label class="block" for="cvFolds">Folds</label><input type="number" id="cvFolds" value="5" min="2" max="20"></div>
+        <div><label class="block" for="search">Hyperparameter search</label>
+          <select id="search"><option value="none">None</option><option value="randomized">Randomized search</option><option value="grid">Grid search</option></select></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" id="step4" aria-labelledby="h4s" aria-disabled="true">
+    <h2 id="h4s" tabindex="-1"><span class="num">4</span>Run</h2>
+    <button id="runBtn" class="primary" disabled>Fit the model</button>
+    <div id="progressBox" class="hidden">
+      <label class="block" for="progress" id="progressLabel">Training</label>
+      <progress id="progress" max="100" value="0"></progress>
+      <p id="progressText" class="status" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <section class="step" id="step5" aria-labelledby="h5s" aria-disabled="true">
+    <h2 id="h5s" tabindex="-1"><span class="num">5</span>Read the result</h2>
+    <div id="result"></div>
+    <details class="full-only"><summary>Everything the run returned</summary><pre id="resultRaw" style="white-space: pre-wrap; font-size: .8rem;"></pre></details>
+    <h3>Apply the model to new rows</h3>
+    <form id="predictForm">
+      <label class="block" for="predictFile">A file with the same predictor columns</label>
+      <input type="file" id="predictFile" name="predictFile" accept=".csv,.xlsx,.xlsm,.parquet" disabled>
+      <button type="submit" id="predictBtn" disabled>Predict</button>
+    </form>
+    <p id="predictStatus" class="status" aria-live="polite"></p>
+  </section>
+</main>
+<footer>
+  <p>Every run writes a record with the file's SHA-256, the seed, the request, the estimator's parameters, the metrics, the data checks and the installed package versions. Download it from the result. Accessibility: this page is built to WCAG 2.2 AA; keyboard, VoiceOver and axe-core checks are listed in <code>docs/ACCESSIBILITY.md</code>.</p>
+</footer>
+<script>window.DIGITERRA_API_ROOT = {{ api_root|tojson }};</script>
+<script src="{{ static_root }}/js/guided.js"></script>
+</body>
+</html>
