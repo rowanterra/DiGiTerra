@@ -602,7 +602,8 @@ def test_the_example_path_runs_from_the_welcome_screen_to_a_prediction(live_sess
     assert pre.value.status == 200, pre.value.text()[:300]
     p.wait_for_timeout(900)
 
-    p.select_option("#simpleClassModels", "RF_classifier")
+    # The tutorial's model is chosen for the example once Modeling opens.
+    p.wait_for_function("document.getElementById('simpleClassModels').value === 'RF_classifier'", timeout=5000)
     p.wait_for_timeout(400)
     with p.expect_response(lambda r: r.url.endswith("/process"), timeout=180000) as run:
         p.click("#processButton", force=True)

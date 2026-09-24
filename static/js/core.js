@@ -1620,6 +1620,7 @@ const EXAMPLE_PREFILL = {
     specificVariableSelect: 'A',
     seedValue: '33',
     corrCols: 'C-F',
+    model: 'RF_classifier',
 };
 
 /* Set a value and tell the page, so a section that opens on change opens now. */
@@ -1654,6 +1655,27 @@ function applyExamplePrefill() {
     setExampleField('specificVariableSelect', EXAMPLE_PREFILL.specificVariableSelect);
 
     setExampleField('seedValue', EXAMPLE_PREFILL.seedValue);
+    prefillExampleModel();
+}
+
+/* Choose the tutorial's model once the Modeling view opens, so the example run is
+   one click from there. The view is revealed by a class change after preprocessing,
+   so the choice waits for that; it is made once, and only into an empty select, so a
+   person's own choice is never overwritten. */
+function prefillExampleModel() {
+    const host = document.getElementById('columnSelection');
+    const select = document.getElementById('simpleClassModels');
+    if (!host || !select) return;
+    const fill = () => {
+        if (host.classList.contains('hidden')) return false;
+        if (!select.value) setExampleField('simpleClassModels', EXAMPLE_PREFILL.model);
+        return true;
+    };
+    if (fill()) return;
+    const watch = new MutationObserver(() => {
+        if (fill()) watch.disconnect();
+    });
+    watch.observe(host, { attributes: true, attributeFilter: ['class'] });
 }
 
 /* Load an example through the ordinary upload, so it meets the same parse, the same

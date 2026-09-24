@@ -22,6 +22,9 @@ datas = [
     (os.path.join(_PROJECT_ROOT, "templates"), "templates"),
     (os.path.join(_PROJECT_ROOT, "static"), "static"),
     (os.path.join(_PROJECT_ROOT, "python_scripts"), "python_scripts"),
+    # The welcome screen's example and the inference page's example rows are served
+    # from this folder, so the built application has to carry it.
+    (os.path.join(_PROJECT_ROOT, "examples"), "examples"),
 ]
 
 block_cipher = None
