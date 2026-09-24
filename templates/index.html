@@ -245,12 +245,12 @@
                     <p class="doc-note">Stratify is set to Yes on column A. The classes are uneven, at 152, 124 and 68, and a stratified split holds those proportions in the training rows and the test rows, so the smallest class is not left out of one of them. Quantiles and bins are not offered, because they cut a continuous column into groups and the species column is text. The seed reads 33.</p>
 
                     <h4>6. Train the model</h4>
-                    <p class="doc-step">Click <strong>Continue to Modeling</strong> at the foot of the page.</p>
+                    <p class="doc-step">Click <strong>Continue to Modeling</strong> at the foot of the rail.</p>
                     <p class="doc-step">Click <strong>Random Forest Classifier</strong> in the Models panel. Click <strong>Run This Model</strong>.</p>
                     <p class="doc-note">The strip at the top moves to Run and then to Results. The result gives an accuracy near 0.99 on the test rows, a confusion matrix over the three species, and a comparison with the baseline. The baseline predicts Adelie every time and reaches about 0.44, so the model earns its place. The exact numbers move with the seed.</p>
 
                     <h4>7. Predict on new rows</h4>
-                    <p class="doc-step">Click <strong>Continue to Inference on New Data</strong> in the results panel.</p>
+                    <p class="doc-step">Click <strong>Continue to Inference on New Data</strong> at the foot of the rail, once a run has finished.</p>
                     <p class="doc-step">Click <strong>Use the Example Rows</strong>.</p>
                     <p class="doc-note">DiGiTerra scores <code>examples/penguins_new.csv</code>, 22 rows drawn from the three species with no blanks. One predicted species comes back for each row, and a line under the summary says how many match the species each row was drawn from. The rows are synthetic, so the count is a check on the run rather than a score.</p>
                     <p class="doc-note">Two more lines say how much to trust the predictions. One reports how many rows score as unlike the training data and how many hold a value outside the training range; the other reports the lowest class probability. The results file carries <code>novelty_score</code>, <code>novel_row</code> and <code>out_of_range_columns</code> for every row, and one probability column per class. The next section explains them.</p>

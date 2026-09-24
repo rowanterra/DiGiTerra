@@ -202,6 +202,52 @@ function narrativeMoveNav() {
     // loaded, and with no data there is no rail to put them in.
     // The bar keeps its node so core.js can still address it; empty, it draws nothing.
     bar.classList.add('is-retired');
+
+    // The forward step lives at the foot of the rail, under the entry it leaves.
+    const next = document.createElement('button');
+    next.type = 'button';
+    next.id = 'narrativeNext';
+    next.className = 'success-button narrative-next hidden';
+    next.addEventListener('click', () => {
+        const source = narrativeNextSource();
+        if (source && !source.disabled) source.click();
+    });
+    nav.appendChild(next);
+}
+
+// The in-page button that carries each view forward. The rail's forward button is
+// a proxy for it: same label, same enabled state, same click. The page keeps its
+// own button as the thing that holds the behaviour; the rail only repeats it.
+const NEXT_SOURCE = {
+    processing: 'continueToPreprocessButton',
+    'model-preprocessing': 'continueToModelingButton',
+    modeling: 'continueToInferenceButton',
+};
+
+function narrativeNextSource() {
+    const active = document.querySelector('#narrativeNav .tab-button.active');
+    const id = active ? NEXT_SOURCE[active.dataset.tab] : null;
+    const source = id ? document.getElementById(id) : null;
+    // A source inside a hidden panel is not on offer, so neither is the proxy.
+    return source && !source.closest('.hidden') ? source : null;
+}
+
+/** Repeat the current view's forward button in the rail, or hide the proxy. */
+function narrativeRefreshNext() {
+    const next = document.getElementById('narrativeNext');
+    if (!next) return;
+    const source = narrativeNextSource();
+    const show = Boolean(source);
+    if (next.classList.contains('hidden') === show) next.classList.toggle('hidden', !show);
+    if (!source) return;
+    const label = source.textContent.trim();
+    if (next.textContent !== label) next.textContent = label;
+    if (next.disabled !== source.disabled) next.disabled = source.disabled;
+    const title = source.getAttribute('title') || '';
+    if ((next.getAttribute('title') || '') !== title) {
+        if (title) next.setAttribute('title', title);
+        else next.removeAttribute('title');
+    }
 }
 
 /**
@@ -437,6 +483,7 @@ function narrativeSync() {
     narrativeApplyLayout();
     narrativeApplyCatalogVisibility();
     narrativeGateNav();
+    narrativeRefreshNext();
     narrativeRefreshData();
     narrativeRefreshApps();
 }
@@ -515,6 +562,19 @@ document.addEventListener('DOMContentLoaded', () => {
         nav.querySelectorAll('.tab-button[data-tab]').forEach((btn) =>
             watch.observe(btn, { attributes: true, attributeFilter: ['class'] })
         );
+    }
+
+    // The forward buttons change without navigation: Continue to Modeling is
+    // enabled once a task type is chosen, and Continue to Inference is created when
+    // a run finishes. Watching the views for those changes keeps the proxy honest.
+    const views = document.getElementById('narrativeViews');
+    if (views) {
+        new MutationObserver(narrativeRefreshNext).observe(views, {
+            subtree: true,
+            childList: true,
+            attributes: true,
+            attributeFilter: ['disabled', 'class'],
+        });
     }
 
     // The Modeling view is revealed by a class change rather than by navigation.

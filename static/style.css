@@ -3249,6 +3249,28 @@ body.dark-mode .documentation .doc-warning-content p {
     opacity: 0.55;
     cursor: not-allowed;
 }
+/* The forward step, at the foot of the rail. It repeats the current view's own
+   continue button, which the rail hides so the step is offered in one place. */
+.narrative-nav .narrative-next {
+    width: 100%;
+    margin-top: 8px;
+    padding: 8px 28px 8px 10px;
+    text-align: left;
+    font-size: 0.9em;
+    font-weight: 600;
+}
+.narrative-nav .narrative-next.hidden {
+    display: none;
+}
+.narrative-nav .narrative-next:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+.narrative-views #continueToPreprocessButton,
+.narrative-views #continueToModelingButton,
+.narrative-views #continueToInferenceButton {
+    display: none;
+}
 .narrative-nav-aside {
     margin-top: 6px;
     padding-top: 6px;

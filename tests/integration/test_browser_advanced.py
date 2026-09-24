@@ -145,7 +145,7 @@ class Session:
         p.fill("#indicators", indicators)
         p.fill("#predictors", predictors)
         with p.expect_response(lambda r: r.url.endswith("/preprocess")) as pre:
-            p.click("#continueToModelingButton", force=True)
+            p.click("#narrativeNext")
         assert pre.value.status == 200, f"preprocess failed: {pre.value.status} {pre.value.text()[:300]}"
         p.wait_for_timeout(500)
 
@@ -443,6 +443,36 @@ def test_the_rail_carries_a_run_from_a_cold_load(live_session):
     assert s.visible("predictionDiv") == "visible"
 
 
+def test_the_rail_carries_the_forward_step(session):
+    """The continue button of each view is offered at the foot of the rail, with the
+    view's own label and enabled state, and the in-page original is hidden."""
+    session.upload_and_preprocess("iris.csv", "Classification", "A-D", "E")
+    p = session.page
+
+    _rail_entry(session, "processing").click()
+    p.wait_for_timeout(350)
+    assert p.text_content("#narrativeNext").strip() == "Continue to Model Preprocessing"
+    assert p.is_visible("#narrativeNext")
+    assert not p.is_visible("#continueToPreprocessButton")
+    p.click("#narrativeNext")
+    p.wait_for_timeout(350)
+    assert session.visible(VIEW_OF_TAB["model-preprocessing"]) == "visible"
+    assert p.text_content("#narrativeNext").strip() == "Continue to Modeling"
+
+    # The proxy follows the original's enabled state without a page change.
+    p.evaluate("() => { document.getElementById('continueToModelingButton').disabled = true; }")
+    p.wait_for_timeout(200)
+    assert p.is_disabled("#narrativeNext")
+    p.evaluate("() => { document.getElementById('continueToModelingButton').disabled = false; }")
+    p.wait_for_timeout(200)
+    assert p.is_enabled("#narrativeNext")
+
+    _rail_entry(session, "historic").click()
+    p.wait_for_timeout(350)
+    assert p.is_hidden("#narrativeNext"), "the last page has no forward step in the rail"
+    assert not session.errors, session.errors
+
+
 def test_the_catalog_count_does_not_change_with_the_page(session):
     """The chip followed whichever select was visible, so it read 23 on Modeling and
     31 on Documentation in one session. It now follows the recorded task."""
@@ -568,7 +598,7 @@ def test_the_example_path_runs_from_the_welcome_screen_to_a_prediction(live_sess
     p.evaluate("() => { if (window.showTab) showTab('model-preprocessing'); }")
     p.wait_for_timeout(1200)
     with p.expect_response(lambda r: r.url.endswith("/preprocess")) as pre:
-        p.click("#continueToModelingButton", force=True)
+        p.click("#narrativeNext")
     assert pre.value.status == 200, pre.value.text()[:300]
     p.wait_for_timeout(900)
 
@@ -579,11 +609,18 @@ def test_the_example_path_runs_from_the_welcome_screen_to_a_prediction(live_sess
     assert run.value.status in (200, 202), run.value.text()[:300]
     p.wait_for_selector('#narrativeFlow .narrative-step[data-step="results"].is-current', timeout=300000)
 
-    # The way on appears only once there is a model to apply.
-    p.wait_for_selector("#continueToInferenceButton", timeout=30000)
-    p.click("#continueToInferenceButton")
+    # The way on appears only once there is a model to apply. The page's own button
+    # is hidden; the rail repeats it as the one forward step, with the same label.
+    p.wait_for_selector("#continueToInferenceButton", state="attached", timeout=30000)
+    p.wait_for_function(
+        "document.getElementById('narrativeNext').textContent === 'Continue to Inference on New Data'"
+    )
+    assert p.is_visible("#narrativeNext")
+    assert not p.is_visible("#continueToInferenceButton")
+    p.click("#narrativeNext")
     p.wait_for_timeout(700)
     assert s.visible("predictionDiv") == "visible"
+    assert p.is_hidden("#narrativeNext"), "no forward step from the last page"
 
     with p.expect_response(lambda r: r.url.endswith("/predict"), timeout=180000) as pred:
         p.click("#usePenguinRowsButton")
