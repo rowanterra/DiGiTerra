@@ -130,3 +130,25 @@ outputs/exp_linux.json, exp_linux2.json, exp_mac.json, exp_mac2.json,
 exp_mac_source_default.json, exp_mac_source_off.json, experiment_2026-09-25.txt
 The Mac scripts, build logs, prediction files and the two source-built
 environments stay in DiGiTerra/tree_probe_2026-09-25.
+
+Decision, 2026-09-25
+The custom build under "Not done" is rejected. The reproducibility standard is
+conformance to the official scikit-learn on the machine that runs DiGiTerra. A
+DiGiTerra run gives exactly what scikit-learn 1.9.0 gives when called directly on
+the same machine with the same versions, data and seed. scikit-learn itself
+promises that an integer random_state "will produce the same results across
+different calls" (glossary, random_state) and makes no statement about other
+machines, and its official x86_64 and arm64 builds give the two results recorded
+here. A Mac app built with -ffp-contract=off would reproduce the Linux numbers and
+stop matching what scikit-learn gives on the same Mac. The scikit-learn defaults
+also stay (finding 8).
+
+Conformance evidence. Plain scikit-learn fits of RF, ExtraTrees and Bagging give
+the same trees as the DiGiTerra pipeline on Linux (exp_linux.json against
+linux.json) and on the Mac (exp_mac.json against mac.json).
+tests/unit/test_sklearn_conformance.py checks this on whatever machine runs the
+suite. For RF, ExtraTrees, Bagging and DecisionTree it captures the matrix and
+target the pipeline passes to fit, refits a clone with plain scikit-learn, and
+requires identical node arrays and predictions. 4 of 4 passed in the container.
+Results are compared between machines only with scripts/compare_roundtrip_records.py,
+which expects rounding differences and marks tree models as platform differences.

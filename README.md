@@ -107,7 +107,12 @@ and an Apple silicon Mac with the same data, seed and package versions
 (`docs/tree_platform_difference_2026-09-25`). The manifest records the operating system
 and processor type, `scripts/rerun_bundle.py` prints a note when either differs, and
 `scripts/compare_roundtrip_records.py` compares two round-trip records and marks tree
-models that differ between processor types.
+models that differ between processor types. The reproducibility standard is conformance
+to the official scikit-learn on the machine that runs DiGiTerra. A run gives exactly
+what scikit-learn gives when called directly on that machine with the same versions,
+data and seed. `tests/unit/test_sklearn_conformance.py` checks this for the tree models.
+DiGiTerra installs the unmodified scikit-learn release and does not rebuild it to make
+two processor types agree.
 
 ## Regression stability across seeds
 
