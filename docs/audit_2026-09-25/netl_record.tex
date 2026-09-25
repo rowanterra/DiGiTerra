@@ -1,0 +1,36 @@
+\newcommand{\DocFooter}{DiGiTerra 0.1.0 verification record for the EDX deployment, 2026-09-25}
+\input{common/preamble}
+\title{DiGiTerra 0.1.0: verification record, product comparison and deployment notes\\[4pt]\large Internal record for the NETL Energy Data eXchange deployment}
+\author{Rowan R. Terra, Terra Cognita LLC and Duquesne University}
+\date{25 September 2026}
+\begin{document}
+\maketitle
+
+\paragraph{TL;DR.} The copy of DiGiTerra hosted on EDX is the same code as the public release at commit \code{5192687} (tag \code{v0.1.0}), and this record is what has been checked about it. Ordinary least squares, k-nearest neighbors, logistic regression and descriptive statistics reproduce a scikit-learn script exactly and agree with R, Excel, Orange and AI Studio to better than $10^{-12}$ on every compared value except Orange's logistic probabilities on arm64 (up to $8\times10^{-3}$, cause inferred). The adversarial review of 2026-09-24 found 25 defects, three of them security findings in how a saved model was loaded, and 17 that changed a reported number; all are fixed and replayed by \code{scripts/adversarial\_check.py}, which is the pre-release gate. Against eleven alternatives, DiGiTerra's distinguishing rows are the run record (input hash, seed, package versions) and the signed artifact; its gaps are the blending rows (join, filter, formula columns, sampling), database sources and scripting. Every desktop alternative is free; the cloud alternatives bill by the hour and cannot run inside the laboratory network.
+
+\tableofcontents
+
+\input{common/sec_scope}
+
+\section{Deployment context}
+The National Energy Technology Laboratory hosts DiGiTerra on its internal Energy Data eXchange platform (EDX) as a laboratory-approved executable for staff who model geochemical and materials data without writing code. The Phase 2 application under which the application was accepted into the EDX Incubator (\code{docs/EDX\_Incubator\_Phase2\_Application\_Answers.pdf}) records the hosting terms, the initial user group with administrator and viewer roles, and the beta testers who held access to the repository before release. Two properties of the deployment bear on this record. The hosted copy and the public repository are one code base, so a run made inside the laboratory and a run made by an outside reviewer from the same commit carry the same manifest fields and can be compared line by line. And the hosted instance sits behind an institutional proxy that supplies the user identity, so the application implements no login of its own; the security findings in Section~\ref{sec:review} concern what a user can do with a file once inside, not the perimeter.
+
+The cloud alternatives in Sections~\ref{sec:interfaces} to \ref{sec:prices} (SageMaker Canvas, Azure Machine Learning, Vertex AI, DataRobot SaaS) run only in the vendor's cloud and are therefore not candidates for data that stays inside the laboratory network; they are compared for what they show a non-programmer, not as deployment options.
+
+\input{common/sec_e1}
+\input{common/sec_review}
+\input{common/sec_sweep}
+\input{common/sec_interfaces}
+\input{common/sec_coverage}
+\input{common/sec_prices}
+\input{common/sec_access}
+
+\section{Operating notes for the EDX copy}
+Before any release to EDX: run \code{MPLBACKEND=Agg python scripts/adversarial\_check.py --json docs/adversarial\_check\_<date>.json} and require 10 of 10; run the sweep and the round trip when the registry or the artifact code changes; rebuild the desktop bundle with \code{pyinstaller build/DiGiTerra.spec} and confirm that \code{Contents/Resources/examples} is present and that a model trains in the built app (the 2026-09-25 build, PyInstaller 6.22.3 on Python 3.13.1, exit 0, 402 MB, has not yet been launched). Keep the E1 folder unchanged as the reference set; a new differential run goes in a new folder with its own date. The Orange C2 attribution is the one open item and is closed by running \code{scripts/oracle.py} under Orange's bundled Python on an arm64 Mac.
+
+\input{common/sec_sources}
+
+\section*{Substitution list}
+No term was replaced for review; the wording of the audit sections is the wording of the repository records.
+
+\end{document}

@@ -1,0 +1,21 @@
+\newcommand{\DocFooter}{DiGiTerra 0.1.0, how it was checked and how it compares, 2026-09-25}
+\input{common/preamble}
+\title{How DiGiTerra was checked, and how it compares}
+\author{DiGiTerra project}
+\date{25 September 2026}
+\begin{document}
+\maketitle
+
+\paragraph{TL;DR.} DiGiTerra 0.1.0 gives the same numbers as a plain scikit-learn script, and R, Excel, Orange and Altair AI Studio give the same numbers too, on the regression, nearest-neighbor and descriptive-statistics cases that were run through all of them. A review that set out to break the application found 25 defects; every one is fixed and re-tested by one script. Beside eleven other no-code tools, DiGiTerra is the one that writes a run record with the input hash and the package versions and signs its saved models; it does not join tables, filter rows by formula or read databases, and the node-graph tools do. Every desktop tool compared is free; the cloud ones bill by the hour.
+
+\input{common/sec_scope}
+\input{common/sec_e1}
+\input{common/sec_review}
+\input{common/sec_sweep}
+\input{common/sec_interfaces}
+\input{common/sec_coverage}
+\input{common/sec_prices}
+\input{common/sec_access}
+\input{common/sec_sources}
+
+\end{document}

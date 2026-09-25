@@ -1,0 +1,32 @@
+% Shared preamble for the three DiGiTerra audit documents. Compile with xelatex.
+\documentclass[11pt,letterpaper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{fontspec}
+\setmainfont{Latin Modern Roman}
+\setsansfont{Latin Modern Sans}
+\setmonofont[Scale=0.9]{Latin Modern Mono}
+\usepackage{microtype}
+\usepackage{graphicx}
+\graphicspath{{figures/}{figures/screens/}}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{caption}
+\captionsetup{font=small,labelfont=bf,justification=raggedright,singlelinecheck=false}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+\usepackage{enumitem}
+\setlist{nosep}
+\usepackage{parskip}
+\setlength{\parskip}{6pt}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\rfoot{\small\thepage}
+\lfoot{\small\DocFooter}
+\renewcommand{\headrulewidth}{0pt}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\usepackage{url}\usepackage{seqsplit}\DeclareRobustCommand{\code}[1]{\texttt{\seqsplit{#1}}}
+\setlength{\emergencystretch}{2em}
+\newcommand{\shot}[3]{\begin{figure}[htbp]\centering\includegraphics[width=#2\textwidth,height=0.42\textheight,keepaspectratio]{#1}\caption{#3}\end{figure}}
+\setcounter{secnumdepth}{2}

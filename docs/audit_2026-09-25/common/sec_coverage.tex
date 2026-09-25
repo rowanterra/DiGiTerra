@@ -1,0 +1,70 @@
+\section{Capability coverage against the operator catalogues}
+\label{sec:coverage}
+
+AI Studio's operator reference is the most complete published catalogue among the products compared, so it is the yardstick here: every operator group in \code{docs.rapidminer.com/latest/studio/operators/} (read 2026-09-25) is mapped to what DiGiTerra 0.1.0 offers, and the other products are placed on the same rows from their documentation and the installed copies. Table~\ref{tab:coverage} is the map. \emph{Yes} means the capability is on the form or in the pipeline; \emph{part} means a subset; \emph{no} means absent; \emph{n/a} means the row does not apply to the product's purpose. The DiGiTerra column is read from the code; the other columns are read from documentation and one installed copy, so a \emph{no} there means not found on the pages and screens consulted, and a reader who knows a product better should treat such a cell as a claim to check rather than a verdict.
+
+{\small\setlength{\tabcolsep}{3pt}\begin{longtable}{@{}L{2.4cm}L{3.9cm}L{1.35cm}L{1.35cm}L{1.05cm}L{1.05cm}L{1.35cm}L{1.05cm}L{1.35cm}@{}}
+\caption{Capability rows from the AI Studio operator groups, with DiGiTerra and six other products. Columns: DiGiTerra (DG), AI Studio (AIS), Orange (Or), KNIME (KN), H2O Flow (H2O), JASP (JA), Weka (We). Sources: operator reference, product documentation and the installed copies of 2026-09-25; DiGiTerra from its guided page (\code{templates/guided.html}) and pipeline modules.}\label{tab:coverage}\\
+\toprule
+Group & Capability & DG & AIS & Or & KN & H2O & JA & We \\
+\midrule
+\endfirsthead
+\toprule
+Group & Capability & DG & AIS & Or & KN & H2O & JA & We \\
+\midrule
+\endhead
+Data access & Read CSV, Excel, Parquet & yes & yes & part & yes & part & part & part \\
+Data access & Read from a database or cloud store & no & yes & yes & yes & yes & yes & yes \\
+Data access & Repository or project store & no & yes & no & yes & no & no & no \\
+Blending, attributes & Select and rename columns & part & yes & yes & yes & yes & yes & yes \\
+Blending, attributes & Type conversion (nominal, numeric, date) & no & yes & yes & yes & part & part & part \\
+Blending, attributes & One-hot encoding & yes & yes & yes & yes & auto & no & yes \\
+Blending, attributes & Target encoding & no & yes & no & yes & yes & no & no \\
+Blending, attributes & Generate attributes by formula & no & yes & yes & yes & no & yes & yes \\
+Blending, attributes & Remove correlated or useless columns & part (data checks) & yes & no & yes & no & no & yes \\
+Blending, examples & Filter rows by condition & no & yes & yes & yes & no & yes & yes \\
+Blending, examples & Sampling (random, stratified, bootstrap) & no & yes & yes & yes & no & no & yes \\
+Blending, examples & Split data (random, stratified, time, group) & yes & part & yes & yes & part & part & part \\
+Blending, table & Join, append, pivot & no & yes & yes & yes & yes & no & no \\
+Cleansing & Missing values (mean, median, mode, drop) & yes & yes & yes & yes & auto & no & yes \\
+Cleansing & Normalize or scale (standard, min-max, robust, quantile) & yes & yes & yes & yes & part & no & yes \\
+Cleansing & Binning or discretization & no & yes & yes & yes & no & no & yes \\
+Cleansing & Duplicates & part (check) & yes & yes & yes & no & no & yes \\
+Cleansing & Outliers (IQR, z-score, isolation forest, LOF) & yes & yes (COF, LOF, distance, density) & yes & yes & no & no & yes \\
+Cleansing & PCA, ICA, SVD & no & yes & yes & yes & yes & yes & yes \\
+Modeling, predictive & Trees, forests, boosting & yes & yes & yes & yes & yes & yes & yes \\
+Modeling, predictive & Linear, ridge, lasso, elastic net & yes & part & yes & yes & yes & yes & yes \\
+Modeling, predictive & Logistic regression & yes & yes & yes & yes & yes & yes & yes \\
+Modeling, predictive & SVM & yes & yes & yes & yes & yes (PSVM) & yes & yes \\
+Modeling, predictive & Naive Bayes & yes & yes & yes & yes & yes & yes & yes \\
+Modeling, predictive & k-NN & yes & yes & yes & yes & no & yes & yes \\
+Modeling, predictive & Neural network (MLP) & yes & yes & yes & yes & yes & yes & yes \\
+Modeling, predictive & Discriminant analysis & yes & yes & no & yes & no & yes & yes \\
+Modeling, predictive & Rule induction & no & yes & yes & yes & yes (RuleFit) & no & yes \\
+Modeling, predictive & Gaussian process, Bayesian ridge, robust regressors & yes & part & no & part & no & no & part \\
+Modeling, predictive & Ensembles (bagging, AdaBoost, stacking, vote) & part & yes & yes & yes & yes (stacked) & yes & yes \\
+Modeling, segmentation & k-means, DBSCAN, agglomerative, GMM, spectral & yes (12) & yes (14) & yes & yes & yes (k-means) & yes (5) & yes \\
+Modeling & Associations (FP-growth, Apriori) & no & yes & yes & yes & no & no & yes \\
+Modeling & Time series forecasting & no & yes (32) & yes & yes & no & no & yes \\
+Modeling & Feature weights and selection & yes (k best, RFE, from model) & yes (17) & yes & yes & yes & no & yes \\
+Modeling, optimization & Hyperparameter search (grid, random) & yes & yes (grid, evolutionary, quadratic) & no & yes & yes & no & yes \\
+Modeling, optimization & Automatic feature engineering & no & yes & no & no & no & no & no \\
+Modeling & AutoML (model comparison) & yes (CV over seeds) & yes (Auto Model) & no & yes (AutoML ext.) & yes & no & yes (Auto-WEKA) \\
+Scoring & Apply model to new data & yes & yes & yes & yes & yes & yes & yes \\
+Scoring & Explain predictions (SHAP, permutation) & yes (SHAP) & yes & yes & yes & part & yes & no \\
+Scoring & Novelty or applicability of new rows & yes & no & no & no & no & no & no \\
+Scoring & Thresholds, cost-sensitive scoring & no & yes & no & yes & yes & no & yes \\
+Validation & Holdout metrics against a baseline & yes & part & part & part & part & part & yes (ZeroR) \\
+Validation & Cross-validation (k-fold, grouped, time) & yes & yes & yes & yes & yes & yes & yes \\
+Validation & Data checks before training (leakage, id columns, imbalance) & yes & part & no & part & no & no & part \\
+Validation & Learning curves, visual evaluation & part & yes & yes & yes & yes & yes & yes \\
+Utility & Scripting (Python, R) & no & yes & yes & yes & yes & yes (R) & no \\
+Utility & Loops, branches, macros & no & yes & no & yes & no & no & no \\
+Provenance & Input hash, seed, package versions in the run record & yes & no & no & no & part (seed) & no & part (seed) \\
+Provenance & Signed model artifact, allowlisted loading & yes & no & no & no & no & no & no \\
+\bottomrule
+\end{longtable}}
+
+The pattern is plain. DiGiTerra covers the modeling rows, the cleansing rows a single-table workflow needs, validation and provenance, and it is the only product in the table with a novelty score on new rows and a signed, allowlisted model artifact. It does not cover the blending rows: it reads one table and has no join, append, pivot, row filter, formula column, type conversion, sampling or binning. It has no database reader, no scripting node, no loop and no associations or time series family. Against AI Studio's 167 modeling operators it registers 67 scikit-learn estimators; the missing families are rule induction, the evolutionary and PSO variants of SVM and logistic regression, the H2O-backed deep learning, and the association and time-series operators.
+
+For a reader deciding whether DiGiTerra can replace one of the other products on a given task, the split is by workflow shape. A task that starts from one clean table and ends at a fitted, explained, reproducible model is inside DiGiTerra's scope, and on that path it carries checks and records the others lack. A task that needs joins, feature formulas, sampling, time series or a database source needs a blending tool first or a different product. The blending rows are the natural next scope for the application; the modeling rows are not where it is short.

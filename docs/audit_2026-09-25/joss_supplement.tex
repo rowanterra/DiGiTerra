@@ -1,0 +1,26 @@
+\newcommand{\DocFooter}{DiGiTerra 0.1.0, supplementary verification and comparison, 2026-09-25}
+\input{common/preamble}
+\title{DiGiTerra 0.1.0: verification records and a comparison with no-code and low-code alternatives\\[4pt]\large Supplementary material to the JOSS submission}
+\author{Rowan R. Terra \and Paige E. DiGirolamo \and Djuna M. Gulliver \and Nancy J. Trun}
+\date{25 September 2026}
+\begin{document}
+\maketitle
+
+\paragraph{TL;DR.} DiGiTerra reproduces a plain scikit-learn script to the last printed digit on ordinary least squares, k-nearest neighbors and multinomial logistic regression, and R, Excel, Orange and AI Studio agree with the same script to better than $10^{-12}$ on every value they were asked for; the one open cell is Orange's logistic probabilities on arm64, which differ by up to $8\times10^{-3}$ and are attributed, not yet established, to platform arithmetic under a loose solver tolerance. An adversarial review reproduced 25 defects (29 as itemized here), 17 of which changed a number a user would have read, and all are fixed under regression tests replayed by one script. Sixty-seven of 69 registered estimators train from an empty form and 66 of 67 round-trip through the signed bundle. Beside eleven alternatives, seven of them installed and driven on one machine, DiGiTerra is the one product whose run record carries the input hash and the package versions and whose model artifact is signed and loaded under an exact allowlist; it lacks the blending, database and scripting rows that the node-graph tools carry. Every desktop product compared is free of charge; the cloud products bill by the hour after a free tier.
+
+\tableofcontents
+
+\input{common/sec_scope}
+\input{common/sec_e1}
+\input{common/sec_review}
+\input{common/sec_sweep}
+\input{common/sec_interfaces}
+\input{common/sec_coverage}
+\input{common/sec_prices}
+\input{common/sec_access}
+\input{common/sec_sources}
+
+\section*{Substitution list}
+No term was replaced for review; the wording of the audit sections is the wording of the repository records.
+
+\end{document}
