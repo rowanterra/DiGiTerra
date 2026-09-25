@@ -1,0 +1,66 @@
+Tree-ensemble predictions on Linux x86_64 and macOS arm64, 2026-09-25
+
+Result
+The RF, ExtraTrees and Bagging regressors give different predictions on the two
+platforms because scikit-learn's compiled tree builder rounds two quantities
+differently on each machine. DiGiTerra's inputs and seeding are identical on both.
+Each difference starts at a node where the exact arithmetic gives a tie, so neither
+platform is wrong. Each platform repeats its own result exactly.
+
+Observation that started the test
+docs/artifact_roundtrip_2026-09-25c.json (Linux container, x86_64, Python 3.11.15)
+and docs/artifact_roundtrip_2026-09-25d.json (macOS arm64, Python 3.13.1), same
+commit, same versions of scikit-learn 1.9.0, numpy 1.26.4 and scipy 1.17.1. The
+first-eight predictions differ by at most 3.6 percent (Bagging), 1.8 percent
+(ExtraTrees) and 0.95 percent (RF). 22 other regressors differ by 4e-13 relative or
+less; 44 models are identical.
+
+Test
+scripts/tree_probe_2026-09-25.py trains the three models through
+run_model_training with the round-trip request (diabetes example, seed 42, test
+size 0.20). For every tree it records the tree seed, the bootstrap rows, a hash of
+the node arrays, the full node arrays and the training matrix the estimator saw.
+Controls: two runs on each platform, and DecisionTree, AdaBoost and
+gradient_boosting, which are identical across platforms in the records.
+
+Findings
+1. Each platform repeats itself. linux.json equals linux2.json; mac.json equals
+   mac2.json. The round-trip rerun in the container on 2026-09-25 also reproduced
+   record c exactly.
+2. The inputs are bitwise identical. Training matrix (353 x 10), targets, model
+   parameters, all 20 RF tree seeds, all RF and Bagging bootstrap row sets and all
+   Bagging feature sets are equal.
+3. The trees differ. RF: 15 of 20 trees. Bagging: 8 of 10. ExtraTrees: 6 of 100.
+4. First differing node, RF and Bagging (outputs/firstdiff_2026-09-25.txt): in 22
+   of 23 trees the two platforms split on different features, and the two splits
+   are an exact tie in rational arithmetic and send the same bootstrap rows left
+   and right. The splitter keeps a candidate only when its improvement is strictly
+   greater, so the last bits of the floating-point improvement decide the tie.
+5. First differing node, ExtraTrees and RF tree 8: a two-row node whose rows have
+   the same target. The impurity is 0 in exact arithmetic and is computed as a
+   rounding residue between -8.9e-16 and 8.9e-16. The builder makes a leaf when
+   the impurity is at most machine epsilon (2.2e-16). One platform gets a residue
+   below epsilon and makes a leaf; the other gets one above and splits.
+6. Effect (outputs/effect_2026-09-25.txt): no in-bag training row changes its
+   tree prediction. 180 out-of-bag RF rows and 33 Bagging rows do, because the
+   tied splits differ for rows the tree never saw. The record's first-eight rows
+   include rows outside each tree's sample, which is why their predictions differ.
+
+What this means for DiGiTerra
+The round-trip check compares a model with itself on one machine, and that claim
+holds on both platforms. Full-depth tree ensembles are not bitwise reproducible
+across CPU architectures. scripts/rerun_bundle.py reports package drift but not a
+platform change. A bundle trained on one architecture and rerun on another can
+therefore show changed metrics for RF, ExtraTrees or Bagging with no drift listed.
+The manifest already records platform.platform(). No code was changed.
+
+Files
+scripts/tree_probe_2026-09-25.py   probe, run on each platform from the repository root
+scripts/firstdiff.py               first differing node and the exact-tie test
+scripts/effect.py                  how many tree predictions differ
+outputs/linux.json, linux2.json    container runs (x86_64)
+outputs/mac.json, mac2.json        Mac runs (arm64), from Terminal
+outputs/firstdiff_2026-09-25.txt, outputs/effect_2026-09-25.txt
+The Mac node-array files (mac3_*_trees.npz, 4.7 MB) stay in
+DiGiTerra/tree_probe_2026-09-25 and are not committed. The Linux ones are written
+by running the probe with the prefix linux3 in the container.
