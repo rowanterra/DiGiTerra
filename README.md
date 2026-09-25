@@ -59,10 +59,10 @@ The `examples/` directory contains 10 CSV files: 4 classification (Iris, Penguin
 
 `scripts/train_every_model.py` trains every registered estimator on the matching example
 dataset through the same function the `/process` route calls, with the defaults an empty
-hyperparameter form sends. `docs/every_model_sweep_2026-09-25.json` is the record of the
-run on 2026-09-25 at commit 15fe96c with scikit-learn 1.9.0: 67 of 69 registry entries
+hyperparameter form sends. `docs/every_model_sweep_2026-09-25b.json` is the record of the
+run on 2026-09-25 at commit 0b0ae6e with scikit-learn 1.9.0: 67 of 69 registry entries
 trained and 2 (Polynomial, Perceptron) are registered without a trainer and were skipped
-(the 2026-09-24 and 2026-09-03 records are kept beside it). `docs/artifact_roundtrip_2026-09-25.json`
+(the earlier records of 2026-09-25, 2026-09-24 and 2026-09-03 are kept beside it). `docs/artifact_roundtrip_2026-09-25b.json`
 is the matching bundle round-trip record: for 66 of 67 estimators the predictions for the
 first eight rows were equal before and after the round trip, and birch is unsupported.
 `docs/differential_test_E1/` is a black-box comparison of the same rows, settings and
@@ -72,7 +72,7 @@ its `RESULT_2026-09-24_partial.txt` names the three defects it found and their f
 (a crafted artifact, path traversal, a foreign session, formula cells, a CSV with markup in its
 headers through both pages, cleared fields, a model-change race, Escape on a focused
 tooltip, figures in a 720 px window, and the review's pipeline tests) and prints one line
-per probe; `docs/adversarial_check_2026-09-25b.json` is its record at commit 15fe96c, 10 of 10. Run it before
+per probe; `docs/adversarial_check_2026-09-25c.json` is its record at commit 0b0ae6e, 10 of 10. Run it before
 a release and after any change to the routes, the pipeline or the two pages.
 `tests/integration/test_browser_advanced.py` drives the page in Chromium through Playwright
 and checks that values typed into Advanced-mode controls reach the training request; the
