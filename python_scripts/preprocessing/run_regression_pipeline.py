@@ -12,6 +12,7 @@ import pandas as pd
 from matplotlib.backends.backend_pdf import PdfPages
 
 from python_scripts.config import VIS_DIR
+from python_scripts.estimator_params import apply_estimator_params
 from python_scripts.plotting.bundles import export_plots
 from python_scripts.plotting.plot_predictor_spread import write_training_spread
 from python_scripts.plotting.plot_shap_summary_graphic import plot_shap_summary
@@ -66,6 +67,8 @@ def run_regression(
     modeling_mode="simple",
     **kwargs,
 ) -> dict[str, Any]:
+    # Parameters typed on the guided page, by their scikit-learn names.
+    model = apply_estimator_params(model)
     # A record must never outlive the run that made it. Both are cleared at the top of
     # the run, so a task that writes neither leaves nothing behind for the caller to
     # read: a classification run following a regression one in the same thread used

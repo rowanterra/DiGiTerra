@@ -1,11 +1,15 @@
 """Score new rows with a DiGiTerra model bundle, without the web app.
 
-The bundle's fitted objects are unpickled. The signature is checked under this
-installation's key (DIGITERRA_BUNDLE_KEY or the key file in the app support
-directory); --trust-unsigned skips that check and is for a file whose origin you
-have verified another way. The script applies the training-time preprocessing recorded in
-the manifest (drop or fill rules, transformer, scaler, feature order) and writes
-one Predicted_<target> column per target.
+The bundle's fitted objects are loaded from the skops artifact under the type
+allowlist. The signature is checked under this
+installation's key (DIGITERRA_BUNDLE_KEY, or the key file in the application
+support directory, which DIGITERRA_APP_SUPPORT_DIR can point elsewhere);
+--trust-unsigned skips that check and is for a file whose origin has been verified
+another way. The script applies the training-time preprocessing recorded in the
+manifest (drop or fill rules, transformer, scaler, feature order) and writes the
+same columns as the web app: one Predicted_<target> column per target, the class
+probabilities or the 90 percent interval, novelty_score, novel_row and
+out_of_range_columns.
 
 Usage:
     .venv/bin/python scripts/score_bundle.py BUNDLE.zip NEW_ROWS.csv [--out predictions.csv] [--trust-unsigned]
@@ -23,8 +27,10 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+# Only the output goes to a temporary directory. The application support directory
+# stays the installation's own, so the signing key file there is found; a temporary
+# support directory held no key and every bundle was refused.
 _sup = Path(tempfile.mkdtemp(prefix="dgt_score_"))
-os.environ.setdefault("DIGITERRA_APP_SUPPORT_DIR", str(_sup))
 os.environ.setdefault("DIGITERRA_OUTPUT_DIR", str(_sup / "vis"))
 os.environ.setdefault("MPLBACKEND", "Agg")
 sys.path.insert(0, str(ROOT))
@@ -85,6 +91,9 @@ def score(bundle_path: str, rows_path: str, trust_unsigned: bool = False) -> pd.
         y_scaler=objects.get("y_scaler"),
         feature_order=list(objects["feature_order"]),
         target_names=targets,
+        applicability=objects.get("applicability"),
+        conformal=objects.get("conformal"),
+        model_type=objects.get("model_type"),
     )
     return pd.read_csv(out_dir / "predictions.csv")
 

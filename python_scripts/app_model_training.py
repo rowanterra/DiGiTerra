@@ -15,6 +15,7 @@ from core import constants as _constants
 from core.constants import MAX_CV_FOLDS, MAX_SEARCH_CV_FOLDS, MAX_SEARCH_ITERATIONS, MAX_TEST_SIZE, MIN_TEST_SIZE
 from core.state import MemoryBudgetExceeded, admit_model, discard_model
 from python_scripts import config as _config
+from python_scripts.estimator_params import reset_estimator_params, set_estimator_params
 from python_scripts.helpers import (
     preprocess_data,
     run_cross_validation,
@@ -297,6 +298,9 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
                 )
             modelName = "RF" if task_type == "Numeric" else "RF_classifier"
         nonreq = data["nonreq"]
+        estimator_params = data.get("estimatorParams") or {}
+        if not isinstance(estimator_params, dict):
+            raise ValueError("estimatorParams must be an object of parameter names and values.")
         scaler = data["scaler"]
         units = data["units"]
         # A cleared field arrives as "", null or 0 depending on the form; 0 decimal
@@ -621,6 +625,7 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
                     train_fn, problem_type = MODEL_REGISTRY[modelName]
                     hyperparameters = {}
                     nonreq = False
+                    estimator_params = {}
                 model_comparison = {
                     k: v for k, v in model_comparison.items() if k in ("chosen", "summary", "note", "seeds", "folds")
                 }
@@ -654,30 +659,36 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
             if problem_type == "regression":
                 base["y_scaler_type"] = scaler
             kwargs = get_model_kwargs(modelName, hyperparameters, nonreq, seed)
-            if problem_type == "cluster":
-                base_c = dict(
-                    train_data=df,
-                    X=df[indicator_names],
-                    units=units,
-                    X_scaler_type=scaler,
-                    seed=seed,
-                    quantileBinDict=quantileBinDict,
-                    sigfig=sigfig,
-                    useTransformer=useTransformer,
-                    categorical_cols=transformer_names,
-                    test_size=testSize,
-                    k_min=2,
-                    k_max=8,
-                    outlier_method=outlier_method,
-                    outlier_action=outlier_action,
-                    progress_tracker=tracker,
-                    modeling_mode=modeling_mode,
-                )
-                result = train_fn(**base_c, **kwargs)
-            elif problem_type == "regression":
-                result = train_fn(modelName, **base, **kwargs)
-            else:
-                result = train_fn(**base, **kwargs)
+            # The guided page sends parameters by their scikit-learn names; the
+            # pipelines set them on the estimator the trainer built.
+            params_token = set_estimator_params(estimator_params)
+            try:
+                if problem_type == "cluster":
+                    base_c = dict(
+                        train_data=df,
+                        X=df[indicator_names],
+                        units=units,
+                        X_scaler_type=scaler,
+                        seed=seed,
+                        quantileBinDict=quantileBinDict,
+                        sigfig=sigfig,
+                        useTransformer=useTransformer,
+                        categorical_cols=transformer_names,
+                        test_size=testSize,
+                        k_min=2,
+                        k_max=8,
+                        outlier_method=outlier_method,
+                        outlier_action=outlier_action,
+                        progress_tracker=tracker,
+                        modeling_mode=modeling_mode,
+                    )
+                    result = train_fn(**base_c, **kwargs)
+                elif problem_type == "regression":
+                    result = train_fn(modelName, **base, **kwargs)
+                else:
+                    result = train_fn(**base, **kwargs)
+            finally:
+                reset_estimator_params(params_token)
             # Pipelines append a baseline comparison as their last element.
             baseline_info = result[11] if problem_type != "cluster" and len(result) > 11 else None
             if problem_type == "classification":

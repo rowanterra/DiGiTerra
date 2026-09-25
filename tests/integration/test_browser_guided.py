@@ -141,6 +141,54 @@ def test_full_run_and_typed_hyperparameter_reaches_the_estimator(server, page):
     assert page.evaluate("document.getElementById('file').labels[0].textContent.trim()") == "CSV, Excel or Parquet file"
 
 
+def _manifest(page, server):
+    """The manifest of the session's last run, from the bundle the result links."""
+    import io
+    import json
+    import zipfile
+
+    r = page.request.get(server + "/export-bundle")
+    assert r.status == 200
+    return json.loads(zipfile.ZipFile(io.BytesIO(r.body())).read("manifest.json"))
+
+
+def test_text_predictors_reach_the_model(server, page):
+    """penguins.csv in Guided mode: island and sex are text and were dropped before 2026-09-25."""
+    page.goto(server + "/guided")
+    page.check("input[name=mode][value=guided]")
+    page.set_input_files("#file", os.path.join(ROOT, "examples", "penguins.csv"))
+    page.click("#uploadForm button[type=submit]")
+    page.wait_for_function("document.getElementById('uploadStatus').textContent.includes('rows')", timeout=30000)
+    page.select_option("#target", label="species (text)")
+    page.click("nav.steps button[data-step='3']")
+    page.wait_for_function("document.getElementById('model').value !== ''", timeout=10000)
+    page.click("#runBtn")
+    page.wait_for_function("document.getElementById('result').textContent.includes('Accuracy')", timeout=180000)
+    m = _manifest(page, server)
+    assert {"island", "sex"} <= set(m["model"]["features"])
+    assert m["request"]["useTransformer"] == "Yes"
+
+
+def test_typed_value_reaches_a_model_with_its_own_trainer_names(server, page):
+    """Ridge on diabetes in Full mode: alpha typed as 10 is the fitted alpha."""
+    page.goto(server + "/guided")
+    page.check("input[name=mode][value=full]")
+    page.set_input_files("#file", os.path.join(ROOT, "examples", "diabetes.csv"))
+    page.click("#uploadForm button[type=submit]")
+    page.wait_for_function("document.getElementById('uploadStatus').textContent.includes('rows')", timeout=30000)
+    page.click("nav.steps button[data-step='3']")
+    page.check("input[name=task][value=regression]")
+    page.select_option("#model", "Ridge")
+    page.wait_for_selector("#hp_alpha", timeout=10000)
+    page.fill("#hp_alpha", "10")
+    page.dispatch_event("#hp_alpha", "change")
+    page.click("#runBtn")
+    page.wait_for_function("document.getElementById('result').textContent.length > 50", timeout=180000)
+    m = _manifest(page, server)
+    assert m["model"]["estimator"] == "Ridge" and m["model"]["params"]["alpha"] == 10
+    assert m["request"]["estimatorParams"] == {"alpha": 10}
+
+
 def test_no_step_needs_scrolling(server, page):
     """Every step, in both modes, at three common laptop viewports, fits its window."""
     for w, h in VIEWPORTS:

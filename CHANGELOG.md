@@ -5,6 +5,16 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+Found while writing the guide of 2026-09-25 (`docs/digiterra_guide_2026-09-25.html`); regression tests in `tests/unit/test_fixes_2026_09_25.py` and `tests/integration/test_browser_guided.py`.
+
+- The guided page sent `useTransformer` "No", so the pipelines kept numeric predictors only and dropped text predictors without a message. On `penguins.csv` the model read four columns while the data-check line reported six predictors. The page now sends the text predictors to the transformer, which one-hot encodes them, and `model.features` in the manifest names all six.
+- `scripts/score_bundle.py` pointed the application support directory at a temporary one, so the installation's key file was not found and every bundle was refused unless `DIGITERRA_BUNDLE_KEY` was set. Only the output directory is temporary now. The test suite did not see the fault because `tests/conftest.py` sets `DIGITERRA_APP_SUPPORT_DIR` for every subprocess; the new test clears the variables and places the key where a user's installation keeps it.
+- `scripts/score_bundle.py` wrote the prediction and probability columns only. The script now passes the recorded novelty detector, conformal interval and model type to the same prediction function as the web app, and writes `novelty_score`, `novel_row`, `out_of_range_columns` and, for regression, `lower_90` and `upper_90`. Its output for `examples/penguins_new.csv` matched the web app's `predictions.csv` in every column.
+- The guided hyperparameter table was editable for 20 of 67 models, and for `Linear` the typed values did not reach the estimator. The page now sends the values by their scikit-learn names as `estimatorParams`, and the regression, classification and clustering pipelines set them on the estimator the trainer built (`python_scripts/estimator_params.py`, wrappers such as `MultiOutputRegressor` take them on the inner estimator). `/models` marks all 67 models editable and `/model-defaults/<name>` reads every model's parameters from its scikit-learn class. A name the estimator does not have stops the run with a message that names it.
+- `docs/documentation.md` names `DIGITERRA_CHROMIUM`, which the browser tests read, so `tests/unit/test_docs.py` passes.
+
 ## [0.1.0] - 2026-09-24
 
 ### Fixed

@@ -255,7 +255,7 @@
     return t;
   }
   $('model').addEventListener('change', async () => {
-    state.model = $('model').value; state.hyper = {};
+    state.model = $('model').value; state.hyper = {}; state.passthrough = false;
     $('runBtn').disabled = !state.model;
     const asked = state.model;
     try {
@@ -264,6 +264,7 @@
       const tb = $('hyperTable').querySelector('tbody'); tb.innerHTML = '';
       const family = MODEL_HELP[state.task] || '';
       if (!d.editable) { $('hyperNote').textContent = (d.note || '') + ' ' + family; $('hyperTable').classList.add('hidden'); return; }
+      state.passthrough = Boolean(d.passthrough);
       $('hyperNote').textContent = d.estimator + ' parameters, from scikit-learn. A blank value keeps the default. ' + family;
       d.params.forEach((p) => {
         const tr = document.createElement('tr');
@@ -294,15 +295,21 @@
     const full = document.body.dataset.mode === 'full';
     const missing = full ? $('dropMissing').value : 'none';
     const zeros = full ? $('zeroHandle').value : 'none';
+    // Text predictors go to the transformer, which one-hot encodes them; without
+    // this the pipelines keep numeric columns only and drop text ones silently.
+    const textCols = state.predictors.filter((i) => { const t = state.types.find((c) => c.index === i); return t && !t.numeric; });
     const req = {
       indicators: state.predictors, predictors: state.task === 'cluster' ? [] : [state.target], models: state.model,
-      hyperparameters: full ? state.hyper : {}, nonreq: full && Object.keys(state.hyper).length > 0,
+      // The pass-through classifiers read the typed values through their trainers;
+      // every model also takes them by scikit-learn name, set on the built estimator.
+      hyperparameters: full && state.passthrough ? state.hyper : {}, nonreq: full && state.passthrough && Object.keys(state.hyper).length > 0,
+      estimatorParams: full ? state.hyper : {},
       scaler: full ? $('scaler').value : 'none', units: '', sigfig: full ? numOrNull($('sigfig').value) : 3,
       seedValue: full ? numOrNull($('seed').value) : 42, testSize: full ? String($('testSize').value) : '0.20',
       stratifyBool: full && $('stratify').value !== '',
       dropMissing: 'indicatorAndTarget', imputeStrategy: missing === 'none' ? 'none' : missing,
       dropZero: zeros === 'none' ? 'none' : 'indicatorAndTarget', zeroHandle: zeros === 'none' ? 'none' : (zeros === 'drop' ? 'drop' : zeros),
-      quantileBinDict: { quantile: 0, bin: 0, binsLabel: '' }, useTransformer: 'No', transformerCols: [],
+      quantileBinDict: { quantile: 0, bin: 0, binsLabel: '' }, useTransformer: textCols.length ? 'Yes' : 'No', transformerCols: textCols,
       filename: ($('file').files[0] || {}).name || 'upload', modelingMode: full ? 'advanced' : 'simple',
       crossValidationType: full ? $('cvType').value : 'None', crossValidationFolds: full ? numOrNull($('cvFolds').value) : 5,
       hyperparameterSearch: full ? $('search').value : 'none',
