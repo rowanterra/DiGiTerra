@@ -1,12 +1,12 @@
-\newcommand{\DocFooter}{DiGiTerra 0.1.0, how it was checked and how it compares, 2026-09-25}
+\newcommand{\DocFooter}{DiGiTerra 0.1.0 verification record and comparison, 2026-09-25}
 \input{common/preamble}
-\title{How DiGiTerra was checked, and how it compares}
+\title{DiGiTerra 0.1.0: Verification Record and Comparison with Other Tools}
 \author{DiGiTerra project}
 \date{25 September 2026}
 \begin{document}
 \maketitle
 
-\paragraph{TL;DR.} DiGiTerra 0.1.0 gives the same numbers as a plain scikit-learn script, and R, Excel, Orange and Altair AI Studio give the same numbers too, on the regression, nearest-neighbor and descriptive-statistics cases that were run through all of them. A review that set out to break the application found 25 defects; every one is fixed and re-tested by one script. Beside eleven other no-code tools, DiGiTerra is the one that writes a run record with the input hash and the package versions and signs its saved models; it does not join tables, filter rows by formula or read databases, and the node-graph tools do. Every desktop tool compared is free; the cloud ones bill by the hour.
+\paragraph{TL;DR.} On the regression, nearest-neighbor and descriptive-statistics cases run through every program, DiGiTerra 0.1.0 agreed with a plain scikit-learn script to the precision each program prints, and R, Excel, Orange and Altair AI Studio agreed with the same script within a relative difference of $10^{-6}$. A review that set out to break the application reproduced 25 defects, and each fix has a regression test. Among eleven other no-code tools, DiGiTerra is the one that writes a run record with the input hash and package versions and signs its saved models. DiGiTerra does not join tables, filter rows by formula or read databases, and the node-graph tools do. Every desktop tool compared is free, and the cloud tools bill by the hour.
 
 \input{common/sec_scope}
 \input{common/sec_e1}
