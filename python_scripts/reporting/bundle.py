@@ -315,7 +315,7 @@ def build_manifest(store: dict, request: dict, result: dict, problem_type: str, 
         "data_checks": result.get("data_checks"),
         "environment": {
             "packages": package_versions(),
-            "platform": platform.platform(),
+            **platform_record(),
         },
     }
     return _json_safe(manifest)
@@ -448,6 +448,16 @@ def render_model_card(manifest: dict) -> str:
         "other time periods. Predictions on rows outside the training ranges are extrapolations."
     )
 
+    reproduce = (
+        "Retraining with the same file, seed and package versions reproduces this run on the same type of "
+        "machine. The fitted model in the bundle predicts the same values on any machine."
+    )
+    if any(k in str(model.get("estimator") or "") for k in TREE_FAMILY):
+        reproduce += (
+            " This is a tree model: retraining on another processor type (x86_64 or arm64) can resolve "
+            "tied splits differently and change the metrics."
+        )
+
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -538,6 +548,7 @@ scikit-learn {html.escape(str(env.get("scikit-learn")))}, Python {html.escape(st
 {_rows(env.items())}
 <tr><th>Platform</th><td>{html.escape(str((m.get("environment") or {}).get("platform")))}</td></tr>
 </table>
+<p>{html.escape(reproduce)}</p>
 </main>
 </body>
 </html>
@@ -751,6 +762,76 @@ def load_bundle(bundle_path: str | Path, *, force: bool = False, trust_unsigned:
     except ArtifactError as e:
         raise BundleError(str(e)) from e
     return manifest, objects
+
+
+# ---------------------------------------------------------------------------
+# Platform. A tree grown to full depth meets exact ties: two candidate splits with
+# the same improvement, or a node whose zero impurity is computed as a rounding
+# residue near machine epsilon. scikit-learn's compiled splitter decides these by
+# the last bits of the arithmetic, which differ between processor types, so a
+# retrained RF, ExtraTrees or Bagging model can differ between an x86_64 and an
+# arm64 machine with the same data, seed and package versions. Each machine
+# repeats its own result. A fitted model read from a bundle is not retrained and
+# is not affected. docs/tree_platform_difference_2026-09-25 holds the evidence.
+
+_MACHINE_ALIASES = {"aarch64": "arm64", "amd64": "x86_64", "x64": "x86_64"}
+_SYSTEM_ALIASES = {"macos": "Darwin", "darwin": "Darwin", "linux": "Linux", "windows": "Windows"}
+TREE_FAMILY = ("Tree", "Forest", "Bagging", "Boost")
+
+
+def _norm_machine(value: str | None) -> str | None:
+    if not value:
+        return None
+    return _MACHINE_ALIASES.get(value.lower(), value.lower())
+
+
+def platform_record() -> dict[str, str]:
+    """The operating system and processor type of this run, and the full platform string."""
+    return {
+        "platform": platform.platform(),
+        "system": platform.system(),
+        "machine": _norm_machine(platform.machine()) or "",
+    }
+
+
+def _recorded_platform(manifest: dict) -> tuple[str | None, str | None]:
+    """System and machine from a manifest; bundles before 2026-09-25 carry only the platform string."""
+    env = manifest.get("environment") or {}
+    system, machine = env.get("system"), _norm_machine(env.get("machine"))
+    text = str(env.get("platform") or "")
+    if not system and text:
+        system = _SYSTEM_ALIASES.get(text.split("-", 1)[0].lower())
+    if not machine and text:
+        tokens = text.lower().split("-")
+        for t in ("arm64", "aarch64", "x86_64", "amd64"):
+            if t in tokens:
+                machine = _norm_machine(t)
+                break
+    return system or None, machine or None
+
+
+def platform_change(manifest: dict) -> str | None:
+    """A sentence naming the recorded and current platform when the system or processor differs, else None."""
+    system, machine = _recorded_platform(manifest)
+    now = platform_record()
+    changed = []
+    if system and system != now["system"]:
+        changed.append(f"system {system} to {now['system']}")
+    if machine and machine != now["machine"]:
+        changed.append(f"processor {machine} to {now['machine']}")
+    if not changed:
+        return None
+    estimator = str((manifest.get("model") or {}).get("estimator") or "")
+    note = "The bundle was trained on another platform (" + ", ".join(changed) + ")."
+    if any(k in estimator for k in TREE_FAMILY):
+        note += (
+            f" {estimator} is a tree model. Retraining a tree model on another processor type can resolve"
+            " tied splits differently, so rerun metrics can differ with the same data, seed and versions"
+            " (docs/tree_platform_difference_2026-09-25). The fitted model in the bundle predicts as recorded."
+        )
+    else:
+        note += " Rerun metrics can differ in the last digits."
+    return note
 
 
 def package_drift(manifest: dict) -> list[str]:

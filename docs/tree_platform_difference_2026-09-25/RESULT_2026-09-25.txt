@@ -64,3 +64,69 @@ outputs/firstdiff_2026-09-25.txt, outputs/effect_2026-09-25.txt
 The Mac node-array files (mac3_*_trees.npz, 4.7 MB) stay in
 DiGiTerra/tree_probe_2026-09-25 and are not committed. The Linux ones are written
 by running the probe with the prefix linux3 in the container.
+
+Follow-up, same day: cause, depth limits, saved models, and the code change
+The paragraph "What this means for DiGiTerra" above describes the state at commit
+f4d1805. The tests below were stated before they ran, and their output is in
+outputs/experiment_2026-09-25.txt.
+
+Test. scripts/platform_experiment_2026-09-25.py fits RF (20 trees), ExtraTrees
+(100) and Bagging (10) with seed 42 directly on the training matrix above, under
+five settings: scikit-learn defaults, min_samples_leaf 2 and 5, max_depth 10 and 5.
+It records every tree's hash and the predictions on 2,000 query rows, and writes or
+reads the three default models in DiGiTerra's artifact format. The default fits
+reproduce the pipeline's trees exactly on Linux (same hashes as linux.json), so the
+direct fits stand for the pipeline. Runs: Linux wheel twice; Mac wheel twice; Mac
+with scikit-learn 1.9.0 built from source with default compiler flags (control);
+Mac with the same source built with CFLAGS and CXXFLAGS -ffp-contract=off, which
+stops the compiler from fusing a multiply and an add into one instruction with a
+single rounding. Inference, confirmed by finding 7: the x86_64 wheel is compiled
+for a baseline without a fused multiply-add instruction, while clang on arm64
+contracts by default.
+
+7. Cause: fused multiply-add. The Mac build with -ffp-contract=off gives the same
+   trees and the same predictions as the Linux wheel in all 15 model and setting
+   pairs (every tree equal, 0 of 2,000 query rows changed). The control build with
+   default flags gives the same trees as the Mac wheel in all 15, and differs from
+   the -ffp-contract=off build exactly as the Mac wheel differs from Linux. Each
+   build repeats itself.
+8. Depth limits reduce the differences and do not remove them. Linux wheel against
+   Mac wheel, query rows changed of 2,000: RF 1,665 (default), 9 (min_samples_leaf
+   2), 115 (min_samples_leaf 5), 784 (max_depth 10), 0 (max_depth 5); ExtraTrees
+   1,872, 0, 0, 1,891, 715; Bagging 424, 35, 0, 86, 0. No single setting gives 0
+   for all three models, and larger leaves can differ where smaller ones do not
+   (RF 9 at leaf size 2, 115 at 5). The scikit-learn defaults stay.
+9. A saved model predicts the same everywhere. The three default models written on
+   Linux and read on the Mac give bitwise-identical predictions on all 2,000 rows.
+   Only retraining is affected.
+
+Code change after f4d1805
+- python_scripts/reporting/bundle.py: the manifest's environment records system and
+  machine as well as the platform string; platform_change() compares them with the
+  current machine (older bundles are read from the string) and returns a note,
+  which for a tree model names tied splits. The model card states that retraining
+  reproduces the run on the same type of machine, that the fitted model predicts
+  the same on any machine, and, for a tree model, that retraining on another
+  processor type can change the metrics.
+- scripts/rerun_bundle.py prints the note, adds platform_change to --json, and
+  repeats it under a metric mismatch.
+- scripts/check_artifact_roundtrip.py records python, system and machine.
+- scripts/compare_roundtrip_records.py classes each model in two round-trip records
+  as identical, rounding (relative difference at most 1e-9), "tree, platform", or
+  unexplained (exit code 1). Records c and d: 44 identical, 22 rounding, 3 tree,
+  platform, 0 unexplained.
+- tests/unit/test_platform_2026_09_25.py covers these. pytest tests/: 263 passed.
+
+Not done
+The desktop app still installs the standard scikit-learn wheel. Building it from
+source with -ffp-contract=off would make the Mac app retrain as the x86_64 builds
+do, at the cost of a nonstandard scikit-learn in the app. Other arm64 builds, such
+as Linux aarch64 wheels compiled with GCC, which also contracts by default, would
+still differ. That build was not tested on Linux aarch64.
+
+More files
+scripts/platform_experiment_2026-09-25.py, scripts/compare_experiment.py
+outputs/exp_linux.json, exp_linux2.json, exp_mac.json, exp_mac2.json,
+exp_mac_source_default.json, exp_mac_source_off.json, experiment_2026-09-25.txt
+The Mac scripts, build logs, prediction files and the two source-built
+environments stay in DiGiTerra/tree_probe_2026-09-25.

@@ -14,6 +14,7 @@ import argparse
 import hashlib
 import json
 import os
+import platform
 import sys
 import tempfile
 import traceback
@@ -37,7 +38,7 @@ from python_scripts.app_model_training import run_model_training  # noqa: E402
 from python_scripts.model_registry import _PASSTHROUGH_CLASSIFIERS, MODEL_REGISTRY  # noqa: E402
 from python_scripts.preprocessing.progress_tracker import get_result, remove_tracker  # noqa: E402
 from python_scripts.reporting import artifact  # noqa: E402
-from python_scripts.reporting.bundle import fitted_objects  # noqa: E402
+from python_scripts.reporting.bundle import fitted_objects, platform_record  # noqa: E402
 
 EXAMPLES = ROOT / "examples"
 DATASETS = {
@@ -268,7 +269,11 @@ def main() -> int:
                 "read back. They are compared exactly, not within a tolerance. Rerun one row with "
                 "'MPLBACKEND=Agg .venv/bin/python scripts/check_artifact_roundtrip.py --only <model>'."
             ),
-            "environment": {p: _version(p) for p in ("skops", "scikit-learn", "numpy", "pandas", "scipy", "joblib")},
+            "environment": {
+                **{p: _version(p) for p in ("skops", "scikit-learn", "numpy", "pandas", "scipy", "joblib")},
+                "python": platform.python_version(),
+                **platform_record(),
+            },
             "summary": {
                 "trained": len(rows) - len(untrainable),
                 "round_tripped": len(ok),

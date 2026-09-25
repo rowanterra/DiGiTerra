@@ -98,6 +98,17 @@ every registered estimator and compares its predictions before and after the rou
 import (`POST /import-bundle`) is on in the desktop build and off in the container unless
 `DIGITERRA_ALLOW_BUNDLE_IMPORT` is set.
 
+A fitted model read from a bundle predicts the same values on any machine. Retraining
+reproduces a run on the same type of processor. Tree models grown to full depth (random
+forest, extra trees, bagging) can resolve exact ties between splits differently on
+x86_64 and arm64, because the Apple silicon build of scikit-learn fuses multiplies and
+adds, so a retrained RF, ExtraTrees or Bagging model can differ between an Intel machine
+and an Apple silicon Mac with the same data, seed and package versions
+(`docs/tree_platform_difference_2026-09-25`). The manifest records the operating system
+and processor type, `scripts/rerun_bundle.py` prints a note when either differs, and
+`scripts/compare_roundtrip_records.py` compares two round-trip records and marks tree
+models that differ between processor types.
+
 ## Regression stability across seeds
 
 `python_scripts/preprocessing/evaluate_regression_robustness.py` repeats the train/test split and cross-validation over a range of seeds and records the spread:

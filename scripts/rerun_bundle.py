@@ -4,7 +4,10 @@ Given the bundle and the original data file, the script checks that the file's
 SHA-256 matches the manifest, replays the recorded request through
 run_model_training with the recorded seed, and prints the recorded and rerun
 metrics side by side. Metrics that differ beyond --tol are listed and the exit
-code is 1.
+code is 1. Installed package versions and the operating system and processor type
+are compared with the manifest, and a difference is printed as a note: a tree
+model retrained on another processor type can resolve tied splits differently
+(docs/tree_platform_difference_2026-09-25).
 
 Usage:
     MPLBACKEND=Agg .venv/bin/python scripts/rerun_bundle.py BUNDLE.zip DATA.csv [--tol 1e-6] [--json out.json]
@@ -30,7 +33,7 @@ warnings.filterwarnings("ignore")
 from core.helpers import read_table_bounded  # noqa: E402
 from python_scripts.app_model_training import run_model_training  # noqa: E402
 from python_scripts.preprocessing.progress_tracker import get_result, remove_tracker  # noqa: E402
-from python_scripts.reporting.bundle import package_drift, read_manifest, sha256_file  # noqa: E402
+from python_scripts.reporting.bundle import package_drift, platform_change, read_manifest, sha256_file  # noqa: E402
 
 
 def _num(v):
@@ -58,6 +61,9 @@ def main() -> int:
     drift = package_drift(manifest)
     if drift:
         print(f"note: installed versions differ from the bundle for {', '.join(drift)}", file=sys.stderr)
+    moved = platform_change(manifest)
+    if moved:
+        print(f"note: {moved}", file=sys.stderr)
 
     request = dict(manifest.get("request") or {})
     request["seedValue"] = (manifest.get("model") or {}).get("seed") or request.get("seedValue")
@@ -86,10 +92,20 @@ def main() -> int:
         print(f"{r['metric']:<{width}}  recorded {r['recorded']!s:>12}  rerun {r['rerun']!s:>12}  {flag}")
     if args.json:
         Path(args.json).write_text(
-            json.dumps({"hash_match": recorded_sha == actual_sha, "package_drift": drift, "rows": rows}, indent=2)
+            json.dumps(
+                {
+                    "hash_match": recorded_sha == actual_sha,
+                    "package_drift": drift,
+                    "platform_change": moved,
+                    "rows": rows,
+                },
+                indent=2,
+            )
         )
     if mismatches:
         print(f"{len(mismatches)} metric(s) differ: {', '.join(mismatches)}", file=sys.stderr)
+        if moved:
+            print("the platform changed since the recorded run; see the note above", file=sys.stderr)
         return 1
     print("all recorded metrics reproduced")
     return 0

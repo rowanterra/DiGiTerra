@@ -1,0 +1,117 @@
+platform_experiment_2026-09-25.py outputs compared with scripts/compare_experiment.py
+Linux: container, x86_64, scikit-learn 1.9.0 wheel. Mac: arm64, Python 3.13.1.
+Predictions are on 2,000 query rows; the target is standardized, so differences are in target standard deviations.
+
+== Linux wheel, run twice
+A x86_64 sklearn 1.9.0  B x86_64 sklearn 1.9.0  X same True  Q same True
+  RF default                       trees equal  20/ 20  query rows changed    0/2000  max abs 0  (target sd units)
+  RF min_samples_leaf=2            trees equal  20/ 20  query rows changed    0/2000  max abs 0  (target sd units)
+  RF min_samples_leaf=5            trees equal  20/ 20  query rows changed    0/2000  max abs 0  (target sd units)
+  RF max_depth=10                  trees equal  20/ 20  query rows changed    0/2000  max abs 0  (target sd units)
+  RF max_depth=5                   trees equal  20/ 20  query rows changed    0/2000  max abs 0  (target sd units)
+  ExtraTrees default               trees equal 100/100  query rows changed    0/2000  max abs 0  (target sd units)
+  ExtraTrees min_samples_leaf=2    trees equal 100/100  query rows changed    0/2000  max abs 0  (target sd units)
+  ExtraTrees min_samples_leaf=5    trees equal 100/100  query rows changed    0/2000  max abs 0  (target sd units)
+  ExtraTrees max_depth=10          trees equal 100/100  query rows changed    0/2000  max abs 0  (target sd units)
+  ExtraTrees max_depth=5           trees equal 100/100  query rows changed    0/2000  max abs 0  (target sd units)
+  Bagging default                  trees equal  10/ 10  query rows changed    0/2000  max abs 0  (target sd units)
+  Bagging min_samples_leaf=2       trees equal  10/ 10  query rows changed    0/2000  max abs 0  (target sd units)
+  Bagging min_samples_leaf=5       trees equal  10/ 10  query rows changed    0/2000  max abs 0  (target sd units)
+  Bagging max_depth=10             trees equal  10/ 10  query rows changed    0/2000  max abs 0  (target sd units)
+  Bagging max_depth=5              trees equal  10/ 10  query rows changed    0/2000  max abs 0  (target sd units)
+  artifact RF                      saved model, predictions changed 0/2000, max abs 0
+  artifact ExtraTrees              saved model, predictions changed 0/2000, max abs 0
+  artifact Bagging                 saved model, predictions changed 0/2000, max abs 0
+
+== Mac wheel, run twice
+A arm64 sklearn 1.9.0  B arm64 sklearn 1.9.0  X same True  Q same True
+  RF default                       trees equal  20/ 20  query rows changed    0/2000  max abs 0  (target sd units)
+  RF min_samples_leaf=2            trees equal  20/ 20  query rows changed    0/2000  max abs 0  (target sd units)
+  RF min_samples_leaf=5            trees equal  20/ 20  query rows changed    0/2000  max abs 0  (target sd units)
+  RF max_depth=10                  trees equal  20/ 20  query rows changed    0/2000  max abs 0  (target sd units)
+  RF max_depth=5                   trees equal  20/ 20  query rows changed    0/2000  max abs 0  (target sd units)
+  ExtraTrees default               trees equal 100/100  query rows changed    0/2000  max abs 0  (target sd units)
+  ExtraTrees min_samples_leaf=2    trees equal 100/100  query rows changed    0/2000  max abs 0  (target sd units)
+  ExtraTrees min_samples_leaf=5    trees equal 100/100  query rows changed    0/2000  max abs 0  (target sd units)
+  ExtraTrees max_depth=10          trees equal 100/100  query rows changed    0/2000  max abs 0  (target sd units)
+  ExtraTrees max_depth=5           trees equal 100/100  query rows changed    0/2000  max abs 0  (target sd units)
+  Bagging default                  trees equal  10/ 10  query rows changed    0/2000  max abs 0  (target sd units)
+  Bagging min_samples_leaf=2       trees equal  10/ 10  query rows changed    0/2000  max abs 0  (target sd units)
+  Bagging min_samples_leaf=5       trees equal  10/ 10  query rows changed    0/2000  max abs 0  (target sd units)
+  Bagging max_depth=10             trees equal  10/ 10  query rows changed    0/2000  max abs 0  (target sd units)
+  Bagging max_depth=5              trees equal  10/ 10  query rows changed    0/2000  max abs 0  (target sd units)
+
+== Linux wheel vs Mac wheel (artifact rows: models fitted and written on Linux, read and scored on the Mac)
+A x86_64 sklearn 1.9.0  B arm64 sklearn 1.9.0  X same True  Q same True
+  RF default                       trees equal   5/ 20  query rows changed 1665/2000  max abs 0.193  (target sd units)
+  RF min_samples_leaf=2            trees equal  19/ 20  query rows changed    9/2000  max abs 0.0154  (target sd units)
+  RF min_samples_leaf=5            trees equal  19/ 20  query rows changed  115/2000  max abs 0.03  (target sd units)
+  RF max_depth=10                  trees equal   8/ 20  query rows changed  784/2000  max abs 0.155  (target sd units)
+  RF max_depth=5                   trees equal  20/ 20  query rows changed    0/2000  max abs 0  (target sd units)
+  ExtraTrees default               trees equal  94/100  query rows changed 1872/2000  max abs 0.0659  (target sd units)
+  ExtraTrees min_samples_leaf=2    trees equal 100/100  query rows changed    0/2000  max abs 0  (target sd units)
+  ExtraTrees min_samples_leaf=5    trees equal 100/100  query rows changed    0/2000  max abs 0  (target sd units)
+  ExtraTrees max_depth=10          trees equal  92/100  query rows changed 1891/2000  max abs 0.0586  (target sd units)
+  ExtraTrees max_depth=5           trees equal  99/100  query rows changed  715/2000  max abs 0.0315  (target sd units)
+  Bagging default                  trees equal   2/ 10  query rows changed  424/2000  max abs 0.346  (target sd units)
+  Bagging min_samples_leaf=2       trees equal   7/ 10  query rows changed   35/2000  max abs 0.0929  (target sd units)
+  Bagging min_samples_leaf=5       trees equal  10/ 10  query rows changed    0/2000  max abs 0  (target sd units)
+  Bagging max_depth=10             trees equal   4/ 10  query rows changed   86/2000  max abs 0.309  (target sd units)
+  Bagging max_depth=5              trees equal  10/ 10  query rows changed    0/2000  max abs 0  (target sd units)
+  artifact RF                      saved model, predictions changed 0/2000, max abs 0
+  artifact ExtraTrees              saved model, predictions changed 0/2000, max abs 0
+  artifact Bagging                 saved model, predictions changed 0/2000, max abs 0
+
+== Mac wheel vs Mac source build, default flags (control)
+A arm64 sklearn 1.9.0  B arm64 sklearn 1.9.0  X same True  Q same True
+  RF default                       trees equal  20/ 20  query rows changed    0/2000  max abs 0  (target sd units)
+  RF min_samples_leaf=2            trees equal  20/ 20  query rows changed    0/2000  max abs 0  (target sd units)
+  RF min_samples_leaf=5            trees equal  20/ 20  query rows changed    0/2000  max abs 0  (target sd units)
+  RF max_depth=10                  trees equal  20/ 20  query rows changed    0/2000  max abs 0  (target sd units)
+  RF max_depth=5                   trees equal  20/ 20  query rows changed    0/2000  max abs 0  (target sd units)
+  ExtraTrees default               trees equal 100/100  query rows changed    0/2000  max abs 0  (target sd units)
+  ExtraTrees min_samples_leaf=2    trees equal 100/100  query rows changed    0/2000  max abs 0  (target sd units)
+  ExtraTrees min_samples_leaf=5    trees equal 100/100  query rows changed    0/2000  max abs 0  (target sd units)
+  ExtraTrees max_depth=10          trees equal 100/100  query rows changed    0/2000  max abs 0  (target sd units)
+  ExtraTrees max_depth=5           trees equal 100/100  query rows changed    0/2000  max abs 0  (target sd units)
+  Bagging default                  trees equal  10/ 10  query rows changed    0/2000  max abs 0  (target sd units)
+  Bagging min_samples_leaf=2       trees equal  10/ 10  query rows changed    0/2000  max abs 0  (target sd units)
+  Bagging min_samples_leaf=5       trees equal  10/ 10  query rows changed    0/2000  max abs 0  (target sd units)
+  Bagging max_depth=10             trees equal  10/ 10  query rows changed    0/2000  max abs 0  (target sd units)
+  Bagging max_depth=5              trees equal  10/ 10  query rows changed    0/2000  max abs 0  (target sd units)
+
+== Linux wheel vs Mac source build, -ffp-contract=off
+A x86_64 sklearn 1.9.0  B arm64 sklearn 1.9.0  X same True  Q same True
+  RF default                       trees equal  20/ 20  query rows changed    0/2000  max abs 0  (target sd units)
+  RF min_samples_leaf=2            trees equal  20/ 20  query rows changed    0/2000  max abs 0  (target sd units)
+  RF min_samples_leaf=5            trees equal  20/ 20  query rows changed    0/2000  max abs 0  (target sd units)
+  RF max_depth=10                  trees equal  20/ 20  query rows changed    0/2000  max abs 0  (target sd units)
+  RF max_depth=5                   trees equal  20/ 20  query rows changed    0/2000  max abs 0  (target sd units)
+  ExtraTrees default               trees equal 100/100  query rows changed    0/2000  max abs 0  (target sd units)
+  ExtraTrees min_samples_leaf=2    trees equal 100/100  query rows changed    0/2000  max abs 0  (target sd units)
+  ExtraTrees min_samples_leaf=5    trees equal 100/100  query rows changed    0/2000  max abs 0  (target sd units)
+  ExtraTrees max_depth=10          trees equal 100/100  query rows changed    0/2000  max abs 0  (target sd units)
+  ExtraTrees max_depth=5           trees equal 100/100  query rows changed    0/2000  max abs 0  (target sd units)
+  Bagging default                  trees equal  10/ 10  query rows changed    0/2000  max abs 0  (target sd units)
+  Bagging min_samples_leaf=2       trees equal  10/ 10  query rows changed    0/2000  max abs 0  (target sd units)
+  Bagging min_samples_leaf=5       trees equal  10/ 10  query rows changed    0/2000  max abs 0  (target sd units)
+  Bagging max_depth=10             trees equal  10/ 10  query rows changed    0/2000  max abs 0  (target sd units)
+  Bagging max_depth=5              trees equal  10/ 10  query rows changed    0/2000  max abs 0  (target sd units)
+
+== Mac source build, default flags vs -ffp-contract=off
+A arm64 sklearn 1.9.0  B arm64 sklearn 1.9.0  X same True  Q same True
+  RF default                       trees equal   5/ 20  query rows changed 1665/2000  max abs 0.193  (target sd units)
+  RF min_samples_leaf=2            trees equal  19/ 20  query rows changed    9/2000  max abs 0.0154  (target sd units)
+  RF min_samples_leaf=5            trees equal  19/ 20  query rows changed  115/2000  max abs 0.03  (target sd units)
+  RF max_depth=10                  trees equal   8/ 20  query rows changed  784/2000  max abs 0.155  (target sd units)
+  RF max_depth=5                   trees equal  20/ 20  query rows changed    0/2000  max abs 0  (target sd units)
+  ExtraTrees default               trees equal  94/100  query rows changed 1872/2000  max abs 0.0659  (target sd units)
+  ExtraTrees min_samples_leaf=2    trees equal 100/100  query rows changed    0/2000  max abs 0  (target sd units)
+  ExtraTrees min_samples_leaf=5    trees equal 100/100  query rows changed    0/2000  max abs 0  (target sd units)
+  ExtraTrees max_depth=10          trees equal  92/100  query rows changed 1891/2000  max abs 0.0586  (target sd units)
+  ExtraTrees max_depth=5           trees equal  99/100  query rows changed  715/2000  max abs 0.0315  (target sd units)
+  Bagging default                  trees equal   2/ 10  query rows changed  424/2000  max abs 0.346  (target sd units)
+  Bagging min_samples_leaf=2       trees equal   7/ 10  query rows changed   35/2000  max abs 0.0929  (target sd units)
+  Bagging min_samples_leaf=5       trees equal  10/ 10  query rows changed    0/2000  max abs 0  (target sd units)
+  Bagging max_depth=10             trees equal   4/ 10  query rows changed   86/2000  max abs 0.309  (target sd units)
+  Bagging max_depth=5              trees equal  10/ 10  query rows changed    0/2000  max abs 0  (target sd units)
