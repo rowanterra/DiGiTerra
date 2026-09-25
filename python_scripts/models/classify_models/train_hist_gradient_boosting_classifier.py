@@ -1,5 +1,6 @@
 from sklearn.ensemble import HistGradientBoostingClassifier
 
+from python_scripts.models.defaults import sk_default
 from python_scripts.preprocessing.run_classification_pipeline import run_classification
 
 
@@ -37,7 +38,9 @@ def train_hist_gradient_boosting_classifier(
         min_samples_leaf=kwargs.get("min_samples_leaf", 20),
         l2_regularization=kwargs.get("l2_regularization", 0.0),
         max_bins=kwargs.get("max_bins", 255),
-        categorical_features=kwargs.get("categorical_features", None),
+        categorical_features=kwargs.get(
+            "categorical_features", sk_default(HistGradientBoostingClassifier, "categorical_features")
+        ),
         monotonic_cst=kwargs.get("monotonic_cst", None),
         interaction_cst=kwargs.get("interaction_cst", None),
         warm_start=kwargs.get("warm_start", False),

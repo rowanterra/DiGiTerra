@@ -6,76 +6,96 @@
 <title>DiGiTerra guided</title>
 <meta name="description" content="Upload a table, choose the target, fit a model, read the result. Guided and Full modes.">
 <style>
+  /* The tokens of the classic page (static/style.css, --app-*): the accent green
+     header, warm off-white page, white panels, one accent, Arial type. */
   :root {
-    --ink: #1f2320; --paper: #fbfaf7; --rule: #cfcac0; --moss: #4f6b4a; --oxblood: #7a2e2e;
-    --ochre: #9a7b1f; --focus: #1f4d8f; --muted: #5d615c; --field: #ffffff;
+    --accent: #357a53; --accent-dark: #2d6543; --accent-deep: #24503d; --on-accent: #ffffff;
+    --page: #fbfaf7; --panel: #ffffff; --panel-head: #f0f2ee; --sunken: #f3f4f0;
+    --border: #d7dbd4; --hairline: #e6e9e3; --ink: #2b2f2c; --muted: #5f635d; --soft: #4a544d;
+    --wash: #eaf1ec; --block: #8a2b22; --block-bg: #fbf1ef; --warn: #6f5a1e; --warn-bg: #f6f2e6;
+    --focus: #24503d; --radius: 4px; --radius-sm: 3px;
   }
   /* The page is one viewport tall. The header and footer take their own height and
      the current step takes the rest; nothing on the page scrolls except the
      hyperparameter table and the raw result block, each bounded inside its step. */
   html, body { height: 100%; }
-  html { font-family: Georgia, "Times New Roman", serif; color: var(--ink); background: var(--paper); font-size: clamp(14px, 1.15vw + 0.55vh + 6px, 17px); }
-  body { margin: 0; display: grid; grid-template-rows: auto 1fr auto; height: 100dvh; overflow: hidden; }
+  html { font-family: Arial, Helvetica, sans-serif; color: var(--ink); background: var(--page); font-size: clamp(14px, 1.15vw + 0.55vh + 6px, 17px); }
+  body { margin: 0; display: grid; grid-template-rows: auto 1fr auto; height: 100dvh; overflow: hidden; background: var(--page); }
   header, main, footer { padding: 0 1.25rem; }
-  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem 1.5rem; padding-top: .6rem; padding-bottom: .4rem; border-bottom: 1px solid var(--rule); }
-  h1 { font-size: 1.35rem; margin: 0; font-weight: normal; }
-  h2 { font-size: 1.15rem; margin: 0 0 .4rem; font-weight: normal; }
-  h3 { font-size: .95rem; margin: .5rem 0 .2rem; font-weight: bold; }
-  .skip { position: absolute; left: -999px; top: 0; background: var(--paper); padding: .5rem; border: 2px solid var(--focus); }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem 1.25rem; padding-top: .45rem; padding-bottom: .45rem; background: var(--accent); color: var(--on-accent); box-shadow: 0 2px 5px rgba(7, 34, 20, 0.2); }
+  header a { color: var(--on-accent); font-weight: 600; }
+  h1 { font-size: 1.4rem; margin: 0; font-weight: bold; display: flex; align-items: center; gap: .6rem; }
+  h1 img { height: 2.4rem; width: auto; }
+  h2 { font-size: 1.2rem; margin: 0 0 .4rem; font-weight: bold; color: var(--accent-deep); }
+  h3 { font-size: .95rem; margin: .5rem 0 .2rem; font-weight: bold; color: var(--accent-deep); }
+  .skip { position: absolute; left: -999px; top: 0; background: var(--panel); color: var(--ink); padding: .5rem; border: 2px solid var(--focus); }
   .skip:focus { left: 1rem; z-index: 10; }
   fieldset { border: 0; padding: 0; margin: 0; }
-  fieldset.mode { display: inline-flex; gap: .25rem; align-items: center; }
-  fieldset.mode legend { font-size: .85rem; color: var(--muted); float: left; margin-right: .5rem; }
-  fieldset.mode label { border: 1px solid var(--rule); padding: .15rem .6rem; cursor: pointer; background: var(--field); }
-  fieldset.mode label:has(input:checked) { border-color: var(--ink); background: #eee9dc; font-weight: bold; }
-  nav.steps { margin-left: auto; }
-  nav.steps ol { list-style: none; display: flex; gap: .25rem; margin: 0; padding: 0; }
-  nav.steps button { padding: .15rem .6rem; border: 1px solid var(--rule); background: var(--field); }
-  nav.steps button[aria-current="step"] { border-color: var(--ink); background: #eee9dc; font-weight: bold; }
-  nav.steps button.done { border-color: var(--moss); }
+  fieldset.mode { display: inline-flex; gap: .3rem; align-items: center; }
+  fieldset.mode legend { font-size: .85rem; float: left; margin-right: .5rem; color: var(--on-accent); }
+  fieldset.mode label { border: 1px solid rgba(255, 255, 255, 0.7); border-radius: var(--radius-sm); padding: .2rem .7rem; cursor: pointer; color: var(--on-accent); font-weight: 600; }
+  fieldset.mode label:has(input:checked) { border-color: var(--on-accent); background: var(--accent-deep); }
+  nav.steps { margin-left: auto; display: flex; align-items: center; gap: .3rem; }
+  nav.steps ol { list-style: none; display: flex; gap: .3rem; margin: 0; padding: 0; }
+  header button { background: transparent; color: var(--on-accent); border: 1px solid rgba(255, 255, 255, 0.7); font-weight: 600; }
+  header button:hover:not(:disabled) { background: var(--accent-dark); }
+  nav.steps button[aria-current="step"] { border-color: var(--on-accent); background: var(--accent-deep); }
+  nav.steps button.done { border-color: var(--on-accent); }
+  header button:disabled { background: transparent; color: rgba(255, 255, 255, 0.55); border-color: rgba(255, 255, 255, 0.35); }
+  header :focus-visible { outline: 3px solid var(--on-accent); outline-offset: 2px; }
   main { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
   #errors { flex: none; }
-  section.step { flex: 1 1 auto; min-height: 0; display: none; flex-direction: column; padding: .6rem 0 .4rem; }
+  section.step { flex: 1 1 auto; min-height: 0; display: none; flex-direction: column; margin: .6rem 0 .4rem; padding: .6rem .9rem .5rem; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); }
   section.step.current { display: flex; }
   .body { flex: 1 1 auto; min-height: 0; display: grid; gap: .4rem 1.5rem; align-content: start; }
   body[data-mode="full"] #step3 .body { grid-template-columns: minmax(16rem, 1fr) minmax(20rem, 1.6fr); }
   body[data-mode="full"] #step4 .body { grid-template-columns: 1fr 1fr; }
   .col { min-height: 0; display: flex; flex-direction: column; gap: .3rem; }
-  .actions { flex: none; display: flex; gap: .75rem; align-items: center; padding-top: .5rem; border-top: 1px solid var(--rule); margin-top: .5rem; }
+  .actions { flex: none; display: flex; gap: .75rem; align-items: center; padding-top: .5rem; border-top: 1px solid var(--hairline); margin-top: .5rem; }
   .actions .spacer { flex: 1; }
-  label.block { display: inline-block; margin: .35rem 0 .15rem; }
+  label.block { display: inline-block; margin: .35rem 0 .15rem; font-weight: 600; color: var(--soft); }
   label.block + .helpwrap { margin-left: .3rem; }
   label.block ~ input, label.block ~ select { display: block; }
-  input[type=text], input[type=number], select { font: inherit; padding: .2rem .35rem; border: 1px solid var(--rule); background: var(--field); min-width: 9rem; max-width: 100%; }
+  input[type=text], input[type=number], select { font: inherit; padding: .25rem .4rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--panel); color: var(--ink); min-width: 9rem; max-width: 100%; }
   input[type=file] { font: inherit; }
-  button { font: inherit; padding: .35rem .9rem; border: 1px solid var(--ink); background: var(--field); cursor: pointer; }
-  button.primary { background: var(--moss); color: #fff; border-color: var(--moss); }
-  button:disabled { opacity: .5; cursor: default; }
+  button { font: inherit; padding: .35rem .9rem; border: 1px solid var(--accent); border-radius: var(--radius-sm); background: var(--panel); color: var(--accent-deep); cursor: pointer; }
+  button:hover:not(:disabled) { background: var(--wash); }
+  button.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 600; }
+  button.primary:hover:not(:disabled) { background: var(--accent-dark); }
+  button:disabled { background: var(--sunken); color: var(--muted); border-color: var(--border); cursor: default; }
   :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
   .full-only { display: none; }
   body[data-mode="full"] .full-only { display: block; }
   body[data-mode="full"] .col.full-only { display: flex; }
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .2rem 1rem; }
   table { border-collapse: collapse; margin: .25rem 0; font-size: .9rem; }
-  th, td { text-align: left; padding: .15rem .5rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  caption { font-weight: bold; color: var(--accent-deep); text-align: left; padding-bottom: .2rem; }
+  th, td { text-align: left; padding: .2rem .5rem; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+  thead th { background: var(--panel-head); border-bottom: 1px solid var(--border); }
   th { font-weight: bold; }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-  .scroll { min-height: 0; overflow: auto; border: 1px solid var(--rule); background: var(--field); padding: 0 .4rem; }
+  .scroll { min-height: 0; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--panel); padding: 0 .4rem; }
   #hyperTable td input, #hyperTable td select { min-width: 6rem; width: 8rem; }
-  .status { margin: .25rem 0; }
-  .error { color: var(--oxblood); border: 1px solid var(--oxblood); padding: .4rem .7rem; margin: .4rem 0; background: #fff6f5; }
+  .status { margin: .25rem 0; color: var(--soft); }
+  .error { color: var(--block); border: 1px solid var(--block); border-radius: var(--radius-sm); padding: .4rem .7rem; margin: .4rem 0 0; background: var(--block-bg); }
   .checks { margin: .2rem 0; padding-left: 1.2rem; }
   .checks li { margin: .15rem 0; }
-  .checks .block-sev { color: var(--oxblood); font-weight: bold; }
-  .checks .warn-sev { color: var(--ochre); font-weight: bold; }
-  progress { width: 100%; height: .9rem; }
-  details summary { cursor: pointer; }
-  footer { border-top: 1px solid var(--rule); padding: .35rem 1.25rem .5rem; font-size: .8rem; color: var(--muted); }
-  /* help buttons and their explanations */
-  .helpwrap { position: relative; display: inline-block; margin-left: .35rem; vertical-align: middle; }
-  button.help { width: 1.25rem; height: 1.25rem; padding: 0; border-radius: 50%; border: 1px solid var(--muted); color: var(--muted); background: var(--field); font-size: .8rem; line-height: 1; cursor: help; }
-  .tip { display: none; position: absolute; left: 1.5rem; top: -.3rem; z-index: 5; width: 22rem; max-width: 60vw; padding: .5rem .65rem; background: #fffdf7; border: 1px solid var(--ink); box-shadow: 0 2px 6px rgba(0,0,0,.15); font-size: .85rem; line-height: 1.35; color: var(--ink); font-weight: normal; }
-  .helpwrap:hover .tip, .helpwrap:focus-within .tip, .helpwrap.open .tip, .tip:hover { display: block; }
+  .checks .block-sev { color: var(--block); font-weight: bold; }
+  .checks .warn-sev { color: var(--warn); font-weight: bold; }
+  progress { width: 100%; height: .9rem; accent-color: var(--accent); }
+  details summary { cursor: pointer; color: var(--accent-deep); }
+  a { color: var(--accent-deep); }
+  footer { border-top: 1px solid var(--border); padding: .35rem 1.25rem .5rem; font-size: .8rem; color: var(--muted); background: var(--page); }
+  /* explanations: the words take a dotted underline and open the tooltip on hover;
+     the control's keyboard focus opens it too (guided.js, attachHelp) */
+  .tipword { text-decoration: underline dotted 1px; text-underline-offset: 3px; cursor: help; }
+  .helpwrap { position: relative; display: inline-block; width: 0; height: 0; vertical-align: top; }
+  .tip { display: none; position: absolute; left: .6rem; top: -.3rem; z-index: 5; width: 22rem; max-width: 60vw; padding: .5rem .65rem; background: var(--panel); border: 1px solid var(--accent); border-radius: var(--radius-sm); box-shadow: 0 2px 6px rgba(7, 34, 20, .15); font-size: .85rem; line-height: 1.35; color: var(--ink); font-weight: normal; text-align: left; white-space: normal; }
+  nav.steps .helpwrap { position: static; width: auto; height: auto; }
+  nav.steps { position: relative; }
+  nav.steps .tip { left: auto; right: 0; top: 2.2rem; }
+  header fieldset .tip { left: 0; top: 1.7rem; }
+  .helpwrap.open .tip { display: block; }
   .helpwrap.dismissed .tip { display: none; }
   .hidden { display: none !important; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -85,7 +105,7 @@
 <body data-mode="guided">
 <a class="skip" href="#main">Skip to the current step</a>
 <header>
-  <h1>DiGiTerra</h1>
+  <h1><img src="{{ static_root }}/Terra_Axe_Logo.png" alt=""> DiGiTerra</h1>
   <fieldset class="mode" id="modeGroup">
     <legend>Mode</legend>
     <label><input type="radio" name="mode" value="guided" checked> <span>Guided</span></label>

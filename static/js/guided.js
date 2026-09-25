@@ -24,7 +24,7 @@
     predictors: 'The columns the model reads. All columns except the target are used unless changed here. Identifier columns and anything that leaks the target should be removed.',
     task: 'Classification predicts a class label. Regression predicts a number. Clustering groups rows without a target. The page proposes one from the target column; change it if the proposal is wrong.',
     model: 'The estimator to fit, from scikit-learn. The Guided default is a random forest, which needs little tuning. Every model in the list is trained through the same route.',
-    hyperTable: 'The parameters of the chosen estimator, read from scikit-learn itself. A blank keeps the default shown. A value typed here reaches the estimator and is recorded in the run manifest.',
+    hyperTable: 'The parameters of the chosen estimator, read from scikit-learn itself. A blank keeps the default shown, which is the scikit-learn default; random_state takes the run seed. A value typed here reaches the estimator and is recorded in the run manifest.',
     splitMethod: 'How rows are divided into training and test halves. Random is the usual choice. Time-ordered keeps the latest rows for the test. Grouped keeps every row of a group on one side, for data where several rows come from one site or sample.',
     splitColumn: 'The column a time-ordered or grouped split reads. Not used by the random split.',
     testSize: 'The fraction of rows held out as the test set. 0.20 keeps one row in five for testing.',
@@ -97,45 +97,60 @@
 
   // ---- help buttons and tooltips (WCAG 1.4.13: hoverable, dismissible with Escape, persistent)
   let tipCounter = 0;
-  function attachHelp(target, text, labelText) {
+  // The explanation opens on hover over the words it explains (a label, legend,
+  // heading or table header), and on keyboard focus of the control the words
+  // name; a target with no control of its own takes tabindex 0 so that a
+  // keyboard reaches it too. The tooltip stays open while the pointer is over
+  // it and closes on Escape (WCAG 1.4.13). It is never inside a label, legend or
+  // heading, so the accessible name of the control stays the label alone.
+  function attachHelp(target, text, labelText, control) {
     if (!target || !text) return null;
     const id = 'tip' + (++tipCounter);
-    const btn = document.createElement('button');
-    btn.type = 'button'; btn.className = 'help'; btn.textContent = '?';
-    btn.setAttribute('aria-label', 'What is ' + labelText + '?');
-    btn.setAttribute('aria-describedby', id);
     const tip = document.createElement('span');
     tip.className = 'tip'; tip.id = id; tip.setAttribute('role', 'tooltip'); tip.textContent = text;
     const wrap = document.createElement('span'); wrap.className = 'helpwrap';
-    wrap.appendChild(btn); wrap.appendChild(tip);
-    // A label's text is the control's accessible name, so the help button goes
-    // after a label, never inside it; other targets (legends, headings, table
-    // header cells) take it as their last child.
-    if (target.tagName === 'LABEL') target.insertAdjacentElement('afterend', wrap); else target.appendChild(wrap);
-    btn.addEventListener('click', (ev) => { ev.preventDefault(); wrap.classList.remove('dismissed'); wrap.classList.toggle('open'); });
+    wrap.appendChild(tip);
+    target.classList.add('tipword');
+    if (['LABEL', 'LEGEND', 'H2', 'H3', 'BUTTON'].includes(target.tagName)) target.insertAdjacentElement('afterend', wrap);
+    else target.appendChild(wrap);
+    const open = () => { wrap.classList.remove('dismissed'); wrap.classList.add('open'); };
+    const close = () => wrap.classList.remove('open');
+    target.addEventListener('mouseenter', open);
+    target.addEventListener('mouseleave', (ev) => { if (!wrap.contains(ev.relatedTarget)) close(); });
+    wrap.addEventListener('mouseleave', (ev) => { if (ev.relatedTarget !== target && !target.contains(ev.relatedTarget)) close(); });
+    const focusable = control || (target.hasAttribute('tabindex') ? target : null);
+    if (focusable) {
+      // focusin and focusout bubble, so a fieldset of radios opens one tooltip for the group.
+      focusable.addEventListener('focusin', (ev) => { if (ev.target.matches(':focus-visible')) open(); });
+      focusable.addEventListener('focusout', (ev) => { if (!focusable.contains(ev.relatedTarget)) close(); });
+    } else {
+      target.tabIndex = 0;
+      target.setAttribute('aria-describedby', id);
+      target.addEventListener('focus', open);
+      target.addEventListener('blur', close);
+    }
+    if (labelText) wrap.dataset.for = labelText;
     return id;
   }
-  // Escape closes an open tooltip, whether it was opened by click or by focus
-  // (WCAG 1.4.13): a focused wrap takes .dismissed until focus leaves it.
+  // Escape closes every open tooltip; the one of the focused control stays closed
+  // until focus moves on.
   document.addEventListener('keydown', (ev) => {
     if (ev.key !== 'Escape') return;
-    document.querySelectorAll('.helpwrap.open').forEach((w) => w.classList.remove('open'));
-    document.querySelectorAll('.helpwrap:focus-within').forEach((w) => w.classList.add('dismissed'));
+    document.querySelectorAll('.helpwrap.open').forEach((w) => { w.classList.remove('open'); w.classList.add('dismissed'); });
   });
-  document.addEventListener('focusout', (ev) => { const w = ev.target.closest && ev.target.closest('.helpwrap'); if (w) w.classList.remove('dismissed'); });
   function helpForControl(id) {
     const ctl = $(id); if (!ctl) return;
     const label = document.querySelector('label[for="' + id + '"]') || (ctl.tagName === 'BUTTON' ? ctl : null);
-    const tipId = attachHelp(label || ctl.parentElement, HELP[id], label ? label.textContent.replace('?', '').trim() : id);
-    if (tipId && ctl.tagName !== 'BUTTON') ctl.setAttribute('aria-describedby', tipId);
+    const tipId = attachHelp(label || ctl.parentElement, HELP[id], label ? label.textContent.trim() : id, ctl);
+    if (tipId) ctl.setAttribute('aria-describedby', tipId);
   }
   ['file', 'target', 'predictors', 'model', 'splitMethod', 'splitColumn', 'testSize', 'stratify', 'scaler', 'dropMissing', 'zeroHandle',
     'seed', 'sigfig', 'featureSelection', 'featureK', 'outlierMethod', 'cvType', 'cvFolds', 'search', 'runBtn', 'predictFile'].forEach(helpForControl);
-  attachHelp(document.querySelector('#modeGroup'), HELP.modeGroup, 'the mode');
-  attachHelp(document.querySelector('#step3 fieldset legend'), HELP.task, 'the task');
+  attachHelp(document.querySelector('#modeGroup legend'), HELP.modeGroup, 'the mode', $('modeGroup'));
+  attachHelp(document.querySelector('#step3 fieldset legend'), HELP.task, 'the task', document.querySelector('#step3 fieldset'));
   attachHelp(document.querySelector('#hyperBox h3'), HELP.hyperTable, 'the hyperparameter table');
   attachHelp(document.querySelector('#step4 h2'), HELP.result, 'the result');
-  attachHelp(document.querySelector('nav.steps'), HELP.stepsNav, 'the step list');
+  attachHelp(document.querySelector('nav.steps'), HELP.stepsNav, 'the step list', document.querySelector('nav.steps'));
 
   // ---- steps
   function showStep(n, focus) {
@@ -265,7 +280,7 @@
       const family = MODEL_HELP[state.task] || '';
       if (!d.editable) { $('hyperNote').textContent = (d.note || '') + ' ' + family; $('hyperTable').classList.add('hidden'); return; }
       state.passthrough = Boolean(d.passthrough);
-      $('hyperNote').textContent = d.estimator + ' parameters, from scikit-learn. A blank value keeps the default. ' + family;
+      $('hyperNote').textContent = d.estimator + ' parameters, from scikit-learn. A blank value keeps the default shown, which is the scikit-learn default except for random_state, which takes the run seed. ' + family;
       d.params.forEach((p) => {
         const tr = document.createElement('tr');
         const id = 'hp_' + p.name;
@@ -281,7 +296,7 @@
         });
         tr.lastElementChild.appendChild(input); tb.appendChild(tr);
         const text = PARAM_HELP[p.name] || ('Parameter ' + p.name + ' of ' + d.estimator + '; the scikit-learn default is shown.');
-        const tipId = attachHelp(tr.firstElementChild, text, p.name);
+        const tipId = attachHelp(tr.firstElementChild, text, p.name, input);
         input.setAttribute('aria-describedby', tipId);
       });
       $('hyperTable').classList.remove('hidden');
@@ -413,7 +428,7 @@
     }
     out.push('<p><a href="' + API + '/export-bundle">Download the run record and model (bundle)</a>' + (res.model_card_url ? ' &middot; <a href="' + esc(res.model_card_url) + '">Model card</a>' : '') + '</p>');
     $('result').innerHTML = out.join('');
-    $('result').querySelectorAll('th[data-metric]').forEach((th) => attachHelp(th, METRIC_HELP[th.dataset.metric], th.textContent.replace('?', '').trim()));
+    $('result').querySelectorAll('th[data-metric]').forEach((th) => attachHelp(th, METRIC_HELP[th.dataset.metric], th.textContent.trim()));
     $('resultRaw').textContent = JSON.stringify(res, null, 1);
     $('predictFile').disabled = false; $('predictBtn').disabled = false;
     openStep(4); showStep(4, true);

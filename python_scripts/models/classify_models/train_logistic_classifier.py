@@ -1,5 +1,6 @@
 from sklearn.linear_model import LogisticRegression
 
+from python_scripts.models.defaults import sk_default
 from python_scripts.preprocessing.run_classification_pipeline import run_classification
 
 
@@ -35,15 +36,15 @@ def train_logistic_classifier(
         "fit_intercept": kwargs.get("Class_LogisticFitIntercept", True),
         "warm_start": kwargs.get("Class_LogisticWarmStart", False),
         "solver": kwargs.get("Class_LogisticSolver", "lbfgs"),
-        "C": kwargs.get("Class_CLogistic", 1),
-        "penalty": kwargs.get("Class_Logistic_penalty", "l2"),
+        "C": kwargs.get("Class_CLogistic", sk_default(LogisticRegression, "C")),
+        "penalty": kwargs.get("Class_Logistic_penalty", sk_default(LogisticRegression, "penalty")),
         "tol": kwargs.get("Class_LogisticTol", 0.0001),
         "intercept_scaling": kwargs.get("Class_Logisticintercept_scaling", 1),
         "class_weight": kwargs.get("Class_LogisticClassWeight", None),
         "max_iter": kwargs.get("Class_LogisticMaxIterations", 100),
         "verbose": kwargs.get("Class_LogisticVerbose", 0),
         "n_jobs": kwargs.get("Class_LogisticNJobs", None),
-        "l1_ratio": kwargs.get("Class_Logisticl1Ratio", None),
+        "l1_ratio": kwargs.get("Class_Logisticl1Ratio", sk_default(LogisticRegression, "l1_ratio")),
         "random_state": seed,
     }
 

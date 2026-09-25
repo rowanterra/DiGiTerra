@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.linear_model import LinearRegression, RANSACRegressor
+from sklearn.linear_model import RANSACRegressor
 
 from python_scripts.preprocessing.run_regression_pipeline import run_regression
 
@@ -31,10 +31,8 @@ def train_ransac_regressor(
     progress_tracker=None,
     **kwargs,
 ):
-    # RANSACRegressor requires an estimator - use LinearRegression as default if none provided
+    # None is scikit-learn's default and fits LinearRegression inside RANSACRegressor.
     estimator = kwargs.get("estimator", None)
-    if estimator is None:
-        estimator = LinearRegression()
 
     model = RANSACRegressor(
         estimator=estimator,

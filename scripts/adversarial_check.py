@@ -14,7 +14,7 @@ Groups:
             (tests/unit/test_review_2026_09_24.py, the artifact tests)
   browser   a CSV whose headers and labels carry markup, through both pages;
             cleared fields on the guided page; two quick model changes;
-            Escape on a focused tooltip; every figure and step in the window
+            Escape on a tooltip opened by keyboard focus; every figure and step in the window
 
 Usage (from the repository root):
     MPLBACKEND=Agg .venv/bin/python scripts/adversarial_check.py [--only routes|pipeline|browser] [--json out.json]
@@ -358,8 +358,7 @@ def browser_probes():
             try:
                 page.goto(base + "/guided")
                 page.mouse.move(5, 5)
-                btn = page.locator("label[for=file] + .helpwrap button.help")
-                btn.focus()
+                page.focus("#file")
                 shown_before = page.locator("label[for=file] + .helpwrap .tip").is_visible()
                 page.keyboard.press("Escape")
                 shown_after = page.locator("label[for=file] + .helpwrap .tip").is_visible()

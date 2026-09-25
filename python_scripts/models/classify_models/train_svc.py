@@ -1,6 +1,7 @@
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.svm import SVC
 
+from python_scripts.models.defaults import sk_default
 from python_scripts.preprocessing.run_classification_pipeline import run_classification
 
 
@@ -36,7 +37,7 @@ def train_svc(
         gamma=kwargs.get("gamma") if kwargs.get("gamma") not in (None, "") else "scale",
         coef0=kwargs.get("coef0", 0.0),
         shrinking=kwargs.get("shrinking", True),
-        probability=kwargs.get("probability", False),
+        probability=kwargs.get("probability", sk_default(SVC, "probability")),
         tol=kwargs.get("tol", 1e-3),
         cache_size=kwargs.get("cache_size", 200),
         class_weight=kwargs.get("class_weight", None),

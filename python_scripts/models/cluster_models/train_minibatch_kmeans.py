@@ -1,5 +1,6 @@
 from sklearn.cluster import MiniBatchKMeans
 
+from python_scripts.models.defaults import sk_default
 from python_scripts.preprocessing.run_clustering_pipeline import clustering_options, run_clustering
 
 
@@ -29,7 +30,7 @@ def train_minibatch_kmeans(
         random_state=kwargs.get("random_state", seed),
         tol=kwargs.get("tol", 0.0),
         max_no_improvement=kwargs.get("max_no_improvement", 10),
-        n_init=kwargs.get("n_init", 3),
+        n_init=kwargs.get("n_init", sk_default(MiniBatchKMeans, "n_init")),
         reassignment_ratio=kwargs.get("reassignment_ratio", 0.01),
     )
 

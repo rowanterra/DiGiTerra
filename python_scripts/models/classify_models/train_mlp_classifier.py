@@ -1,5 +1,6 @@
 from sklearn.neural_network import MLPClassifier
 
+from python_scripts.models.defaults import sk_default
 from python_scripts.preprocessing.run_classification_pipeline import run_classification
 
 
@@ -34,7 +35,7 @@ def train_mlp_classifier(
         solver=kwargs.get("solver", "adam"),
         alpha=kwargs.get("alpha", 0.0001),
         learning_rate=kwargs.get("learning_rate", "constant"),
-        max_iter=kwargs.get("max_iter", 10000),
+        max_iter=kwargs.get("max_iter", sk_default(MLPClassifier, "max_iter")),
         batch_size=kwargs.get("batch_size", "auto"),
         beta_1=kwargs.get("beta_1", 0.9),
         beta_2=kwargs.get("beta_2", 0.999),

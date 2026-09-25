@@ -2,6 +2,7 @@ import numpy as np
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.multioutput import MultiOutputRegressor
 
+from python_scripts.models.defaults import sk_default
 from python_scripts.preprocessing.run_regression_pipeline import run_regression
 
 
@@ -38,13 +39,17 @@ def train_gb(
         n_estimators=kwargs.get("n_estimators", 100),
         learning_rate=kwargs.get("learning_rate", 0.1),
         max_depth=kwargs.get("max_depth", 3),
-        loss=kwargs.get("loss", "absolute_error"),
-        subsample=kwargs.get("subsample", 1),
-        criterion=kwargs.get("criterion", "friedman_mse"),
+        loss=kwargs.get("loss", sk_default(GradientBoostingRegressor, "loss")),
+        subsample=kwargs.get("subsample", sk_default(GradientBoostingRegressor, "subsample")),
+        criterion=kwargs.get("criterion", sk_default(GradientBoostingRegressor, "criterion")),
         min_samples_split=kwargs.get("min_samples_split", 2),
         min_samples_leaf=kwargs.get("min_samples_leaf", 1),
-        min_weight_fraction_leaf=kwargs.get("min_weight_fraction_leaf", 0),
-        min_impurity_decrease=kwargs.get("min_impurity_decrease", 0),
+        min_weight_fraction_leaf=kwargs.get(
+            "min_weight_fraction_leaf", sk_default(GradientBoostingRegressor, "min_weight_fraction_leaf")
+        ),
+        min_impurity_decrease=kwargs.get(
+            "min_impurity_decrease", sk_default(GradientBoostingRegressor, "min_impurity_decrease")
+        ),
         init=kwargs.get("init", None),
         random_state=kwargs.get("random_state", None),
         max_features=kwargs.get("max_features", None),

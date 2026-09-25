@@ -1,5 +1,6 @@
 from sklearn.cluster import BisectingKMeans
 
+from python_scripts.models.defaults import sk_default
 from python_scripts.preprocessing.run_clustering_pipeline import clustering_options, run_clustering
 
 
@@ -21,7 +22,7 @@ def train_bisecting_kmeans(
 
     model = BisectingKMeans(
         n_clusters=kwargs.get("n_clusters", 8),
-        init=kwargs.get("init", "k-means++"),
+        init=kwargs.get("init", sk_default(BisectingKMeans, "init")),
         n_init=kwargs.get("n_init", 1),
         random_state=kwargs.get("random_state", seed),
         max_iter=kwargs.get("max_iter", 300),

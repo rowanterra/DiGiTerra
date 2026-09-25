@@ -15,7 +15,7 @@ from core import constants as _constants
 from core.constants import MAX_CV_FOLDS, MAX_SEARCH_CV_FOLDS, MAX_SEARCH_ITERATIONS, MAX_TEST_SIZE, MIN_TEST_SIZE
 from core.state import MemoryBudgetExceeded, admit_model, discard_model
 from python_scripts import config as _config
-from python_scripts.estimator_params import reset_estimator_params, set_estimator_params
+from python_scripts.estimator_params import built_estimator, reset_estimator_params, set_estimator_params
 from python_scripts.helpers import (
     preprocess_data,
     run_cross_validation,
@@ -298,9 +298,11 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
                 )
             modelName = "RF" if task_type == "Numeric" else "RF_classifier"
         nonreq = data["nonreq"]
-        estimator_params = data.get("estimatorParams") or {}
-        if not isinstance(estimator_params, dict):
+        raw_params = data.get("estimatorParams") or {}
+        if not isinstance(raw_params, dict):
             raise ValueError("estimatorParams must be an object of parameter names and values.")
+        # A copy, so the request recorded in the manifest stays as the page sent it.
+        estimator_params = dict(raw_params)
         scaler = data["scaler"]
         units = data["units"]
         # A cleared field arrives as "", null or 0 depending on the form; 0 decimal
@@ -659,6 +661,14 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
             if problem_type == "regression":
                 base["y_scaler_type"] = scaler
             kwargs = get_model_kwargs(modelName, hyperparameters, nonreq, seed)
+            # Advanced-form values whose names are the estimator's own parameters reach
+            # the estimator even where the trainer does not read them (LinearSVR dual,
+            # MiniBatchKMeans n_init). Values the guided page typed take precedence.
+            if nonreq and hyperparameters:
+                valid = set(built_estimator(modelName).get_params(deep=False))
+                for key, value in hyperparameters.items():
+                    if key in valid and key not in estimator_params:
+                        estimator_params[key] = value
             # The guided page sends parameters by their scikit-learn names; the
             # pipelines set them on the estimator the trainer built.
             params_token = set_estimator_params(estimator_params)

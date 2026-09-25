@@ -1,5 +1,6 @@
 from sklearn.ensemble import RandomForestRegressor
 
+from python_scripts.models.defaults import sk_default
 from python_scripts.preprocessing.run_regression_pipeline import run_regression
 
 
@@ -39,7 +40,7 @@ def train_rf(
         min_samples_split=kwargs.get("min_samples_split", 2),
         min_samples_leaf=kwargs.get("min_samples_leaf", 1),
         min_weight_fraction_leaf=kwargs.get("min_weight_fraction_leaf", 0.0),
-        max_features=kwargs.get("max_features", "sqrt"),
+        max_features=kwargs.get("max_features", sk_default(RandomForestRegressor, "max_features")),
         max_leaf_nodes=kwargs.get("max_leaf_nodes", None),
         min_impurity_decrease=kwargs.get("min_impurity_decrease", 0.0),
         bootstrap=kwargs.get("bootstrap", True),

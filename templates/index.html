@@ -1941,8 +1941,8 @@
                         
                         <label for="GBLoss">Loss:</label>
                         <select name="GBLoss" id="GBLoss">
-                            <option value="absolute_error">absolute_error</option>
                             <option value="squared_error">squared_error</option>
+                            <option value="absolute_error">absolute_error</option>
                             <option value="huber">huber</option>
                             <option value="quantile">quantile</option>
                         </select>
@@ -3229,8 +3229,8 @@
                                     <div id="advancedNonreqGBParams" class="hidden">
                                         <label for="advancedGBLoss">Loss:</label>
                                         <select name="advancedGBLoss" id="advancedGBLoss">
-                                            <option value="absolute_error">absolute_error</option>
                                             <option value="squared_error">squared_error</option>
+                                            <option value="absolute_error">absolute_error</option>
                                             <option value="huber">huber</option>
                                             <option value="quantile">quantile</option>
                                         </select>
@@ -4115,6 +4115,7 @@
                                         <div><br></div>
                                         <label for="LinearSVRDual">Dual:</label>
                                         <select name="LinearSVRDual" id="LinearSVRDual">
+                                            <option value="auto">auto</option>
                                             <option value="true">True</option>
                                             <option value="false">False</option>
                                         </select>
@@ -5073,6 +5074,7 @@
                                         <div><br></div>
                                         <label for="LinearSVCDual">Dual:</label>
                                         <select name="LinearSVCDual" id="LinearSVCDual">
+                                            <option value="auto">auto</option>
                                             <option value="true">True</option>
                                             <option value="false">False</option>
                                         </select>
@@ -5494,8 +5496,8 @@
                                     <div id="advancedNonreqBisectingKmeansParams" class="hidden">
                                         <label for="BisectingKmeansInit">Init:</label>
                                         <select name="BisectingKmeansInit" id="BisectingKmeansInit">
-                                            <option value="k-means++">K-Means++</option>
                                             <option value="random">Random</option>
+                                            <option value="k-means++">K-Means++</option>
                                         </select>
                                         <div><br></div>
                                         <label for="BisectingKmeansNInit">N Init (int >=1):</label>
@@ -5677,8 +5679,8 @@
                                         <label for="MinibatchKmeansMaxNoImprovement">Max No Improvement (int >=1):</label>
                                         <input type="number" step=1 value=10 placeholder=10 min=1 id="MinibatchKmeansMaxNoImprovement" name="MinibatchKmeansMaxNoImprovement">
                                         <div><br></div>
-                                        <label for="MinibatchKmeansNInit">N Init (int >=1):</label>
-                                        <input type="number" step=1 value=3 placeholder=3 min=1 id="MinibatchKmeansNInit" name="MinibatchKmeansNInit">
+                                        <label for="MinibatchKmeansNInit">N Init ("auto" or int >=1):</label>
+                                        <input type="text" value="auto" placeholder="auto" id="MinibatchKmeansNInit" name="MinibatchKmeansNInit">
                                         <div><br></div>
                                         <label for="MinibatchKmeansReassignmentRatio">Reassignment Ratio (float [0,1]):</label>
                                         <input type="number" value=0.01 placeholder=0.01 min=0 max=1 step="any" id="MinibatchKmeansReassignmentRatio" name="MinibatchKmeansReassignmentRatio">

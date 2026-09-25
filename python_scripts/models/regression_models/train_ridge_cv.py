@@ -1,5 +1,6 @@
 from sklearn.linear_model import RidgeCV
 
+from python_scripts.models.defaults import sk_default
 from python_scripts.preprocessing.run_regression_pipeline import run_regression
 
 
@@ -36,7 +37,7 @@ def train_ridge_cv(
         fit_intercept=kwargs.get("fit_intercept", True),
         scoring=kwargs.get("scoring", None),
         cv=kwargs.get("cv", None),
-        gcv_mode=kwargs.get("gcv_mode", "auto"),
+        gcv_mode=kwargs.get("gcv_mode", sk_default(RidgeCV, "gcv_mode")),
         store_cv_results=kwargs.get("store_cv_results", False),
         alpha_per_target=kwargs.get("alpha_per_target", False),
     )

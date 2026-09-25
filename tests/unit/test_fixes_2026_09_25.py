@@ -154,15 +154,41 @@ def test_score_bundle_finds_the_installation_key_and_writes_the_web_columns(clie
         assert any(c.startswith(col) for c in pred.columns), col
 
 
-def test_the_default_column_shows_what_a_blank_field_leaves(client):
-    """Several trainers set values other than scikit-learn's; the table shows the trainer's."""
+def test_an_empty_form_fits_scikit_learns_defaults(client):
+    """Every trainer falls back to scikit-learn's default; random_state takes the run seed.
+
+    Before 2026-09-25 21 of 67 trainers set other values, among them absolute_error
+    loss for the gradient boosting regressor and max_features "sqrt" for the random
+    forest regressor, while the table showed scikit-learn's defaults.
+    """
+    import importlib
+
+    from routes.guided import _SKLEARN_CLASS, _display
+
+    for name, (fn, _) in MODEL_REGISTRY.items():
+        if fn is None:
+            continue
+        module, cls = _SKLEARN_CLASS[name]
+        library = getattr(importlib.import_module(module), cls)().get_params(deep=False)
+        for row in client.get(f"/model-defaults/{name}").get_json()["params"]:
+            if row["name"] == "random_state":
+                continue
+            assert row["default"] == _display(row["name"], library[row["name"]]), (name, row["name"])
     rows = {p["name"]: p for p in client.get("/model-defaults/gradient_boosting").get_json()["params"]}
-    assert rows["loss"]["default"] == "absolute_error"
-    assert rows["random_state"]["default"] == "run seed"
-    rows = {p["name"]: p for p in client.get("/model-defaults/RF").get_json()["params"]}
-    assert rows["max_features"]["default"] == "sqrt" and rows["max_features"]["kind"] == "text"
-    rows = {p["name"]: p for p in client.get("/model-defaults/MLP").get_json()["params"]}
-    assert rows["max_iter"]["default"] == 10000
+    assert rows["loss"]["default"] == "squared_error" and rows["random_state"]["default"] == "run seed"
+
+
+def test_advanced_form_values_with_scikit_learn_names_reach_the_estimator():
+    """LinearSVR's trainer reads no dual field; the Advanced form's value still reaches the estimator."""
+    result = _train_in_session(
+        uuid.uuid4().hex,
+        {
+            "models": "LinearSVR",
+            "nonreq": True,
+            "hyperparameters": {"dual": False, "loss": "squared_epsilon_insensitive"},
+        },
+    )
+    assert result["model_params"]["dual"] is False
 
 
 def test_every_trainer_builds_its_estimator_without_fitting():

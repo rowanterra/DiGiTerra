@@ -1,5 +1,6 @@
 from sklearn.ensemble import BaggingRegressor
 
+from python_scripts.models.defaults import sk_default
 from python_scripts.preprocessing.run_regression_pipeline import run_regression
 
 
@@ -34,7 +35,7 @@ def train_bagging_regressor(
     model = BaggingRegressor(
         estimator=kwargs.get("estimator", None),
         n_estimators=kwargs.get("n_estimators", 10),
-        max_samples=kwargs.get("max_samples", 1.0),
+        max_samples=kwargs.get("max_samples", sk_default(BaggingRegressor, "max_samples")),
         max_features=kwargs.get("max_features", 1.0),
         bootstrap=kwargs.get("bootstrap", True),
         bootstrap_features=kwargs.get("bootstrap_features", False),

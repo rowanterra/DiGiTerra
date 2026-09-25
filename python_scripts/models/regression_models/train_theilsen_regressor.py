@@ -1,5 +1,6 @@
 from sklearn.linear_model import TheilSenRegressor
 
+from python_scripts.models.defaults import sk_default
 from python_scripts.preprocessing.run_regression_pipeline import run_regression
 
 
@@ -33,7 +34,7 @@ def train_theilsen_regressor(
 
     model = TheilSenRegressor(
         fit_intercept=kwargs.get("fit_intercept", True),
-        max_subpopulation=kwargs.get("max_subpopulation", 10000),
+        max_subpopulation=kwargs.get("max_subpopulation", sk_default(TheilSenRegressor, "max_subpopulation")),
         n_subsamples=kwargs.get("n_subsamples", None),
         max_iter=kwargs.get("max_iter", 300),
         tol=kwargs.get("tol", 1e-3),

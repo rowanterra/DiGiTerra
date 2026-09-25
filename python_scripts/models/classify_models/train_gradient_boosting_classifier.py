@@ -1,5 +1,6 @@
 from sklearn.ensemble import GradientBoostingClassifier
 
+from python_scripts.models.defaults import sk_default
 from python_scripts.preprocessing.run_classification_pipeline import run_classification
 
 
@@ -33,7 +34,7 @@ def train_gradient_boosting_classifier(
         learning_rate=kwargs.get("learning_rate", 0.1),
         n_estimators=kwargs.get("n_estimators", 100),
         subsample=kwargs.get("subsample", 1.0),
-        criterion=kwargs.get("criterion", "friedman_mse"),
+        criterion=kwargs.get("criterion", sk_default(GradientBoostingClassifier, "criterion")),
         min_samples_split=kwargs.get("min_samples_split", 2),
         min_samples_leaf=kwargs.get("min_samples_leaf", 1),
         min_weight_fraction_leaf=kwargs.get("min_weight_fraction_leaf", 0.0),

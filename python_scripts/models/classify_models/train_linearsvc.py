@@ -1,6 +1,7 @@
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.svm import LinearSVC
 
+from python_scripts.models.defaults import sk_default
 from python_scripts.preprocessing.run_classification_pipeline import run_classification
 
 
@@ -32,12 +33,12 @@ def train_linearsvc(
     base = LinearSVC(
         penalty=kwargs.get("penalty", "l2"),
         loss=kwargs.get("loss", "squared_hinge"),
-        dual=kwargs.get("dual", True),
+        dual=kwargs.get("dual", sk_default(LinearSVC, "dual")),
         tol=kwargs.get("tol", 1e-4),
         C=kwargs.get("C", 1.0),
         multi_class=kwargs.get("multi_class", "ovr"),
         fit_intercept=kwargs.get("fit_intercept", True),
-        intercept_scaling=kwargs.get("intercept_scaling", 1.0),
+        intercept_scaling=kwargs.get("intercept_scaling", sk_default(LinearSVC, "intercept_scaling")),
         class_weight=kwargs.get("class_weight", None),
         verbose=kwargs.get("verbose", 0),
         random_state=kwargs.get("random_state", seed),

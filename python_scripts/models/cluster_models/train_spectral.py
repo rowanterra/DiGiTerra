@@ -1,5 +1,6 @@
 from sklearn.cluster import SpectralClustering
 
+from python_scripts.models.defaults import sk_default
 from python_scripts.preprocessing.run_clustering_pipeline import clustering_options, run_clustering
 
 
@@ -17,7 +18,7 @@ def train_spectral(
     **kwargs,
 ):
     model = SpectralClustering(
-        n_clusters=kwargs.get("n_clusters", 3),
+        n_clusters=kwargs.get("n_clusters", sk_default(SpectralClustering, "n_clusters")),
         eigen_solver=kwargs.get("eigen_solver", None),
         n_components=kwargs.get("n_components", None),
         random_state=kwargs.get("random_state", seed),
@@ -25,7 +26,7 @@ def train_spectral(
         gamma=kwargs.get("gamma", 1.0),
         affinity=kwargs.get("affinity", "rbf"),
         n_neighbors=kwargs.get("n_neighbors", 10),
-        eigen_tol=kwargs.get("eigen_tol", 0.0),
+        eigen_tol=kwargs.get("eigen_tol", sk_default(SpectralClustering, "eigen_tol")),
         assign_labels=kwargs.get("assign_labels", "kmeans"),
         degree=kwargs.get("degree", 3),
         coef0=kwargs.get("coef0", 1),

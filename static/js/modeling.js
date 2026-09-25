@@ -1224,7 +1224,7 @@ processForm.addEventListener('submit', async (e) => {
             if (tol) hyperparameters['tol'] = parseFloat(tol.value);
             if (fitIntercept) hyperparameters['fit_intercept'] = fitIntercept.value === 'true';
             if (interceptScaling) hyperparameters['intercept_scaling'] = parseFloat(interceptScaling.value);
-            if (dual) hyperparameters['dual'] = dual.value === 'true';
+            if (dual) hyperparameters['dual'] = dual.value === 'auto' ? 'auto' : dual.value === 'true';
             if (verbose) hyperparameters['verbose'] = parseInt(verbose.value);
             if (maxIter) hyperparameters['max_iter'] = parseInt(maxIter.value);
         }
@@ -1736,7 +1736,7 @@ processForm.addEventListener('submit', async (e) => {
             const verbose = document.getElementById('LinearSVCVerbose');
             if (loss) hyperparameters['loss'] = loss.value;
             if (penalty) hyperparameters['penalty'] = penalty.value;
-            if (dual) hyperparameters['dual'] = dual.value === 'true';
+            if (dual) hyperparameters['dual'] = dual.value === 'auto' ? 'auto' : dual.value === 'true';
             if (tol) hyperparameters['tol'] = parseFloat(tol.value);
             if (multiClass) hyperparameters['multi_class'] = multiClass.value;
             if (fitIntercept) hyperparameters['fit_intercept'] = fitIntercept.value === 'true';
@@ -2042,7 +2042,7 @@ processForm.addEventListener('submit', async (e) => {
             if (computeLabels) hyperparameters['compute_labels'] = computeLabels.value === 'true';
             if (tol) hyperparameters['tol'] = parseFloat(tol.value);
             if (maxNoImprovement) hyperparameters['max_no_improvement'] = parseInt(maxNoImprovement.value);
-            if (nInit) hyperparameters['n_init'] = parseInt(nInit.value);
+            if (nInit) hyperparameters['n_init'] = nInit.value.trim() === 'auto' ? 'auto' : parseInt(nInit.value);
             if (reassignmentRatio) hyperparameters['reassignment_ratio'] = parseFloat(reassignmentRatio.value);
         }
     }

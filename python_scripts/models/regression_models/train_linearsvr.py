@@ -2,6 +2,7 @@ import numpy as np
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.svm import LinearSVR
 
+from python_scripts.models.defaults import sk_default
 from python_scripts.preprocessing.run_regression_pipeline import run_regression
 
 
@@ -40,7 +41,7 @@ def train_linearsvr(
         loss=kwargs.get("loss", "epsilon_insensitive"),
         fit_intercept=kwargs.get("fit_intercept", True),
         intercept_scaling=kwargs.get("intercept_scaling", 1.0),
-        dual=kwargs.get("dual", True),
+        dual=kwargs.get("dual", sk_default(LinearSVR, "dual")),
         verbose=kwargs.get("verbose", 0),
         random_state=kwargs.get("random_state", seed),
         max_iter=kwargs.get("max_iter", 1000),

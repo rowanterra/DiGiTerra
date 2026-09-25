@@ -98,11 +98,21 @@ def test_every_control_has_an_explanation(server, page):
         assert desc, f"#{i} has no explanation"
         assert page.locator(f"#{desc}[role=tooltip]").count() == 1
         assert len(page.text_content(f"#{desc}")) > 20
-    btn = page.locator("label[for=file] + .helpwrap button.help")
-    btn.focus()
-    assert page.locator("label[for=file] + .helpwrap .tip").is_visible()
+    tip = page.locator("label[for=file] + .helpwrap .tip")
+    # hover over the label's words opens the explanation, leaving closes it
+    page.hover("label[for=file]")
+    assert tip.is_visible()
+    page.mouse.move(5, 5)
+    assert not tip.is_visible()
+    # keyboard focus of the control opens it, Escape closes it (WCAG 1.4.13); a key
+    # press first, because focus after a pointer click is not :focus-visible
+    page.keyboard.press("Shift")
+    page.focus("#file")
+    assert tip.is_visible()
+    page.keyboard.press("Escape")
+    assert not tip.is_visible()
     page.locator("h1").click()
-    assert not page.locator("label[for=file] + .helpwrap .tip").is_visible()
+    assert page.locator("button.help").count() == 0
     page.check("input[name=mode][value=guided]")
 
 
@@ -136,7 +146,7 @@ def test_full_run_and_typed_hyperparameter_reaches_the_estimator(server, page):
     assert m and m.group(1) == "3", "the typed n_neighbors did not reach the estimator"
     assert page.locator("#result table caption").first.text_content() == "Metrics"
     assert page.evaluate("document.activeElement.id") == "h4s"
-    assert page.locator("#result th[data-metric=accuracy] button.help").count() == 1
+    assert page.locator("#result th[data-metric=accuracy].tipword .tip").count() == 1
     # a control's accessible name is its label alone, not the help button beside it
     assert page.evaluate("document.getElementById('file').labels[0].textContent.trim()") == "CSV, Excel or Parquet file"
 
