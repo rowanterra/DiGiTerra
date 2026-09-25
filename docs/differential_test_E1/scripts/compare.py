@@ -279,8 +279,9 @@ def main() -> None:
     res.to_csv(ROOT / "RESULTS.csv", index=False, float_format="%.17g")
     today = dt.date.today().isoformat()
     expected = {(a, c) for a in APPS for c in ("D1", "D2", "R1", "C1", "C2")}
-    # C2 and D/C cases that PLAN.txt excludes for an app
-    expected -= {("r", "C2"), ("excel", "C1"), ("excel", "C2")}
+    # C2 and D/C cases that PLAN.txt excludes for an app (R and AI Studio fit a
+    # different logistic estimator; Excel has no classifier)
+    expected -= {("r", "C2"), ("aistudio", "C2"), ("excel", "C1"), ("excel", "C2")}
     present = set(zip(res["app"], res["case"])) if len(res) else set()
     partial = expected - present
     with open(ROOT / f"RESULT_{today}.txt", "w") as f:
