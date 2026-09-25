@@ -9,8 +9,10 @@ model, so the page's hyperparameter table cannot drift from the library.
 
 from __future__ import annotations
 
+import functools
 import inspect
 
+import numpy as np
 import pandas as pd
 from flask import Blueprint, jsonify, render_template
 
@@ -18,6 +20,7 @@ from core.constants import HTTP_BAD_REQUEST, HTTP_NOT_FOUND
 from core.helpers import with_prefix
 from core.state import get_session_storage
 from python_scripts import config
+from python_scripts.estimator_params import RUN_SEED, built_estimator
 from python_scripts.model_registry import _PASSTHROUGH_CLASSIFIERS, MODEL_REGISTRY
 
 bp = Blueprint("guided", __name__)
@@ -147,9 +150,28 @@ def column_types():
     return jsonify({"rows": n, "columns": cols})
 
 
+@functools.cache
+def _built_params(name: str) -> dict:
+    """get_params of the estimator the trainer builds from an empty form."""
+    return built_estimator(name).get_params(deep=False)
+
+
+def _display(param: str, value):
+    """A JSON value for the Default column; the run seed is named, objects are written as repr."""
+    if param == "random_state" and value == RUN_SEED:
+        return "run seed"
+    if value is None or isinstance(value, (bool, str)):
+        return value
+    if isinstance(value, (np.integer, int)):
+        return int(value)
+    if isinstance(value, (np.floating, float)):
+        return float(value)
+    return repr(value)
+
+
 @bp.route("/model-defaults/<name>")
 def model_defaults(name: str):
-    """Parameter names, defaults and kinds for one model, from the estimator itself."""
+    """Parameter names, kinds and the values a blank field leaves, for one model."""
     if name not in MODEL_REGISTRY or MODEL_REGISTRY[name][0] is None:
         return jsonify({"error": f"Unknown model {name!r}."}), HTTP_NOT_FOUND
     if name not in _SKLEARN_CLASS:
@@ -163,21 +185,25 @@ def model_defaults(name: str):
         )
     module, cls = _SKLEARN_CLASS[name]
     est_cls = getattr(__import__(module, fromlist=[cls]), cls)
+    # The Default column shows the value a blank field leaves in place, which is the
+    # value the trainer sets, not always scikit-learn's (see built_estimator).
+    built = _built_params(name)
     params = []
     for p in inspect.signature(est_cls.__init__).parameters.values():
         if p.name == "self" or p.kind in (p.VAR_POSITIONAL, p.VAR_KEYWORD):
             continue
-        d = p.default
+        library = None if p.default is inspect.Parameter.empty else p.default
+        value = built.get(p.name, library)
+        # The kind follows the value a blank field leaves; the input type must accept it.
+        probe = value if value is not None else library
         kind = "text"
-        if isinstance(d, bool):
+        if isinstance(probe, bool):
             kind = "bool"
-        elif isinstance(d, int):
+        elif isinstance(probe, (int, np.integer)):
             kind = "int"
-        elif isinstance(d, float):
+        elif isinstance(probe, (float, np.floating)):
             kind = "float"
-        elif d is None:
-            kind = "text"
-        params.append({"name": p.name, "default": None if d is inspect.Parameter.empty else d, "kind": kind})
+        params.append({"name": p.name, "default": _display(p.name, value), "kind": kind})
     return jsonify(
         {
             "name": name,

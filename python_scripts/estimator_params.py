@@ -72,6 +72,7 @@ def clean_params(params: dict | None) -> dict:
 
 def apply_estimator_params(model):
     """Set the run's parameters on the estimator, or on the estimator a multi-output wrapper holds."""
+    _capture_check(model)
     params = clean_params(_PARAMS.get())
     if not params:
         return model
@@ -86,4 +87,85 @@ def apply_estimator_params(model):
             "Clear the field or choose a parameter from the table, then train again."
         )
     model.set_params(**{prefix + k: v for k, v in params.items()})
+    return model
+
+
+# ---------------------------------------------------------------------------
+# The estimator a trainer builds from an empty form. The guided page's Default
+# column shows these values, because a blank field leaves the trainer's value in
+# place and several trainers set values other than scikit-learn's (a gradient
+# boosting regressor with absolute_error loss, a random forest regressor with
+# max_features "sqrt", an MLP with max_iter 10000). Every pipeline calls
+# apply_estimator_params before it reads the data, so a capture there returns the
+# built estimator without fitting anything.
+
+RUN_SEED = 918273645  # stands for the run seed; the page shows "run seed"
+
+_CAPTURE: ContextVar[bool] = ContextVar("digiterra_capture_estimator", default=False)
+
+
+class EstimatorCaptured(Exception):
+    """Raised by apply_estimator_params during a capture; carries the built estimator."""
+
+    def __init__(self, model):
+        super().__init__("estimator captured")
+        self.model = model
+
+
+def _capture_check(model) -> None:
+    if _CAPTURE.get():
+        raise EstimatorCaptured(model)
+
+
+def built_estimator(name: str):
+    """The estimator the trainer for `name` builds from an empty form, not fitted.
+
+    The trainer runs on an eight-row frame with the seed RUN_SEED; the pipeline stops
+    at its first line. Returns the inner estimator of a multi-output wrapper.
+    """
+    import pandas as pd
+
+    from python_scripts.model_registry import MODEL_REGISTRY, get_model_kwargs
+
+    train_fn, task = MODEL_REGISTRY[name]
+    X = pd.DataFrame({"a": [1.0, 2, 3, 4, 5, 6, 7, 8], "b": [2.0, 1, 4, 3, 6, 5, 8, 7]})
+    y = pd.DataFrame({"t": [0, 1, 0, 1, 0, 1, 0, 1]})
+    bins = {"quantile": 0, "bin": 0, "binsLabel": ""}
+    kwargs = get_model_kwargs(name, {}, False, RUN_SEED)
+    common = dict(
+        units="",
+        X_scaler_type="none",
+        seed=RUN_SEED,
+        quantileBinDict=bins,
+        sigfig=3,
+        useTransformer="No",
+        categorical_cols=[],
+    )
+    token = _CAPTURE.set(True)
+    try:
+        if task == "cluster":
+            train_fn(train_data=X, X=X, test_size=0.2, k_min=2, k_max=8, **common, **kwargs)
+        else:
+            base = dict(
+                target_variables=["t"],
+                train_data=pd.concat([X, y], axis=1),
+                use_stratified_split=False,
+                X=X,
+                y=y,
+                stratifyColumn="",
+                testSize=0.2,
+                **common,
+            )
+            if task == "regression":
+                train_fn(name, y_scaler_type="none", **base, **kwargs)
+            else:
+                train_fn(**base, **kwargs)
+    except EstimatorCaptured as captured:
+        model = captured.model
+    else:
+        raise RuntimeError(f"The trainer for {name} did not reach its pipeline.")
+    finally:
+        _CAPTURE.reset(token)
+    if isinstance(model, (MultiOutputRegressor, MultiOutputClassifier)):
+        return model.estimator
     return model

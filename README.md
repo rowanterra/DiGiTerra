@@ -22,7 +22,7 @@ Then run one of the two entry points:
 | The guided page | `python app.py`, then open http://127.0.0.1:5000/guided |
 | Desktop window | `python desktop_app.py` |
 
-The guided page is four steps, one on screen at a time with no scrolling, with a Guided and a Full mode and an explanation on every control; Full opens every setting the training route accepts and a hyperparameter table filled from the estimator itself. `docs/SIMPLE_INTERFACE_DESIGN.md` says why it looks the way it does, and `docs/guided_page_guided_mode.png` and `docs/guided_page_full_mode.png` show it.
+The guided page is four steps, one on screen at a time with no scrolling, with a Guided and a Full mode and an explanation on every control; Full opens every setting the training route accepts and a hyperparameter table for every model, filled from the estimator that the trainer builds, so the Default column shows the value a blank field leaves. `docs/SIMPLE_INTERFACE_DESIGN.md` says why it looks the way it does, and `docs/guided_page_guided_mode.png` and `docs/guided_page_full_mode.png` show it.
 
 Both entry points import the application from `core/`, `routes/`, and `python_scripts/`.
 
@@ -59,11 +59,12 @@ The `examples/` directory contains 10 CSV files: 4 classification (Iris, Penguin
 
 `scripts/train_every_model.py` trains every registered estimator on the matching example
 dataset through the same function the `/process` route calls, with the defaults an empty
-hyperparameter form sends. `docs/every_model_sweep_2026-09-24.json` is the record of the
-run on 2026-09-24 with scikit-learn 1.9.0 on Python 3.11: 67 of 69 registry entries
+hyperparameter form sends. `docs/every_model_sweep_2026-09-25.json` is the record of the
+run on 2026-09-25 at commit 15fe96c with scikit-learn 1.9.0: 67 of 69 registry entries
 trained and 2 (Polynomial, Perceptron) are registered without a trainer and were skipped
-(the 2026-09-03 record is kept beside it). `docs/artifact_roundtrip_2026-09-24.json` is the
-matching bundle round-trip record: 66 of 67 identical, birch unsupported.
+(the 2026-09-24 and 2026-09-03 records are kept beside it). `docs/artifact_roundtrip_2026-09-25.json`
+is the matching bundle round-trip record: for 66 of 67 estimators the predictions for the
+first eight rows were equal before and after the round trip, and birch is unsupported.
 `docs/differential_test_E1/` is a black-box comparison of the same rows, settings and
 splits against Orange, RapidMiner AI Studio and R with plain scikit-learn as the arbiter;
 its `RESULT_2026-09-24_partial.txt` names the three defects it found and their fixes.
@@ -71,7 +72,7 @@ its `RESULT_2026-09-24_partial.txt` names the three defects it found and their f
 (a crafted artifact, path traversal, a foreign session, formula cells, a CSV with markup in its
 headers through both pages, cleared fields, a model-change race, Escape on a focused
 tooltip, figures in a 720 px window, and the review's pipeline tests) and prints one line
-per probe; `docs/adversarial_check_2026-09-24.json` is its record, 10 of 10. Run it before
+per probe; `docs/adversarial_check_2026-09-25b.json` is its record at commit 15fe96c, 10 of 10. Run it before
 a release and after any change to the routes, the pipeline or the two pages.
 `tests/integration/test_browser_advanced.py` drives the page in Chromium through Playwright
 and checks that values typed into Advanced-mode controls reach the training request; the
@@ -84,7 +85,7 @@ directory: the SHA-256 of the uploaded file, the request, seed, estimator and pa
 preprocessing and split, metrics, the baseline comparison, data-check findings, and package
 versions. The result page links the model card and `GET /export-bundle`, a zip of the record
 with the fitted objects. `scripts/score_bundle.py BUNDLE.zip NEW_ROWS.csv` scores a file from
-a bundle without the web app; `scripts/rerun_bundle.py BUNDLE.zip DATA.csv` checks the data
+a bundle without the web app and writes the same columns as the web app, novelty and range included; `scripts/rerun_bundle.py BUNDLE.zip DATA.csv` checks the data
 hash, replays the recorded request, and reports whether the metrics reproduce. Loading a
 bundle builds fitted objects from a file, so the artifact is written in a format that
 stores them as data with their types named and refuses to build a type outside an

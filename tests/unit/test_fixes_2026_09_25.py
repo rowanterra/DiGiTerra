@@ -152,3 +152,24 @@ def test_score_bundle_finds_the_installation_key_and_writes_the_web_columns(clie
     pred = pd.read_csv(out)
     for col in ("novelty_score", "novel_row", "out_of_range_columns", "lower_90", "upper_90"):
         assert any(c.startswith(col) for c in pred.columns), col
+
+
+def test_the_default_column_shows_what_a_blank_field_leaves(client):
+    """Several trainers set values other than scikit-learn's; the table shows the trainer's."""
+    rows = {p["name"]: p for p in client.get("/model-defaults/gradient_boosting").get_json()["params"]}
+    assert rows["loss"]["default"] == "absolute_error"
+    assert rows["random_state"]["default"] == "run seed"
+    rows = {p["name"]: p for p in client.get("/model-defaults/RF").get_json()["params"]}
+    assert rows["max_features"]["default"] == "sqrt" and rows["max_features"]["kind"] == "text"
+    rows = {p["name"]: p for p in client.get("/model-defaults/MLP").get_json()["params"]}
+    assert rows["max_iter"]["default"] == 10000
+
+
+def test_every_trainer_builds_its_estimator_without_fitting():
+    from python_scripts.estimator_params import built_estimator
+
+    for name, (fn, _) in MODEL_REGISTRY.items():
+        if fn is None:
+            continue
+        model = built_estimator(name)
+        assert not any(k.endswith("_") and not k.startswith("_") for k in vars(model)), f"{name} was fitted"
