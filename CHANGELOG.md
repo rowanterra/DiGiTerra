@@ -5,6 +5,8 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-24
+
 ### Fixed
 
 Adversarial review of 2026-09-24 (three reviewers, one each on the routes, the pipeline and the browser side; every item below was reproduced before it was fixed, and each has a regression test in `tests/unit/test_review_2026_09_24.py`, `tests/unit/test_bundle.py` or the browser suites)
