@@ -362,7 +362,7 @@
                     <h3>Modeling Approaches</h3>
                 </summary>
                 <div class="doc-section-body">
-                    <p>The registry holds 67 trainable estimators: 32 for regression, 23 for classification and 12 for clustering. Every mode offers all of them for its task, so the rail catalog reads 32, 23 or 12 with the task type. <code>tests/unit/test_catalog_reachable.py</code> reads the sweep record and fails when an estimator trains but no select offers it.</p>
+                    <p>The registry holds 69 trainable estimators: 33 for regression, 24 for classification and 12 for clustering. Every mode offers all of them for its task, so the rail catalog reads 33, 24 or 12 with the task type. <code>tests/unit/test_catalog_reachable.py</code> reads the sweep record and fails when an estimator trains but no select offers it.</p>
             <p>Regression and classification offer three modeling modes after Model Preprocessing. The modes are independent, and clustering has one interface with no mode selection.</p>
             <p><strong>AutoML</strong> selects and tunes the model without manual configuration. It chooses the estimator (or takes the one named), selects features by recursive feature elimination, removes outliers with Isolation Forest, tunes hyperparameters by randomized search, and scores by cross-validation.</p>
             <p><strong>Simple Modeling</strong> fits one chosen estimator with its main hyperparameters and reports the score against a baseline.</p>
@@ -1205,6 +1205,7 @@
                         <option value="" disabled selected>-- Select an option --</option>
                         <optgroup label="Most Common">
                             <option value="Linear">Linear</option>
+                            <option value="Polynomial">Polynomial Regression</option>
                             <option value="Ridge">Ridge</option>
                             <option value="Lasso">Lasso</option>
                             <option value="ElasticNet">Elastic Net</option>
@@ -1271,6 +1272,7 @@
                         <option value="" disabled selected>-- Select an option --</option>
                         <optgroup label="Most Common">
                             <option value="Logistic_classifier">Logistic Classifier</option>
+                            <option value="Perceptron">Perceptron</option>
                             <option value="RF_classifier">Random Forest Classifier</option>
                             <option value="SVC_classifier">SVC Classifier</option>
                             <option value="MLP_classifier">MLP Classifier</option>
@@ -2581,6 +2583,7 @@
                                     <option value="" disabled selected>-- Select an option --</option>
                                     <optgroup label="Most Common">
                                         <option value="Linear">Linear</option>
+                                        <option value="Polynomial">Polynomial Regression</option>
                                         <option value="Ridge">Ridge</option>
                                         <option value="Lasso">Lasso</option>
                                         <option value="ElasticNet">Elastic Net</option>
@@ -2647,6 +2650,7 @@
                                     <option value="" disabled selected>-- Select an option --</option>
                                     <optgroup label="Most Common">
                                         <option value="Logistic_classifier">Logistic Classifier</option>
+                                        <option value="Perceptron">Perceptron</option>
                                         <option value="RF_classifier">Random Forest Classifier</option>
                                         <option value="SVC_classifier">SVC Classifier</option>
                                         <option value="MLP_classifier">MLP Classifier</option>
@@ -5940,6 +5944,7 @@
                                     <option value="" selected>Let AutoML choose</option>
                                     <optgroup label="Most Common">
                                         <option value="Linear">Linear</option>
+                                        <option value="Polynomial">Polynomial Regression</option>
                                         <option value="Ridge">Ridge</option>
                                         <option value="Lasso">Lasso</option>
                                         <option value="ElasticNet">Elastic Net</option>
@@ -6006,6 +6011,7 @@
                                     <option value="" selected>Let AutoML choose</option>
                                     <optgroup label="Most Common">
                                         <option value="Logistic_classifier">Logistic Classifier</option>
+                                        <option value="Perceptron">Perceptron</option>
                                         <option value="RF_classifier">Random Forest Classifier</option>
                                         <option value="SVC_classifier">SVC Classifier</option>
                                         <option value="MLP_classifier">MLP Classifier</option>

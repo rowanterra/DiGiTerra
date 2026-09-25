@@ -97,6 +97,8 @@ _SKLEARN_CLASS = {
     "meanshift": ("sklearn.cluster", "MeanShift"),
     "minibatch_kmeans": ("sklearn.cluster", "MiniBatchKMeans"),
     "optics": ("sklearn.cluster", "OPTICS"),
+    "Polynomial": ("python_scripts.models.regression_models.train_polynomial", "PolynomialRegression"),
+    "Perceptron": ("sklearn.linear_model", "Perceptron"),
 }
 
 

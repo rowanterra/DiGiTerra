@@ -1,0 +1,116 @@
+{
+ "trainscore": "0.5160004587",
+ "valscore": "0.5195043978",
+ "trainrmse": "53.4590502658",
+ "trainrmsestd": "N/A",
+ "trainmae": "43.1348242468",
+ "trainmaestd": "N/A",
+ "valrmse": "53.8084298037",
+ "valrmsestd": "N/A",
+ "valmae": "44.4422914892",
+ "valmaestd": "N/A",
+ "train_n": 353,
+ "test_n": 89,
+ "indicators": [
+  "age",
+  "sex",
+  "bmi",
+  "bp",
+  "s1",
+  "s2",
+  "s3",
+  "s4",
+  "s5",
+  "s6"
+ ],
+ "predictors": [
+  "target"
+ ],
+ "cross_validation_file": null,
+ "cross_validation_summary": null,
+ "model_params": {
+  "copy_X": true,
+  "fit_intercept": true,
+  "n_jobs": null,
+  "positive": false,
+  "tol": 1e-06
+ },
+ "feature_selection_info": null,
+ "outlier_info": null,
+ "regression_visuals": [
+  {
+   "label": "Predicted vs Actual (per target) - DiGiTerra Advanced Modeling",
+   "file": "target_plot_pred_actual",
+   "type": "baseline"
+  },
+  {
+   "label": "Test Residuals (per target) - DiGiTerra Advanced Modeling",
+   "file": "target_plot_residuals",
+   "type": "baseline"
+  },
+  {
+   "label": "Predicted vs Actual + Residuals (combined, per target) - DiGiTerra Advanced Modeling",
+   "file": "target_plot",
+   "type": "baseline"
+  },
+  {
+   "label": "SHAP Summary - DiGiTerra Advanced Modeling",
+   "file": "shap_summary",
+   "type": "baseline"
+  },
+  {
+   "label": "Predicted vs Actual (summary)",
+   "file": "regression_predicted_vs_actual.png",
+   "type": "default"
+  },
+  {
+   "label": "Residuals Histogram",
+   "file": "regression_residuals_hist.png",
+   "type": "default"
+  },
+  {
+   "label": "Residuals vs Fitted",
+   "file": "regression_residuals_vs_fitted.png",
+   "type": "default"
+  },
+  {
+   "label": "Actual vs Predicted Density",
+   "file": "regression_density.png",
+   "type": "default"
+  },
+  {
+   "label": "Feature Importance",
+   "file": "regression_feature_importance.png",
+   "type": "default"
+  }
+ ],
+ "split_note": "Time-ordered holdout on column 'order': the latest 20% of rows (89 of 442) are the test set.",
+ "data_checks": {
+  "n_rows": 442,
+  "n_features": 10,
+  "blocking": [],
+  "warnings": [],
+  "allow_unsafe": false,
+  "forced": false,
+  "override_reason": null,
+  "decision_use": "no blocking findings"
+ },
+ "baseline": {
+  "kind": "regression",
+  "description": "Predicting the training mean",
+  "metric": "R\u00b2",
+  "baseline_value": -0.0008,
+  "model_value": 0.5195,
+  "baseline_rmse": 77.658296,
+  "training_mean": [
+   152.58640226628896
+  ],
+  "model_beats_baseline": true
+ },
+ "model_comparison": null,
+ "model_name": "Linear",
+ "session_id": "87f253d7-eb8c-4bc5-b571-8cb3d928cba8",
+ "model_card_url": "/user-visualizations/model_card.html",
+ "bundle_url": "/export-bundle",
+ "model_retained": true
+}

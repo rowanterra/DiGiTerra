@@ -43,6 +43,8 @@ OWN_TRUSTED_TYPES = (
     "python_scripts.models.regression_models.train_radius_neighbors_regressor.RadiusNeighborsWithFallback",
     "python_scripts.preprocessing.applicability.Applicability",
     "python_scripts.preprocessing.uncertainty.Conformal",
+    "python_scripts.reporting.birch_centroids.BirchCentroids",
+    "python_scripts.models.regression_models.train_polynomial.PolynomialRegression",
 )
 
 
@@ -76,7 +78,8 @@ _NEVER = (
 # Estimators skops cannot describe as data. A bundle of one of these cannot be
 # written without a pickle, so the export says so rather than falling back to one.
 # Checked by scripts/check_artifact_roundtrip.py, which names any that appear.
-UNSUPPORTED_ESTIMATORS = ("Birch",)
+# Birch was here until 2026-09-25; it is now written as BirchCentroids (below).
+UNSUPPORTED_ESTIMATORS: tuple[str, ...] = ()
 
 
 class ArtifactError(ValueError):
@@ -97,6 +100,7 @@ def dumps(objects: dict) -> bytes:
     """Serialize the fitted objects. Raises ArtifactError when they cannot be."""
     import skops.io as sio
 
+    objects = _describable(objects)
     try:
         return sio.dumps(objects)
     except Exception as e:  # a type skops cannot describe as data
@@ -107,6 +111,20 @@ def dumps(objects: dict) -> bytes:
                 "cannot be exported as a bundle. Its results, model card and manifest are unaffected."
             ) from e
         raise ArtifactError(f"The fitted objects could not be written without a pickle: {e}") from e
+
+
+def _describable(objects: dict) -> dict:
+    """Replace a fitted Birch, which skops refuses, with its data-only prediction state."""
+    if not isinstance(objects, dict):
+        return objects
+    from sklearn.cluster import Birch
+
+    model = objects.get("model")
+    if isinstance(model, Birch):
+        from python_scripts.reporting.birch_centroids import BirchCentroids
+
+        return {**objects, "model": BirchCentroids.from_birch(model)}
+    return objects
 
 
 def untrusted_types(data: bytes) -> list[str]:

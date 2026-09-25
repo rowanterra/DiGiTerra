@@ -2,7 +2,6 @@
 
 Same imports as app_model_training.py (regression, classify, cluster).
 MODEL_REGISTRY maps model name -> (train_fn, problem_type).
-Polynomial has no train_*; it is registered with train_fn=None.
 """
 
 import ast
@@ -33,6 +32,7 @@ from python_scripts.models.classify_models.train_nusvc import train_nusvc
 from python_scripts.models.classify_models.train_passive_aggressive_classifier import (
     train_passive_aggressive_classifier,
 )
+from python_scripts.models.classify_models.train_perceptron import train_perceptron
 from python_scripts.models.classify_models.train_quadratic_discriminant_analysis import (
     train_quadratic_discriminant_analysis,
 )
@@ -83,6 +83,7 @@ from python_scripts.models.regression_models.train_orthogonal_matching_pursuit i
 from python_scripts.models.regression_models.train_passive_aggressive_regressor import (
     train_passive_aggressive_regressor,
 )
+from python_scripts.models.regression_models.train_polynomial import train_polynomial
 from python_scripts.models.regression_models.train_quantile_regressor import train_quantile_regressor
 from python_scripts.models.regression_models.train_radius_neighbors_regressor import train_radius_neighbors_regressor
 from python_scripts.models.regression_models.train_ransac_regressor import train_ransac_regressor
@@ -163,10 +164,8 @@ MODEL_REGISTRY: dict[str, tuple[Callable | None, str]] = {
     "RidgeCV": (train_ridge_cv, "regression"),
     "SGD": (train_sgd_regressor, "regression"),
     "TheilSen": (train_theilsen_regressor, "regression"),
-    "Polynomial": (None, "regression"),  # no train_* in codebase
-    # Perceptron is a classifier but train_perceptron has the regression signature and fails on any
-    # numeric target. No <option> in the template offers it, so dispatch rejects it like Polynomial.
-    "Perceptron": (None, "classification"),
+    "Polynomial": (train_polynomial, "regression"),
+    "Perceptron": (train_perceptron, "classification"),
     # Classification
     "Logistic_classifier": (train_logistic_classifier, "classification"),
     "ExtraTrees_classifier": (train_extra_trees_classifier, "classification"),
@@ -524,7 +523,7 @@ def _model_kwargs(
     if modelName == "TheilSen":
         return {}
     if modelName == "Polynomial":
-        return {"degree": h.get("degree_specificity")}
+        return {"degree": h.get("degree_specificity") or h.get("degree")}
     if modelName == "Perceptron":
         if n:
             return {

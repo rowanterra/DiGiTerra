@@ -1,10 +1,10 @@
 from sklearn.linear_model import Perceptron
 
-from python_scripts.preprocessing.run_regression_pipeline import run_regression
+from python_scripts.models.defaults import sk_default
+from python_scripts.preprocessing.run_classification_pipeline import run_classification
 
 
 def train_perceptron(
-    model_type,
     train_data,
     target_variables,
     use_stratified_split,
@@ -13,7 +13,6 @@ def train_perceptron(
     stratifyColumn,
     units,
     X_scaler_type,
-    y_scaler_type,
     seed,
     quantileBinDict,
     sigfig,
@@ -27,30 +26,33 @@ def train_perceptron(
     hyperparameter_search="none",
     search_cv_folds=5,
     search_n_iter=50,
-    progress_tracker=None,
-    modeling_mode="simple",
     **kwargs,
 ):
-
+    # Perceptron is a classifier. The earlier trainer had the regression signature
+    # and failed on every numeric target, so the model was registered without one.
+    names = (
+        "penalty",
+        "alpha",
+        "l1_ratio",
+        "fit_intercept",
+        "max_iter",
+        "tol",
+        "shuffle",
+        "verbose",
+        "eta0",
+        "n_jobs",
+        "early_stopping",
+        "validation_fraction",
+        "n_iter_no_change",
+        "class_weight",
+        "warm_start",
+    )
     model = Perceptron(
-        penalty=kwargs.get("penalty", None),
-        alpha=kwargs.get("alpha", 0.0001),
-        fit_intercept=kwargs.get("fit_intercept", True),
-        max_iter=kwargs.get("max_iter", 1000),
-        tol=kwargs.get("tol", 1e-3),
-        shuffle=kwargs.get("shuffle", True),
-        verbose=kwargs.get("verbose", 0),
-        eta0=kwargs.get("eta0", 1.0),
-        n_jobs=kwargs.get("n_jobs", None),
+        **{n: kwargs.get(n, sk_default(Perceptron, n)) for n in names},
         random_state=kwargs.get("random_state", seed),
-        early_stopping=kwargs.get("early_stopping", False),
-        validation_fraction=kwargs.get("validation_fraction", 0.1),
-        n_iter_no_change=kwargs.get("n_iter_no_change", 5),
-        class_weight=kwargs.get("class_weight", None),
-        warm_start=kwargs.get("warm_start", False),
     )
 
-    return run_regression(
+    return run_classification(
         model,
         "Perceptron",
         train_data,
@@ -61,7 +63,6 @@ def train_perceptron(
         stratifyColumn,
         units,
         X_scaler_type,
-        y_scaler_type,
         seed,
         sigfig,
         quantileBinDict,
@@ -75,6 +76,5 @@ def train_perceptron(
         hyperparameter_search=hyperparameter_search,
         search_cv_folds=search_cv_folds,
         search_n_iter=search_n_iter,
-        progress_tracker=progress_tracker,
-        modeling_mode=modeling_mode,
+        modeling_mode=kwargs.get("modeling_mode", "simple"),
     )

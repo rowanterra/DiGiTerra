@@ -5,7 +5,7 @@ at all. LassoLars was in that state: trainable, exercised by the sweep, present 
 the hidden legacy selects, and absent from every select a person can reach. The
 registry count and the interface count disagreed by one and no test noticed.
 
-The expected set is read from docs/every_model_sweep_2026-09-03.json rather than
+The expected set is read from docs/every_model_sweep_2026-09-25c.json rather than
 written out here, so an estimator added to the registry and swept, but never put on
 a screen, fails this instead of reaching a reviewer.
 """
@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-SWEEP = ROOT / "docs" / "every_model_sweep_2026-09-03.json"
+SWEEP = ROOT / "docs" / "every_model_sweep_2026-09-25c.json"
 TEMPLATE = ROOT / "templates" / "index.html"
 
 # The selects a person can reach. The header* selects sit inside #headerModelSelection,
@@ -71,16 +71,19 @@ def test_every_offered_estimator_is_one_the_sweep_trained(offered, trained):
 
 
 def test_the_counts_the_documentation_states_are_the_counts_on_screen(offered, trained):
-    """67 trainable, and 67 reachable, so the paper and the interface agree."""
+    """69 trainable, and 69 reachable, so the documentation and the interface agree.
+
+    67 until 2026-09-25, when Polynomial and Perceptron took trainers.
+    """
     by_task = {}
     for r in trained:
         by_task.setdefault(r["task"], set()).add(r["model"])
     assert set(by_task) == {"regression", "classification", "cluster"}, sorted(by_task)
-    assert len(by_task["regression"]) == 32, sorted(by_task["regression"])
-    assert len(by_task["classification"]) == 23
+    assert len(by_task["regression"]) == 33, sorted(by_task["regression"])
+    assert len(by_task["classification"]) == 24
     assert len(by_task["cluster"]) == 12
-    assert sum(len(v) for v in by_task.values()) == 67
-    assert len({r["model"] for r in trained} & offered) == 67
+    assert sum(len(v) for v in by_task.values()) == 69
+    assert len({r["model"] for r in trained} & offered) == 69
 
 
 @pytest.mark.parametrize(

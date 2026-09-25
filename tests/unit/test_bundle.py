@@ -533,13 +533,20 @@ def test_the_radius_neighbors_fallback_estimator_is_on_the_allowlist():
     assert dotted in artifact.OWN_TRUSTED_TYPES
 
 
-def test_a_model_that_cannot_be_written_without_a_pickle_says_so():
-    """Birch is not describable by skops; the export refuses rather than pickling."""
+def test_a_birch_model_is_written_as_its_prediction_state():
+    """skops refuses the Birch type; the artifact holds BirchCentroids, which predicts the same labels.
+
+    Until 2026-09-25 a Birch run could not be exported as a bundle at all.
+    """
     import numpy as np
     from sklearn.cluster import Birch
 
     from python_scripts.reporting import artifact
 
-    model = Birch(n_clusters=2).fit(np.random.default_rng(0).normal(size=(30, 3)))
-    with pytest.raises(artifact.ArtifactError, match="cannot be exported as a bundle"):
-        artifact.dumps({"model": model})
+    X = np.random.default_rng(0).normal(size=(30, 3))
+    model = Birch(n_clusters=2).fit(X)
+    data = artifact.dumps({"model": model})
+    assert artifact.untrusted_types(data) == []
+    loaded = artifact.loads(data)["model"]
+    assert type(loaded).__name__ == "BirchCentroids"
+    assert (loaded.predict(X) == model.predict(X)).all() and (loaded.labels_ == model.labels_).all()
