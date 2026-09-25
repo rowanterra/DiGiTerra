@@ -1193,8 +1193,6 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
                     )
             store["training_visualization_version"] = str(int(time.time() * 1000))
 
-        # Mark all stages complete
-        tracker.complete()
         result["split_note"] = split_plan.note
         result["data_checks"] = guardrail_report.to_dict()
         forced = bool(allow_unsafe and guardrail_report.blocking)
@@ -1254,6 +1252,9 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
         except Exception as flush_err:
             logger.warning("Session not written after the run: %s", flush_err)
 
+        # Mark all stages complete only now, after the record, the memory check and
+        # the session file, so the progress does not read 100 while they run.
+        tracker.complete()
         # Store result for SSE endpoint
         set_result(session_id, result)
 

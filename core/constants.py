@@ -56,6 +56,14 @@ PROGRESS_STREAM_TIMEOUT_SECONDS = float(os.environ.get("DIGITERRA_PROGRESS_TIMEO
 PROGRESS_UPDATE_INTERVAL_SECONDS = 0.5
 PROGRESS_FINAL_UPDATE_DELAY_SECONDS = 0.5
 PROGRESS_COMPLETE_THRESHOLD = 100
+# The stream waits this long for the result once the progress reads 100, before it
+# reports that none arrived. Until 2026-09-25 the progress read 100 before the run
+# wrote its record (manifest, model card, memory check, session file) and the wait
+# was about 2 seconds; that step took 1.35 seconds for an MLP classifier on
+# penguins.csv in the container, and the Mac where the error appeared was not
+# measured. The progress now reads 100 after the record is written.
+PROGRESS_RESULT_WAIT_SECONDS = float(os.environ.get("DIGITERRA_RESULT_WAIT_SECONDS", "120") or 120)
+PROGRESS_RESULT_POLL_SECONDS = 0.25
 
 # HTTP
 HTTP_OK = 200

@@ -529,6 +529,39 @@ def test_try_an_example_loads_penguins_and_opens_exploration(session):
     assert not session.errors, session.errors
 
 
+def test_pairplot_same_column_and_its_errors_stay_in_the_pairplot_panel(session):
+    """2026-09-25: X and Y set to one column failed, and the message went to the Modeling form."""
+    p = session.page
+    with p.expect_response(lambda r: r.url.endswith("/upload")):
+        p.click("#tryExampleButton")
+    p.wait_for_timeout(1200)
+    with p.expect_response(lambda r: r.url.endswith("/correlationMatrices"), timeout=60000):
+        p.click("#columnsection button[type=submit]")
+    p.wait_for_selector("#pairplotImage", timeout=60000)
+    p.wait_for_timeout(800)
+    column = p.eval_on_selector("#pairplotXSelect", "e => e.value")
+    with p.expect_response(lambda r: r.url.endswith("/pairplot"), timeout=60000) as resp:
+        p.select_option("#pairplotYSelect", column)
+    assert resp.value.status == 200, f"same-column pairplot returned {resp.value.status}"
+    p.wait_for_timeout(1200)
+    assert p.inner_text("#errorDiv").strip() == ""
+    assert "hidden" in (p.get_attribute("#pairplotError", "class") or "")
+    assert not session.errors, session.errors
+
+    # A failure is shown beside the pairplot, not in the Modeling form.
+    p.route(
+        "**/pairplot",
+        lambda route: route.fulfill(status=500, content_type="application/json", body='{"error": "test failure"}'),
+    )
+    other = p.eval_on_selector("#pairplotXSelect", "e => [...e.options].map(o => o.value).find(v => v !== e.value)")
+    p.select_option("#pairplotXSelect", other)
+    p.wait_for_timeout(1200)
+    assert "test failure" in p.inner_text("#pairplotError")
+    assert p.inner_text("#errorDiv").strip() == ""
+    p.unroute("**/pairplot")
+    session.errors.clear()
+
+
 # --- The example path, end to end -----------------------------------------
 
 # The fields Try an Example fills in, and the tutorial's step for each.

@@ -15,6 +15,8 @@ from core.constants import (
     HTTP_TOO_MANY_REQUESTS,
     PROGRESS_COMPLETE_THRESHOLD,
     PROGRESS_FINAL_UPDATE_DELAY_SECONDS,
+    PROGRESS_RESULT_POLL_SECONDS,
+    PROGRESS_RESULT_WAIT_SECONDS,
     PROGRESS_STREAM_TIMEOUT_SECONDS,
     PROGRESS_UPDATE_INTERVAL_SECONDS,
 )
@@ -124,12 +126,18 @@ def _progress_events(tracker, session_id, start_time):
             yield f"data: {json.dumps(progress)}\n\n"
             if progress["overall_progress"] >= PROGRESS_COMPLETE_THRESHOLD:
                 time.sleep(PROGRESS_FINAL_UPDATE_DELAY_SECONDS)
+                # The run writes its record after the progress reaches 100; wait
+                # for the result, sending the progress about once a second so the
+                # connection stays open.
                 result = get_result(session_id)
-                for _ in range(3):
-                    if result is not None:
-                        break
-                    time.sleep(0.5)
+                deadline = time.time() + PROGRESS_RESULT_WAIT_SECONDS
+                last_sent = time.time()
+                while result is None and time.time() < deadline:
+                    time.sleep(PROGRESS_RESULT_POLL_SECONDS)
                     result = get_result(session_id)
+                    if result is None and time.time() - last_sent >= 1:
+                        yield f"data: {json.dumps(tracker.get_progress())}\n\n"
+                        last_sent = time.time()
                 if result is not None:
                     yield f"data: {json.dumps({'type': 'result', 'data': result})}\n\n"
                 else:

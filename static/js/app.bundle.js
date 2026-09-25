@@ -2079,6 +2079,7 @@ corrForm.addEventListener('submit', async(e) => {
                             ${pairplotOptions}
                         </select>
                     </div>
+                    <div id="pairplotError" class="hidden"></div>
                     <img id="pairplotImage" src="${withCacheBust(pairplotImage)}" alt="Pairplot preview">
                 </div>
             </div>
@@ -2101,11 +2102,24 @@ corrForm.addEventListener('submit', async(e) => {
         const pairplotXSelect = document.getElementById('pairplotXSelect')
         const pairplotYSelect = document.getElementById('pairplotYSelect')
         const pairplotImageEl = document.getElementById('pairplotImage')
+        // Pairplot messages go to the box inside the pairplot panel. The page-wide
+        // #errorDiv sits in the Modeling form, where a pairplot message appeared
+        // after the user had left Data Exploration.
+        const pairplotErrorEl = document.getElementById('pairplotError')
         if (pairplotXSelect && pairplotYSelect && pairplotImageEl && numericColumns.length >= 2) {
             // Set initial values without triggering change events
             pairplotXSelect.value = numericColumns[0]
             pairplotYSelect.value = numericColumns[1]
             
+            // Ends a request and, when X or Y changed while it ran, draws the latest pair.
+            const finishPairplot = () => {
+                pairplotImageEl.dataset.updating = 'false';
+                if (pairplotImageEl.dataset.pending === 'true') {
+                    pairplotImageEl.dataset.pending = 'false';
+                    updatePairplot();
+                }
+            };
+
             const updatePairplot = async () => {
                 // Validate that both selects have values
                 if (!pairplotXSelect.value || !pairplotYSelect.value) {
@@ -2113,11 +2127,21 @@ corrForm.addEventListener('submit', async(e) => {
                     return;
                 }
                 
-                // Prevent duplicate requests if one is already in progress
+                // One request at a time. A change made while one is running is not
+                // dropped: the plot is redrawn once more for the latest X and Y when
+                // the running request ends, so the image matches the selects.
                 if (pairplotImageEl.dataset.updating === 'true') {
+                    pairplotImageEl.dataset.pending = 'true';
                     return;
                 }
                 pairplotImageEl.dataset.updating = 'true';
+                pairplotImageEl.dataset.pending = 'false';
+                const requestId = String(Number(pairplotImageEl.dataset.request || 0) + 1);
+                pairplotImageEl.dataset.request = requestId;
+                if (pairplotErrorEl) {
+                    pairplotErrorEl.innerHTML = '';
+                    hideElement(pairplotErrorEl);
+                }
                 
                 // Add a slight opacity change to show it's updating
                 pairplotImageEl.style.opacity = '0.6';
@@ -2147,9 +2171,9 @@ corrForm.addEventListener('submit', async(e) => {
                     if (!response.ok) {
                         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
                         console.error('Pairplot update failed:', errorData.error || response.statusText);
-                        showError(errorDiv, `Pairplot update failed: ${errorData.error || response.statusText}`);
+                        showError(pairplotErrorEl, `Pairplot update failed: ${errorData.error || response.statusText}`);
                         pairplotImageEl.style.opacity = '1';
-                        pairplotImageEl.dataset.updating = 'false';
+                        finishPairplot();
                         return;
                     }
                     
@@ -2185,17 +2209,17 @@ corrForm.addEventListener('submit', async(e) => {
                                 // Wait for image to actually load
                                 const imgLoadHandler = () => {
                                     currentImg.style.opacity = '1';
-                                    currentImg.dataset.updating = 'false';
+                                    finishPairplot();
                                     currentImg.removeEventListener('load', imgLoadHandler);
                                     currentImg.removeEventListener('error', imgErrorHandler);
                                 };
                                 
                                 const imgErrorHandler = () => {
                                     console.error('Pairplot: Failed to load image');
-                                    showError(errorDiv, 'The pairplot image did not load.');
+                                    showError(pairplotErrorEl, 'The pairplot image did not load.');
                                     currentImg.style.opacity = '1';
                                     currentImg.style.display = '';
-                                    currentImg.dataset.updating = 'false';
+                                    finishPairplot();
                                     currentImg.removeEventListener('load', imgLoadHandler);
                                     currentImg.removeEventListener('error', imgErrorHandler);
                                 };
@@ -2206,25 +2230,25 @@ corrForm.addEventListener('submit', async(e) => {
                                 
                                 // Fallback timeout in case events don't fire
                                 setTimeout(() => {
-                                    if (currentImg.dataset.updating === 'true') {
+                                    if (currentImg.dataset.updating === 'true' && currentImg.dataset.request === requestId) {
                                         currentImg.style.opacity = '1';
                                         currentImg.style.display = '';
-                                        currentImg.dataset.updating = 'false';
+                                        finishPairplot();
                                     }
                                 }, 5000);
                             });
                         });
                     } else {
                         console.warn('Pairplot: No image returned from server');
-                        showError(errorDiv, 'The server returned no pairplot image.');
+                        showError(pairplotErrorEl, 'The server returned no pairplot image.');
                         pairplotImageEl.style.opacity = '1';
-                        pairplotImageEl.dataset.updating = 'false';
+                        finishPairplot();
                     }
                 } catch (error) {
                     console.error('Pairplot update error:', error);
-                    showError(errorDiv, `Pairplot update failed: ${error.message || 'request error'}`);
+                    showError(pairplotErrorEl, `Pairplot update failed: ${error.message || 'request error'}`);
                     pairplotImageEl.style.opacity = '1';
-                    pairplotImageEl.dataset.updating = 'false';
+                    finishPairplot();
                 }
             };
             
@@ -2234,7 +2258,7 @@ corrForm.addEventListener('submit', async(e) => {
         }
     }
     catch (error) {
-        showError(errorDiv, error.message || 'The request failed. Open the browser console for the details.');
+        showError(document.getElementById('explorationErrorDiv') || errorDiv, error.message || 'The request failed. Open the browser console for the details.');
     }
 
 });

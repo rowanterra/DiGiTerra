@@ -325,7 +325,10 @@ def handle_pairplot(
     safe_x = secure_filename(str(x_col))
     safe_y = secure_filename(str(y_col))
     pairplot_path = user_vis_dir / f"pairplot_{safe_x}_{safe_y}.png"
-    grid = sns.pairplot(df_numeric[[x_col, y_col]], diag_kind="hist")
+    # The same column in X and Y is one variable: a histogram. Selecting it twice
+    # built a frame with a duplicated column name, which seaborn rejects.
+    columns = [x_col] if x_col == y_col else [x_col, y_col]
+    grid = sns.pairplot(df_numeric[columns], diag_kind="hist")
     grid.savefig(pairplot_path, dpi=150)
     plt.close("all")
     return (
