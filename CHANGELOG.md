@@ -5,6 +5,8 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-27
+
 ### Fixed
 
 Found while writing the guide of 2026-09-25 (`docs/digiterra_guide_2026-09-25.html`); regression tests in `tests/unit/test_fixes_2026_09_25.py` and `tests/integration/test_browser_guided.py`.
@@ -23,10 +25,6 @@ Found while writing the guide of 2026-09-25 (`docs/digiterra_guide_2026-09-25.ht
 - RF, ExtraTrees and Bagging retrained on an Apple silicon Mac and on x86_64 Linux gave different trees from bitwise-identical data, seeds and package versions (first-eight predictions in the round-trip records differ by up to 3.6 percent). The cause is fused multiply-add in the arm64 build of scikit-learn: a build with `-ffp-contract=off` on the Mac matches Linux in all 15 model and depth settings tested, and a control build with default flags matches the Mac wheel. Each platform repeats its own result, and a model read from a bundle predicts the same values on both. Depth limits reduce the differences and do not remove them, so the scikit-learn defaults stay (`docs/tree_platform_difference_2026-09-25`). `scripts/rerun_bundle.py` named package drift but not a platform change, so such a rerun reported changed metrics with no reason given. The manifest now records `system` and `machine`, `scripts/rerun_bundle.py` prints a note when either differs from the recorded run (reading older bundles from the platform string) and adds `platform_change` to its JSON, the model card states what retraining reproduces, `scripts/check_artifact_roundtrip.py` records the processor type, and `scripts/compare_roundtrip_records.py` classes the differences between two round-trip records. Tests in `tests/unit/test_platform_2026_09_25.py`. The reproducibility standard is conformance to the official scikit-learn on the machine that runs DiGiTerra, so the app keeps the unmodified scikit-learn release rather than a build that makes the Mac agree with Linux; `tests/unit/test_sklearn_conformance.py` requires the RF, ExtraTrees, Bagging and DecisionTree fits of a DiGiTerra run to equal plain scikit-learn fits on the same matrix, node for node.
 - Choosing the same column for the pairplot's X and Y failed with "Pairplot update failed: The server could not complete that request", because the plotted frame had a duplicated column name. The same column now draws its histogram. Pairplot and exploration messages went to `#errorDiv`, which sits in the Modeling form, so the message appeared on the Modeling page after the user had left Data Exploration; they now appear in the pairplot panel and above the exploration results. A change of X or Y made while a pairplot was being drawn was dropped, which left the image out of step with the selects; the plot is now redrawn for the latest pair. Tests in `tests/unit/test_fixes_2026_09_25b.py` and `tests/integration/test_browser_advanced.py`.
 - The MLP classifier on `penguins.csv` reported "Result not available after training completed". The progress reached 100 before the run wrote its record (manifest, model card, the memory check, the session file), and the progress stream waited about 2 seconds for the result; that step took 1.35 seconds for the MLP in the container (not measured on the Mac where the error appeared). The progress now reaches 100 after that step, and the stream waits up to `DIGITERRA_RESULT_WAIT_SECONDS` (120 by default) for the result.
-
-## [0.1.0] - 2026-09-24
-
-### Fixed
 
 Adversarial review of 2026-09-24 (three reviewers, one each on the routes, the pipeline and the browser side; every item below was reproduced before it was fixed, and each has a regression test in `tests/unit/test_review_2026_09_24.py`, `tests/unit/test_bundle.py` or the browser suites)
 
