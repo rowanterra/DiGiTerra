@@ -233,7 +233,6 @@ all recorded metrics reproduced</code></pre>
 
 <h2 id="cite">Version and citation</h2>
 <p>This guide describes DiGiTerra 0.1.0, released 2026-09-24, at commit <code>15fe96c</code> on branch <code>audit-fixes</code>. The software is released under the MIT license. <code>CITATION.cff</code> in the repository holds the citation: DiGirolamo, P. E., Terra, R. R., Gulliver, D. M., and Trun, N. J. (2026), <em>DiGiTerra: Tabular Machine Learning in the Browser with scikit-learn</em> (Version 0.1.0), <a href="https://github.com/rowanterra/DiGiTerra">https://github.com/rowanterra/DiGiTerra</a>. Please also cite scikit-learn (Pedregosa et al., 2011) for the estimators, preprocessing steps, and metrics, and Gorman et al. (2014) for the penguin data. <code>THIRD_PARTY_NOTICES.md</code> lists every runtime dependency with the dependency's version and license, including Flask (Pallets, 2026).</p>
-<p></p>
 </section>
 """
 
