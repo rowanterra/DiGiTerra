@@ -51,6 +51,23 @@ The prebuilt application contains the Python interpreter and every dependency, s
 3. Run `chmod +x DiGiTerra/DiGiTerra`.
 4. Double-click `DiGiTerra` or run `./DiGiTerra/DiGiTerra`.
 
+## Layout
+
+| Path | Contents |
+| --- | --- |
+| `app.py`, `desktop_app.py` | the two entry points |
+| `core/`, `routes/`, `python_scripts/` | the application: state, jobs, security; the Flask routes; models, preprocessing, plotting, reporting |
+| `static/`, `templates/` | the browser assets and page templates |
+| `tests/` | the pytest suite (`make test`); unit and integration |
+| `scripts/` | one-purpose scripts: adversarial check, roundtrip check, trainer defaults, every-model sweep, language check, bundle rerun |
+| `examples/` | the example datasets |
+| `docs/` | documentation and the dated verification records (adversarial checks, roundtrips, sweeps, `differential_test_E1/`, `audit_2026-09-25/`, `tree_platform_difference_2026-09-25/`), named by tests and scripts; `docs/reviews/` holds the review and audit notes |
+| `build/`, `deploy/`, `dist/` | PyInstaller build files and specs; Docker and Kubernetes files; build output (not tracked) |
+| `paper/` | the JOSS manuscript |
+| `NOTEBOOK.md`, `RERUN_LOG.md`, `CHANGELOG.md` | the project records (CMP-004) |
+| `pyproject.toml`, `requirements.txt`, `requirements-dev.txt`, `package.json`, `package-lock.json`, `Makefile` | the environment and the build commands (CMP-003) |
+| `LICENSE`, `CITATION.cff`, `THIRD_PARTY_NOTICES.md`, `CONTRIBUTING.md`, `SECURITY.md` | the release and policy files (CMP-006) |
+
 ## Example datasets
 
 The `examples/` directory contains 10 CSV files: 4 classification (Iris, Penguins, Wine, Breast cancer), 3 regression (Diabetes, Synthetic, Linnerud), and 3 feature-only clustering copies. Penguins is the one with categorical columns and missing values. `examples/README.md` lists the column setup for each file.

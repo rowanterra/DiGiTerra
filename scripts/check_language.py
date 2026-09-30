@@ -42,7 +42,7 @@ STE_JS = (
 )
 
 # Standard B: the prose.
-PROSE = ("README.md", "CHANGELOG.md", "CONTRIBUTING.md", "AUDIT_RESUME.md", "deploy/README.md", "examples/README.md")
+PROSE = ("README.md", "CHANGELOG.md", "CONTRIBUTING.md", "docs/reviews/AUDIT_RESUME.md", "deploy/README.md", "examples/README.md")
 PROSE_DIRS = ("docs",)
 
 STE_PROCEDURAL_WORDS = 20
