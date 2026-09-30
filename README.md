@@ -61,7 +61,7 @@ The prebuilt application contains the Python interpreter and every dependency, s
 | `tests/` | the pytest suite (`make test`); unit and integration |
 | `scripts/` | one-purpose scripts: adversarial check, roundtrip check, trainer defaults, every-model sweep, language check, bundle rerun |
 | `examples/` | the example datasets |
-| `docs/` | documentation and the dated verification records (adversarial checks, roundtrips, sweeps, `differential_test_E1/`, `audit_2026-09-25/`, `tree_platform_difference_2026-09-25/`), named by tests and scripts; `docs/reviews/` holds the review and audit notes |
+| `docs/` | documentation and the dated verification records (adversarial checks, roundtrips, sweeps, `differential_test_E1/`, `audit_2026-09-25/`, `tree_platform_difference_2026-09-25/`), named by tests and scripts; `docs/reviews/` has the review and audit notes |
 | `build/`, `deploy/`, `dist/` | PyInstaller build files and specs; Docker and Kubernetes files; build output (not tracked) |
 | `paper/` | the JOSS manuscript |
 | `NOTEBOOK.md`, `RERUN_LOG.md`, `CHANGELOG.md` | the project records (CMP-004) |
