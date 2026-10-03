@@ -6,7 +6,7 @@ title: >-
 abstract: >-
   DiGiTerra is a Flask application for exploring a tabular dataset, training a
   scikit-learn model on the dataset, and running inference on new rows. The
-  application offers 67 trainable estimators (32 regression, 23 classification, 12 clustering) across regression,
+  application offers 69 trainable estimators (33 regression, 24 classification, 12 clustering) across regression,
   classification, and clustering, with optional feature selection, outlier
   handling, hyperparameter search, and cross-validation, and ships as a desktop
   application for macOS, Windows, and Linux.
