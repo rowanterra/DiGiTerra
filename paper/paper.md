@@ -59,7 +59,7 @@ Preprocessing covers missing values and zeros, one-hot encoding of text columns,
 
 Before a run starts, data checks look for a feature that duplicates the target, a categorical column that maps one to one onto the class, constant and identifier columns, heavy missingness, duplicate rows, class imbalance, and too few rows for the split. A blocking finding stops the run; a user who overrides one must write a justification, and the run is then labeled as not valid for decision use. Each fitted regression or classification model is scored against a baseline, the training mean or the most common class, on the same validation rows.
 
-The interface ships in two forms on the same routes. The classic page holds Simple, Advanced and AutoML modes. The guided page (`/guided`) is four steps, one on screen at a time, with a plain-language explanation on every control and metric and on the common hyperparameters, and a Full choice that opens a hyperparameter table filled from the estimator's own signature, so names and defaults cannot drift from scikit-learn. The page is built to WCAG 2.2 AA, and a Chromium test runs axe-core under the A and AA rule sets with no serious violation allowed; `docs/ACCESSIBILITY.md` states what is checked and what is not claimed.
+The classic page holds Simple, Advanced and AutoML modes. The guided page (`/guided`) is four steps, one on screen at a time, with a plain-language explanation on every control and metric and on the common hyperparameters, and a Full choice that opens a hyperparameter table filled from the estimator's own signature, so names and defaults cannot drift from scikit-learn. The page is built to WCAG 2.2 AA, and a Chromium test runs axe-core under the A and AA rule sets with no serious violation allowed; `docs/ACCESSIBILITY.md` states what is checked and what is not claimed.
 
 Every run writes a manifest and a model card. The manifest records the SHA-256 of the uploaded bytes, the request as submitted, the seed, the estimator and its parameters, preprocessing and split, metrics, baseline, data-check findings, and the versions of Python, DiGiTerra and the numerical packages. Models are stored with skops rather than pickle, so loading builds only allowlisted types, and each installation signs its bundles with an HMAC-SHA256 key that import verifies. Command-line scripts score and rerun a bundle without the interface.
 
@@ -79,7 +79,7 @@ The Department of Energy's National Energy Technology Laboratory hosts DiGiTerra
 
 # AI usage disclosure
 
-Claude Opus 5 [@anthropic2026claudeopus5] and Cursor [@anysphere2026cursor] were used to audit and assist with the user interface code. Their changes were checked by the test suites and the verification records above.
+Claude Opus 5, Claude Opus 5.5 and Claude Fable 5.1 [@anthropic2026claudeopus5; @anthropic2026claudeopus55; @anthropic2026claudefable51] and Cursor [@anysphere2026cursor] were used to audit and assist with the user interface code. Their changes were checked by the test suites and the verification records above.
 
 # Author contributions
 
