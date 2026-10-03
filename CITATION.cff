@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: >-
   If you use DiGiTerra, cite this software.
 title: >-
-  DiGiTerra: Tabular Machine Learning in the Browser with scikit-learn
+  DiGiTerra: An interactive interface for machine learning model development
 abstract: >-
   DiGiTerra is a Flask application for exploring a tabular dataset, training a
   scikit-learn model on the dataset, and running inference on new rows. The

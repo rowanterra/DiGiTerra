@@ -1,8 +1,8 @@
 # Example datasets
 
-Ten CSV files for end-to-end checks of DiGiTerra. The files are in the repository only. The desktop build does not include them.
+Ten example datasets as CSV files for end-to-end checks of DiGiTerra, plus `penguins_new.csv` and its key `penguins_new_key.csv` for the Inference on New Data page (12 CSV files). The files are in the repository only. The desktop build does not include them.
 
-Eight files are static copies of scikit-learn datasets ([scikit-learn.org/stable/datasets.html](https://scikit-learn.org/stable/datasets.html), BSD license). `synthetic_regression.csv` was produced once with `sklearn.datasets.make_regression`. `penguins.csv` is the Palmer Archipelago penguin data of Gorman, Williams and Fraser (2014), distributed under CC0 through the palmerpenguins package and copied here unmodified. No generator script is in the repository.
+Eight files are static copies of scikit-learn datasets ([scikit-learn.org/stable/datasets.html](https://scikit-learn.org/stable/datasets.html), BSD license). `synthetic_regression.csv` was produced once with `sklearn.datasets.make_regression`. `penguins.csv` is the Palmer Archipelago penguin data of Gorman, Williams and Fraser (2014), distributed under CC0 through the palmerpenguins package and copied here unmodified. No generator script for these ten files is in the repository; `make_penguins_new.py` writes the two inference files described below.
 
 ## Classification
 
