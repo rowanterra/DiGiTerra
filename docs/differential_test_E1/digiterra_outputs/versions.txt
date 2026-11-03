@@ -1,0 +1,6 @@
+python 3.11.15
+scikit-learn 1.9.0
+numpy 1.26.4
+pandas 2.3.3
+DiGiTerra tree /home/user/dgt
+DIGITERRA_ISOLATE_WORK 0

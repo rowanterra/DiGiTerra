@@ -1,0 +1,235 @@
+E1 comparison, 2026-09-25. COMPLETE set.
+
+Counts by app, case and class:
+app        case  cls         
+aistudio   C1    same              2
+           D1    near zero        20
+                 same            112
+           D2    same             48
+           R1    same            200
+digiterra  C1    same              1
+           C2    same             91
+           D1    last digit        6
+                 near zero        10
+                 rounded 6 dp     54
+                 same             18
+           D2    last digit        1
+                 rounded 6 dp      2
+                 same             29
+           R1    same            318
+excel      D1    near zero        20
+                 same            156
+           D2    same             64
+           R1    same            206
+orange     C1    same              2
+           C2    other           180
+                 same              2
+           D1    near zero        20
+                 same            156
+           D2    same             64
+           R1    same            206
+r          C1    same              2
+           D1    near zero        20
+                 same            156
+           D2    same             64
+           R1    same            206
+
+Cells classed other (oracle, value, relative difference):
+  orange C2 p_setosa.order121: 0.974625667447019 vs 0.9745428281386735 rel 8.500e-05
+  orange C2 p_setosa.order122: 0.0459809721699888 vs 0.0461122197409049 rel 2.854e-03
+  orange C2 p_setosa.order123: 0.9876235930879032 vs 0.9876264532142568 rel 2.896e-06
+  orange C2 p_setosa.order124: 2.475983809235178e-06 vs 2.4814791041049727e-06 rel 2.219e-03
+  orange C2 p_setosa.order125: 0.9528800404065146 vs 0.9526061416142668 rel 2.874e-04
+  orange C2 p_setosa.order126: 0.0207823533440169 vs 0.0208528690389736 rel 3.393e-03
+  orange C2 p_setosa.order127: 0.0001196963748729 vs 0.0001202681991234 rel 4.777e-03
+  orange C2 p_setosa.order128: 1.2454957942954442e-05 vs 1.251660952844288e-05 rel 4.950e-03
+  orange C2 p_setosa.order129: 0.0001763251800889 vs 0.000176785199176 rel 2.609e-03
+  orange C2 p_setosa.order130: 0.9950935087519888 vs 0.9950836171728163 rel 9.940e-06
+  orange C2 p_setosa.order131: 0.9651439979351264 vs 0.9650438818613069 rel 1.037e-04
+  orange C2 p_setosa.order132: 0.0022691194077909 vs 0.0022678127805234 rel 5.758e-04
+  orange C2 p_setosa.order133: 0.00153117926517 vs 0.0015353721952127 rel 2.738e-03
+  orange C2 p_setosa.order134: 0.0203794967472996 vs 0.0204220344185739 rel 2.087e-03
+  orange C2 p_setosa.order135: 8.922457369229656e-06 vs 8.976654727155758e-06 rel 6.074e-03
+  orange C2 p_setosa.order136: 0.011117071263055 vs 0.0111037477861492 rel 1.198e-03
+  orange C2 p_setosa.order137: 1.3792835164983124e-05 vs 1.385726916560224e-05 rel 4.672e-03
+  orange C2 p_setosa.order138: 0.0323501465556703 vs 0.0324700958813862 rel 3.708e-03
+  orange C2 p_setosa.order139: 0.0127553703243428 vs 0.0128275733573865 rel 5.661e-03
+  orange C2 p_setosa.order140: 0.0001166785448482 vs 0.0001174126480565 rel 6.292e-03
+  orange C2 p_setosa.order141: 0.000336296756872 vs 0.0003375011988815 rel 3.581e-03
+  orange C2 p_setosa.order142: 0.0173119701086475 vs 0.0173621073205183 rel 2.896e-03
+  orange C2 p_setosa.order143: 0.0205798642618682 vs 0.0205930273262386 rel 6.396e-04
+  orange C2 p_setosa.order144: 1.8184982084759195e-06 vs 1.8315763022420108e-06 rel 7.192e-03
+  orange C2 p_setosa.order145: 0.987208377420808 vs 0.9871599886105475 rel 4.902e-05
+  orange C2 p_setosa.order146: 0.0001019456065291 vs 0.0001022568347472 rel 3.053e-03
+  orange C2 p_setosa.order147: 4.8706009864667935e-06 vs 4.8992305542107055e-06 rel 5.878e-03
+  orange C2 p_setosa.order148: 0.9852271335334952 vs 0.9852088709743316 rel 1.854e-05
+  orange C2 p_setosa.order149: 7.399237056184413e-05 vs 7.426960626008307e-05 rel 3.747e-03
+  orange C2 p_setosa.order150: 0.9724763359995244 vs 0.97242257168115 rel 5.529e-05
+  orange C2 p_versicolor.order121: 0.0253742632176204 vs 0.0254571027530196 rel 3.265e-03
+  orange C2 p_versicolor.order122: 0.8923644734232721 vs 0.8923203738674191 rel 4.942e-05
+  orange C2 p_versicolor.order123: 0.0123763790523824 vs 0.0123735191470821 rel 2.311e-04
+  orange C2 p_versicolor.order124: 0.0389703558025308 vs 0.0388945677707222 rel 1.945e-03
+  orange C2 p_versicolor.order125: 0.0471196857494231 vs 0.04739358421889 rel 5.813e-03
+  orange C2 p_versicolor.order126: 0.9041415516409648 vs 0.9041617567596808 rel 2.235e-05
+  orange C2 p_versicolor.order127: 0.0581367719887917 vs 0.0581221524424843 rel 2.515e-04
+  orange C2 p_versicolor.order128: 0.0339371593958835 vs 0.0339197877815192 rel 5.119e-04
+  orange C2 p_versicolor.order129: 0.1490727765507506 vs 0.1491009041883958 rel 1.887e-04
+  orange C2 p_versicolor.order130: 0.0049064850476592 vs 0.0049163766614144 rel 2.016e-03
+  orange C2 p_versicolor.order131: 0.0348558745325022 vs 0.0349559909807447 rel 2.872e-03
+  orange C2 p_versicolor.order132: 0.7773016149109298 vs 0.777195678285811 rel 1.363e-04
+  orange C2 p_versicolor.order133: 0.7053402658266579 vs 0.7054297880104182 rel 1.269e-04
+  orange C2 p_versicolor.order134: 0.9520813515723134 vs 0.952065622095844 rel 1.652e-05
+  orange C2 p_versicolor.order135: 0.0186326006123945 vs 0.0186271752357502 rel 2.912e-04
+  orange C2 p_versicolor.order136: 0.9671199296701882 vs 0.9671356194313484 rel 1.622e-05
+  orange C2 p_versicolor.order137: 0.0295629148921682 vs 0.029547419122207 rel 5.242e-04
+  orange C2 p_versicolor.order138: 0.9082753052532128 vs 0.9082513681681986 rel 2.635e-05
+  orange C2 p_versicolor.order139: 0.7639489305760314 vs 0.7641942178300605 rel 3.211e-04
+  orange C2 p_versicolor.order140: 0.1355800897091177 vs 0.1355298737781369 rel 3.704e-04
+  orange C2 p_versicolor.order141: 0.1641722487866295 vs 0.1640717146833738 rel 6.124e-04
+  orange C2 p_versicolor.order142: 0.8983753202791935 vs 0.898394915179482 rel 2.181e-05
+  orange C2 p_versicolor.order143: 0.9431133960644568 vs 0.9431468879893256 rel 3.551e-05
+  orange C2 p_versicolor.order144: 0.0094682116691895 vs 0.0094646317901703 rel 3.781e-04
+  orange C2 p_versicolor.order145: 0.0127916109722953 vs 0.0128399998312381 rel 3.783e-03
+  orange C2 p_versicolor.order146: 0.1024241800847632 vs 0.1024135630066951 rel 1.037e-04
+  orange C2 p_versicolor.order147: 0.0187533890653021 vs 0.0187379752774476 rel 8.219e-04
+  orange C2 p_versicolor.order148: 0.0147728309827116 vs 0.0147910937437578 rel 1.236e-03
+  orange C2 p_versicolor.order149: 0.1149104502635242 vs 0.1148825391527394 rel 2.429e-04
+  orange C2 p_versicolor.order150: 0.0275235062454753 vs 0.0275772711765514 rel 1.953e-03
+  orange C2 p_virginica.order121: 6.933536054049677e-08 vs 6.91083067728153e-08 rel 3.275e-03
+  orange C2 p_virginica.order122: 0.061654554406739 vs 0.0615674063916759 rel 1.413e-03
+  orange C2 p_virginica.order123: 2.7859714081748494e-08 vs 2.7638660956272256e-08 rel 7.935e-03
+  orange C2 p_virginica.order124: 0.96102716821366 vs 0.9611029507501736 rel 7.886e-05
+  orange C2 p_virginica.order125: 2.738440622119339e-07 vs 2.7416684323736786e-07 rel 1.179e-03
+  orange C2 p_virginica.order126: 0.0750760950150179 vs 0.0749853742013455 rel 1.208e-03
+  orange C2 p_virginica.order127: 0.9417435316363352 vs 0.9417575793583924 rel 1.492e-05
+  orange C2 p_virginica.order128: 0.9660503856461734 vs 0.9660676956089524 rel 1.792e-05
+  orange C2 p_virginica.order129: 0.8507508982691603 vs 0.850722310612428 rel 3.360e-05
+  orange C2 p_virginica.order130: 6.200351816599949e-09 vs 6.1657690681418604e-09 rel 5.578e-03
+  orange C2 p_virginica.order131: 1.2753237125157477e-07 vs 1.2715794803784776e-07 rel 2.936e-03
+  orange C2 p_virginica.order132: 0.2204292656812792 vs 0.2205365089336655 rel 4.865e-04
+  orange C2 p_virginica.order133: 0.293128554908172 vs 0.2930348397943689 rel 3.197e-04
+  orange C2 p_virginica.order134: 0.0275391516803868 vs 0.0275123434855821 rel 9.735e-04
+  orange C2 p_virginica.order135: 0.981358476930236 vs 0.9813638481095224 rel 5.473e-06
+  orange C2 p_virginica.order136: 0.0217629990667567 vs 0.0217606327825022 rel 1.087e-04
+  orange C2 p_virginica.order137: 0.9704232922726668 vs 0.9704387236086272 rel 1.590e-05
+  orange C2 p_virginica.order138: 0.0593745481911169 vs 0.0592785359504151 rel 1.617e-03
+  orange C2 p_virginica.order139: 0.2232956990996257 vs 0.2229782088125528 rel 1.422e-03
+  orange C2 p_virginica.order140: 0.8643032317460339 vs 0.8643527135738066 rel 5.725e-05
+  orange C2 p_virginica.order141: 0.8354914544564984 vs 0.8355907841177445 rel 1.189e-04
+  orange C2 p_virginica.order142: 0.0843127096121589 vs 0.0842429774999997 rel 8.271e-04
+  orange C2 p_virginica.order143: 0.0363067396736751 vs 0.0362600846844356 rel 1.285e-03
+  orange C2 p_virginica.order144: 0.990529969832602 vs 0.9905335366335272 rel 3.601e-06
+  orange C2 p_virginica.order145: 1.1606896706340984e-08 vs 1.1558214381533061e-08 rel 4.194e-03
+  orange C2 p_virginica.order146: 0.8974738743087075 vs 0.8974841801585575 rel 1.148e-05
+  orange C2 p_virginica.order147: 0.9812417403337113 vs 0.981257125491998 rel 1.568e-05
+  orange C2 p_virginica.order148: 3.5483793196832886e-08 vs 3.528191045799947e-08 rel 5.689e-03
+  orange C2 p_virginica.order149: 0.8850155573659139 vs 0.8850431912410005 rel 3.122e-05
+  orange C2 p_virginica.order150: 1.577550003932794e-07 vs 1.5714229850778637e-07 rel 3.884e-03
+  orange C2 p_setosa.order121: 0.974625667447019 vs 0.9745428281386735 rel 8.500e-05
+  orange C2 p_setosa.order122: 0.0459809721699888 vs 0.0461122197409049 rel 2.854e-03
+  orange C2 p_setosa.order123: 0.9876235930879032 vs 0.9876264532142568 rel 2.896e-06
+  orange C2 p_setosa.order124: 2.475983809235178e-06 vs 2.4814791041049727e-06 rel 2.219e-03
+  orange C2 p_setosa.order125: 0.9528800404065146 vs 0.9526061416142668 rel 2.874e-04
+  orange C2 p_setosa.order126: 0.0207823533440169 vs 0.0208528690389736 rel 3.393e-03
+  orange C2 p_setosa.order127: 0.0001196963748729 vs 0.0001202681991234 rel 4.777e-03
+  orange C2 p_setosa.order128: 1.2454957942954442e-05 vs 1.251660952844288e-05 rel 4.950e-03
+  orange C2 p_setosa.order129: 0.0001763251800889 vs 0.000176785199176 rel 2.609e-03
+  orange C2 p_setosa.order130: 0.9950935087519888 vs 0.9950836171728163 rel 9.940e-06
+  orange C2 p_setosa.order131: 0.9651439979351264 vs 0.9650438818613069 rel 1.037e-04
+  orange C2 p_setosa.order132: 0.0022691194077909 vs 0.0022678127805234 rel 5.758e-04
+  orange C2 p_setosa.order133: 0.00153117926517 vs 0.0015353721952127 rel 2.738e-03
+  orange C2 p_setosa.order134: 0.0203794967472996 vs 0.0204220344185739 rel 2.087e-03
+  orange C2 p_setosa.order135: 8.922457369229656e-06 vs 8.976654727155758e-06 rel 6.074e-03
+  orange C2 p_setosa.order136: 0.011117071263055 vs 0.0111037477861492 rel 1.198e-03
+  orange C2 p_setosa.order137: 1.3792835164983124e-05 vs 1.385726916560224e-05 rel 4.672e-03
+  orange C2 p_setosa.order138: 0.0323501465556703 vs 0.0324700958813862 rel 3.708e-03
+  orange C2 p_setosa.order139: 0.0127553703243428 vs 0.0128275733573865 rel 5.661e-03
+  orange C2 p_setosa.order140: 0.0001166785448482 vs 0.0001174126480565 rel 6.292e-03
+  orange C2 p_setosa.order141: 0.000336296756872 vs 0.0003375011988815 rel 3.581e-03
+  orange C2 p_setosa.order142: 0.0173119701086475 vs 0.0173621073205183 rel 2.896e-03
+  orange C2 p_setosa.order143: 0.0205798642618682 vs 0.0205930273262386 rel 6.396e-04
+  orange C2 p_setosa.order144: 1.8184982084759195e-06 vs 1.8315763022420108e-06 rel 7.192e-03
+  orange C2 p_setosa.order145: 0.987208377420808 vs 0.9871599886105475 rel 4.902e-05
+  orange C2 p_setosa.order146: 0.0001019456065291 vs 0.0001022568347472 rel 3.053e-03
+  orange C2 p_setosa.order147: 4.8706009864667935e-06 vs 4.8992305542107055e-06 rel 5.878e-03
+  orange C2 p_setosa.order148: 0.9852271335334952 vs 0.9852088709743316 rel 1.854e-05
+  orange C2 p_setosa.order149: 7.399237056184413e-05 vs 7.426960626008307e-05 rel 3.747e-03
+  orange C2 p_setosa.order150: 0.9724763359995244 vs 0.97242257168115 rel 5.529e-05
+  orange C2 p_versicolor.order121: 0.0253742632176204 vs 0.0254571027530196 rel 3.265e-03
+  orange C2 p_versicolor.order122: 0.8923644734232721 vs 0.8923203738674191 rel 4.942e-05
+  orange C2 p_versicolor.order123: 0.0123763790523824 vs 0.0123735191470821 rel 2.311e-04
+  orange C2 p_versicolor.order124: 0.0389703558025308 vs 0.0388945677707222 rel 1.945e-03
+  orange C2 p_versicolor.order125: 0.0471196857494231 vs 0.04739358421889 rel 5.813e-03
+  orange C2 p_versicolor.order126: 0.9041415516409648 vs 0.9041617567596808 rel 2.235e-05
+  orange C2 p_versicolor.order127: 0.0581367719887917 vs 0.0581221524424843 rel 2.515e-04
+  orange C2 p_versicolor.order128: 0.0339371593958835 vs 0.0339197877815192 rel 5.119e-04
+  orange C2 p_versicolor.order129: 0.1490727765507506 vs 0.1491009041883958 rel 1.887e-04
+  orange C2 p_versicolor.order130: 0.0049064850476592 vs 0.0049163766614144 rel 2.016e-03
+  orange C2 p_versicolor.order131: 0.0348558745325022 vs 0.0349559909807447 rel 2.872e-03
+  orange C2 p_versicolor.order132: 0.7773016149109298 vs 0.777195678285811 rel 1.363e-04
+  orange C2 p_versicolor.order133: 0.7053402658266579 vs 0.7054297880104182 rel 1.269e-04
+  orange C2 p_versicolor.order134: 0.9520813515723134 vs 0.952065622095844 rel 1.652e-05
+  orange C2 p_versicolor.order135: 0.0186326006123945 vs 0.0186271752357502 rel 2.912e-04
+  orange C2 p_versicolor.order136: 0.9671199296701882 vs 0.9671356194313484 rel 1.622e-05
+  orange C2 p_versicolor.order137: 0.0295629148921682 vs 0.029547419122207 rel 5.242e-04
+  orange C2 p_versicolor.order138: 0.9082753052532128 vs 0.9082513681681986 rel 2.635e-05
+  orange C2 p_versicolor.order139: 0.7639489305760314 vs 0.7641942178300605 rel 3.211e-04
+  orange C2 p_versicolor.order140: 0.1355800897091177 vs 0.1355298737781369 rel 3.704e-04
+  orange C2 p_versicolor.order141: 0.1641722487866295 vs 0.1640717146833738 rel 6.124e-04
+  orange C2 p_versicolor.order142: 0.8983753202791935 vs 0.898394915179482 rel 2.181e-05
+  orange C2 p_versicolor.order143: 0.9431133960644568 vs 0.9431468879893256 rel 3.551e-05
+  orange C2 p_versicolor.order144: 0.0094682116691895 vs 0.0094646317901703 rel 3.781e-04
+  orange C2 p_versicolor.order145: 0.0127916109722953 vs 0.0128399998312381 rel 3.783e-03
+  orange C2 p_versicolor.order146: 0.1024241800847632 vs 0.1024135630066951 rel 1.037e-04
+  orange C2 p_versicolor.order147: 0.0187533890653021 vs 0.0187379752774476 rel 8.219e-04
+  orange C2 p_versicolor.order148: 0.0147728309827116 vs 0.0147910937437578 rel 1.236e-03
+  orange C2 p_versicolor.order149: 0.1149104502635242 vs 0.1148825391527394 rel 2.429e-04
+  orange C2 p_versicolor.order150: 0.0275235062454753 vs 0.0275772711765514 rel 1.953e-03
+  orange C2 p_virginica.order121: 6.933536054049677e-08 vs 6.91083067728153e-08 rel 3.275e-03
+  orange C2 p_virginica.order122: 0.061654554406739 vs 0.0615674063916759 rel 1.413e-03
+  orange C2 p_virginica.order123: 2.7859714081748494e-08 vs 2.7638660956272256e-08 rel 7.935e-03
+  orange C2 p_virginica.order124: 0.96102716821366 vs 0.9611029507501736 rel 7.886e-05
+  orange C2 p_virginica.order125: 2.738440622119339e-07 vs 2.7416684323736786e-07 rel 1.179e-03
+  orange C2 p_virginica.order126: 0.0750760950150179 vs 0.0749853742013455 rel 1.208e-03
+  orange C2 p_virginica.order127: 0.9417435316363352 vs 0.9417575793583924 rel 1.492e-05
+  orange C2 p_virginica.order128: 0.9660503856461734 vs 0.9660676956089524 rel 1.792e-05
+  orange C2 p_virginica.order129: 0.8507508982691603 vs 0.850722310612428 rel 3.360e-05
+  orange C2 p_virginica.order130: 6.200351816599949e-09 vs 6.1657690681418604e-09 rel 5.578e-03
+  orange C2 p_virginica.order131: 1.2753237125157477e-07 vs 1.2715794803784776e-07 rel 2.936e-03
+  orange C2 p_virginica.order132: 0.2204292656812792 vs 0.2205365089336655 rel 4.865e-04
+  orange C2 p_virginica.order133: 0.293128554908172 vs 0.2930348397943689 rel 3.197e-04
+  orange C2 p_virginica.order134: 0.0275391516803868 vs 0.0275123434855821 rel 9.735e-04
+  orange C2 p_virginica.order135: 0.981358476930236 vs 0.9813638481095224 rel 5.473e-06
+  orange C2 p_virginica.order136: 0.0217629990667567 vs 0.0217606327825022 rel 1.087e-04
+  orange C2 p_virginica.order137: 0.9704232922726668 vs 0.9704387236086272 rel 1.590e-05
+  orange C2 p_virginica.order138: 0.0593745481911169 vs 0.0592785359504151 rel 1.617e-03
+  orange C2 p_virginica.order139: 0.2232956990996257 vs 0.2229782088125528 rel 1.422e-03
+  orange C2 p_virginica.order140: 0.8643032317460339 vs 0.8643527135738066 rel 5.725e-05
+  orange C2 p_virginica.order141: 0.8354914544564984 vs 0.8355907841177445 rel 1.189e-04
+  orange C2 p_virginica.order142: 0.0843127096121589 vs 0.0842429774999997 rel 8.271e-04
+  orange C2 p_virginica.order143: 0.0363067396736751 vs 0.0362600846844356 rel 1.285e-03
+  orange C2 p_virginica.order144: 0.990529969832602 vs 0.9905335366335272 rel 3.601e-06
+  orange C2 p_virginica.order145: 1.1606896706340984e-08 vs 1.1558214381533061e-08 rel 4.194e-03
+  orange C2 p_virginica.order146: 0.8974738743087075 vs 0.8974841801585575 rel 1.148e-05
+  orange C2 p_virginica.order147: 0.9812417403337113 vs 0.981257125491998 rel 1.568e-05
+  orange C2 p_virginica.order148: 3.5483793196832886e-08 vs 3.528191045799947e-08 rel 5.689e-03
+  orange C2 p_virginica.order149: 0.8850155573659139 vs 0.8850431912410005 rel 3.122e-05
+  orange C2 p_virginica.order150: 1.577550003932794e-07 vs 1.5714229850778637e-07 rel 3.884e-03
+
+Cells that equal the oracle rounded to 3 or 4 decimals (display rounding), by app and case:
+app        case  cls         
+digiterra  D1    rounded 6 dp    54
+           D2    rounded 6 dp     2
+
+Notes:
+  digiterra R1 metrics_from_predictions.csv: terms not in file: ['intercept', 'age', 'sex', 'bmi', 'bp', 's1', 's2', 's3', 's4', 's5', 's6']
+  digiterra R1 metrics_from_predictions.csv: terms not in file: ['intercept', 'age', 'sex', 'bmi', 'bp', 's1', 's2', 's3', 's4', 's5', 's6']
+  digiterra R1 metrics_from_predictions.csv: terms not in file: ['intercept', 'age', 'sex', 'bmi', 'bp', 's1', 's2', 's3', 's4', 's5', 's6']
+  aistudio R1 R1_aistudio_run1_coefficients.csv: terms not in file: ['intercept', 'test_rmse', 'test_mae', 'test_r2']
+  aistudio R1 R1_aistudio_run2_coefficients.csv: terms not in file: ['intercept', 'test_rmse', 'test_mae', 'test_r2']
+  aistudio D1 D1_aistudio_run1.csv: statistics not in file: ['q1', 'q3']
+  aistudio D1 D1_aistudio_run2.csv: statistics not in file: ['q1', 'q3']
+  aistudio D2 D2_aistudio_run1.csv: statistics not in file: ['q1', 'q3']
+  aistudio D2 D2_aistudio_run2.csv: statistics not in file: ['q1', 'q3']
+
+Unparsed files:

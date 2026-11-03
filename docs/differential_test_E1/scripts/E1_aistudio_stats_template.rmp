@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?><process version="10.3.000">
+  <context>
+    <input/>
+    <output/>
+    <macros/>
+  </context>
+  <operator activated="true" class="process" compatibility="10.3.000" expanded="true" name="Process">
+    <parameter key="logverbosity" value="init"/>
+    <parameter key="random_seed" value="2001"/>
+    <process expanded="true">
+      <!-- E1 stats run __RUN__. Cases D1 (diabetes base) and D2 (iris base): count, average,
+           standard_deviation, minimum, median, maximum per column through Aggregate with no
+           group-by. AI Studio's Aggregate has no quartile function, so q1 and q3 are absent;
+           scripts/aistudio_stats_to_describe.py reshapes the one-row output to the describe layout. -->
+      <operator activated="true" class="read_csv" compatibility="10.3.000" expanded="true" height="68" name="Read diabetes base" width="90" x="45" y="34">
+        <parameter key="csv_file" value="__E1__/data/diabetes_E1_base.csv"/>
+        <parameter key="column_separators" value=","/>
+        <parameter key="first_row_as_names" value="true"/>
+        <parameter key="encoding" value="UTF-8"/>
+        <parameter key="parse_numbers" value="true"/>
+        <parameter key="decimal_character" value="."/>
+        <parameter key="read_not_matching_values_as_missings" value="false"/>
+        <list key="annotations"/>
+        <list key="data_set_meta_data_information"/>
+      </operator>
+      <operator activated="true" class="aggregate" compatibility="10.3.000" expanded="true" height="82" name="Aggregate diabetes" width="90" x="179" y="34">
+        <parameter key="use_default_aggregation" value="false"/>
+        <parameter key="attribute_filter_type" value="all"/>
+        <parameter key="attribute" value=""/>
+        <parameter key="attributes" value=""/>
+        <parameter key="use_except_expression" value="false"/>
+        <parameter key="value_type" value="attribute_value"/>
+        <parameter key="use_value_type_exception" value="false"/>
+        <parameter key="except_value_type" value="time"/>
+        <parameter key="block_type" value="attribute_block"/>
+        <parameter key="use_block_type_exception" value="false"/>
+        <parameter key="except_block_type" value="value_matrix_row_start"/>
+        <parameter key="invert_selection" value="false"/>
+        <parameter key="include_special_attributes" value="false"/>
+        <parameter key="default_aggregation_function" value="average"/>
+        <list key="aggregation_attributes">
+          <parameter key="age" value="count"/>
+          <parameter key="age" value="average"/>
+          <parameter key="age" value="standard_deviation"/>
+          <parameter key="age" value="minimum"/>
+          <parameter key="age" value="median"/>
+          <parameter key="age" value="maximum"/>
+          <parameter key="sex" value="count"/>
+          <parameter key="sex" value="average"/>
+          <parameter key="sex" value="standard_deviation"/>
+          <parameter key="sex" value="minimum"/>
+          <parameter key="sex" value="median"/>
+          <parameter key="sex" value="maximum"/>
+          <parameter key="bmi" value="count"/>
+          <parameter key="bmi" value="average"/>
+          <parameter key="bmi" value="standard_deviation"/>
+          <parameter key="bmi" value="minimum"/>
+          <parameter key="bmi" value="median"/>
+          <parameter key="bmi" value="maximum"/>
+          <parameter key="bp" value="count"/>
+          <parameter key="bp" value="average"/>
+          <parameter key="bp" value="standard_deviation"/>
+          <parameter key="bp" value="minimum"/>
+          <parameter key="bp" value="median"/>
+          <parameter key="bp" value="maximum"/>
+          <parameter key="s1" value="count"/>
+          <parameter key="s1" value="average"/>
+          <parameter key="s1" value="standard_deviation"/>
+          <parameter key="s1" value="minimum"/>
+          <parameter key="s1" value="median"/>
+          <parameter key="s1" value="maximum"/>
+          <parameter key="s2" value="count"/>
+          <parameter key="s2" value="average"/>
+          <parameter key="s2" value="standard_deviation"/>
+          <parameter key="s2" value="minimum"/>
+          <parameter key="s2" value="median"/>
+          <parameter key="s2" value="maximum"/>
+          <parameter key="s3" value="count"/>
+          <parameter key="s3" value="average"/>
+          <parameter key="s3" value="standard_deviation"/>
+          <parameter key="s3" value="minimum"/>
+          <parameter key="s3" value="median"/>
+          <parameter key="s3" value="maximum"/>
+          <parameter key="s4" value="count"/>
+          <parameter key="s4" value="average"/>
+          <parameter key="s4" value="standard_deviation"/>
+          <parameter key="s4" value="minimum"/>
+          <parameter key="s4" value="median"/>
+          <parameter key="s4" value="maximum"/>
+          <parameter key="s5" value="count"/>
+          <parameter key="s5" value="average"/>
+          <parameter key="s5" value="standard_deviation"/>
+          <parameter key="s5" value="minimum"/>
+          <parameter key="s5" value="median"/>
+          <parameter key="s5" value="maximum"/>
+          <parameter key="s6" value="count"/>
+          <parameter key="s6" value="average"/>
+          <parameter key="s6" value="standard_deviation"/>
+          <parameter key="s6" value="minimum"/>
+          <parameter key="s6" value="median"/>
+          <parameter key="s6" value="maximum"/>
+          <parameter key="target" value="count"/>
+          <parameter key="target" value="average"/>
+          <parameter key="target" value="standard_deviation"/>
+          <parameter key="target" value="minimum"/>
+          <parameter key="target" value="median"/>
+          <parameter key="target" value="maximum"/>
+        </list>
+        <parameter key="group_by_attributes" value=""/>
+        <parameter key="count_all_combinations" value="false"/>
+        <parameter key="only_distinct" value="false"/>
+        <parameter key="ignore_missings" value="true"/>
+      </operator>
+      <operator activated="true" class="write_csv" compatibility="10.3.000" expanded="true" height="82" name="Write D1" width="90" x="313" y="34">
+        <parameter key="csv_file" value="__E1__/reference_outputs/aistudio/aggregate_raw/D1_run__RUN__.csv"/>
+        <parameter key="column_separator" value=","/>
+        <parameter key="write_attribute_names" value="true"/>
+        <parameter key="quote_nominal_values" value="false"/>
+        <parameter key="format_date_attributes" value="false"/>
+        <parameter key="append_to_file" value="false"/>
+        <parameter key="encoding" value="UTF-8"/>
+      </operator>
+      <operator activated="true" class="read_csv" compatibility="10.3.000" expanded="true" height="68" name="Read iris base" width="90" x="45" y="136">
+        <parameter key="csv_file" value="__E1__/data/iris_E1_base.csv"/>
+        <parameter key="column_separators" value=","/>
+        <parameter key="first_row_as_names" value="true"/>
+        <parameter key="encoding" value="UTF-8"/>
+        <parameter key="parse_numbers" value="true"/>
+        <parameter key="decimal_character" value="."/>
+        <parameter key="read_not_matching_values_as_missings" value="false"/>
+        <list key="annotations"/>
+        <list key="data_set_meta_data_information"/>
+      </operator>
+      <operator activated="true" class="aggregate" compatibility="10.3.000" expanded="true" height="82" name="Aggregate iris" width="90" x="179" y="136">
+        <parameter key="use_default_aggregation" value="false"/>
+        <parameter key="attribute_filter_type" value="all"/>
+        <parameter key="attribute" value=""/>
+        <parameter key="attributes" value=""/>
+        <parameter key="use_except_expression" value="false"/>
+        <parameter key="value_type" value="attribute_value"/>
+        <parameter key="use_value_type_exception" value="false"/>
+        <parameter key="except_value_type" value="time"/>
+        <parameter key="block_type" value="attribute_block"/>
+        <parameter key="use_block_type_exception" value="false"/>
+        <parameter key="except_block_type" value="value_matrix_row_start"/>
+        <parameter key="invert_selection" value="false"/>
+        <parameter key="include_special_attributes" value="false"/>
+        <parameter key="default_aggregation_function" value="average"/>
+        <list key="aggregation_attributes">
+          <parameter key="sepal length" value="count"/>
+          <parameter key="sepal length" value="average"/>
+          <parameter key="sepal length" value="standard_deviation"/>
+          <parameter key="sepal length" value="minimum"/>
+          <parameter key="sepal length" value="median"/>
+          <parameter key="sepal length" value="maximum"/>
+          <parameter key="sepal width" value="count"/>
+          <parameter key="sepal width" value="average"/>
+          <parameter key="sepal width" value="standard_deviation"/>
+          <parameter key="sepal width" value="minimum"/>
+          <parameter key="sepal width" value="median"/>
+          <parameter key="sepal width" value="maximum"/>
+          <parameter key="petal length" value="count"/>
+          <parameter key="petal length" value="average"/>
+          <parameter key="petal length" value="standard_deviation"/>
+          <parameter key="petal length" value="minimum"/>
+          <parameter key="petal length" value="median"/>
+          <parameter key="petal length" value="maximum"/>
+          <parameter key="petal width" value="count"/>
+          <parameter key="petal width" value="average"/>
+          <parameter key="petal width" value="standard_deviation"/>
+          <parameter key="petal width" value="minimum"/>
+          <parameter key="petal width" value="median"/>
+          <parameter key="petal width" value="maximum"/>
+        </list>
+        <parameter key="group_by_attributes" value=""/>
+        <parameter key="count_all_combinations" value="false"/>
+        <parameter key="only_distinct" value="false"/>
+        <parameter key="ignore_missings" value="true"/>
+      </operator>
+      <operator activated="true" class="write_csv" compatibility="10.3.000" expanded="true" height="82" name="Write D2" width="90" x="313" y="136">
+        <parameter key="csv_file" value="__E1__/reference_outputs/aistudio/aggregate_raw/D2_run__RUN__.csv"/>
+        <parameter key="column_separator" value=","/>
+        <parameter key="write_attribute_names" value="true"/>
+        <parameter key="quote_nominal_values" value="false"/>
+        <parameter key="format_date_attributes" value="false"/>
+        <parameter key="append_to_file" value="false"/>
+        <parameter key="encoding" value="UTF-8"/>
+      </operator>
+      <connect from_op="Read diabetes base" from_port="output" to_op="Aggregate diabetes" to_port="example set input"/>
+      <connect from_op="Aggregate diabetes" from_port="example set output" to_op="Write D1" to_port="input"/>
+      <connect from_op="Read iris base" from_port="output" to_op="Aggregate iris" to_port="example set input"/>
+      <connect from_op="Aggregate iris" from_port="example set output" to_op="Write D2" to_port="input"/>
+      <portSpacing port="source_input 1" spacing="0"/>
+      <portSpacing port="sink_result 1" spacing="0"/>
+    </process>
+  </operator>
+</process>

@@ -1,0 +1,664 @@
+{
+  "models": 67,
+  "differ": 42,
+  "differ_beyond_random_state": 21,
+  "rows": [
+    {
+      "model": "Linear",
+      "estimator": "LinearRegression",
+      "differs": {}
+    },
+    {
+      "model": "BayesianRidge",
+      "estimator": "BayesianRidge",
+      "differs": {}
+    },
+    {
+      "model": "ARDRegression",
+      "estimator": "ARDRegression",
+      "differs": {}
+    },
+    {
+      "model": "Ridge",
+      "estimator": "Ridge",
+      "differs": {
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "Lasso",
+      "estimator": "Lasso",
+      "differs": {
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "ElasticNet",
+      "estimator": "ElasticNet",
+      "differs": {
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "SVM",
+      "estimator": "SVR",
+      "differs": {}
+    },
+    {
+      "model": "RF",
+      "estimator": "RandomForestRegressor",
+      "differs": {
+        "max_features": {
+          "scikit_learn": "1.0",
+          "trainer": "'sqrt'"
+        },
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "ExtraTrees",
+      "estimator": "ExtraTreesRegressor",
+      "differs": {
+        "max_features": {
+          "scikit_learn": "1.0",
+          "trainer": "'sqrt'"
+        },
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "MLP",
+      "estimator": "MLPRegressor",
+      "differs": {
+        "max_iter": {
+          "scikit_learn": "200",
+          "trainer": "10000"
+        },
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "K-Nearest",
+      "estimator": "KNeighborsRegressor",
+      "differs": {}
+    },
+    {
+      "model": "gradient_boosting",
+      "estimator": "GradientBoostingRegressor",
+      "differs": {
+        "criterion": {
+          "scikit_learn": "'deprecated'",
+          "trainer": "'friedman_mse'"
+        },
+        "loss": {
+          "scikit_learn": "'squared_error'",
+          "trainer": "'absolute_error'"
+        },
+        "min_impurity_decrease": {
+          "scikit_learn": "0.0",
+          "trainer": "0"
+        },
+        "min_weight_fraction_leaf": {
+          "scikit_learn": "0.0",
+          "trainer": "0"
+        },
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        },
+        "subsample": {
+          "scikit_learn": "1.0",
+          "trainer": "1"
+        }
+      }
+    },
+    {
+      "model": "AdaBoost",
+      "estimator": "AdaBoostRegressor",
+      "differs": {
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "Bagging",
+      "estimator": "BaggingRegressor",
+      "differs": {
+        "max_samples": {
+          "scikit_learn": "None",
+          "trainer": "1.0"
+        },
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "DecisionTree",
+      "estimator": "DecisionTreeRegressor",
+      "differs": {
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "ElasticNetCV",
+      "estimator": "ElasticNetCV",
+      "differs": {
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "HistGradientBoosting",
+      "estimator": "HistGradientBoostingRegressor",
+      "differs": {
+        "categorical_features": {
+          "scikit_learn": "'from_dtype'",
+          "trainer": "None"
+        },
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "Huber",
+      "estimator": "HuberRegressor",
+      "differs": {}
+    },
+    {
+      "model": "LARS",
+      "estimator": "Lars",
+      "differs": {
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "LARSCV",
+      "estimator": "LarsCV",
+      "differs": {}
+    },
+    {
+      "model": "LassoCV",
+      "estimator": "LassoCV",
+      "differs": {
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "LassoLars",
+      "estimator": "LassoLars",
+      "differs": {
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "LinearSVR",
+      "estimator": "LinearSVR",
+      "differs": {
+        "dual": {
+          "scikit_learn": "'auto'",
+          "trainer": "True"
+        },
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "NuSVR",
+      "estimator": "NuSVR",
+      "differs": {}
+    },
+    {
+      "model": "OMP",
+      "estimator": "OrthogonalMatchingPursuit",
+      "differs": {}
+    },
+    {
+      "model": "PassiveAggressive",
+      "estimator": "PassiveAggressiveRegressor",
+      "differs": {
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "Quantile",
+      "estimator": "QuantileRegressor",
+      "differs": {}
+    },
+    {
+      "model": "RadiusNeighbors",
+      "estimator": "RadiusNeighborsRegressor",
+      "differs": {}
+    },
+    {
+      "model": "RANSAC",
+      "estimator": "RANSACRegressor",
+      "differs": {
+        "estimator": {
+          "scikit_learn": "None",
+          "trainer": "LinearRegression()"
+        },
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "RidgeCV",
+      "estimator": "RidgeCV",
+      "differs": {
+        "gcv_mode": {
+          "scikit_learn": "None",
+          "trainer": "'auto'"
+        }
+      }
+    },
+    {
+      "model": "SGD",
+      "estimator": "SGDRegressor",
+      "differs": {
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "TheilSen",
+      "estimator": "TheilSenRegressor",
+      "differs": {
+        "max_subpopulation": {
+          "scikit_learn": "10000.0",
+          "trainer": "10000"
+        },
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "Logistic_classifier",
+      "estimator": "LogisticRegression",
+      "differs": {
+        "C": {
+          "scikit_learn": "1.0",
+          "trainer": "1"
+        },
+        "l1_ratio": {
+          "scikit_learn": "0.0",
+          "trainer": "None"
+        },
+        "penalty": {
+          "scikit_learn": "'deprecated'",
+          "trainer": "'l2'"
+        },
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "ExtraTrees_classifier",
+      "estimator": "ExtraTreesClassifier",
+      "differs": {
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "GaussianNB_classifier",
+      "estimator": "GaussianNB",
+      "differs": {}
+    },
+    {
+      "model": "SGD_classifier",
+      "estimator": "SGDClassifier",
+      "differs": {
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "MLP_classifier",
+      "estimator": "MLPClassifier",
+      "differs": {
+        "max_iter": {
+          "scikit_learn": "200",
+          "trainer": "10000"
+        },
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "RF_classifier",
+      "estimator": "RandomForestClassifier",
+      "differs": {
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "SVC_classifier",
+      "estimator": "SVC",
+      "differs": {
+        "probability": {
+          "scikit_learn": "'deprecated'",
+          "trainer": "False"
+        },
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "AdaBoost_classifier",
+      "estimator": "AdaBoostClassifier",
+      "differs": {
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "Bagging_classifier",
+      "estimator": "BaggingClassifier",
+      "differs": {
+        "max_samples": {
+          "scikit_learn": "None",
+          "trainer": "1.0"
+        },
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "BernoulliNB_classifier",
+      "estimator": "BernoulliNB",
+      "differs": {}
+    },
+    {
+      "model": "CategoricalNB_classifier",
+      "estimator": "CategoricalNB",
+      "differs": {}
+    },
+    {
+      "model": "ComplementNB_classifier",
+      "estimator": "ComplementNB",
+      "differs": {}
+    },
+    {
+      "model": "DecisionTree_classifier",
+      "estimator": "DecisionTreeClassifier",
+      "differs": {
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "GradientBoosting_classifier",
+      "estimator": "GradientBoostingClassifier",
+      "differs": {
+        "criterion": {
+          "scikit_learn": "'deprecated'",
+          "trainer": "'friedman_mse'"
+        },
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "HistGradientBoosting_classifier",
+      "estimator": "HistGradientBoostingClassifier",
+      "differs": {
+        "categorical_features": {
+          "scikit_learn": "'from_dtype'",
+          "trainer": "None"
+        },
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "KNeighbors_classifier",
+      "estimator": "KNeighborsClassifier",
+      "differs": {}
+    },
+    {
+      "model": "LDA_classifier",
+      "estimator": "LinearDiscriminantAnalysis",
+      "differs": {}
+    },
+    {
+      "model": "LinearSVC_classifier",
+      "estimator": "LinearSVC",
+      "differs": {
+        "dual": {
+          "scikit_learn": "'auto'",
+          "trainer": "True"
+        },
+        "intercept_scaling": {
+          "scikit_learn": "1",
+          "trainer": "1.0"
+        },
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "MultinomialNB_classifier",
+      "estimator": "MultinomialNB",
+      "differs": {}
+    },
+    {
+      "model": "NuSVC_classifier",
+      "estimator": "NuSVC",
+      "differs": {
+        "probability": {
+          "scikit_learn": "'deprecated'",
+          "trainer": "False"
+        },
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "PassiveAggressive_classifier",
+      "estimator": "PassiveAggressiveClassifier",
+      "differs": {
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "QDA_classifier",
+      "estimator": "QuadraticDiscriminantAnalysis",
+      "differs": {}
+    },
+    {
+      "model": "Ridge_classifier",
+      "estimator": "RidgeClassifier",
+      "differs": {
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "kmeans",
+      "estimator": "KMeans",
+      "differs": {
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "gmm",
+      "estimator": "GaussianMixture",
+      "differs": {
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "agglo",
+      "estimator": "AgglomerativeClustering",
+      "differs": {}
+    },
+    {
+      "model": "dbscan",
+      "estimator": "DBSCAN",
+      "differs": {}
+    },
+    {
+      "model": "birch",
+      "estimator": "Birch",
+      "differs": {}
+    },
+    {
+      "model": "spectral",
+      "estimator": "SpectralClustering",
+      "differs": {
+        "eigen_tol": {
+          "scikit_learn": "'auto'",
+          "trainer": "0.0"
+        },
+        "n_clusters": {
+          "scikit_learn": "8",
+          "trainer": "3"
+        },
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "affinity_propagation",
+      "estimator": "AffinityPropagation",
+      "differs": {
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "bisecting_kmeans",
+      "estimator": "BisectingKMeans",
+      "differs": {
+        "init": {
+          "scikit_learn": "'random'",
+          "trainer": "'k-means++'"
+        },
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "hdbscan",
+      "estimator": "HDBSCAN",
+      "differs": {}
+    },
+    {
+      "model": "meanshift",
+      "estimator": "MeanShift",
+      "differs": {}
+    },
+    {
+      "model": "minibatch_kmeans",
+      "estimator": "MiniBatchKMeans",
+      "differs": {
+        "n_init": {
+          "scikit_learn": "'auto'",
+          "trainer": "3"
+        },
+        "random_state": {
+          "scikit_learn": "None",
+          "trainer": "run seed"
+        }
+      }
+    },
+    {
+      "model": "optics",
+      "estimator": "OPTICS",
+      "differs": {}
+    }
+  ]
+}

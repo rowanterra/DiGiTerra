@@ -1,30 +1,24 @@
-# March requested edits (URL prefix and SVC)
+# March edits: URL prefix and SVC
 
 ## Scope
 
-Run the app under a URL prefix (e.g. `http://127.0.0.1:5000/digiterra/`) for subpath hosting. All features must work at the prefixed path.
+Run the app under a URL prefix (for example `http://127.0.0.1:5000/digiterra/`) for subpath hosting, with every feature working at the prefixed path.
 
 ## Done
 
-**URL prefix**
-- Backend: route registration and response URLs use prefix. Pairplot, correlation, and download paths are prefixed.
-- Frontend: `API_ROOT` and helpers applied to fetch, SSE, image paths, and download links. Template asset paths use prefix.
-- Routes and static assets work at both root and prefixed paths. Template variables: `api_root`, `static_root`.
+URL prefix: route registration and response URLs use the prefix. Pairplot, correlation, and download paths are prefixed. In the page, `API_ROOT` and the helpers in `core.js` apply the prefix to fetch calls, the SSE stream, image paths, and download links, and the template asset paths use the `api_root` and `static_root` variables. Routes and static assets answer at both the root and the prefixed path.
 
-**SVC**
-- Duplicate element id for SVC gamma input removed.
-- Gamma field lookup corrected for rbf kernel.
-- Empty `class_weight` normalized so sklearn accepts it.
+SVC: the duplicate element id for the gamma input is removed, the gamma lookup for the rbf kernel is corrected, and an empty `class_weight` is normalized so scikit-learn accepts the value.
 
-## How to test
+## Check
 
-From project root:
+From the project root:
 
 ```bash
 export URL_PREFIX=digiterra
 python app.py
 ```
 
-Open `http://127.0.0.1:5000/digiterra/`. Upload a CSV, run correlation and pairplot, run training (progress stream), download a file, run SVC with rbf and poly kernels.
+Open `http://127.0.0.1:5000/digiterra/`. Upload a CSV, run correlation and pairplot, run training with the progress stream, download a file, and run SVC with the rbf and poly kernels.
 
-See docs/HANDOFF.md for more on URL prefix and deployment.
+`docs/documentation.md` describes the URL prefix and `deploy/README.md` the container deployment.

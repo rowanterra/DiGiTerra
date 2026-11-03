@@ -1,0 +1,18 @@
+PRICE AND LICENSE SURVEY, read 2026-09-25 (UTC) from each vendor's own page. Quotes verbatim.
+
+Product | Desktop or cloud | Price as stated | Source page
+DiGiTerra 0.1.0 | Desktop app or hosted Flask | MIT license, no charge | LICENSE in the repository
+Orange 3 | Desktop | "Orange is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License" | orangedatamining.com/license/ (read 2026-09-24)
+KNIME Analytics Platform | Desktop | "Free" ("open source KNIME Analytics Platform for personal use"); KNIME Pro "Starts at $19 / month"; Team "Starts at $99 / month" for 3 members, "$49/month" each further member; Business Hub "Pricing available on request" | knime.com/knime-hub-pricing
+Altair AI Studio (RapidMiner) | Desktop | "Altair AI Studio is available to everyone for free for non-commercial purposes" as a "Renewable one-year license"; commercial use is metered in Altair Units: "The baseline for using Altair AI Studio is 20 Altair Units"; no unit price on the pages read | web.altair.com/academic-hub-ai-studio; docs.rapidminer.com/2024.0/studio/installation/license/altair-units.html
+H2O-3 Flow | Browser against a local server | Apache 2.0; "H2O Flow is deprecated and will be removed in a future release." | docs.h2o.ai/h2o/latest-stable/h2o-docs/flow.html
+Amazon SageMaker Canvas | Cloud | "$1.9/hour" workspace session; "Amazon SageMaker Canvas provides a 2-month free tier. The free tier includes workspace instance (Session-Hrs) usage up to 160 hours/month"; training "$2.03 - $4.89 per hour of training time" (NLP models) | aws.amazon.com/sagemaker/canvas/pricing/
+Azure Machine Learning | Cloud | "Please note, there is no additional charge to use Azure Machine Learning."; compute, Blob Storage, Key Vault, Container Registry and Application Insights billed separately | azure.microsoft.com/en-us/pricing/details/machine-learning/
+Google Vertex AI AutoML tabular | Cloud | Training "$21.252 / 1 hour" ($19.1268 and $17.0016 under 1- and 3-year savings plans); "Inference Same price as inference for custom-trained models." | cloud.google.com/vertex-ai/pricing, section "Tabular data"
+Weka | Desktop | GPL, no charge | waikato.github.io/weka-site (read 2026-09-24)
+JASP | Desktop | GPLv2 and AGPLv3, no charge | jasp-stats.org (read 2026-09-24)
+jamovi | Desktop; jamovi Cloud | Desktop free; Cloud "Guest" plan free ("Runs in your browser, nothing to install"); "Priority" plan "Priced by region" ("the exact price and full plan details are confirmed at sign-in"); "Teams" custom quote | jamovi.org/cloud.html
+DataRobot | SaaS or self-managed | No price on the pricing page; "Try DataRobot", "Request a Demo" | datarobot.com/pricing/
+Microsoft Excel (E1 reference only) | Desktop | Office Home 2024 "$179.99" one-time ("Classic 2024 desktop versions of Word, Excel, PowerPoint, and OneNote"); Microsoft 365 Personal "$99.99/year" or "$9.99/month" | microsoft.com/en-us/microsoft-365/p/office-home-2024/cfq7ttc0pqvj; microsoft.com/en-us/microsoft-365/buy/compare-all-microsoft-365-products
+
+Notes. Cloud prices are for the vendor's hosted service; a desktop product's cost is the license and the user's own machine. A per-hour session price and a per-hour training price are not additive in the same way for every vendor; the table records what each page states and nothing derived. "No price" means the pages read carry none.

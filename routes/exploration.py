@@ -1,4 +1,5 @@
 """Data exploration: auto-detect, correlation matrices, pairplot."""
+
 from flask import Blueprint, jsonify, request
 
 from core.helpers import ensure_user_vis_dir, with_prefix

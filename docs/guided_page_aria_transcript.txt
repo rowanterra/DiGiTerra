@@ -1,0 +1,848 @@
+GUIDED PAGE: ACCESSIBILITY TREE TRANSCRIPT, 2026-09-24
+What this is: the accessibility tree of each step, as Chromium exposes it to assistive technology, written out
+in Playwright's ARIA snapshot form (role, accessible name, state). A screen reader reads from this same tree;
+this is not a recording of a screen reader session, and it does not test VoiceOver's or NVDA's own behaviour.
+Each block is what a user moving through the step would meet, top to bottom, plus every tooltip's text.
+The transcript found one defect on its first run (a control's accessible name included the help button's
+label, because the button was inside the label); the button now follows the label, and this is the rerun.
+
+==============================================================================
+Mode guided, step 1 (upload)
+------------------------------------------------------------------------------
+- link "Skip to the current step":
+  - /url: "#main"
+- banner:
+  - heading "DiGiTerra" [level=1]
+  - group "Mode":
+    - text: Mode
+    - radio "Guided" [checked]
+    - text: Guided
+    - radio "Full"
+    - text: Full
+    - button "What is the mode?": "?"
+  - navigation "Steps":
+    - list:
+      - listitem:
+        - button "1 Upload"
+      - listitem:
+        - button "2 Target" [disabled]
+      - listitem:
+        - button "3 Model and run" [disabled]
+      - listitem:
+        - button "4 Result" [disabled]
+    - button "What is the step list?": "?"
+  - navigation "Other pages":
+    - link "Classic page":
+      - /url: /
+- main:
+  - region "1. Upload a table":
+    - heading "1. Upload a table" [level=2]
+    - text: CSV, Excel or Parquet file
+    - button "What is CSV, Excel or Parquet file?": "?"
+    - button "CSV, Excel or Parquet file"
+    - button "Upload"
+    - paragraph
+    - paragraph: Guided shows the steps with sensible defaults. Full opens every setting the training route accepts, in the same steps. Each step fills the window; the buttons at the top and the bottom move between them.
+    - 'button "Next: target" [disabled]'
+- contentinfo:
+  - text: Every run writes a record with the file's SHA-256, the seed, the request, the estimator's parameters, the metrics, the data checks and the installed package versions; download it from the result. This page is built to WCAG 2.2 AA;
+  - code: docs/ACCESSIBILITY.md
+  - text: lists the checks.
+
+Tooltips reachable on this step (help button label -> text):
+  What is the mode? -> Guided fills every setting with a default and shows only the four steps. Full opens every setting the training route accepts, in the same steps. The choice is remembered in this browser.
+  What is the step list? -> The four steps. A step opens when the one before it is done; any opened step can be revisited.
+  What is CSV, Excel or Parquet file? -> A table with one header row. CSV, Excel (.xlsx, .xlsm) and Parquet are read. Nothing is sent anywhere except this server.
+
+==============================================================================
+Mode guided, step 2 (target); focus is on: 2. Choose what to predict
+------------------------------------------------------------------------------
+- link "Skip to the current step":
+  - /url: "#main"
+- banner:
+  - heading "DiGiTerra" [level=1]
+  - group "Mode":
+    - text: Mode
+    - radio "Guided" [checked]
+    - text: Guided
+    - radio "Full"
+    - text: Full
+    - button "What is the mode?": "?"
+  - navigation "Steps":
+    - list:
+      - listitem:
+        - button "1 Upload"
+      - listitem:
+        - button "2 Target"
+      - listitem:
+        - button "3 Model and run"
+      - listitem:
+        - button "4 Result" [disabled]
+    - button "What is the step list?": "?"
+  - navigation "Other pages":
+    - link "Classic page":
+      - /url: /
+- main:
+  - region "2. Choose what to predict":
+    - heading "2. Choose what to predict" [level=2]
+    - text: Target column
+    - button "What is Target column?": "?"
+    - combobox "Target column":
+      - option "sepal length"
+      - option "sepal width"
+      - option "petal length"
+      - option "petal width"
+      - option "species (text)" [selected]
+    - paragraph: "species has 3 distinct values. Proposed task: classification."
+    - button "Back"
+    - 'button "Next: model"'
+- contentinfo:
+  - text: Every run writes a record with the file's SHA-256, the seed, the request, the estimator's parameters, the metrics, the data checks and the installed package versions; download it from the result. This page is built to WCAG 2.2 AA;
+  - code: docs/ACCESSIBILITY.md
+  - text: lists the checks.
+
+Tooltips reachable on this step (help button label -> text):
+  What is the mode? -> Guided fills every setting with a default and shows only the four steps. Full opens every setting the training route accepts, in the same steps. The choice is remembered in this browser.
+  What is the step list? -> The four steps. A step opens when the one before it is done; any opened step can be revisited.
+  What is Target column? -> The column the model predicts. A text column or a number with few distinct values is treated as a class; other numbers as a quantity to regress.
+  What is Predictor columns (all other columns unless changed)? -> The columns the model reads. All columns except the target are used unless changed here. Identifier columns and anything that leaks the target should be removed.
+
+==============================================================================
+Mode guided, step 3 (model and run)
+------------------------------------------------------------------------------
+- link "Skip to the current step":
+  - /url: "#main"
+- banner:
+  - heading "DiGiTerra" [level=1]
+  - group "Mode":
+    - text: Mode
+    - radio "Guided" [checked]
+    - text: Guided
+    - radio "Full"
+    - text: Full
+    - button "What is the mode?": "?"
+  - navigation "Steps":
+    - list:
+      - listitem:
+        - button "1 Upload"
+      - listitem:
+        - button "2 Target"
+      - listitem:
+        - button "3 Model and run"
+      - listitem:
+        - button "4 Result" [disabled]
+    - button "What is the step list?": "?"
+  - navigation "Other pages":
+    - link "Classic page":
+      - /url: /
+- main:
+  - region "3. Choose the model and run":
+    - heading "3. Choose the model and run" [level=2]
+    - group "Task What is the task?":
+      - text: Task
+      - button "What is the task?": "?"
+      - radio "Classification (the target is a class)" [checked]
+      - text: Classification (the target is a class)
+      - radio "Regression (the target is a number)"
+      - text: Regression (the target is a number)
+      - radio "Clustering (no target)"
+      - text: Clustering (no target)
+    - text: Model
+    - button "What is Model?": "?"
+    - combobox "Model":
+      - option "Logistic"
+      - option "ExtraTrees"
+      - option "GaussianNB"
+      - option "SGD"
+      - option "MLP"
+      - option "RF"
+      - option "SVC"
+      - option "AdaBoost"
+      - option "Bagging"
+      - option "BernoulliNB"
+      - option "CategoricalNB"
+      - option "ComplementNB"
+      - option "DecisionTree"
+      - option "GradientBoosting"
+      - option "HistGradientBoosting"
+      - option "KNeighbors" [selected]
+      - option "LDA"
+      - option "LinearSVC"
+      - option "MultinomialNB"
+      - option "NuSVC"
+      - option "PassiveAggressive"
+      - option "QDA"
+      - option "Ridge"
+    - button "Back"
+    - button "Fit the model What is Fit the model?":
+      - text: Fit the model
+      - button "What is Fit the model?": "?"
+    - 'button "Next: result" [disabled]'
+- contentinfo:
+  - text: Every run writes a record with the file's SHA-256, the seed, the request, the estimator's parameters, the metrics, the data checks and the installed package versions; download it from the result. This page is built to WCAG 2.2 AA;
+  - code: docs/ACCESSIBILITY.md
+  - text: lists the checks.
+
+Tooltips reachable on this step (help button label -> text):
+  What is the mode? -> Guided fills every setting with a default and shows only the four steps. Full opens every setting the training route accepts, in the same steps. The choice is remembered in this browser.
+  What is the step list? -> The four steps. A step opens when the one before it is done; any opened step can be revisited.
+  What is the task? -> Classification predicts a class label. Regression predicts a number. Clustering groups rows without a target. The page proposes one from the target column; change it if the proposal is wrong.
+  What is Model? -> The estimator to fit, from scikit-learn. The Guided default is a random forest, which needs little tuning. Every model in the list is trained through the same route.
+  What is the hyperparameter table? -> The parameters of the chosen estimator, read from scikit-learn itself. A blank keeps the default shown. A value typed here reaches the estimator and is recorded in the run manifest.
+  What is n_neighbors? -> How many nearest rows vote for a prediction. Small values follow the training rows closely.
+  What is weights? -> uniform gives every neighbour one vote; distance gives nearer neighbours more.
+  What is algorithm? -> Parameter algorithm of KNeighborsClassifier; the scikit-learn default is shown.
+  What is leaf_size? -> Parameter leaf_size of KNeighborsClassifier; the scikit-learn default is shown.
+  What is p? -> Power of the Minkowski distance: 1 is Manhattan, 2 is Euclidean.
+  What is metric? -> The distance measure between rows.
+  What is metric_params? -> Parameter metric_params of KNeighborsClassifier; the scikit-learn default is shown.
+  What is n_jobs? -> CPU cores to use; blank means one.
+  What is Split method? -> How rows are divided into training and test halves. Random is the usual choice. Time-ordered keeps the latest rows for the test. Grouped keeps every row of a group on one side, for data where several rows come from one site or sample.
+  What is Split column (time or group)? -> The column a time-ordered or grouped split reads. Not used by the random split.
+  What is Test fraction? -> The fraction of rows held out as the test set. 0.20 keeps one row in five for testing.
+  What is Stratify the random split by a column? -> Keeps the class mix of the chosen column the same in both halves of a random split. Off unless a column is chosen.
+  What is Scaler? -> Rescales the predictors before fitting. Trees do not need it; distance and linear models often do. Standard centres to mean zero and unit variance; min-max maps to 0 to 1; robust uses the median and quartiles; quantile maps to a uniform distribution.
+  What is Rows with blanks? -> What to do with rows that have a blank in a modeling column: remove them, or fill the blank with the column mean, median or mode computed on the training rows only.
+  What is Zeros? -> What to do with zeros in the modeling columns, for data where zero means "not measured": keep them, remove the rows, or fill them with the mean or median.
+  What is Random seed? -> The random seed. The same seed and settings give the same split and the same fit. It is written to the run record.
+  What is Decimal places in the results? -> Decimal places shown for the metrics. The predictions file is always written at full precision.
+  What is Feature selection? -> Keeps a subset of predictors before fitting: the k with the strongest univariate score, recursive elimination, or the ones a model weights. The chosen columns are named in the result.
+  What is k for selection? -> How many predictors to keep when feature selection is on.
+  What is Outlier method? -> Finds and removes outlying training rows before fitting, by interquartile range, z-score, an isolation forest or the local outlier factor. The count removed is reported.
+  What is Cross-validation? -> Cross-validation on the training rows, reported beside the single test score. Stratified K-fold keeps the class mix in every fold.
+  What is Folds? -> How many folds the cross-validation uses.
+  What is Hyperparameter search? -> Searches over hyperparameter values with cross-validation and keeps the best set. Randomized tries a sample of combinations; grid tries all of them. The chosen values are written to the run record.
+  What is Fit the model? -> Fits the model with the settings on this page. A blocking data check stops the run and says why.
+
+==============================================================================
+Mode guided, step 4 (result); focus is on: 4. Read the result?The metrics on the held-out test rows, the baseline on the same rows, the data checks, and the parameters as fitted. The bundle link downloads the run record and the model.
+------------------------------------------------------------------------------
+- link "Skip to the current step":
+  - /url: "#main"
+- banner:
+  - heading "DiGiTerra" [level=1]
+  - group "Mode":
+    - text: Mode
+    - radio "Guided" [checked]
+    - text: Guided
+    - radio "Full"
+    - text: Full
+    - button "What is the mode?": "?"
+  - navigation "Steps":
+    - list:
+      - listitem:
+        - button "1 Upload"
+      - listitem:
+        - button "2 Target"
+      - listitem:
+        - button "3 Model and run"
+      - listitem:
+        - button "4 Result"
+    - button "What is the step list?": "?"
+  - navigation "Other pages":
+    - link "Classic page":
+      - /url: /
+- main:
+  - region "4. Read the result What is the result?":
+    - heading "4. Read the result What is the result?" [level=2]:
+      - text: 4. Read the result
+      - button "What is the result?": "?"
+    - table "Metrics":
+      - caption: Metrics
+      - rowgroup:
+        - row "Metric Value":
+          - columnheader "Metric"
+          - columnheader "Value"
+      - rowgroup:
+        - row "Accuracy What is Accuracy? 1.000":
+          - rowheader "Accuracy What is Accuracy?":
+            - text: Accuracy
+            - button "What is Accuracy?": "?"
+          - cell "1.000"
+        - row "Precision (weighted) What is Precision (weighted)? 1.000":
+          - rowheader "Precision (weighted) What is Precision (weighted)?":
+            - text: Precision (weighted)
+            - button "What is Precision (weighted)?": "?"
+          - cell "1.000"
+        - row "Recall (weighted) What is Recall (weighted)? 1.000":
+          - rowheader "Recall (weighted) What is Recall (weighted)?":
+            - text: Recall (weighted)
+            - button "What is Recall (weighted)?": "?"
+          - cell "1.000"
+        - row "F1 (weighted) What is F1 (weighted)? 1.000":
+          - rowheader "F1 (weighted) What is F1 (weighted)?":
+            - text: F1 (weighted)
+            - button "What is F1 (weighted)?": "?"
+          - cell "1.000"
+    - paragraph: "Baseline (Predicting the most common training class (versicolor, 41 of 120 training rows)): accuracy 0.3 against the model’s 1. The model beat the baseline."
+    - heading "Data checks" [level=3]
+    - list:
+      - listitem: "warning: 1 rows are exact duplicates across the modeling columns. A duplicate in both sides of the split inflates the test score."
+    - group: Estimator parameters as fitted
+    - paragraph:
+      - link "Download the run record and model (bundle)":
+        - /url: /export-bundle
+      - text: ·
+      - link "Model card":
+        - /url: /user-visualizations/model_card.html
+    - heading "Apply the model to new rows" [level=3]
+    - text: A file with the same predictor columns
+    - button "What is A file with the same predictor columns?": "?"
+    - button "A file with the same predictor columns"
+    - button "Predict"
+    - paragraph
+    - button "Back"
+    - button "Start over with a new file"
+- contentinfo:
+  - text: Every run writes a record with the file's SHA-256, the seed, the request, the estimator's parameters, the metrics, the data checks and the installed package versions; download it from the result. This page is built to WCAG 2.2 AA;
+  - code: docs/ACCESSIBILITY.md
+  - text: lists the checks.
+
+Tooltips reachable on this step (help button label -> text):
+  What is the mode? -> Guided fills every setting with a default and shows only the four steps. Full opens every setting the training route accepts, in the same steps. The choice is remembered in this browser.
+  What is the step list? -> The four steps. A step opens when the one before it is done; any opened step can be revisited.
+  What is the result? -> The metrics on the held-out test rows, the baseline on the same rows, the data checks, and the parameters as fitted. The bundle link downloads the run record and the model.
+  What is Accuracy? -> Share of test rows whose class was predicted correctly.
+  What is Precision (weighted)? -> Of the rows predicted as each class, the share that were that class, averaged by class size.
+  What is Recall (weighted)? -> Of the rows of each class, the share that were found, averaged by class size.
+  What is F1 (weighted)? -> The harmonic mean of precision and recall, averaged by class size.
+  What is A file with the same predictor columns? -> A table with the same predictor columns as the training file. Predictions are written with a novelty score and a note for rows outside the training range.
+
+==============================================================================
+Mode full, step 1 (upload)
+------------------------------------------------------------------------------
+- link "Skip to the current step":
+  - /url: "#main"
+- banner:
+  - heading "DiGiTerra" [level=1]
+  - group "Mode":
+    - text: Mode
+    - radio "Guided"
+    - text: Guided
+    - radio "Full" [checked]
+    - text: Full
+    - button "What is the mode?": "?"
+  - navigation "Steps":
+    - list:
+      - listitem:
+        - button "1 Upload"
+      - listitem:
+        - button "2 Target" [disabled]
+      - listitem:
+        - button "3 Model and run" [disabled]
+      - listitem:
+        - button "4 Result" [disabled]
+    - button "What is the step list?": "?"
+  - navigation "Other pages":
+    - link "Classic page":
+      - /url: /
+- main:
+  - region "1. Upload a table":
+    - heading "1. Upload a table" [level=2]
+    - text: CSV, Excel or Parquet file
+    - button "What is CSV, Excel or Parquet file?": "?"
+    - button "CSV, Excel or Parquet file"
+    - button "Upload"
+    - paragraph
+    - paragraph: Guided shows the steps with sensible defaults. Full opens every setting the training route accepts, in the same steps. Each step fills the window; the buttons at the top and the bottom move between them.
+    - 'button "Next: target" [disabled]'
+- contentinfo:
+  - text: Every run writes a record with the file's SHA-256, the seed, the request, the estimator's parameters, the metrics, the data checks and the installed package versions; download it from the result. This page is built to WCAG 2.2 AA;
+  - code: docs/ACCESSIBILITY.md
+  - text: lists the checks.
+
+Tooltips reachable on this step (help button label -> text):
+  What is the mode? -> Guided fills every setting with a default and shows only the four steps. Full opens every setting the training route accepts, in the same steps. The choice is remembered in this browser.
+  What is the step list? -> The four steps. A step opens when the one before it is done; any opened step can be revisited.
+  What is CSV, Excel or Parquet file? -> A table with one header row. CSV, Excel (.xlsx, .xlsm) and Parquet are read. Nothing is sent anywhere except this server.
+
+==============================================================================
+Mode full, step 2 (target); focus is on: 2. Choose what to predict
+------------------------------------------------------------------------------
+- link "Skip to the current step":
+  - /url: "#main"
+- banner:
+  - heading "DiGiTerra" [level=1]
+  - group "Mode":
+    - text: Mode
+    - radio "Guided"
+    - text: Guided
+    - radio "Full" [checked]
+    - text: Full
+    - button "What is the mode?": "?"
+  - navigation "Steps":
+    - list:
+      - listitem:
+        - button "1 Upload"
+      - listitem:
+        - button "2 Target"
+      - listitem:
+        - button "3 Model and run"
+      - listitem:
+        - button "4 Result" [disabled]
+    - button "What is the step list?": "?"
+  - navigation "Other pages":
+    - link "Classic page":
+      - /url: /
+- main:
+  - region "2. Choose what to predict":
+    - heading "2. Choose what to predict" [level=2]
+    - text: Target column
+    - button "What is Target column?": "?"
+    - combobox "Target column":
+      - option "sepal length"
+      - option "sepal width"
+      - option "petal length"
+      - option "petal width"
+      - option "species (text)" [selected]
+    - paragraph: "species has 3 distinct values. Proposed task: classification."
+    - text: Predictor columns (all other columns unless changed)
+    - button "What is Predictor columns (all other columns unless changed)?": "?"
+    - listbox "Predictor columns (all other columns unless changed)":
+      - option "sepal length" [selected]
+      - option "sepal width" [selected]
+      - option "petal length" [selected]
+      - option "petal width" [selected]
+      - option "species" [disabled]
+    - paragraph: Hold Command or Control to choose several.
+    - button "Back"
+    - 'button "Next: model"'
+- contentinfo:
+  - text: Every run writes a record with the file's SHA-256, the seed, the request, the estimator's parameters, the metrics, the data checks and the installed package versions; download it from the result. This page is built to WCAG 2.2 AA;
+  - code: docs/ACCESSIBILITY.md
+  - text: lists the checks.
+
+Tooltips reachable on this step (help button label -> text):
+  What is the mode? -> Guided fills every setting with a default and shows only the four steps. Full opens every setting the training route accepts, in the same steps. The choice is remembered in this browser.
+  What is the step list? -> The four steps. A step opens when the one before it is done; any opened step can be revisited.
+  What is Target column? -> The column the model predicts. A text column or a number with few distinct values is treated as a class; other numbers as a quantity to regress.
+  What is Predictor columns (all other columns unless changed)? -> The columns the model reads. All columns except the target are used unless changed here. Identifier columns and anything that leaks the target should be removed.
+
+==============================================================================
+Mode full, step 3 (model and run)
+------------------------------------------------------------------------------
+- link "Skip to the current step":
+  - /url: "#main"
+- banner:
+  - heading "DiGiTerra" [level=1]
+  - group "Mode":
+    - text: Mode
+    - radio "Guided"
+    - text: Guided
+    - radio "Full" [checked]
+    - text: Full
+    - button "What is the mode?": "?"
+  - navigation "Steps":
+    - list:
+      - listitem:
+        - button "1 Upload"
+      - listitem:
+        - button "2 Target"
+      - listitem:
+        - button "3 Model and run"
+      - listitem:
+        - button "4 Result" [disabled]
+    - button "What is the step list?": "?"
+  - navigation "Other pages":
+    - link "Classic page":
+      - /url: /
+- main:
+  - region "3. Choose the model and run":
+    - heading "3. Choose the model and run" [level=2]
+    - group "Task What is the task?":
+      - text: Task
+      - button "What is the task?": "?"
+      - radio "Classification (the target is a class)" [checked]
+      - text: Classification (the target is a class)
+      - radio "Regression (the target is a number)"
+      - text: Regression (the target is a number)
+      - radio "Clustering (no target)"
+      - text: Clustering (no target)
+    - text: Model
+    - button "What is Model?": "?"
+    - combobox "Model":
+      - option "Logistic"
+      - option "ExtraTrees"
+      - option "GaussianNB"
+      - option "SGD"
+      - option "MLP"
+      - option "RF"
+      - option "SVC"
+      - option "AdaBoost"
+      - option "Bagging"
+      - option "BernoulliNB"
+      - option "CategoricalNB"
+      - option "ComplementNB"
+      - option "DecisionTree"
+      - option "GradientBoosting"
+      - option "HistGradientBoosting"
+      - option "KNeighbors" [selected]
+      - option "LDA"
+      - option "LinearSVC"
+      - option "MultinomialNB"
+      - option "NuSVC"
+      - option "PassiveAggressive"
+      - option "QDA"
+      - option "Ridge"
+    - heading "Hyperparameters What is the hyperparameter table?" [level=3]:
+      - text: Hyperparameters
+      - button "What is the hyperparameter table?": "?"
+    - paragraph: KNeighborsClassifier parameters, from scikit-learn. A blank value keeps the default. Predicts a class label from the predictors.
+    - table "Hyperparameters of the chosen model":
+      - rowgroup:
+        - row "Parameter Default Value":
+          - columnheader "Parameter"
+          - columnheader "Default"
+          - columnheader "Value"
+      - rowgroup:
+        - row "n_neighbors What is n_neighbors? 5":
+          - rowheader "n_neighbors What is n_neighbors?":
+            - text: n_neighbors
+            - button "What is n_neighbors?": "?"
+          - cell "5"
+          - cell:
+            - spinbutton "n_neighbors"
+        - row "weights What is weights? uniform":
+          - rowheader "weights What is weights?":
+            - text: weights
+            - button "What is weights?": "?"
+          - cell "uniform"
+          - cell:
+            - textbox "weights"
+        - row "algorithm What is algorithm? auto":
+          - rowheader "algorithm What is algorithm?":
+            - text: algorithm
+            - button "What is algorithm?": "?"
+          - cell "auto"
+          - cell:
+            - textbox "algorithm"
+        - row "leaf_size What is leaf_size? 30":
+          - rowheader "leaf_size What is leaf_size?":
+            - text: leaf_size
+            - button "What is leaf_size?": "?"
+          - cell "30"
+          - cell:
+            - spinbutton "leaf_size"
+        - row "p What is p? 2":
+          - rowheader "p What is p?":
+            - text: p
+            - button "What is p?": "?"
+          - cell "2"
+          - cell:
+            - spinbutton "p"
+        - row "metric What is metric? minkowski":
+          - rowheader "metric What is metric?":
+            - text: metric
+            - button "What is metric?": "?"
+          - cell "minkowski"
+          - cell:
+            - textbox "metric"
+        - row "metric_params What is metric_params? None":
+          - rowheader "metric_params What is metric_params?":
+            - text: metric_params
+            - button "What is metric_params?": "?"
+          - cell "None"
+          - cell:
+            - textbox "metric_params"
+        - row "n_jobs What is n_jobs? None":
+          - rowheader "n_jobs What is n_jobs?":
+            - text: n_jobs
+            - button "What is n_jobs?": "?"
+          - cell "None"
+          - cell:
+            - textbox "n_jobs"
+    - heading "Split and preprocessing" [level=3]
+    - text: Split method
+    - button "What is Split method?": "?"
+    - combobox "Split method":
+      - option "Random" [selected]
+      - option "Time-ordered holdout"
+      - option "Grouped holdout"
+    - text: Split column (time or group)
+    - button "What is Split column (time or group)?": "?"
+    - combobox "Split column (time or group)":
+      - option "None" [selected]
+      - option "sepal length"
+      - option "sepal width"
+      - option "petal length"
+      - option "petal width"
+      - option "species"
+    - text: Test fraction
+    - button "What is Test fraction?": "?"
+    - spinbutton "Test fraction": "0.20"
+    - text: Stratify the random split by a column
+    - button "What is Stratify the random split by a column?": "?"
+    - combobox "Stratify the random split by a column":
+      - option "No" [selected]
+      - option "sepal length"
+      - option "sepal width"
+      - option "petal length"
+      - option "petal width"
+      - option "species"
+    - text: Scaler
+    - button "What is Scaler?": "?"
+    - combobox "Scaler":
+      - option "None" [selected]
+      - option "Standard"
+      - option "Min-max"
+      - option "Robust"
+      - option "Quantile"
+    - text: Rows with blanks
+    - button "What is Rows with blanks?": "?"
+    - combobox "Rows with blanks":
+      - option "Remove" [selected]
+      - option "Fill with the mean"
+      - option "Fill with the median"
+      - option "Fill with the mode"
+    - text: Zeros
+    - button "What is Zeros?": "?"
+    - combobox "Zeros":
+      - option "Keep" [selected]
+      - option "Remove rows"
+      - option "Fill with the mean"
+      - option "Fill with the median"
+    - text: Random seed
+    - button "What is Random seed?": "?"
+    - spinbutton "Random seed": "42"
+    - text: Decimal places in the results
+    - button "What is Decimal places in the results?": "?"
+    - spinbutton "Decimal places in the results": "3"
+    - heading "Selection, outliers, validation" [level=3]
+    - text: Feature selection
+    - button "What is Feature selection?": "?"
+    - combobox "Feature selection":
+      - option "None" [selected]
+      - option "Select k best"
+      - option "Recursive elimination"
+      - option "From a model"
+    - text: k for selection
+    - button "What is k for selection?": "?"
+    - spinbutton "k for selection": "5"
+    - text: Outlier method
+    - button "What is Outlier method?": "?"
+    - combobox "Outlier method":
+      - option "None" [selected]
+      - option "IQR"
+      - option "z-score"
+      - option "Isolation forest"
+      - option "Local outlier factor"
+    - text: Cross-validation
+    - button "What is Cross-validation?": "?"
+    - combobox "Cross-validation":
+      - option "None" [selected]
+      - option "K-fold"
+      - option "Stratified K-fold"
+    - text: Folds
+    - button "What is Folds?": "?"
+    - spinbutton "Folds": "5"
+    - text: Hyperparameter search
+    - button "What is Hyperparameter search?": "?"
+    - combobox "Hyperparameter search":
+      - option "None" [selected]
+      - option "Randomized search"
+      - option "Grid search"
+    - button "Back"
+    - button "Fit the model What is Fit the model?":
+      - text: Fit the model
+      - button "What is Fit the model?": "?"
+    - 'button "Next: result" [disabled]'
+- contentinfo:
+  - text: Every run writes a record with the file's SHA-256, the seed, the request, the estimator's parameters, the metrics, the data checks and the installed package versions; download it from the result. This page is built to WCAG 2.2 AA;
+  - code: docs/ACCESSIBILITY.md
+  - text: lists the checks.
+
+Tooltips reachable on this step (help button label -> text):
+  What is the mode? -> Guided fills every setting with a default and shows only the four steps. Full opens every setting the training route accepts, in the same steps. The choice is remembered in this browser.
+  What is the step list? -> The four steps. A step opens when the one before it is done; any opened step can be revisited.
+  What is the task? -> Classification predicts a class label. Regression predicts a number. Clustering groups rows without a target. The page proposes one from the target column; change it if the proposal is wrong.
+  What is Model? -> The estimator to fit, from scikit-learn. The Guided default is a random forest, which needs little tuning. Every model in the list is trained through the same route.
+  What is the hyperparameter table? -> The parameters of the chosen estimator, read from scikit-learn itself. A blank keeps the default shown. A value typed here reaches the estimator and is recorded in the run manifest.
+  What is n_neighbors? -> How many nearest rows vote for a prediction. Small values follow the training rows closely.
+  What is weights? -> uniform gives every neighbour one vote; distance gives nearer neighbours more.
+  What is algorithm? -> Parameter algorithm of KNeighborsClassifier; the scikit-learn default is shown.
+  What is leaf_size? -> Parameter leaf_size of KNeighborsClassifier; the scikit-learn default is shown.
+  What is p? -> Power of the Minkowski distance: 1 is Manhattan, 2 is Euclidean.
+  What is metric? -> The distance measure between rows.
+  What is metric_params? -> Parameter metric_params of KNeighborsClassifier; the scikit-learn default is shown.
+  What is n_jobs? -> CPU cores to use; blank means one.
+  What is Split method? -> How rows are divided into training and test halves. Random is the usual choice. Time-ordered keeps the latest rows for the test. Grouped keeps every row of a group on one side, for data where several rows come from one site or sample.
+  What is Split column (time or group)? -> The column a time-ordered or grouped split reads. Not used by the random split.
+  What is Test fraction? -> The fraction of rows held out as the test set. 0.20 keeps one row in five for testing.
+  What is Stratify the random split by a column? -> Keeps the class mix of the chosen column the same in both halves of a random split. Off unless a column is chosen.
+  What is Scaler? -> Rescales the predictors before fitting. Trees do not need it; distance and linear models often do. Standard centres to mean zero and unit variance; min-max maps to 0 to 1; robust uses the median and quartiles; quantile maps to a uniform distribution.
+  What is Rows with blanks? -> What to do with rows that have a blank in a modeling column: remove them, or fill the blank with the column mean, median or mode computed on the training rows only.
+  What is Zeros? -> What to do with zeros in the modeling columns, for data where zero means "not measured": keep them, remove the rows, or fill them with the mean or median.
+  What is Random seed? -> The random seed. The same seed and settings give the same split and the same fit. It is written to the run record.
+  What is Decimal places in the results? -> Decimal places shown for the metrics. The predictions file is always written at full precision.
+  What is Feature selection? -> Keeps a subset of predictors before fitting: the k with the strongest univariate score, recursive elimination, or the ones a model weights. The chosen columns are named in the result.
+  What is k for selection? -> How many predictors to keep when feature selection is on.
+  What is Outlier method? -> Finds and removes outlying training rows before fitting, by interquartile range, z-score, an isolation forest or the local outlier factor. The count removed is reported.
+  What is Cross-validation? -> Cross-validation on the training rows, reported beside the single test score. Stratified K-fold keeps the class mix in every fold.
+  What is Folds? -> How many folds the cross-validation uses.
+  What is Hyperparameter search? -> Searches over hyperparameter values with cross-validation and keeps the best set. Randomized tries a sample of combinations; grid tries all of them. The chosen values are written to the run record.
+  What is Fit the model? -> Fits the model with the settings on this page. A blocking data check stops the run and says why.
+
+==============================================================================
+Mode full, step 4 (result); focus is on: 4. Read the result?The metrics on the held-out test rows, the baseline on the same rows, the data checks, and the parameters as fitted. The bundle link downloads the run record and the model.
+------------------------------------------------------------------------------
+- link "Skip to the current step":
+  - /url: "#main"
+- banner:
+  - heading "DiGiTerra" [level=1]
+  - group "Mode":
+    - text: Mode
+    - radio "Guided"
+    - text: Guided
+    - radio "Full" [checked]
+    - text: Full
+    - button "What is the mode?": "?"
+  - navigation "Steps":
+    - list:
+      - listitem:
+        - button "1 Upload"
+      - listitem:
+        - button "2 Target"
+      - listitem:
+        - button "3 Model and run"
+      - listitem:
+        - button "4 Result"
+    - button "What is the step list?": "?"
+  - navigation "Other pages":
+    - link "Classic page":
+      - /url: /
+- main:
+  - region "4. Read the result What is the result?":
+    - heading "4. Read the result What is the result?" [level=2]:
+      - text: 4. Read the result
+      - button "What is the result?": "?"
+    - table "Metrics":
+      - caption: Metrics
+      - rowgroup:
+        - row "Metric Value":
+          - columnheader "Metric"
+          - columnheader "Value"
+      - rowgroup:
+        - row "Accuracy What is Accuracy? 1.000":
+          - rowheader "Accuracy What is Accuracy?":
+            - text: Accuracy
+            - button "What is Accuracy?": "?"
+          - cell "1.000"
+        - row "Precision (weighted) What is Precision (weighted)? 1.000":
+          - rowheader "Precision (weighted) What is Precision (weighted)?":
+            - text: Precision (weighted)
+            - button "What is Precision (weighted)?": "?"
+          - cell "1.000"
+        - row "Recall (weighted) What is Recall (weighted)? 1.000":
+          - rowheader "Recall (weighted) What is Recall (weighted)?":
+            - text: Recall (weighted)
+            - button "What is Recall (weighted)?": "?"
+          - cell "1.000"
+        - row "F1 (weighted) What is F1 (weighted)? 1.000":
+          - rowheader "F1 (weighted) What is F1 (weighted)?":
+            - text: F1 (weighted)
+            - button "What is F1 (weighted)?": "?"
+          - cell "1.000"
+    - paragraph: "Baseline (Predicting the most common training class (versicolor, 41 of 120 training rows)): accuracy 0.3 against the model’s 1. The model beat the baseline."
+    - heading "Data checks" [level=3]
+    - list:
+      - listitem: "warning: 1 rows are exact duplicates across the modeling columns. A duplicate in both sides of the split inflates the test score."
+    - group: Estimator parameters as fitted
+    - paragraph:
+      - link "Download the run record and model (bundle)":
+        - /url: /export-bundle
+      - text: ·
+      - link "Model card":
+        - /url: /user-visualizations/model_card.html
+    - heading "Apply the model to new rows" [level=3]
+    - text: A file with the same predictor columns
+    - button "What is A file with the same predictor columns?": "?"
+    - button "A file with the same predictor columns"
+    - button "Predict"
+    - paragraph
+    - group: Everything the run returned
+    - button "Back"
+    - button "Start over with a new file"
+- contentinfo:
+  - text: Every run writes a record with the file's SHA-256, the seed, the request, the estimator's parameters, the metrics, the data checks and the installed package versions; download it from the result. This page is built to WCAG 2.2 AA;
+  - code: docs/ACCESSIBILITY.md
+  - text: lists the checks.
+
+Tooltips reachable on this step (help button label -> text):
+  What is the mode? -> Guided fills every setting with a default and shows only the four steps. Full opens every setting the training route accepts, in the same steps. The choice is remembered in this browser.
+  What is the step list? -> The four steps. A step opens when the one before it is done; any opened step can be revisited.
+  What is the result? -> The metrics on the held-out test rows, the baseline on the same rows, the data checks, and the parameters as fitted. The bundle link downloads the run record and the model.
+  What is Accuracy? -> Share of test rows whose class was predicted correctly.
+  What is Precision (weighted)? -> Of the rows predicted as each class, the share that were that class, averaged by class size.
+  What is Recall (weighted)? -> Of the rows of each class, the share that were found, averaged by class size.
+  What is F1 (weighted)? -> The harmonic mean of precision and recall, averaged by class size.
+  What is A file with the same predictor columns? -> A table with the same predictor columns as the training file. Predictions are written with a novelty score and a note for rows outside the training range.
+
+==============================================================================
+Keyboard walk, Full mode, step 3: every Tab stop from the heading (tag | accessible name | type | has description)
+------------------------------------------------------------------------------
+  button | What is the task? | button | described
+  input |  | radio | 
+  button | What is Model? | button | described
+  select | Model | select-one | described
+  button | What is the hyperparameter table? | button | described
+  button | What is n_neighbors? | button | described
+  input | n_neighbors | number | described
+  button | What is weights? | button | described
+  input | weights | text | described
+  button | What is algorithm? | button | described
+  input | algorithm | text | described
+  button | What is leaf_size? | button | described
+  input | leaf_size | number | described
+  button | What is p? | button | described
+  input | p | number | described
+  button | What is metric? | button | described
+  input | metric | text | described
+  button | What is metric_params? | button | described
+  input | metric_params | text | described
+  button | What is n_jobs? | button | described
+  input | n_jobs | text | described
+  button | What is Split method? | button | described
+  select | Split method | select-one | described
+  button | What is Split column (time or group)? | button | described
+  select | Split column (time or group) | select-one | described
+  button | What is Test fraction? | button | described
+  input | Test fraction | number | described
+  button | What is Stratify the random split by a column? | button | described
+  select | Stratify the random split by a column | select-one | described
+  button | What is Scaler? | button | described
+  select | Scaler | select-one | described
+  button | What is Rows with blanks? | button | described
+  select | Rows with blanks | select-one | described
+  button | What is Zeros? | button | described
+  select | Zeros | select-one | described
+  button | What is Random seed? | button | described
+  input | Random seed | number | described
+  button | What is Decimal places in the results? | button | described
+  input | Decimal places in the results | number | described
+  button | What is Feature selection? | button | described
+  select | Feature selection | select-one | described
+  button | What is k for selection? | button | described
+  input | k for selection | number | described
+  button | What is Outlier method? | button | described
+  select | Outlier method | select-one | described
+  button | What is Cross-validation? | button | described
+  select | Cross-validation | select-one | described
+  button | What is Folds? | button | described
+  input | Folds | number | described
+  button | What is Hyperparameter search? | button | described
+  select | Hyperparameter search | select-one | described
+  button | Back | button | 
+  button | Fit the model?Fits the model with the se | submit | 
+  button | What is Fit the model? | button | described
+  body | Skip to the current step
+
+  DiGiTerra
+   |  | 
+  a | Skip to the current step |  | 
+  input |  | radio | 
+  button | What is the mode? | button | described
+  button | 1 Upload | button | 
+  button | 2 Target | button | 
+  button | 3 Model and run | button | 
+  button | What is the step list? | button | described
+  a | Classic page |  | 

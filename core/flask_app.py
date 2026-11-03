@@ -1,8 +1,9 @@
-# DiGiTerra Flask app. Routes in routes/; session state in core.state. See docs/HANDOFF.md.
+# DiGiTerra Flask app. Routes in routes/; session state in core.state. See docs/documentation.md.
 
-import os
-import uuid
 import logging
+import os
+import re
+import uuid
 from pathlib import Path
 
 from flask import Flask, g, request, send_from_directory
@@ -32,6 +33,7 @@ def _configure_logging():
     try:
         LOG_DIR.mkdir(parents=True, exist_ok=True)
         from datetime import datetime
+
         log_file = LOG_DIR / f"digiterra_{datetime.now().strftime('%Y-%m-%d')}.log"
         fh = logging.FileHandler(log_file, encoding="utf-8")
         fh.setLevel(level)
@@ -44,8 +46,16 @@ def _configure_logging():
 
 logger = _configure_logging()
 
-from core.state import SESSION_COOKIE_NAME
-from routes import register_blueprints
+from core import jobs  # noqa: E402  logging must be configured before the routes import
+from core.constants import DEFAULT_MAX_UPLOAD_MB  # noqa: E402  logging must be configured before the routes import
+from core.errors import register_error_handlers  # noqa: E402  logging must be configured before the routes import
+from core.security import install as install_security  # noqa: E402  logging is configured above
+from core.state import SESSION_COOKIE_NAME  # noqa: E402  logging must be configured before the routes import
+from core.state import flush as state_flush  # noqa: E402  logging is configured above
+from python_scripts.preprocessing.progress_tracker import (  # noqa: E402  logging is configured above
+    active_owner_sessions,
+)  # noqa: E402  logging must be configured before the routes import
+from routes import register_blueprints  # noqa: E402  logging must be configured before the routes import
 
 app = Flask(
     __name__,
@@ -54,31 +64,73 @@ app = Flask(
 )
 app.config["UPLOAD_FOLDER"] = str(UPLOAD_DIR)
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+# Reject an oversized body before it is read into memory or written to disk.
+_max_mb = float(os.environ.get("DIGITERRA_MAX_UPLOAD_MB", "0") or 0)
+app.config["MAX_CONTENT_LENGTH"] = int((_max_mb if _max_mb > 0 else DEFAULT_MAX_UPLOAD_MB) * 1024 * 1024)
+
+# Session ids this app issues are 32 hex characters.
+_VALID_SESSION_ID = re.compile(r"[0-9a-f]{32}")
 
 
 @app.before_request
 def _ensure_session_cookie():
     existing = request.cookies.get(SESSION_COOKIE_NAME)
-    if existing:
+    if existing and _VALID_SESSION_ID.fullmatch(existing):
         g.session_id = existing
         g.new_session_id = None
-        return
-    new_id = uuid.uuid4().hex
-    g.session_id = new_id
-    g.new_session_id = new_id
+    else:
+        # A cookie the server never issued gets replaced rather than trusted, so a
+        # crafted value cannot name another session's storage or output directory.
+        new_id = uuid.uuid4().hex
+        g.session_id = new_id
+        g.new_session_id = new_id
+        # A new session is the moment to drop directories nobody will return to.
+        config.sweep_stale_outputs()
+    # Generated files go to this session's own directory.
+    g.vis_scope_token = config.set_session_scope(g.session_id)
+
+
+@app.teardown_request
+def _clear_session_scope(exc=None):
+    token = getattr(g, "vis_scope_token", None)
+    if token is not None:
+        config.reset_session_scope(token)
+    # A change made while answering this request becomes visible to other
+    # processes here rather than on every key that was set.
+    sid = getattr(g, "session_id", None)
+    if sid:
+        try:
+            state_flush(sid)
+        except Exception:  # a failed write must not fail the response
+            pass
 
 
 @app.after_request
 def _set_session_cookie(response):
     new_id = getattr(g, "new_session_id", None)
     if new_id:
-        response.set_cookie(SESSION_COOKIE_NAME, new_id, httponly=True, samesite="Lax")
+        secure = request.is_secure or os.environ.get("DIGITERRA_COOKIE_SECURE", "").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        response.set_cookie(SESSION_COOKIE_NAME, new_id, httponly=True, samesite="Lax", secure=secure)
     return response
 
 
+# The sweep skips a session with a run in flight, and runs on a timer as well as
+# when a new session cookie is issued.
+config.set_active_session_provider(lambda: active_owner_sessions() | jobs.active_sessions())
+config.start_sweep_timer()
+
+# The profile's controls run before the blueprints see a request.
+install_security(app)
 register_blueprints(app)
+register_error_handlers(app)
 
 if URL_PREFIX:
+
     @app.route(f"{URL_PREFIX}/static/<path:filename>")
     def prefixed_static(filename):
         return send_from_directory(app.static_folder, filename)

@@ -1,6 +1,8 @@
 /**
  * Upload and Data Exploration (correlation matrices, pairplot). Depends on core.js (refs, helpers).
  */
+// Shared across the split files (they run in one script scope).
+let corrColsIndices = 'all';
 uploadForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const formData = new FormData(uploadForm);
@@ -8,14 +10,15 @@ uploadForm.addEventListener('submit', async (e) => {
     // Validate file is selected
     const fileInput = document.getElementById('file');
     if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-        alert('Please select a CSV file to upload.');
+        alert('No file is selected.');
         return;
     }
     
     // Validate file extension
-    const fileName = fileInput.files[0].name;
-    if (!fileName.toLowerCase().endsWith('.csv')) {
-        alert('Please select a CSV file. Only .csv files are allowed.');
+    const fileName = fileInput.files[0].name.toLowerCase();
+    const accepted = ['.csv', '.xlsx', '.xlsm', '.parquet'];
+    if (!accepted.some(ext => fileName.endsWith(ext))) {
+        alert('Accepted file types are .csv, .xlsx, .xlsm, and .parquet.');
         return;
     }
     
@@ -45,6 +48,10 @@ uploadForm.addEventListener('submit', async (e) => {
 
         // once recieves column names
         uploadedFileName = formData.get('file').name;
+        // The shape the server measured, kept for the Data panel of the modeling page.
+        uploadedShape = { rows: data.rows || null, columns: data.numcols || null };
+        // The rail names the column behind a letter, so it needs the header row.
+        window.uploadedColumnNames = Array.isArray(data.columns) ? data.columns : null;
 
         // show the divs for preprocessing and selecting targets, indicators, output type, etc
         let columnDiv = document.getElementById('columnsection');
@@ -53,6 +60,8 @@ uploadForm.addEventListener('submit', async (e) => {
         columnSelection.dataset.ready = 'false';
         columnSelection.style.display = 'none';
         setActiveTab('processing');
+        // Anything that has to run once the columns are on the page listens for this.
+        document.dispatchEvent(new CustomEvent('digiterra:upload-complete', { detail: { ok: true } }));
 
         // getting names of the first and last columns and their letter index
         indicatorsSelect.innerHTML = '';
@@ -82,7 +91,7 @@ uploadForm.addEventListener('submit', async (e) => {
                 <div class="upload-warning" style="background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; padding: 12px; margin-top: 12px; margin-bottom: 12px;">
                     <strong style="color: #856404;">Warning:</strong>
                     <ul style="margin: 8px 0 0 0; padding-left: 20px; color: #856404;">
-                        ${data.warnings.map(w => `<li>${w}</li>`).join('')}
+                        ${data.warnings.map(w => `<li>${escapeHtml(w)}</li>`).join('')}
                     </ul>
                 </div>
             `;
@@ -93,7 +102,7 @@ uploadForm.addEventListener('submit', async (e) => {
                 <tbody>
                     <tr>
                         <th>File name</th>
-                        <td>${shortFileName}</td>
+                        <td>${escapeHtml(shortFileName)}</td>
                     </tr>
                     <tr>
                         <th>Total columns</th>
@@ -101,11 +110,11 @@ uploadForm.addEventListener('submit', async (e) => {
                     </tr>
                     <tr>
                         <th>First column</th>
-                        <td>A: ${data.firstcol}</td>
+                        <td>A: ${escapeHtml(data.firstcol)}</td>
                     </tr>
                     <tr>
                         <th>Last column</th>
-                        <td>${lastColVal}: ${data.lastcol}</td>
+                        <td>${escapeHtml(lastColVal)}: ${escapeHtml(data.lastcol)}</td>
                     </tr>
                     ${data.rows ? `<tr><th>Total rows</th><td>${data.rows.toLocaleString()}</td></tr>` : ''}
                     ${data.total_cells ? `<tr><th>Total cells</th><td>${data.total_cells.toLocaleString()}</td></tr>` : ''}
@@ -123,7 +132,7 @@ uploadForm.addEventListener('submit', async (e) => {
 
     } catch (error) {
         console.error('Upload error:', error);
-        alert('An error occurred while uploading the file. Please check the console for details.');
+        alert('The upload failed. Open the browser console for the details.');
     }
     
 });
@@ -159,7 +168,7 @@ corrForm.addEventListener('submit', async(e) => {
         });
         let data = await response.json();
         if (!response.ok) {
-            throw new Error(data.error || 'An error occurred.');
+            throw new Error(data.error || 'The upload failed.');
         }
 
         // show div to tell user they can download resutls
@@ -203,7 +212,7 @@ corrForm.addEventListener('submit', async(e) => {
                         <tbody>
                             ${statsRows.map((row) => `
                                 <tr>
-                                    ${headers.map((header) => `<td>${row[header.key] ?? ''}</td>`).join('')}
+                                    ${headers.map((header) => `<td>${escapeHtml(row[header.key] ?? '')}</td>`).join('')}
                                 </tr>
                             `).join('')}
                         </tbody>
@@ -224,7 +233,7 @@ corrForm.addEventListener('submit', async(e) => {
         const initialKey = correlationOptions[0]?.key
         const initialSrc = initialKey ? correlationImages[initialKey] : data.correlation_image
         const pairplotOptions = numericColumns
-            .map((column) => `<option value="${column}">${column}</option>`)
+            .map((column) => `<option value="${escapeHtml(column)}">${escapeHtml(column)}</option>`)
             .join('')
 
         explorationOutput.innerHTML = `
@@ -232,27 +241,28 @@ corrForm.addEventListener('submit', async(e) => {
                 <div class="exploration-graphic">
                     <div class="matrix-heading">
                         <h3>Correlation Matrix</h3>
-                        <label for="correlationMatrixSelect">Matrix type</label>
+                        <span class="matrix-control"><label for="correlationMatrixSelect">Matrix type</label>
                         <select id="correlationMatrixSelect">
                             ${correlationOptions
                                 .map((option) => `<option value="${option.key}">${option.label}</option>`)
                                 .join('')}
-                        </select>
+                        </select></span>
                     </div>
                     <img id="correlationMatrixImage" src="${withCacheBust(initialSrc)}" alt="Correlation matrix heatmap">
                 </div>
                 <div class="exploration-graphic pairplot-graphic">
                     <div class="matrix-heading">
                         <h3>Pairplot</h3>
-                        <label for="pairplotXSelect">X</label>
+                        <span class="matrix-control"><label for="pairplotXSelect">X</label>
                         <select id="pairplotXSelect">
                             ${pairplotOptions}
-                        </select>
-                        <label for="pairplotYSelect">Y</label>
+                        </select></span>
+                        <span class="matrix-control"><label for="pairplotYSelect">Y</label>
                         <select id="pairplotYSelect">
                             ${pairplotOptions}
-                        </select>
+                        </select></span>
                     </div>
+                    <div id="pairplotError" class="hidden"></div>
                     <img id="pairplotImage" src="${withCacheBust(pairplotImage)}" alt="Pairplot preview">
                 </div>
             </div>
@@ -275,11 +285,24 @@ corrForm.addEventListener('submit', async(e) => {
         const pairplotXSelect = document.getElementById('pairplotXSelect')
         const pairplotYSelect = document.getElementById('pairplotYSelect')
         const pairplotImageEl = document.getElementById('pairplotImage')
+        // Pairplot messages go to the box inside the pairplot panel. The page-wide
+        // #errorDiv sits in the Modeling form, where a pairplot message appeared
+        // after the user had left Data Exploration.
+        const pairplotErrorEl = document.getElementById('pairplotError')
         if (pairplotXSelect && pairplotYSelect && pairplotImageEl && numericColumns.length >= 2) {
             // Set initial values without triggering change events
             pairplotXSelect.value = numericColumns[0]
             pairplotYSelect.value = numericColumns[1]
             
+            // Ends a request and, when X or Y changed while it ran, draws the latest pair.
+            const finishPairplot = () => {
+                pairplotImageEl.dataset.updating = 'false';
+                if (pairplotImageEl.dataset.pending === 'true') {
+                    pairplotImageEl.dataset.pending = 'false';
+                    updatePairplot();
+                }
+            };
+
             const updatePairplot = async () => {
                 // Validate that both selects have values
                 if (!pairplotXSelect.value || !pairplotYSelect.value) {
@@ -287,11 +310,21 @@ corrForm.addEventListener('submit', async(e) => {
                     return;
                 }
                 
-                // Prevent duplicate requests if one is already in progress
+                // One request at a time. A change made while one is running is not
+                // dropped: the plot is redrawn once more for the latest X and Y when
+                // the running request ends, so the image matches the selects.
                 if (pairplotImageEl.dataset.updating === 'true') {
+                    pairplotImageEl.dataset.pending = 'true';
                     return;
                 }
                 pairplotImageEl.dataset.updating = 'true';
+                pairplotImageEl.dataset.pending = 'false';
+                const requestId = String(Number(pairplotImageEl.dataset.request || 0) + 1);
+                pairplotImageEl.dataset.request = requestId;
+                if (pairplotErrorEl) {
+                    pairplotErrorEl.innerHTML = '';
+                    hideElement(pairplotErrorEl);
+                }
                 
                 // Add a slight opacity change to show it's updating
                 pairplotImageEl.style.opacity = '0.6';
@@ -321,8 +354,9 @@ corrForm.addEventListener('submit', async(e) => {
                     if (!response.ok) {
                         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
                         console.error('Pairplot update failed:', errorData.error || response.statusText);
+                        showError(pairplotErrorEl, `Pairplot update failed: ${errorData.error || response.statusText}`);
                         pairplotImageEl.style.opacity = '1';
-                        pairplotImageEl.dataset.updating = 'false';
+                        finishPairplot();
                         return;
                     }
                     
@@ -358,16 +392,17 @@ corrForm.addEventListener('submit', async(e) => {
                                 // Wait for image to actually load
                                 const imgLoadHandler = () => {
                                     currentImg.style.opacity = '1';
-                                    currentImg.dataset.updating = 'false';
+                                    finishPairplot();
                                     currentImg.removeEventListener('load', imgLoadHandler);
                                     currentImg.removeEventListener('error', imgErrorHandler);
                                 };
                                 
                                 const imgErrorHandler = () => {
                                     console.error('Pairplot: Failed to load image');
+                                    showError(pairplotErrorEl, 'The pairplot image did not load.');
                                     currentImg.style.opacity = '1';
                                     currentImg.style.display = '';
-                                    currentImg.dataset.updating = 'false';
+                                    finishPairplot();
                                     currentImg.removeEventListener('load', imgLoadHandler);
                                     currentImg.removeEventListener('error', imgErrorHandler);
                                 };
@@ -378,23 +413,25 @@ corrForm.addEventListener('submit', async(e) => {
                                 
                                 // Fallback timeout in case events don't fire
                                 setTimeout(() => {
-                                    if (currentImg.dataset.updating === 'true') {
+                                    if (currentImg.dataset.updating === 'true' && currentImg.dataset.request === requestId) {
                                         currentImg.style.opacity = '1';
                                         currentImg.style.display = '';
-                                        currentImg.dataset.updating = 'false';
+                                        finishPairplot();
                                     }
                                 }, 5000);
                             });
                         });
                     } else {
                         console.warn('Pairplot: No image returned from server');
+                        showError(pairplotErrorEl, 'The server returned no pairplot image.');
                         pairplotImageEl.style.opacity = '1';
-                        pairplotImageEl.dataset.updating = 'false';
+                        finishPairplot();
                     }
                 } catch (error) {
                     console.error('Pairplot update error:', error);
+                    showError(pairplotErrorEl, `Pairplot update failed: ${error.message || 'request error'}`);
                     pairplotImageEl.style.opacity = '1';
-                    pairplotImageEl.dataset.updating = 'false';
+                    finishPairplot();
                 }
             };
             
@@ -404,7 +441,7 @@ corrForm.addEventListener('submit', async(e) => {
         }
     }
     catch (error) {
-        showError(errorDiv, error.message || 'Request failed. See console for details.');
+        showError(document.getElementById('explorationErrorDiv') || errorDiv, error.message || 'The request failed. Open the browser console for the details.');
     }
 
 });

@@ -1,0 +1,154 @@
+Tree-ensemble predictions on Linux x86_64 and macOS arm64, 2026-09-25
+
+Result
+The RF, ExtraTrees and Bagging regressors give different predictions on the two
+platforms because scikit-learn's compiled tree builder rounds two quantities
+differently on each machine. DiGiTerra's inputs and seeding are identical on both.
+Each difference starts at a node where the exact arithmetic gives a tie, so neither
+platform is wrong. Each platform repeats its own result exactly.
+
+Observation that started the test
+docs/artifact_roundtrip_2026-09-25c.json (Linux container, x86_64, Python 3.11.15)
+and docs/artifact_roundtrip_2026-09-25d.json (macOS arm64, Python 3.13.1), same
+commit, same versions of scikit-learn 1.9.0, numpy 1.26.4 and scipy 1.17.1. The
+first-eight predictions differ by at most 3.6 percent (Bagging), 1.8 percent
+(ExtraTrees) and 0.95 percent (RF). 22 other regressors differ by 4e-13 relative or
+less; 44 models are identical.
+
+Test
+scripts/tree_probe_2026-09-25.py trains the three models through
+run_model_training with the round-trip request (diabetes example, seed 42, test
+size 0.20). For every tree it records the tree seed, the bootstrap rows, a hash of
+the node arrays, the full node arrays and the training matrix the estimator saw.
+Controls: two runs on each platform, and DecisionTree, AdaBoost and
+gradient_boosting, which are identical across platforms in the records.
+
+Findings
+1. Each platform repeats itself. linux.json equals linux2.json; mac.json equals
+   mac2.json. The round-trip rerun in the container on 2026-09-25 also reproduced
+   record c exactly.
+2. The inputs are bitwise identical. Training matrix (353 x 10), targets, model
+   parameters, all 20 RF tree seeds, all RF and Bagging bootstrap row sets and all
+   Bagging feature sets are equal.
+3. The trees differ. RF: 15 of 20 trees. Bagging: 8 of 10. ExtraTrees: 6 of 100.
+4. First differing node, RF and Bagging (outputs/firstdiff_2026-09-25.txt): in 22
+   of 23 trees the two platforms split on different features, and the two splits
+   are an exact tie in rational arithmetic and send the same bootstrap rows left
+   and right. The splitter keeps a candidate only when its improvement is strictly
+   greater, so the last bits of the floating-point improvement decide the tie.
+5. First differing node, ExtraTrees and RF tree 8: a two-row node whose rows have
+   the same target. The impurity is 0 in exact arithmetic and is computed as a
+   rounding residue between -8.9e-16 and 8.9e-16. The builder makes a leaf when
+   the impurity is at most machine epsilon (2.2e-16). One platform gets a residue
+   below epsilon and makes a leaf; the other gets one above and splits.
+6. Effect (outputs/effect_2026-09-25.txt): no in-bag training row changes its
+   tree prediction. 180 out-of-bag RF rows and 33 Bagging rows do, because the
+   tied splits differ for rows the tree never saw. The record's first-eight rows
+   include rows outside each tree's sample, which is why their predictions differ.
+
+What this means for DiGiTerra
+The round-trip check compares a model with itself on one machine, and that claim
+holds on both platforms. Full-depth tree ensembles are not bitwise reproducible
+across CPU architectures. scripts/rerun_bundle.py reports package drift but not a
+platform change. A bundle trained on one architecture and rerun on another can
+therefore show changed metrics for RF, ExtraTrees or Bagging with no drift listed.
+The manifest already records platform.platform(). No code was changed.
+
+Files
+scripts/tree_probe_2026-09-25.py   probe, run on each platform from the repository root
+scripts/firstdiff.py               first differing node and the exact-tie test
+scripts/effect.py                  how many tree predictions differ
+outputs/linux.json, linux2.json    container runs (x86_64)
+outputs/mac.json, mac2.json        Mac runs (arm64), from Terminal
+outputs/firstdiff_2026-09-25.txt, outputs/effect_2026-09-25.txt
+The Mac node-array files (mac3_*_trees.npz, 4.7 MB) stay in
+DiGiTerra/tree_probe_2026-09-25 and are not committed. The Linux ones are written
+by running the probe with the prefix linux3 in the container.
+
+Follow-up, same day: cause, depth limits, saved models, and the code change
+The paragraph "What this means for DiGiTerra" above describes the state at commit
+d9cd311. The tests below were stated before they ran, and their output is in
+outputs/experiment_2026-09-25.txt.
+
+Test. scripts/platform_experiment_2026-09-25.py fits RF (20 trees), ExtraTrees
+(100) and Bagging (10) with seed 42 directly on the training matrix above, under
+five settings: scikit-learn defaults, min_samples_leaf 2 and 5, max_depth 10 and 5.
+It records every tree's hash and the predictions on 2,000 query rows, and writes or
+reads the three default models in DiGiTerra's artifact format. The default fits
+reproduce the pipeline's trees exactly on Linux (same hashes as linux.json), so the
+direct fits stand for the pipeline. Runs: Linux wheel twice; Mac wheel twice; Mac
+with scikit-learn 1.9.0 built from source with default compiler flags (control);
+Mac with the same source built with CFLAGS and CXXFLAGS -ffp-contract=off, which
+stops the compiler from fusing a multiply and an add into one instruction with a
+single rounding. Inference, confirmed by finding 7: the x86_64 wheel is compiled
+for a baseline without a fused multiply-add instruction, while clang on arm64
+contracts by default.
+
+7. Cause: fused multiply-add. The Mac build with -ffp-contract=off gives the same
+   trees and the same predictions as the Linux wheel in all 15 model and setting
+   pairs (every tree equal, 0 of 2,000 query rows changed). The control build with
+   default flags gives the same trees as the Mac wheel in all 15, and differs from
+   the -ffp-contract=off build exactly as the Mac wheel differs from Linux. Each
+   build repeats itself.
+8. Depth limits reduce the differences and do not remove them. Linux wheel against
+   Mac wheel, query rows changed of 2,000: RF 1,665 (default), 9 (min_samples_leaf
+   2), 115 (min_samples_leaf 5), 784 (max_depth 10), 0 (max_depth 5); ExtraTrees
+   1,872, 0, 0, 1,891, 715; Bagging 424, 35, 0, 86, 0. No single setting gives 0
+   for all three models, and larger leaves can differ where smaller ones do not
+   (RF 9 at leaf size 2, 115 at 5). The scikit-learn defaults stay.
+9. A saved model predicts the same everywhere. The three default models written on
+   Linux and read on the Mac give bitwise-identical predictions on all 2,000 rows.
+   Only retraining is affected.
+
+Code change after d9cd311
+- python_scripts/reporting/bundle.py: the manifest's environment records system and
+  machine as well as the platform string; platform_change() compares them with the
+  current machine (older bundles are read from the string) and returns a note,
+  which for a tree model names tied splits. The model card states that retraining
+  reproduces the run on the same type of machine, that the fitted model predicts
+  the same on any machine, and, for a tree model, that retraining on another
+  processor type can change the metrics.
+- scripts/rerun_bundle.py prints the note, adds platform_change to --json, and
+  repeats it under a metric mismatch.
+- scripts/check_artifact_roundtrip.py records python, system and machine.
+- scripts/compare_roundtrip_records.py classes each model in two round-trip records
+  as identical, rounding (relative difference at most 1e-9), "tree, platform", or
+  unexplained (exit code 1). Records c and d: 44 identical, 22 rounding, 3 tree,
+  platform, 0 unexplained.
+- tests/unit/test_platform_2026_09_25.py covers these. pytest tests/: 263 passed.
+
+Not done
+The desktop app still installs the standard scikit-learn wheel. Building it from
+source with -ffp-contract=off would make the Mac app retrain as the x86_64 builds
+do, at the cost of a nonstandard scikit-learn in the app. Other arm64 builds, such
+as Linux aarch64 wheels compiled with GCC, which also contracts by default, would
+still differ. That build was not tested on Linux aarch64.
+
+More files
+scripts/platform_experiment_2026-09-25.py, scripts/compare_experiment.py
+outputs/exp_linux.json, exp_linux2.json, exp_mac.json, exp_mac2.json,
+exp_mac_source_default.json, exp_mac_source_off.json, experiment_2026-09-25.txt
+The Mac scripts, build logs, prediction files and the two source-built
+environments stay in DiGiTerra/tree_probe_2026-09-25.
+
+Decision, 2026-09-25
+The custom build under "Not done" is rejected. The reproducibility standard is
+conformance to the official scikit-learn on the machine that runs DiGiTerra. A
+DiGiTerra run gives exactly what scikit-learn 1.9.0 gives when called directly on
+the same machine with the same versions, data and seed. scikit-learn itself
+promises that an integer random_state "will produce the same results across
+different calls" (glossary, random_state) and makes no statement about other
+machines, and its official x86_64 and arm64 builds give the two results recorded
+here. A Mac app built with -ffp-contract=off would reproduce the Linux numbers and
+stop matching what scikit-learn gives on the same Mac. The scikit-learn defaults
+also stay (finding 8).
+
+Conformance evidence. Plain scikit-learn fits of RF, ExtraTrees and Bagging give
+the same trees as the DiGiTerra pipeline on Linux (exp_linux.json against
+linux.json) and on the Mac (exp_mac.json against mac.json).
+tests/unit/test_sklearn_conformance.py checks this on whatever machine runs the
+suite. For RF, ExtraTrees, Bagging and DecisionTree it captures the matrix and
+target the pipeline passes to fit, refits a clone with plain scikit-learn, and
+requires identical node arrays and predictions. 4 of 4 passed in the container.
+Results are compared between machines only with scripts/compare_roundtrip_records.py,
+which expects rounding differences and marks tree models as platform differences.

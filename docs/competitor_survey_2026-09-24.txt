@@ -1,0 +1,26 @@
+NO-CODE AND LOW-CODE ML INTERFACES: FEATURE AND ACCESSIBILITY SURVEY, 2026-09-24
+Official documentation and product pages read on 2026-09-24. "Not stated" means the page read does not address the item. Summary and comparison table; the design note docs/SIMPLE_INTERFACE_DESIGN.md draws on this.
+
+Product | Steps to first model | Novice/expert switch | Hyperparameters | Data checks | Run record | Accessibility claim | Cost | Deployment
+Orange 3 | 3 widgets, about 4 steps | Not stated | Widget form fields | Not stated (balance checkbox) | Report file with workflow; seed option | None | GPL v3, free | Local
+KNIME Analytics Platform | about 5 to 6 steps, 3 to 5 nodes | Not stated | Node dialog forms | Missing value markers, execution warnings | knime.log, Hub versions | None (forum: editor "a bit more complex") | GPLv3, free | Local
+RapidMiner AI Studio | 6 wizard screens (Auto Model) | Yes: Auto Model, then Open Process | Via operators after Open Process | Correlation with target, ID-ness, stability, missing | Saved process | Not stated | Not stated | Local desktop; cloud or on premises
+H2O-3 Flow | about 5 cells | Standard, Advanced and Expert option groups | Form fields, grid checkbox | Not stated | Flow notebook, seed field | Keyboard shortcuts only; Flow deprecated | Apache 2.0 | Browser against a local server
+Amazon SageMaker Canvas | about 5 to 6 screens | Quick vs Standard build, advanced panel | Metric, algorithms, split only | Leakage, imbalance, missing, duplicates, anomalies | Model versions, leaderboard | AWS ACR/VPAT (Section 508, WCAG) | $1.90 per hour; 2 month free tier | Cloud only
+Azure Machine Learning | AutoML about 6 screens; designer 9 steps | No-code studio vs SDK; Additional configuration | Not per model in the UI | Guardrails: imbalance, missing, cardinality | Jobs, child jobs, metrics, Responsible AI dashboard | Microsoft ACRs (WCAG, 508, EN 301 549) | No service charge; compute billed | Cloud only
+Google Vertex AI AutoML tabular | Not retrievable | Not stated | Not stated | Missing, distinct, correlation statistics | Not stated | Google VPAT list names "Vertex AI - Tabular Data" | $21.252 per node hour | Cloud only
+Weka Explorer | 4 steps, 2 tabs | Not stated | GenericObjectEditor dialog | Missing, distinct, unique per attribute | Run information with seed | None | GPL | Local
+JASP | about 4 steps | Not stated; syntax mode | Form fields; automatic optimization | Not stated | .jasp file; Set Seed | VPAT: "JASP does not currently support screen readers"; keyboard partial | GPLv2 and AGPLv3, free | Local
+jamovi | about 5 steps with a module | Not stated; syntax mode | Module form fields | Not stated | .omv file | "jamovi can be operated entirely from the keyboard and works with NVDA and JAWS"; VPAT | Free; cloud free guest plan | Local or browser cloud
+DataRobot | about 4 screens | Modeling modes plus "Show advanced options" | Advanced Tuning fields | Leakage, outliers, disguised missing | Seed, compliance DOCX | Not stated | 30 day trial; pricing not stated | SaaS or self-managed
+
+Quoted claims used in the design note and the paper:
+- Orange: "Orange is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License" (orangedatamining.com/license/).
+- KNIME: "KNIME Analytics Platform is free and open source" (knime.com/knime-analytics-platform).
+- SageMaker Canvas: "You pay based on the number of hours for which SageMaker Canvas is used or logged in" (aws.amazon.com/sagemaker/canvas/pricing/).
+- Azure ML: "There is no additional charge to use Azure Machine Learning." (azure.microsoft.com/en-us/pricing/details/machine-learning/).
+- JASP VPAT (August 2025): "JASP does not currently support screen readers" (jasp-stats.org/accessibility/).
+- jamovi: "jamovi can be operated entirely from the keyboard and works with NVDA and JAWS" (jamovi.org/accessibility.html).
+- H2O Flow: "H2O Flow is deprecated and will be removed in a future release." (docs.h2o.ai/h2o/latest-stable/h2o-docs/flow.html).
+- DataRobot: random seed "fixes the value used by DataRobot so that subsequent runs of the same project will have the same results" (docs.datarobot.com, advanced options).
+No product page read states that the run record includes a hash of the input data or the versions of the installed packages.

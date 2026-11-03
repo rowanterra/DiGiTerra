@@ -1,0 +1,655 @@
+[
+  {
+    "model": "Linear",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 3.28,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "BayesianRidge",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 3.28,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "ARDRegression",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 3.28,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "Ridge",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 3.28,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [
+      "alpha"
+    ],
+    "error": null
+  },
+  {
+    "model": "Lasso",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 2.9,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [
+      "alpha"
+    ],
+    "error": null
+  },
+  {
+    "model": "ElasticNet",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 2.92,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [
+      "alpha",
+      "l1_ratio"
+    ],
+    "error": null
+  },
+  {
+    "model": "SVM",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 119.28,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [
+      "C"
+    ],
+    "error": null
+  },
+  {
+    "model": "RF",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 21.84,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [
+      "n_estimators"
+    ],
+    "error": null
+  },
+  {
+    "model": "ExtraTrees",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 47.56,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "MLP",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 4.85,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [
+      "activation",
+      "solver"
+    ],
+    "error": null
+  },
+  {
+    "model": "K-Nearest",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 39.44,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [
+      "n_neighbors"
+    ],
+    "error": null
+  },
+  {
+    "model": "gradient_boosting",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 6.66,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [
+      "learning_rate",
+      "n_estimators"
+    ],
+    "error": null
+  },
+  {
+    "model": "AdaBoost",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 29.55,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "Bagging",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 9.52,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "DecisionTree",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 4.05,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "ElasticNetCV",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 3.13,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "HistGradientBoosting",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 19.47,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "Huber",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 3.31,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "LARS",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 3.38,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "LARSCV",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 3.55,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "LassoCV",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 3.47,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "LassoLars",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 3.37,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "LinearSVR",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 3.27,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "NuSVR",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 85.57,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "OMP",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 3.15,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "PassiveAggressive",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 3.25,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "Quantile",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 3.2,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "RadiusNeighbors",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 75.74,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "RANSAC",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 3.4,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "RidgeCV",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 3.17,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "SGD",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 3.14,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "TheilSen",
+    "task": "regression",
+    "status": "pass",
+    "seconds": 3.39,
+    "dataset": "diabetes.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "Polynomial",
+    "task": "regression",
+    "status": "skip",
+    "seconds": 0.0,
+    "dataset": null,
+    "filled_defaults": [],
+    "error": "no train function registered"
+  },
+  {
+    "model": "Perceptron",
+    "task": "classification",
+    "status": "skip",
+    "seconds": 0.0,
+    "dataset": null,
+    "filled_defaults": [],
+    "error": "no train function registered"
+  },
+  {
+    "model": "Logistic_classifier",
+    "task": "classification",
+    "status": "pass",
+    "seconds": 1.81,
+    "dataset": "iris.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "ExtraTrees_classifier",
+    "task": "classification",
+    "status": "pass",
+    "seconds": 2.59,
+    "dataset": "iris.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "GaussianNB_classifier",
+    "task": "classification",
+    "status": "pass",
+    "seconds": 1.72,
+    "dataset": "iris.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "SGD_classifier",
+    "task": "classification",
+    "status": "pass",
+    "seconds": 1.68,
+    "dataset": "iris.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "MLP_classifier",
+    "task": "classification",
+    "status": "pass",
+    "seconds": 1.81,
+    "dataset": "iris.csv",
+    "filled_defaults": [
+      "activation",
+      "solver"
+    ],
+    "error": null
+  },
+  {
+    "model": "RF_classifier",
+    "task": "classification",
+    "status": "pass",
+    "seconds": 2.03,
+    "dataset": "iris.csv",
+    "filled_defaults": [
+      "n_estimators"
+    ],
+    "error": null
+  },
+  {
+    "model": "SVC_classifier",
+    "task": "classification",
+    "status": "pass",
+    "seconds": 1.7,
+    "dataset": "iris.csv",
+    "filled_defaults": [
+      "C"
+    ],
+    "error": null
+  },
+  {
+    "model": "AdaBoost_classifier",
+    "task": "classification",
+    "status": "pass",
+    "seconds": 2.42,
+    "dataset": "iris.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "Bagging_classifier",
+    "task": "classification",
+    "status": "pass",
+    "seconds": 1.87,
+    "dataset": "iris.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "BernoulliNB_classifier",
+    "task": "classification",
+    "status": "pass",
+    "seconds": 1.75,
+    "dataset": "iris.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "CategoricalNB_classifier",
+    "task": "classification",
+    "status": "pass",
+    "seconds": 5.7,
+    "dataset": "wine.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "ComplementNB_classifier",
+    "task": "classification",
+    "status": "pass",
+    "seconds": 3.85,
+    "dataset": "wine.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "DecisionTree_classifier",
+    "task": "classification",
+    "status": "pass",
+    "seconds": 1.67,
+    "dataset": "iris.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "GradientBoosting_classifier",
+    "task": "classification",
+    "status": "pass",
+    "seconds": 2.19,
+    "dataset": "iris.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "HistGradientBoosting_classifier",
+    "task": "classification",
+    "status": "pass",
+    "seconds": 10.87,
+    "dataset": "iris.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "KNeighbors_classifier",
+    "task": "classification",
+    "status": "pass",
+    "seconds": 1.9,
+    "dataset": "iris.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "LDA_classifier",
+    "task": "classification",
+    "status": "pass",
+    "seconds": 1.74,
+    "dataset": "iris.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "LinearSVC_classifier",
+    "task": "classification",
+    "status": "pass",
+    "seconds": 1.61,
+    "dataset": "iris.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "MultinomialNB_classifier",
+    "task": "classification",
+    "status": "pass",
+    "seconds": 3.94,
+    "dataset": "wine.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "NuSVC_classifier",
+    "task": "classification",
+    "status": "pass",
+    "seconds": 1.89,
+    "dataset": "iris.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "PassiveAggressive_classifier",
+    "task": "classification",
+    "status": "pass",
+    "seconds": 1.59,
+    "dataset": "iris.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "QDA_classifier",
+    "task": "classification",
+    "status": "pass",
+    "seconds": 1.64,
+    "dataset": "iris.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "Ridge_classifier",
+    "task": "classification",
+    "status": "pass",
+    "seconds": 1.59,
+    "dataset": "iris.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "kmeans",
+    "task": "cluster",
+    "status": "pass",
+    "seconds": 1.18,
+    "dataset": "iris_clustering.csv",
+    "filled_defaults": [
+      "n_clusters"
+    ],
+    "error": null
+  },
+  {
+    "model": "gmm",
+    "task": "cluster",
+    "status": "pass",
+    "seconds": 1.17,
+    "dataset": "iris_clustering.csv",
+    "filled_defaults": [
+      "n_components"
+    ],
+    "error": null
+  },
+  {
+    "model": "agglo",
+    "task": "cluster",
+    "status": "pass",
+    "seconds": 1.08,
+    "dataset": "iris_clustering.csv",
+    "filled_defaults": [
+      "n_clusters"
+    ],
+    "error": null
+  },
+  {
+    "model": "dbscan",
+    "task": "cluster",
+    "status": "pass",
+    "seconds": 1.03,
+    "dataset": "iris_clustering.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "birch",
+    "task": "cluster",
+    "status": "pass",
+    "seconds": 1.07,
+    "dataset": "iris_clustering.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "spectral",
+    "task": "cluster",
+    "status": "pass",
+    "seconds": 1.1,
+    "dataset": "iris_clustering.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "affinity_propagation",
+    "task": "cluster",
+    "status": "pass",
+    "seconds": 1.12,
+    "dataset": "iris_clustering.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "bisecting_kmeans",
+    "task": "cluster",
+    "status": "pass",
+    "seconds": 1.19,
+    "dataset": "iris_clustering.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "hdbscan",
+    "task": "cluster",
+    "status": "pass",
+    "seconds": 1.05,
+    "dataset": "iris_clustering.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "meanshift",
+    "task": "cluster",
+    "status": "pass",
+    "seconds": 1.24,
+    "dataset": "iris_clustering.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "minibatch_kmeans",
+    "task": "cluster",
+    "status": "pass",
+    "seconds": 1.14,
+    "dataset": "iris_clustering.csv",
+    "filled_defaults": [],
+    "error": null
+  },
+  {
+    "model": "optics",
+    "task": "cluster",
+    "status": "pass",
+    "seconds": 1.06,
+    "dataset": "iris_clustering.csv",
+    "filled_defaults": [],
+    "error": null
+  }
+]

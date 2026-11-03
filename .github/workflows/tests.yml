@@ -1,4 +1,4 @@
-# Run tests on push and pull requests.
+# Lint and test on push and pull requests.
 name: Tests
 
 on:
@@ -9,22 +9,35 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # Both platforms, because they do not make the same promises. RLIMIT_AS is
+    # enforced on Linux and not on macOS, so the isolated worker takes a memory
+    # ceiling on one and refuses to start a step on the other. An ubuntu-only
+    # matrix ran green while the macOS behavior was untested.
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.11", "3.12"]
+    name: ${{ matrix.os }} / Python ${{ matrix.python-version }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r requirements-dev.txt
+          pip install -r requirements.txt -r requirements-dev.txt
 
-      - name: Set up Node (frontend lint)
+      - name: Check that every package in requirements.txt imports
+        run: python scripts/check_requirements.py
+
+      - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -33,10 +46,36 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Lint frontend
+      - name: Build and lint the frontend
         run: npm run lint
 
+      - name: Check that the committed bundle matches the split files
+        run: npm run check-bundle
+
+      - name: Run ruff
+        run: |
+          ruff check .
+          ruff format --check .
+
+      - name: Check the writing standards
+        run: python scripts/check_language.py
+
+      - name: Check that no runtime dependency is missing from the notices
+        run: |
+          python - <<'PY'
+          import sys
+          req = {l.split("==")[0].strip() for l in open("requirements.txt") if l.strip() and not l.startswith("#")}
+          notices = open("THIRD_PARTY_NOTICES.md").read().lower()
+          missing = sorted(p for p in req if p.lower() not in notices)
+          if missing:
+              sys.exit("Not in THIRD_PARTY_NOTICES.md: " + ", ".join(missing))
+          print("every runtime dependency is listed")
+          PY
+
+      - name: Audit the runtime npm dependencies
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Run tests
-        run: pytest tests/ -v --tb=short
+        run: pytest tests/ -q --tb=short
         env:
           MPLBACKEND: Agg

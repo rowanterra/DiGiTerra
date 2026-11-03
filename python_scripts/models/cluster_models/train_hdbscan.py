@@ -1,8 +1,21 @@
 from sklearn.cluster import HDBSCAN
-from python_scripts.preprocessing.run_clustering_pipeline import run_clustering
 
-def train_hdbscan(train_data, X, units, X_scaler_type,
-                 seed, sigfig, quantileBinDict, useTransformer, categorical_cols, test_size, **kwargs):
+from python_scripts.preprocessing.run_clustering_pipeline import clustering_options, run_clustering
+
+
+def train_hdbscan(
+    train_data,
+    X,
+    units,
+    X_scaler_type,
+    seed,
+    sigfig,
+    quantileBinDict,
+    useTransformer,
+    categorical_cols,
+    test_size,
+    **kwargs,
+):
     model = HDBSCAN(
         min_cluster_size=kwargs.get("min_cluster_size", 5),
         min_samples=kwargs.get("min_samples", None),
@@ -21,10 +34,19 @@ def train_hdbscan(train_data, X, units, X_scaler_type,
     )
 
     return run_clustering(
-        model, "hdbscan",
+        model,
+        "hdbscan",
         train_data,
         X,
-        units, X_scaler_type,
-        seed, sigfig, quantileBinDict, useTransformer, categorical_cols, test_size,
-        k_min=2, k_max=8
+        units,
+        X_scaler_type,
+        seed,
+        sigfig,
+        quantileBinDict,
+        useTransformer,
+        categorical_cols,
+        test_size,
+        k_min=2,
+        k_max=8,
+        **clustering_options(kwargs),
     )

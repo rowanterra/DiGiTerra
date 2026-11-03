@@ -1,0 +1,239 @@
+"""The guided page, driven through Chromium: keyboard walk, live regions, a full run,
+no page scrolling, and an explanation on every control.
+
+Skipped when Playwright or its Chromium is absent; DIGITERRA_CHROMIUM names a
+Chromium binary to use instead of Playwright's own. The run goes iris ->
+species -> k-NN classifier with n_neighbors typed as 3 in Full mode, and the
+test reads the fitted n_neighbors back from the result, which is the E1
+finding F3 checked through the page rather than the route.
+"""
+
+import os
+import re
+import socket
+import threading
+
+import pytest
+
+pw = pytest.importorskip("playwright.sync_api")
+
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+VIEWPORTS = [(1280, 800), (1366, 768), (1440, 900)]
+
+
+@pytest.fixture(scope="module")
+def server():
+    os.environ.setdefault("DIGITERRA_ISOLATE_WORK", "0")
+    os.environ.setdefault("MPLBACKEND", "Agg")
+    from werkzeug.serving import make_server
+
+    from app import app
+
+    app.config["TESTING"] = True
+    sock = socket.socket()
+    sock.bind(("127.0.0.1", 0))
+    port = sock.getsockname()[1]
+    sock.close()
+    srv = make_server("127.0.0.1", port, app, threaded=True)
+    t = threading.Thread(target=srv.serve_forever, daemon=True)
+    t.start()
+    yield f"http://127.0.0.1:{port}"
+    srv.shutdown()
+
+
+@pytest.fixture(scope="module")
+def page(server):
+    try:
+        p = pw.sync_playwright().start()
+        exe = os.environ.get("DIGITERRA_CHROMIUM")  # a pinned Chromium when Playwright's own is absent
+        browser = p.chromium.launch(executable_path=exe) if exe else p.chromium.launch()
+    except Exception as e:  # noqa: BLE001
+        pytest.skip(f"Chromium not available: {e}")
+    pg = browser.new_page(viewport={"width": 1280, "height": 800})
+    yield pg
+    browser.close()
+    p.stop()
+
+
+def no_scroll(page):
+    """True when neither the page nor the visible step needs a scrollbar."""
+    return page.evaluate(
+        "document.documentElement.scrollHeight <= window.innerHeight + 1 && "
+        "document.documentElement.scrollWidth <= window.innerWidth + 1 && "
+        "(() => { const s = document.querySelector('section.step.current'); "
+        "return s.scrollHeight <= s.clientHeight + 1; })()"
+    )
+
+
+def upload_iris(page):
+    page.set_input_files("#file", os.path.join(ROOT, "examples", "iris.csv"))
+    page.click("#uploadForm button[type=submit]")
+    page.wait_for_function("document.getElementById('uploadStatus').textContent.includes('rows')", timeout=30000)
+
+
+def test_landmarks_labels_and_keyboard_order(server, page):
+    page.goto(server + "/guided")
+    assert page.locator("main#main").count() == 1
+    assert page.locator("header").count() == 1
+    assert page.locator("a.skip").count() == 1
+    assert page.locator("nav.steps button[aria-current=step]").text_content().startswith("1")
+    ids = page.eval_on_selector_all("input:not([type=radio]):not([type=hidden]), select", "els => els.map(e => e.id)")
+    for i in ids:
+        assert i, "control without id"
+        assert page.locator(f"label[for='{i}']").count() == 1, f"no label for #{i}"
+    assert page.locator("fieldset.mode legend").count() == 1
+    assert page.locator("#errors[role=alert]").count() == 1
+    page.keyboard.press("Tab")
+    assert page.evaluate("document.activeElement.className") == "skip"
+    page.keyboard.press("Tab")
+    assert page.evaluate("document.activeElement.name") == "mode"
+
+
+def test_every_control_has_an_explanation(server, page):
+    page.goto(server + "/guided")
+    page.check("input[name=mode][value=full]")
+    ids = page.eval_on_selector_all("input:not([type=radio]), select", "els => els.map(e => e.id)")
+    for i in ids:
+        desc = page.get_attribute(f"#{i}", "aria-describedby")
+        assert desc, f"#{i} has no explanation"
+        assert page.locator(f"#{desc}[role=tooltip]").count() == 1
+        assert len(page.text_content(f"#{desc}")) > 20
+    tip = page.locator("label[for=file] + .helpwrap .tip")
+    # hover over the label's words opens the explanation, leaving closes it
+    page.hover("label[for=file]")
+    assert tip.is_visible()
+    page.mouse.move(5, 5)
+    assert not tip.is_visible()
+    # keyboard focus of the control opens it, Escape closes it (WCAG 1.4.13); a key
+    # press first, because focus after a pointer click is not :focus-visible
+    page.keyboard.press("Shift")
+    page.focus("#file")
+    assert tip.is_visible()
+    page.keyboard.press("Escape")
+    assert not tip.is_visible()
+    page.locator("h1").click()
+    assert page.locator("button.help").count() == 0
+    page.check("input[name=mode][value=guided]")
+
+
+def test_mode_switch_is_a_radio_group_and_persists(server, page):
+    page.goto(server + "/guided")
+    assert page.evaluate("document.body.dataset.mode") == "guided"
+    page.check("input[name=mode][value=full]")
+    assert page.evaluate("document.body.dataset.mode") == "full"
+    page.reload()
+    assert page.evaluate("document.body.dataset.mode") == "full"
+    page.check("input[name=mode][value=guided]")
+
+
+def test_full_run_and_typed_hyperparameter_reaches_the_estimator(server, page):
+    page.goto(server + "/guided")
+    page.check("input[name=mode][value=full]")
+    upload_iris(page)
+    assert page.evaluate("document.activeElement.id") == "h2s"
+    assert "classification" in page.text_content("#targetHint")
+    page.click("nav.steps button[data-step='3']")
+    assert page.evaluate("document.activeElement.id") == "h3s"
+    page.select_option("#model", "KNeighbors_classifier")
+    page.wait_for_selector("#hp_n_neighbors", timeout=10000)
+    assert page.get_attribute("#hp_n_neighbors", "aria-describedby")
+    page.fill("#hp_n_neighbors", "3")
+    page.dispatch_event("#hp_n_neighbors", "change")
+    page.click("#runBtn")
+    page.wait_for_function("document.getElementById('result').textContent.includes('Accuracy')", timeout=180000)
+    raw = page.text_content("#resultRaw")
+    m = re.search(r'"n_neighbors":\s*(\d+)', raw)
+    assert m and m.group(1) == "3", "the typed n_neighbors did not reach the estimator"
+    assert page.locator("#result table caption").first.text_content() == "Metrics"
+    assert page.evaluate("document.activeElement.id") == "h4s"
+    assert page.locator("#result th[data-metric=accuracy].tipword .tip").count() == 1
+    # a control's accessible name is its label alone, not the help button beside it
+    assert page.evaluate("document.getElementById('file').labels[0].textContent.trim()") == "CSV, Excel or Parquet file"
+
+
+def _manifest(page, server):
+    """The manifest of the session's last run, from the bundle the result links."""
+    import io
+    import json
+    import zipfile
+
+    r = page.request.get(server + "/export-bundle")
+    assert r.status == 200
+    return json.loads(zipfile.ZipFile(io.BytesIO(r.body())).read("manifest.json"))
+
+
+def test_text_predictors_reach_the_model(server, page):
+    """penguins.csv in Guided mode: island and sex are text and were dropped before 2026-09-25."""
+    page.goto(server + "/guided")
+    page.check("input[name=mode][value=guided]")
+    page.set_input_files("#file", os.path.join(ROOT, "examples", "penguins.csv"))
+    page.click("#uploadForm button[type=submit]")
+    page.wait_for_function("document.getElementById('uploadStatus').textContent.includes('rows')", timeout=30000)
+    page.select_option("#target", label="species (text)")
+    page.click("nav.steps button[data-step='3']")
+    page.wait_for_function("document.getElementById('model').value !== ''", timeout=10000)
+    page.click("#runBtn")
+    page.wait_for_function("document.getElementById('result').textContent.includes('Accuracy')", timeout=180000)
+    m = _manifest(page, server)
+    assert {"island", "sex"} <= set(m["model"]["features"])
+    assert m["request"]["useTransformer"] == "Yes"
+
+
+def test_typed_value_reaches_a_model_with_its_own_trainer_names(server, page):
+    """Ridge on diabetes in Full mode: alpha typed as 10 is the fitted alpha."""
+    page.goto(server + "/guided")
+    page.check("input[name=mode][value=full]")
+    page.set_input_files("#file", os.path.join(ROOT, "examples", "diabetes.csv"))
+    page.click("#uploadForm button[type=submit]")
+    page.wait_for_function("document.getElementById('uploadStatus').textContent.includes('rows')", timeout=30000)
+    page.click("nav.steps button[data-step='3']")
+    page.check("input[name=task][value=regression]")
+    page.select_option("#model", "Ridge")
+    page.wait_for_selector("#hp_alpha", timeout=10000)
+    page.fill("#hp_alpha", "10")
+    page.dispatch_event("#hp_alpha", "change")
+    page.click("#runBtn")
+    page.wait_for_function("document.getElementById('result').textContent.length > 50", timeout=180000)
+    m = _manifest(page, server)
+    assert m["model"]["estimator"] == "Ridge" and m["model"]["params"]["alpha"] == 10
+    assert m["request"]["estimatorParams"] == {"alpha": 10}
+
+
+def test_no_step_needs_scrolling(server, page):
+    """Every step, in both modes, at three common laptop viewports, fits its window."""
+    for w, h in VIEWPORTS:
+        page.set_viewport_size({"width": w, "height": h})
+        for mode in ("guided", "full"):
+            page.goto(server + "/guided")
+            page.check(f"input[name=mode][value={mode}]")
+            assert no_scroll(page), f"step 1 scrolls at {w}x{h} in {mode}"
+            upload_iris(page)
+            assert no_scroll(page), f"step 2 scrolls at {w}x{h} in {mode}"
+            page.click("nav.steps button[data-step='3']")
+            page.select_option("#model", "GradientBoosting_classifier")  # the longest hyperparameter table
+            page.wait_for_selector("#hp_n_estimators", state="attached", timeout=10000)
+            assert no_scroll(page), f"step 3 scrolls at {w}x{h} in {mode}"
+    page.set_viewport_size({"width": 1280, "height": 800})
+
+
+def test_result_step_fits_the_window(server, page):
+    page.goto(server + "/guided")
+    page.check("input[name=mode][value=guided]")
+    upload_iris(page)
+    page.click("nav.steps button[data-step='3']")
+    page.select_option("#model", "KNeighbors_classifier")
+    page.click("#runBtn")
+    page.wait_for_function("document.getElementById('result').textContent.includes('Accuracy')", timeout=180000)
+    assert no_scroll(page), "the result step scrolls"
+
+
+def test_axe_core_has_no_serious_violations(server, page):
+    page.goto(server + "/guided")
+    axe = os.path.join(ROOT, "node_modules", "axe-core", "axe.min.js")
+    if not os.path.exists(axe):
+        pytest.skip("axe-core not installed (npm install)")
+    page.add_script_tag(path=axe)
+    tags = "['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']"
+    res = page.evaluate("axe.run(document, {runOnly: {type: 'tag', values: " + tags + "}})")
+    serious = [v for v in res["violations"] if v["impact"] in ("serious", "critical")]
+    assert not serious, [(v["id"], v["help"], [n["target"] for n in v["nodes"]]) for v in serious]

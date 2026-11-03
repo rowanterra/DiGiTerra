@@ -1,0 +1,35 @@
+== RF: 15 trees differ
+   tree   0 first diff node   23 (3 rows): linux feature 9, mac feature 8; exact tie True; same partition True
+   tree   1 first diff node  154 (11 rows): linux feature 6, mac feature 3; exact tie True; same partition True
+   tree   2 first diff node   21 (3 rows): linux feature 3, mac feature 9; exact tie True; same partition True
+   tree   3 first diff node  159 (3 rows): linux feature 1, mac feature 0; exact tie True; same partition True
+   tree   4 first diff node  100 (4 rows): linux feature 9, mac feature 5; exact tie True; same partition True
+   tree   5 first diff node  355 (18 rows): linux feature 5, mac feature 4; exact tie True; same partition True
+   tree   6 first diff node  430 (5 rows): linux feature 3, mac feature 9; exact tie True; same partition True
+   tree   7 first diff node   79 (4 rows): linux feature 4, mac feature 5; exact tie True; same partition True
+   tree   8 first diff node  142 (2 rows): linux feature -2, mac feature 3; exact tie None; same partition None
+   tree   9 first diff node  100 (4 rows): linux feature 8, mac feature 2; exact tie True; same partition True
+   tree  11 first diff node    6 (5 rows): linux feature 5, mac feature 8; exact tie True; same partition True
+   tree  12 first diff node  125 (3 rows): linux feature 6, mac feature 0; exact tie True; same partition True
+   tree  15 first diff node  315 (6 rows): linux feature 8, mac feature 2; exact tie True; same partition True
+   tree  16 first diff node  111 (5 rows): linux feature 6, mac feature 9; exact tie True; same partition True
+   tree  18 first diff node  156 (4 rows): linux feature 6, mac feature 8; exact tie True; same partition True
+   exact ties at first differing node: 14 of 15
+== Bagging: 8 trees differ
+   tree   0 first diff node  303 (6 rows): linux feature 5, mac feature 1; exact tie True; same partition True
+   tree   1 first diff node  154 (11 rows): linux feature 6, mac feature 3; exact tie True; same partition True
+   tree   2 first diff node   20 (3 rows): linux feature 3, mac feature 4; exact tie True; same partition True
+   tree   3 first diff node  351 (3 rows): linux feature 8, mac feature 9; exact tie True; same partition True
+   tree   4 first diff node  100 (4 rows): linux feature 9, mac feature 5; exact tie True; same partition True
+   tree   7 first diff node  119 (4 rows): linux feature 3, mac feature 2; exact tie True; same partition True
+   tree   8 first diff node  280 (11 rows): linux feature 4, mac feature 5; exact tie True; same partition True
+   tree   9 first diff node  100 (4 rows): linux feature 4, mac feature 2; exact tie True; same partition True
+   exact ties at first differing node: 8 of 8
+== ExtraTrees: 6 trees differ
+   tree  30 first diff node  223 (2 rows): linux feature -2, mac feature 7; exact tie None; same partition None
+   tree  51 first diff node  495 (2 rows): linux feature 8, mac feature -2; exact tie None; same partition None
+   tree  61 first diff node  622 (2 rows): linux feature -2, mac feature 8; exact tie None; same partition None
+   tree  65 first diff node  222 (2 rows): linux feature -2, mac feature 8; exact tie None; same partition None
+   tree  67 first diff node  695 (2 rows): linux feature -2, mac feature 2; exact tie None; same partition None
+   tree  73 first diff node  232 (2 rows): linux feature -2, mac feature 4; exact tie None; same partition None
+   exact ties at first differing node: 0 of 6

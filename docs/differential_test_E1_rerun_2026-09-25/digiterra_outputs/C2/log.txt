@@ -1,0 +1,8 @@
+2026-09-25T19:33:37Z  uploaded iris_E1_base.csv: {'columns': ['order', 'sepal length', 'sepal width', 'petal length', 'petal width', 'species'], 'filename': 'iris_E1_bas
+2026-09-25T19:33:37Z  /process accepted, session 8d57efc3-278f-43e4-9920-bf8efbf7e76f
+2026-09-25T19:33:40Z  result keys 24; split_note: Time-ordered holdout on column 'order': the latest 20% of rows (30 of 150) are the test set.
+2026-09-25T19:33:41Z  bundle members: ['manifest.json', 'model_card.json', 'model_card.html', 'model.skops', 'visualizations.pdf']
+2026-09-25T19:33:41Z  /predict status 200: {'applicability_summary': {'novel': 0, 'out_of_range': 1, 'rows': 30}, 'filename': 'iris_E1_test.csv', 'inference_visualization': None, 'inference_visualization_version': None, 'model_type': 'classifi
+2026-09-25T19:33:41Z  predictions.csv columns ['order', 'sepal length', 'sepal width', 'petal length', 'petal width', 'species', 'Predicted_Target', 'probability_setosa', 'probability_versicolor', 'probability_virginica', 'max_probability', 'novelty_score', 'novel_row', 'out_of_range_columns'] rows 30
+2026-09-25T19:33:41Z  input check passed
+2026-09-25T19:33:41Z  done

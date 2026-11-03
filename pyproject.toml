@@ -11,3 +11,14 @@ python_files = ["test_*.py"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short -p no:dash"
 filterwarnings = ["ignore:Matplotlib", "ignore:Fontconfig"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+# docs/differential_test_E1 is a deposited test record, kept as it ran, not repository code.
+# docs/guide_2026-09-25 holds the guide's build scripts, whose HTML strings run past the line length.
+# docs/tree_platform_difference_2026-09-25 holds one-off investigation scripts kept as run.
+exclude = ["node_modules", ".venv", "build", "dist", "docs/differential_test_E1", "docs/guide_2026-09-25", "docs/tree_platform_difference_2026-09-25"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

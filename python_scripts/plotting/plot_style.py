@@ -3,10 +3,12 @@ Shared plot style for DiGiTerra model visualizations.
 Apply a softer, seaborn-like look to all matplotlib figures.
 Import this module once at the start of any code path that creates plots.
 """
+
 import matplotlib.pyplot as plt
 
 try:
     import seaborn as sns
+
     sns.set_theme(
         style="whitegrid",
         palette="muted",
@@ -38,6 +40,7 @@ def apply_plot_style():
     """Re-apply the shared plot style. Call at the start of plotting functions to ensure style is active."""
     try:
         import seaborn as sns
+
         sns.set_theme(
             style="whitegrid",
             palette="muted",

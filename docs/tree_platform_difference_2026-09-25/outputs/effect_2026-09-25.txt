@@ -1,0 +1,9 @@
+RF: training-row tree predictions differing 180 of 7060; off-training 3141 of 40000; ensemble off-training points changed 1688 of 2000, max rel 2.08e+02
+Bagging: training-row tree predictions differing 33 of 3530; off-training 555 of 20000; ensemble off-training points changed 464 of 2000, max rel 1.12e+01
+   ExtraTrees tree 30 node 223: leaf-side impurity 1.1102230246251565e-16, split-side impurity 5.551115123125783e-16, samples 2
+   ExtraTrees tree 51 node 495: leaf-side impurity -4.440892098500626e-16, split-side impurity 4.440892098500626e-16, samples 2
+   ExtraTrees tree 61 node 622: leaf-side impurity 0.0, split-side impurity 8.881784197001252e-16, samples 2
+   ExtraTrees tree 65 node 222: leaf-side impurity -4.440892098500626e-16, split-side impurity 4.440892098500626e-16, samples 2
+   ExtraTrees tree 67 node 695: leaf-side impurity -8.881784197001252e-16, split-side impurity 8.881784197001252e-16, samples 2
+   ExtraTrees tree 73 node 232: leaf-side impurity -1.1102230246251565e-16, split-side impurity 3.3306690738754696e-16, samples 2
+ExtraTrees: training-row tree predictions differing 0 of 35300; off-training 4526 of 200000; ensemble off-training points changed 1864 of 2000, max rel 1.61e+02

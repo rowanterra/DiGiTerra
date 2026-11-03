@@ -1,0 +1,7 @@
+accuracy                  1
+confusion rows=true cols=pred
+            pred
+true         setosa versicolor virginica
+  setosa          8          0         0
+  versicolor      0         10         0
+  virginica       0          0        12

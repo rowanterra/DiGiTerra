@@ -1,0 +1,9 @@
+2026-09-25T19:33:14Z  uploaded diabetes_E1_base.csv: {'columns': ['order', 'age', 'sex', 'bmi', 'bp', 's1', 's2', 's3', 's4', 's5', 's6', 'target'], 'filename': 'diabetes_E1
+2026-09-25T19:33:14Z  /process accepted, session 5025dc58-c514-44ce-b359-be30e82823be
+2026-09-25T19:33:23Z  result keys 29; split_note: Time-ordered holdout on column 'order': the latest 20% of rows (89 of 442) are the test set.
+2026-09-25T19:33:24Z  bundle members: ['manifest.json', 'model_card.json', 'model_card.html', 'model.skops', 'visualizations.pdf']
+2026-09-25T19:33:25Z  /predict status 200: {'applicability_summary': {'novel': 0, 'out_of_range': 2, 'rows': 89}, 'filename': 'diabetes_E1_test.csv', 'inference_visualization': 'inference_pred_vs_actual_1.png', 'inference_visualization_version
+2026-09-25T19:33:25Z  predictions.csv columns ['order', 'age', 'sex', 'bmi', 'bp', 's1', 's2', 's3', 's4', 's5', 's6', 'target', 'Predicted_Target', 'lower_90', 'upper_90', 'novelty_score', 'novel_row', 'out_of_range_columns'] rows 89
+2026-09-25T19:33:25Z  input check passed
+2026-09-25T19:33:25Z  coefficients read from model.skops (LinearRegression)
+2026-09-25T19:33:25Z  done

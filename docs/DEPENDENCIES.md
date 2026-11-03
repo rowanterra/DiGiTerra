@@ -2,7 +2,7 @@
 
 ## Python
 
-Use Python 3.11 or higher. The project uses type hints and dependencies that assume 3.11+.
+Python 3.11 or 3.12. CI runs the tests on both.
 
 ## Install
 
@@ -18,25 +18,20 @@ For development and tests:
 pip install -r requirements.txt -r requirements-dev.txt
 ```
 
-## Key constraints
+## Pins
 
-- **NumPy**: `numpy>=1.24,<3`. NumPy 2 is supported.
-- **SHAP**: `shap>=0.46,<0.51`. SHAP 0.46+ supports NumPy 2; earlier versions do not.
-- **scikit-learn**: `>=1.3,<2`. Do not upgrade to 2.x without testing; API changes are possible.
-- **pandas**: `>=2.0,<3`.
+`requirements.txt` pins every package with `==` to the versions recorded by `pip freeze` on 2026-09-03 under Python 3.11: Flask 3.1.3, gunicorn 23.0.0, matplotlib 3.11.1, NumPy 1.26.4, openpyxl 3.1.5, pandas 2.3.3, scikit-learn 1.9.0, SciPy 1.17.1, scikit-optimize 0.10.2, seaborn 0.13.2, SHAP 0.49.1, Werkzeug 3.1.8, XlsxWriter 3.2.9, pywebview 5.4, and pyarrow 25.0.1 (added 2026-09-04 for Parquet). `requirements-dev.txt` adds pytest 8.4.2 and ruff 0.16.6.
 
-Other packages in `requirements.txt` are pinned to major (or minor) ranges for reproducible installs and to avoid known incompatibilities.
+NumPy is pinned to 1.26.4. The test suite has been run against the pinned set only, so NumPy 2 is untested with this code. An upgrade of any pin is a change to test with `pytest tests/` and one training run per problem type before committing.
 
-## Verify install
-
-After installing, you can check that all imports used by the app are satisfied:
+## Install check
 
 ```bash
 python scripts/check_requirements.py
 ```
 
-This script reports any missing or problematic packages. Fix any reported issues before running the app or tests.
+The script imports each package in `requirements.txt` and lists the ones that fail. The script does not scan the source for imports.
 
 ## Builds
 
-When building the desktop app (PyInstaller), use the same environment where `pip install -r requirements.txt` was run. See `docs/BUILD_INSTRUCTIONS.md` for platform-specific steps.
+The desktop build (PyInstaller) uses the environment where `pip install -r requirements.txt` ran. `docs/BUILD_INSTRUCTIONS.md` has the platform steps.

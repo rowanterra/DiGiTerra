@@ -1,0 +1,2 @@
+accuracy_from_predictions 1
+page_metrics {}

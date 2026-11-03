@@ -1,16 +1,19 @@
-# DiGiTerra runtime dependencies. Pinned for reproducible installs (see docs/DEPENDENCIES.md).
-flask>=3.0,<4
-gunicorn>=21,<24
-requests>=2.28,<3
-matplotlib>=3.7,<4
-numpy>=1.24,<2
-openpyxl>=3.1,<4
-pandas>=2.0,<3
-scikit-learn>=1.3,<2
-scipy>=1.10,<2
-scikit-optimize>=0.9,<0.11
-seaborn>=0.12,<1
-shap>=0.46,<0.51
-werkzeug>=3.0,<4
-xlsxwriter>=3.1,<4
-pywebview>=4.0,<6
+# DiGiTerra runtime dependencies, pinned to the versions recorded by `pip freeze`
+# on 2026-09-04 under Python 3.11 (see docs/DEPENDENCIES.md).
+flask==3.1.3
+gunicorn==23.0.0
+matplotlib==3.11.1
+numpy==1.26.4
+openpyxl==3.1.5
+pandas==2.3.3
+prettytable==3.18.0
+pyarrow==25.0.1
+pywebview==5.4
+scikit-learn==1.9.0
+scikit-optimize==0.10.2
+scipy==1.17.1
+seaborn==0.13.2
+shap==0.49.1
+skops==0.14.0
+werkzeug==3.1.8
+xlsxwriter==3.2.9

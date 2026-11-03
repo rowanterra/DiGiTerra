@@ -1,0 +1,41 @@
+cff-version: 1.2.0
+message: >-
+  If you use DiGiTerra, cite this software.
+title: >-
+  DiGiTerra: An interactive interface for machine learning model development
+abstract: >-
+  DiGiTerra is a Flask application for exploring a tabular dataset, training a
+  scikit-learn model on the dataset, and running inference on new rows. The
+  application offers 69 trainable estimators (33 regression, 24 classification, 12 clustering) across regression,
+  classification, and clustering, with optional feature selection, outlier
+  handling, hyperparameter search, and cross-validation, and ships as a desktop
+  application for macOS, Windows, and Linux.
+type: software
+authors:
+  - family-names: DiGirolamo
+    given-names: Paige E.
+    affiliation: Stevens Institute of Technology
+    orcid: 'https://orcid.org/0009-0007-9028-3401'
+  - family-names: Terra
+    given-names: Rowan R.
+    email: rowan.r.terra@gmail.com
+    affiliation: Duquesne University
+    orcid: 'https://orcid.org/0009-0001-3890-705X'
+  - family-names: Gulliver
+    given-names: Djuna M.
+    affiliation: National Energy Technology Laboratory
+    orcid: 'https://orcid.org/0000-0003-4219-5849'
+  - family-names: Trun
+    given-names: Nancy J.
+    affiliation: Duquesne University
+    orcid: 'https://orcid.org/0000-0003-0149-3874'
+version: 0.1.0
+date-released: '2026-09-27'
+license: MIT
+repository-code: 'https://github.com/rowanterra/DiGiTerra'
+keywords:
+  - machine learning
+  - scikit-learn
+  - Flask
+  - tabular data
+  - desktop application

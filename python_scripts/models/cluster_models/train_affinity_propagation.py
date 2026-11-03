@@ -1,8 +1,21 @@
 from sklearn.cluster import AffinityPropagation
-from python_scripts.preprocessing.run_clustering_pipeline import run_clustering
 
-def train_affinity_propagation(train_data, X, units, X_scaler_type,
-                 seed, sigfig, quantileBinDict, useTransformer, categorical_cols, test_size, **kwargs):
+from python_scripts.preprocessing.run_clustering_pipeline import clustering_options, run_clustering
+
+
+def train_affinity_propagation(
+    train_data,
+    X,
+    units,
+    X_scaler_type,
+    seed,
+    sigfig,
+    quantileBinDict,
+    useTransformer,
+    categorical_cols,
+    test_size,
+    **kwargs,
+):
     model = AffinityPropagation(
         damping=kwargs.get("damping", 0.5),
         max_iter=kwargs.get("max_iter", 200),
@@ -15,10 +28,19 @@ def train_affinity_propagation(train_data, X, units, X_scaler_type,
     )
 
     return run_clustering(
-        model, "affinity_propagation",
+        model,
+        "affinity_propagation",
         train_data,
         X,
-        units, X_scaler_type,
-        seed, sigfig, quantileBinDict, useTransformer, categorical_cols, test_size,
-        k_min=2, k_max=8
+        units,
+        X_scaler_type,
+        seed,
+        sigfig,
+        quantileBinDict,
+        useTransformer,
+        categorical_cols,
+        test_size,
+        k_min=2,
+        k_max=8,
+        **clustering_options(kwargs),
     )

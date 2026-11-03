@@ -1,12 +1,18 @@
 replicaCount: 1
 
 image:
-  repository: ghcr.io/netl/digiterra
+  # Required. No public image is published. Build one from deploy/docker/Dockerfile,
+  # push it to a registry the cluster can pull from, and set the repository here or
+  # with --set image.repository=<registry>/<name>. With the value empty, helm
+  # install stops with a message naming this setting.
+  repository: ""
   pullPolicy: IfNotPresent
   tag: "latest"
 
 service:
   type: ClusterIP
+  # Used for the Service port and the containerPort. The Dockerfile CMD binds
+  # gunicorn to 5000, so a different value here needs a matching Dockerfile change.
   port: 5000
 
 ingress:

@@ -1,7 +1,9 @@
 """File upload route."""
+
+import datetime as _dt
+import logging
 import os
 import uuid
-import logging
 
 import pandas as pd
 from flask import Blueprint, current_app, jsonify, request
@@ -13,13 +15,19 @@ from core.constants import (
     CELL_COUNT_WARNING_MODERATE,
     COLUMN_NAME_DISPLAY_LENGTH,
     ENFORCE_UPLOAD_LIMIT,
-    FILENAME_DISPLAY_LENGTH,
     FILE_SIZE_WARNING_MB,
+    FILENAME_DISPLAY_LENGTH,
     HTTP_BAD_REQUEST,
+    HTTP_INTERNAL_SERVER_ERROR,
+    HTTP_TOO_MANY_REQUESTS,
+    MAX_CELLS,
+    MAX_FRAME_MB,
     MAX_UPLOAD_MB,
 )
-from core.helpers import allowed_file
-from core.state import get_session_storage
+from core.helpers import FrameTooLarge, allowed_file, estimate_decoded_bytes
+from core.state import MemoryBudgetExceeded, admit_frame, get_session_id, get_session_storage, reserve_frame
+from core.worker import WorkerError, WorkerLimitUnavailable, read_table_isolated
+from python_scripts.reporting.bundle import sha256_file
 
 bp = Blueprint("upload", __name__)
 logger = logging.getLogger(__name__)
@@ -28,50 +36,99 @@ logger = logging.getLogger(__name__)
 @bp.route("/upload", methods=["POST"])
 def upload_file():
     """Handle file upload and return column information."""
-    logger.info("Upload request received. Content-Type: %s, Files: %s", request.content_type, list(request.files.keys()))
+    logger.info(
+        "Upload request received. Content-Type: %s, Files: %s", request.content_type, list(request.files.keys())
+    )
     store = get_session_storage()
     if "file" not in request.files:
         logger.warning("No 'file' key in request.files")
-        return jsonify({"error": "No file uploaded"}), HTTP_BAD_REQUEST
+        return jsonify({"error": "The request has no file. Select a file and upload it again."}), HTTP_BAD_REQUEST
     file = request.files["file"]
     if file.filename == "":
         logger.warning("File filename is empty")
-        return jsonify({"error": "No file selected"}), HTTP_BAD_REQUEST
+        return jsonify({"error": "No file is selected. Select a file and click Upload."}), HTTP_BAD_REQUEST
     logger.info("Processing file upload: %s", file.filename)
     if not allowed_file(file.filename):
-        return jsonify({"error": "Invalid file type. Only CSV files are allowed."}), HTTP_BAD_REQUEST
+        return jsonify(
+            {"error": "DiGiTerra cannot read this file type. Use a .csv, .xlsx, .xlsm, or .parquet file."}
+        ), HTTP_BAD_REQUEST
     safe_filename_val = secure_filename(file.filename)
     if not safe_filename_val:
-        return jsonify({"error": "Invalid filename."}), HTTP_BAD_REQUEST
+        return jsonify({"error": "The file name is not valid. Rename the file and upload it again."}), HTTP_BAD_REQUEST
 
     unique_prefix = uuid.uuid4().hex[:8]
     stored_filename = f"{unique_prefix}_{safe_filename_val}"
     filepath = os.path.join(current_app.config["UPLOAD_FOLDER"], stored_filename)
     file.save(filepath)
+    # The file on disk is read once into a DataFrame and never opened again, so it
+    # is removed on every exit from this block. Left in place, uploads accumulate
+    # until the disk is full.
+    try:
+        file_size_mb = os.path.getsize(filepath) / BYTES_PER_MB
+        if ENFORCE_UPLOAD_LIMIT and MAX_UPLOAD_MB > 0 and file_size_mb > MAX_UPLOAD_MB:
+            return jsonify(
+                {"error": f"The file is larger than the limit of {MAX_UPLOAD_MB:.1f} MB. Upload a smaller file."}
+            ), HTTP_BAD_REQUEST
 
-    file_size_mb = os.path.getsize(filepath) / BYTES_PER_MB
-    if ENFORCE_UPLOAD_LIMIT and MAX_UPLOAD_MB > 0 and file_size_mb > MAX_UPLOAD_MB:
+        size_warning = (
+            f"Large file detected ({file_size_mb:.1f} MB). Processing may take longer."
+            if file_size_mb > FILE_SIZE_WARNING_MB
+            else None
+        )
+
+        # The hash is taken from the bytes on disk before the file is removed, so
+        # the run manifest can name the exact file that was modeled.
+        file_bytes = os.path.getsize(filepath)
+        file_sha256 = sha256_file(filepath)
+        # The budget is checked against the decoded size from metadata before the
+        # parse, so a file that cannot fit costs a directory read, not a parse.
+        try:
+            reserve_frame(get_session_id(), estimate_decoded_bytes(filepath))
+        except MemoryBudgetExceeded as e:
+            return jsonify({"error": str(e)}), HTTP_TOO_MANY_REQUESTS
+        except Exception as e:  # unreadable container; the parser gives the specific message
+            logger.debug("Decoded-size estimate unavailable for %s: %s", stored_filename, e)
+        try:
+            # Under the server profile this parse happens in a child process with a
+            # memory limit, so a file that gets past the metadata check cannot take
+            # the machine with it.
+            data = read_table_isolated(filepath, max_cells=MAX_CELLS, max_frame_mb=MAX_FRAME_MB)
+        except FrameTooLarge as e:
+            return jsonify({"error": str(e)}), HTTP_BAD_REQUEST
+        except WorkerLimitUnavailable as e:
+            # Not the file's fault and not the caller's: this installation cannot
+            # bound a parse, so it declines to run one. The operator has to move it.
+            logger.error("Isolated parse unavailable on this platform: %s", e)
+            return jsonify(
+                {
+                    "error": "DiGiTerra did not read the file. This installation cannot apply a "
+                    "memory limit to the parse. Ask the operator to run the server profile on a "
+                    "platform whose kernel applies RLIMIT_AS. Linux and the BSDs apply it."
+                }
+            ), HTTP_INTERNAL_SERVER_ERROR
+        except WorkerError as e:
+            logger.warning("Isolated parse refused %s: %s", stored_filename, e)
+            return jsonify(
+                {"error": f"DiGiTerra cannot read the file within the limits for one upload. {e}"}
+            ), HTTP_BAD_REQUEST
+        except pd.errors.EmptyDataError:
+            return jsonify({"error": "The file is empty. Upload a file that contains data."}), HTTP_BAD_REQUEST
+        except pd.errors.ParserError as e:
+            logger.error("Parsing error: %s", e)
+            return jsonify({"error": f"DiGiTerra cannot parse the file. {str(e)}"}), HTTP_BAD_REQUEST
+        except Exception as e:
+            logger.error("Error reading file: %s", e, exc_info=True)
+            return jsonify(
+                {"error": f"DiGiTerra cannot read the file. {type(e).__name__}: {str(e)[:200]}"}
+            ), HTTP_BAD_REQUEST
+    finally:
         try:
             os.remove(filepath)
         except OSError:
-            logger.warning("Failed to remove oversized uploaded file: %s", filepath)
-        return jsonify({"error": f"File exceeds maximum allowed size of {MAX_UPLOAD_MB:.1f} MB."}), HTTP_BAD_REQUEST
-
-    size_warning = f"Large file detected ({file_size_mb:.1f} MB). Processing may take longer." if file_size_mb > FILE_SIZE_WARNING_MB else None
-
-    try:
-        data = pd.read_csv(filepath)
-    except pd.errors.EmptyDataError:
-        return jsonify({"error": "The uploaded file is empty."}), HTTP_BAD_REQUEST
-    except pd.errors.ParserError as e:
-        logger.error("CSV parsing error: %s", e)
-        return jsonify({"error": f"Error parsing CSV file: {str(e)}"}), HTTP_BAD_REQUEST
-    except Exception as e:
-        logger.error("Error reading CSV file: %s", e, exc_info=True)
-        return jsonify({"error": f"Error reading file: {str(e)}"}), HTTP_BAD_REQUEST
+            logger.debug("Temporary upload already removed or unavailable: %s", filepath)
 
     if data.empty:
-        return jsonify({"error": "The uploaded file contains no data."}), HTTP_BAD_REQUEST
+        return jsonify({"error": "The file has no data rows. Upload a file that contains data."}), HTTP_BAD_REQUEST
 
     if data.columns.duplicated().any():
         logger.warning("Duplicate column names detected in uploaded file. Renaming duplicates.")
@@ -88,13 +145,32 @@ def upload_file():
 
     total_cells = len(data) * len(data.columns)
     if total_cells > CELL_COUNT_WARNING_LARGE:
-        cell_warning = f"Large dataset detected ({len(data):,} rows × {len(data.columns)} columns = {total_cells:,} cells). Processing may take longer."
+        cell_warning = (
+            f"Large dataset detected ({len(data):,} rows × {len(data.columns)} columns = {total_cells:,} cells). "
+            "Processing may take longer."
+        )
     elif total_cells > CELL_COUNT_WARNING_MODERATE:
-        cell_warning = f"Moderate dataset size ({len(data):,} rows × {len(data.columns)} columns = {total_cells:,} cells)."
+        cell_warning = (
+            f"Moderate dataset size ({len(data):,} rows × {len(data.columns)} columns = {total_cells:,} cells)."
+        )
     else:
         cell_warning = None
 
-    store["data"] = data
+    try:
+        admit_frame(get_session_id(), data)
+    except MemoryBudgetExceeded as e:
+        return jsonify({"error": str(e)}), HTTP_TOO_MANY_REQUESTS
+    store["data_fingerprint"] = {
+        "filename": safe_filename_val,
+        "sha256": file_sha256,
+        "bytes": int(file_bytes),
+        "rows": int(len(data)),
+        "columns": int(len(data.columns)),
+        "uploaded_at": _dt.datetime.now(_dt.UTC).replace(microsecond=0).isoformat(),
+    }
+    # A new file invalidates the previous run's record.
+    for stale in ("manifest_written",):
+        store.pop(stale, None)
     columns = data.columns.tolist()
     firstcol = columns[0][:COLUMN_NAME_DISPLAY_LENGTH]
     if len(columns[0]) > COLUMN_NAME_DISPLAY_LENGTH - 1:
@@ -103,8 +179,10 @@ def upload_file():
     lastcol = columns[-1][:COLUMN_NAME_DISPLAY_LENGTH]
     if len(columns[-1]) > COLUMN_NAME_DISPLAY_LENGTH - 1:
         lastcol += "..."
-    filename_display = file.filename[:FILENAME_DISPLAY_LENGTH]
-    if len(file.filename) > FILENAME_DISPLAY_LENGTH - 1:
+    # Display the sanitized name, not the raw browser name, so the response
+    # never echoes markup from the client.
+    filename_display = safe_filename_val[:FILENAME_DISPLAY_LENGTH]
+    if len(safe_filename_val) > FILENAME_DISPLAY_LENGTH - 1:
         filename_display += "..."
 
     response_data = {

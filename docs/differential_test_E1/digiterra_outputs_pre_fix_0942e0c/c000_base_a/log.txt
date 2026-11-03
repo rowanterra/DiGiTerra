@@ -1,0 +1,17 @@
+2026-09-24T17:35:10Z  uploaded diabetes_E1_base.csv: {'columns': ['order', 'age', 'sex', 'bmi', 'bp', 's1', 's2', 's3', 's4', 's5', 's6', 'target'], 'filename': 'diabetes_E1
+2026-09-24T17:35:10Z  /process accepted, session b3b7fc75-ee88-4acf-9c9d-1e2b236082fa
+2026-09-24T17:35:18Z  result keys 27; split_note: Time-ordered holdout on column 'order': the latest 20% of rows (89 of 442) are the test set.
+2026-09-24T17:35:18Z  bundle members: ['manifest.json', 'model_card.json', 'model_card.html', 'model.skops', 'visualizations.pdf']
+2026-09-24T17:35:18Z  /predict status 200: {'applicability_summary': {'novel': 0, 'out_of_range': 2, 'rows': 89}, 'filename': 'diabetes_E1_test.csv', 'inference_visualization': 'inference_pred_vs_actual_1.png', 'inference_visualization_version
+2026-09-24T17:35:18Z  predictions.csv columns ['order', 'age', 'sex', 'bmi', 'bp', 's1', 's2', 's3', 's4', 's5', 's6', 'target', 'Predicted_Target', 'lower_90', 'upper_90', 'novelty_score', 'novel_row', 'out_of_range_columns'] rows 89
+2026-09-24T17:35:18Z  input check passed
+2026-09-24T17:35:18Z  done
+2026-09-24T17:36:23Z  uploaded diabetes_E1_base.csv: {'columns': ['order', 'age', 'sex', 'bmi', 'bp', 's1', 's2', 's3', 's4', 's5', 's6', 'target'], 'filename': 'diabetes_E1
+2026-09-24T17:36:23Z  /process accepted, session 250cbe29-1567-48eb-b2f3-6326cbf4d40f
+2026-09-24T17:36:30Z  result keys 27; split_note: Time-ordered holdout on column 'order': the latest 20% of rows (89 of 442) are the test set.
+2026-09-24T17:36:30Z  bundle members: ['manifest.json', 'model_card.json', 'model_card.html', 'model.skops', 'visualizations.pdf']
+2026-09-24T17:36:31Z  /predict status 200: {'applicability_summary': {'novel': 0, 'out_of_range': 2, 'rows': 89}, 'filename': 'diabetes_E1_test.csv', 'inference_visualization': 'inference_pred_vs_actual_1.png', 'inference_visualization_version
+2026-09-24T17:36:31Z  predictions.csv columns ['order', 'age', 'sex', 'bmi', 'bp', 's1', 's2', 's3', 's4', 's5', 's6', 'target', 'Predicted_Target', 'lower_90', 'upper_90', 'novelty_score', 'novel_row', 'out_of_range_columns'] rows 89
+2026-09-24T17:36:31Z  input check passed
+2026-09-24T17:36:31Z  coefficients read from model.skops (LinearRegression)
+2026-09-24T17:36:31Z  done

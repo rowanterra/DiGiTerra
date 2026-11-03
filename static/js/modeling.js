@@ -1,6 +1,10 @@
 /**
  * Modeling tab: run model, process results, hyperparameters. Depends on core.js, formatDateTimeForFilename, downloadFile, etc.
  */
+// Shared across the split files (they run in one script scope).
+let model1 = null;
+let stratifyBool = false;
+let quantileBinDict = {};
 processForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -101,7 +105,7 @@ processForm.addEventListener('submit', async (e) => {
     //ensure predictors and indicators - validate BEFORE clearing results
     let selectedOutputType = outputType.value
     if (!indicators.length || (!predictors.length && selectedOutputType !== 'Cluster')) {
-        showError(NumericResultDiv, 'Please select at least one predictor and one indicator column.');
+        showError(NumericResultDiv, 'At least one predictor column and one indicator column are required.');
         if (runButton) runButton.disabled = false;
         if (stopButton) stopButton.style.display = 'none';
         return;
@@ -119,8 +123,8 @@ processForm.addEventListener('submit', async (e) => {
         }
         if (!String(modelPick).trim()) {
             const errDiv = getCachedElement('errorDiv');
-            if (errDiv) showError(errDiv, 'Please select a model from the dropdown before running.');
-            else showError(NumericResultDiv, 'Please select a model from the dropdown before running.');
+            if (errDiv) showError(errDiv, 'A model must be selected from the dropdown before the run.');
+            else showError(NumericResultDiv, 'A model must be selected from the dropdown before the run.');
             if (runButton) runButton.disabled = false;
             if (stopButton) stopButton.style.display = 'none';
             return;
@@ -184,8 +188,17 @@ processForm.addEventListener('submit', async (e) => {
         stratifyBool = false
     }
 
-    if (stratifyBool && selectedOutputType !== 'Cluster' && predictorCols.indexOf(stratifyColumnNumber) !== -1) {
-        showError(NumericResultDiv, 'Do not stratify by your target column. That would leak target information into the train/test split. Choose a different column to stratify by.', false);
+    // Classification stratifies on the class labels, which is what train_test_split's
+    // own stratify argument takes, so naming the target there is correct. The guard is
+    // for regression, where the target is cut into bins that would carry it into the
+    // split. The route and the training path make the same exception.
+    if (
+        stratifyBool &&
+        selectedOutputType !== 'Cluster' &&
+        selectedOutputType !== 'Classifier' &&
+        predictorCols.indexOf(stratifyColumnNumber) !== -1
+    ) {
+        showError(NumericResultDiv, 'Stratifying by the target column leaks target information into the train/test split, so a different stratify column is required.', false);
         const processButton = getCachedElement('processButton');
         if (processButton) processButton.disabled = false;
         if (loadingDiv) loadingDiv.classList.add('hidden');
@@ -223,21 +236,16 @@ processForm.addEventListener('submit', async (e) => {
         }
     } else if (currentMode === 'automl') {
         // Use AutoML model selectors (optional - can be empty to let AutoML choose)
+        // A blank model is a request for AutoML to compare its candidates by
+        // cross-validation and train the one that scores best; the server does
+        // that when models is blank and taskType names the task.
         if (selectedOutputType === 'Numeric'){
             model1 = document.getElementById('automlNModels');
             selectedModel1 = model1 ? model1.value : ''
-            // If no model selected in AutoML, use a sensible default (Random Forest is robust and works well with AutoML features)
-            if (!selectedModel1 || selectedModel1 === '') {
-                selectedModel1 = 'RF';
-            }
         }
         else if (selectedOutputType === 'Classifier'){
             model1 = document.getElementById('automlClassModels');
             selectedModel1 = model1 ? model1.value : ''
-            // If no model selected in AutoML, use a sensible default (Random Forest Classifier)
-            if (!selectedModel1 || selectedModel1 === '') {
-                selectedModel1 = 'RF_classifier';
-            }
         }
         else if (selectedOutputType === 'Cluster'){
             model1 = document.getElementById('automlClModels');
@@ -291,13 +299,13 @@ processForm.addEventListener('submit', async (e) => {
             : document.getElementById('nonreqRidgeSlider');
         if (nonreqRidgeSlider && nonreqRidgeSlider.checked){
             nonreq=true
-            let RidgeFitIntersept = document.getElementById('RidgeFitIntersept').value
-            let RidgeNormalize = document.getElementById('RidgeNormalize').value
-            let RidgeCopyX = document.getElementById('RidgeCopyX').value
-            let RidgePositive = document.getElementById('RidgePositive').value
-            let RidgeMaxIter = document.getElementById('RidgeMaxIter').value
-            let RidgeTol = document.getElementById('RidgeTol').value
-            const solver = document.getElementById('RidgeSolver');
+            let RidgeFitIntersept = getModeScopedElement('RidgeFitIntersept').value
+            let RidgeNormalize = getModeScopedElement('RidgeNormalize').value
+            let RidgeCopyX = getModeScopedElement('RidgeCopyX').value
+            let RidgePositive = getModeScopedElement('RidgePositive').value
+            let RidgeMaxIter = getModeScopedElement('RidgeMaxIter').value
+            let RidgeTol = getModeScopedElement('RidgeTol').value
+            const solver = getModeScopedElement('RidgeSolver');
             hyperparameters['solver'] = solver.value
             //let RidgeRandomState = document.getElementById('RidgeRandomState').value
             hyperparameters['RidgeFitIntersept'] = RidgeFitIntersept
@@ -323,15 +331,15 @@ processForm.addEventListener('submit', async (e) => {
             : document.getElementById('nonreqLassoSlider');
         if (nonreqLassoSlider && nonreqLassoSlider.checked){
             nonreq=true
-            let LassoFitIntersept = document.getElementById('LassoFitIntersept').value
-            let LassoPrecompute = document.getElementById('LassoPrecompute').value
-            let LassoCopyX = document.getElementById('LassoCopyX').value
-            let LassoWarmStart = document.getElementById('LassoWarmStart').value
-            let LassoPositive = document.getElementById('LassoPositive').value
-            let LassoTol = document.getElementById('LassoTol').value
+            let LassoFitIntersept = getModeScopedElement('LassoFitIntersept').value
+            let LassoPrecompute = getModeScopedElement('LassoPrecompute').value
+            let LassoCopyX = getModeScopedElement('LassoCopyX').value
+            let LassoWarmStart = getModeScopedElement('LassoWarmStart').value
+            let LassoPositive = getModeScopedElement('LassoPositive').value
+            let LassoTol = getModeScopedElement('LassoTol').value
             //let LassoRandomState = document.getElementById('LassoRandomState').value
-            let LassoSelection = document.getElementById('LassoSelection').value
-            const max_iter = document.getElementById('LassoMax_iter');
+            let LassoSelection = getModeScopedElement('LassoSelection').value
+            const max_iter = getModeScopedElement('LassoMax_iter');
             hyperparameters['LassoFitIntersept'] = LassoFitIntersept
             hyperparameters['LassoPrecompute'] = LassoPrecompute
             hyperparameters['LassoCopyX'] = LassoCopyX
@@ -352,22 +360,22 @@ processForm.addEventListener('submit', async (e) => {
             : document.getElementById('nonreqLogisticSlider');
         if (nonreqLogisticSlider && nonreqLogisticSlider.checked){
             nonreq=true
-            let LogisticDual = document.getElementById('LogisticDual').value
-            let LogisticFitIntercept = document.getElementById('LogisticFitIntercept').value
-            let LogisticSolver = document.getElementById('LogisticSolver').value
-            let LogisticMultiClass = document.getElementById('LogisticMultiClass').value
-            let LogisticWarmStart = document.getElementById('LogisticWarmStart').value
-            let LogisticTol = document.getElementById('LogisticTol').value
-            let Logisticintercept_scaling = document.getElementById('Logisticintercept_scaling').value
-            let LogisticClassWeight = document.getElementById('LogisticClassWeight').value
+            let LogisticDual = getModeScopedElement('LogisticDual').value
+            let LogisticFitIntercept = getModeScopedElement('LogisticFitIntercept').value
+            let LogisticSolver = getModeScopedElement('LogisticSolver').value
+            let LogisticMultiClass = getModeScopedElement('LogisticMultiClass').value
+            let LogisticWarmStart = getModeScopedElement('LogisticWarmStart').value
+            let LogisticTol = getModeScopedElement('LogisticTol').value
+            let Logisticintercept_scaling = getModeScopedElement('Logisticintercept_scaling').value
+            let LogisticClassWeight = getModeScopedElement('LogisticClassWeight').value
             //let LogisticRandomState = document.getElementById('LogisticRandomState').value
-            let LogisticMaxIterations = document.getElementById('LogisticMaxIterations').value
-            let LogisticVerbose = document.getElementById('LogisticVerbose').value
-            let LogisticNJobs = document.getElementById('LogisticNJobs').value
-            let Logisticl1Ratio = document.getElementById('Logisticl1Ratio').value
+            let LogisticMaxIterations = getModeScopedElement('LogisticMaxIterations').value
+            let LogisticVerbose = getModeScopedElement('LogisticVerbose').value
+            let LogisticNJobs = getModeScopedElement('LogisticNJobs').value
+            let Logisticl1Ratio = getModeScopedElement('Logisticl1Ratio').value
 
-            const CLogistic = document.getElementById('CLogistic');
-            const penatly = document.getElementById('penalty');
+            const CLogistic = getModeScopedElement('CLogistic');
+            const penatly = getModeScopedElement('penalty');
             hyperparameters['C'] = parseFloat(CLogistic.value);
             hyperparameters['penalty'] = penatly.value;
             
@@ -449,16 +457,16 @@ processForm.addEventListener('submit', async (e) => {
             : document.getElementById('nonreqSVMSlider');
         if (nonreqSVMSlider && nonreqSVMSlider.checked){
             nonreq=true
-            let SVMshrinking = document.getElementById('SVMshrinking').value
-            let SVMprobability = document.getElementById('SVMprobability').value
-            let SVMBreakTies = document.getElementById('SVMBreakTies').value
-            let SVMverbose = document.getElementById('SVMverbose').value
-            let SVMcoef0 = document.getElementById('SVMcoef0').value
-            let SVMtol = document.getElementById('SVMtol').value
-            let SVMCacheSize = document.getElementById('SVMCacheSize').value
-            let SVMClassWeight = document.getElementById('SVMClassWeight').value
-            let SVMmaxIter = document.getElementById('SVMmaxIter').value
-            let SVMdecisionFunctionShape = document.getElementById('SVMdecisionFunctionShape').value
+            let SVMshrinking = getModeScopedElement('SVMshrinking').value
+            let SVMprobability = getModeScopedElement('SVMprobability').value
+            let SVMBreakTies = getModeScopedElement('SVMBreakTies').value
+            let SVMverbose = getModeScopedElement('SVMverbose').value
+            let SVMcoef0 = getModeScopedElement('SVMcoef0').value
+            let SVMtol = getModeScopedElement('SVMtol').value
+            let SVMCacheSize = getModeScopedElement('SVMCacheSize').value
+            let SVMClassWeight = getModeScopedElement('SVMClassWeight').value
+            let SVMmaxIter = getModeScopedElement('SVMmaxIter').value
+            let SVMdecisionFunctionShape = getModeScopedElement('SVMdecisionFunctionShape').value
             //let SVMrandomState = document.getElementById('SVMrandomState').value
             
             hyperparameters['SVMshrinking'] = SVMshrinking
@@ -492,19 +500,19 @@ processForm.addEventListener('submit', async (e) => {
             : document.getElementById('nonreqRFSlider');
         if (nonreqRFSlider && nonreqRFSlider.checked){
             nonreq=true
-            let RFBoostrap = document.getElementById('RFBoostrap').value
-            let RFoobScore = document.getElementById('RFoobScore').value
-            let RFWarmStart = document.getElementById('RFWarmStart').value
-            let RFmin_weight_fraction_leaf = document.getElementById('RFmin_weight_fraction_leaf').value
-            let RFMaxLeafNodes = document.getElementById('RFMaxLeafNodes').value
-            let RFMinImpurityDecrease = document.getElementById('RFMinImpurityDecrease').value
-            let RFNJobs = document.getElementById('RFNJobs').value
+            let RFBoostrap = getModeScopedElement('RFBoostrap').value
+            let RFoobScore = getModeScopedElement('RFoobScore').value
+            let RFWarmStart = getModeScopedElement('RFWarmStart').value
+            let RFmin_weight_fraction_leaf = getModeScopedElement('RFmin_weight_fraction_leaf').value
+            let RFMaxLeafNodes = getModeScopedElement('RFMaxLeafNodes').value
+            let RFMinImpurityDecrease = getModeScopedElement('RFMinImpurityDecrease').value
+            let RFNJobs = getModeScopedElement('RFNJobs').value
             //let RFRandomState = document.getElementById('RFRandomState').value
-            let RFVerbose  = document.getElementById('RFVerbose').value
+            let RFVerbose  = getModeScopedElement('RFVerbose').value
 
-            const min_samples_split = document.getElementById('min_samples_split');
-            const min_samples_leaf = document.getElementById('min_samples_leaf');
-            const max_depth = document.getElementById('RFMax_depth');
+            const min_samples_split = getModeScopedElement('min_samples_split');
+            const min_samples_leaf = getModeScopedElement('min_samples_leaf');
+            const max_depth = getModeScopedElement('RFMax_depth');
             if (max_depth !== null) {
                 hyperparameters['max_depth'] = parseFloat(max_depth.value)
             }
@@ -530,22 +538,22 @@ processForm.addEventListener('submit', async (e) => {
         hyperparameters['max_iter'] = parseFloat(max_iter.value)
         hyperparameters['eta0'] = parseFloat(eta0.value)
 
-        let nonreqPerceptronSlider = document.getElementById('nonreqPerceptronSlider')
+        let nonreqPerceptronSlider = getModeScopedElement('nonreqPerceptronSlider')
         if (nonreqPerceptronSlider.checked){
             nonreq=true
-            let PerceptronFitIntercept = document.getElementById('').value
-            let PerceptronShuffle = document.getElementById('').value
-            let PerceptronEarlyStopping = document.getElementById('').value
-            let PerceptronWarmStart = document.getElementById('').value
-            let PerceptronPenalty = document.getElementById('').value
-            let PerceptronAlpha = document.getElementById('').value
-            let PerceptronTol = document.getElementById('').value
-            let PerceptronVerbose = document.getElementById('').value
-            let PerceptronNJobs = document.getElementById('').value
-            //let PerceptronRandomState = document.getElementById('').value
-            let PerceptronValidationFraction = document.getElementById('').value
-            let PerceptronNIterNoChange = document.getElementById('').value
-            let PerceptronClassWeight = document.getElementById('').value
+            let PerceptronFitIntercept = getModeScopedElement('PerceptronFitIntercept')?.value
+            let PerceptronShuffle = getModeScopedElement('PerceptronShuffle')?.value
+            let PerceptronEarlyStopping = getModeScopedElement('PerceptronEarlyStopping')?.value
+            let PerceptronWarmStart = getModeScopedElement('PerceptronWarmStart')?.value
+            let PerceptronPenalty = getModeScopedElement('PerceptronPenalty')?.value
+            let PerceptronAlpha = getModeScopedElement('PerceptronAlpha')?.value
+            let PerceptronTol = getModeScopedElement('PerceptronTol')?.value
+            let PerceptronVerbose = getModeScopedElement('PerceptronVerbose')?.value
+            let PerceptronNJobs = getModeScopedElement('PerceptronNJobs')?.value
+            //let PerceptronRandomState = getModeScopedElement('PerceptronRandomState')?.value
+            let PerceptronValidationFraction = getModeScopedElement('PerceptronValidationFraction')?.value
+            let PerceptronNIterNoChange = getModeScopedElement('PerceptronNIterNoChange')?.value
+            let PerceptronClassWeight = getModeScopedElement('PerceptronClassWeight')?.value
             
             hyperparameters['PerceptronFitIntercept'] = PerceptronFitIntercept
             hyperparameters['PerceptronShuffle'] = PerceptronShuffle
@@ -578,27 +586,27 @@ processForm.addEventListener('submit', async (e) => {
         hyperparameters['activation'] = activation.value
         hyperparameters['solver'] = solver.value
 
-        let nonreqMLPSlider = document.getElementById('nonreqMLPSlider')
+        let nonreqMLPSlider = getModeScopedElement('nonreqMLPSlider')
         if (nonreqMLPSlider.checked){
             nonreq=true
-            let MLPNesterovsMomentum = document.getElementById('MLPNesterovsMomentum').value
-            let MLPEarlyStopping = document.getElementById('MLPEarlyStopping').value
-            let MLPShuffle = document.getElementById('MLPShuffle').value
-            let MLPVerbose = document.getElementById('MLPVerbose').value
-            let MLPWarmStart = document.getElementById('MLPWarmStart').value
-            let MLPBatchSize = document.getElementById('MLPBatchSize').value
-            let MLPLearningRateInit = document.getElementById('MLPLearningRateInit').value
-            let MLPPowerT = document.getElementById('MLPPowerT').value
-            let MLPMaxIter = document.getElementById('MLPMaxIter').value
+            let MLPNesterovsMomentum = getModeScopedElement('MLPNesterovsMomentum').value
+            let MLPEarlyStopping = getModeScopedElement('MLPEarlyStopping').value
+            let MLPShuffle = getModeScopedElement('MLPShuffle').value
+            let MLPVerbose = getModeScopedElement('MLPVerbose').value
+            let MLPWarmStart = getModeScopedElement('MLPWarmStart').value
+            let MLPBatchSize = getModeScopedElement('MLPBatchSize').value
+            let MLPLearningRateInit = getModeScopedElement('MLPLearningRateInit').value
+            let MLPPowerT = getModeScopedElement('MLPPowerT').value
+            let MLPMaxIter = getModeScopedElement('MLPMaxIter').value
             //let MLPRandomState = document.getElementById('MLPRandomState').value
-            let MLPTol = document.getElementById('MLPTol').value
-            let MLPMomentum = document.getElementById('MLPMomentum').value
-            let MLPValidationFraction = document.getElementById('MLPValidationFraction').value
-            let MLPBeta1 = document.getElementById('MLPBeta1').value
-            let MLPBeta2 = document.getElementById('MLPBeta2').value
-            let MLPEpsilon = document.getElementById('MLPEpsilon').value
-            const alpha = document.getElementById('MLPAlpha');
-            const learning_rate = document.getElementById('MLPLearning_rate');
+            let MLPTol = getModeScopedElement('MLPTol').value
+            let MLPMomentum = getModeScopedElement('MLPMomentum').value
+            let MLPValidationFraction = getModeScopedElement('MLPValidationFraction').value
+            let MLPBeta1 = getModeScopedElement('MLPBeta1').value
+            let MLPBeta2 = getModeScopedElement('MLPBeta2').value
+            let MLPEpsilon = getModeScopedElement('MLPEpsilon').value
+            const alpha = getModeScopedElement('MLPAlpha');
+            const learning_rate = getModeScopedElement('MLPLearning_rate');
             
             hyperparameters['learning_rate'] = learning_rate.value
             hyperparameters['alpha'] = parseFloat(alpha.value)
@@ -636,16 +644,16 @@ processForm.addEventListener('submit', async (e) => {
             hyperparameters['n_neighbors'] = parseFloat(n_neighbors.value);
         }
 
-        let nonreqKNearestSlider = document.getElementById('nonreqKNearestSlider')
+        let nonreqKNearestSlider = getModeScopedElement('nonreqKNearestSlider')
         if (nonreqKNearestSlider.checked){
             nonreq=true
-            let KNearestWeights = document.getElementById('KNearestWeights').value
-            let KNearestAlgorithm = document.getElementById('KNearestAlgorithm').value
-            let KNearestLeafSize = document.getElementById('KNearestLeafSize').value
-            let KNearestP = document.getElementById('KNearestP').value
-            let KNearestMetricParams = document.getElementById('KNearestMetricParams').value
-            let KNearestNJobs = document.getElementById('KNearestNJobs').value
-            const metric = document.getElementById('metric');
+            let KNearestWeights = getModeScopedElement('KNearestWeights').value
+            let KNearestAlgorithm = getModeScopedElement('KNearestAlgorithm').value
+            let KNearestLeafSize = getModeScopedElement('KNearestLeafSize').value
+            let KNearestP = getModeScopedElement('KNearestP').value
+            let KNearestMetricParams = getModeScopedElement('KNearestMetricParams').value
+            let KNearestNJobs = getModeScopedElement('KNearestNJobs').value
+            const metric = getModeScopedElement('metric');
             
             hyperparameters['metric'] = metric.value
             hyperparameters['KNearestWeights'] = KNearestWeights
@@ -670,24 +678,24 @@ processForm.addEventListener('submit', async (e) => {
         if (learning_rate) hyperparameters['learning_rate'] = parseFloat(learning_rate.value);
     
 
-        let nonreqGBSlider = document.getElementById('nonreqGBSlider')
+        let nonreqGBSlider = getModeScopedElement('nonreqGBSlider')
         if (nonreqGBSlider.checked){
             nonreq=true
-            let GBLoss = document.getElementById('GBLoss').value
-            let GBWarmStart = document.getElementById('GBWarmStart').value
-            let GBCriterion = document.getElementById('GBCriterion').value
-            let GBSubsample = document.getElementById('GBSubsample').value
-            let GBMinSamplesSplit = document.getElementById('GBMinSamplesSplit').value
-            let GBMinSamplesLeaf = document.getElementById('GBMinSamplesLeaf').value
-            let GBMinWeightFractionLeaf = document.getElementById('GBMinWeightFractionLeaf').value
-            let GBMinImpurityDecrease = document.getElementById('GBMinImpurityDecrease').value
-            let GBInit = document.getElementById('GBInit').value
+            let GBLoss = getModeScopedElement('GBLoss').value
+            let GBWarmStart = getModeScopedElement('GBWarmStart').value
+            let GBCriterion = getModeScopedElement('GBCriterion').value
+            let GBSubsample = getModeScopedElement('GBSubsample').value
+            let GBMinSamplesSplit = getModeScopedElement('GBMinSamplesSplit').value
+            let GBMinSamplesLeaf = getModeScopedElement('GBMinSamplesLeaf').value
+            let GBMinWeightFractionLeaf = getModeScopedElement('GBMinWeightFractionLeaf').value
+            let GBMinImpurityDecrease = getModeScopedElement('GBMinImpurityDecrease').value
+            let GBInit = getModeScopedElement('GBInit').value
             //let GBRandomState = document.getElementById('GBRandomState').value
-            let GBMaxFeatrues = document.getElementById('GBMaxFeatrues').value
-            let GBAlpha = document.getElementById('GBAlpha').value
-            let GBVerbose = document.getElementById('GBVerbose').value
-            let GBMaxLeafNodes = document.getElementById('GBMaxLeafNodes').value
-            const max_depth = document.getElementById('GBMax_depth');
+            let GBMaxFeatrues = getModeScopedElement('GBMaxFeatrues').value
+            let GBAlpha = getModeScopedElement('GBAlpha').value
+            let GBVerbose = getModeScopedElement('GBVerbose').value
+            let GBMaxLeafNodes = getModeScopedElement('GBMaxLeafNodes').value
+            const max_depth = getModeScopedElement('GBMax_depth');
             
             hyperparameters['max_depth'] = parseFloat(max_depth.value)
             hyperparameters['GBLoss'] = GBLoss
@@ -709,23 +717,23 @@ processForm.addEventListener('submit', async (e) => {
     }
 
     else if (selectedModel === "Logistic_classifier"){
-        let nonreqLogisticClassifierSlider = document.getElementById('nonreqLogisticClassifierSlider')
+        let nonreqLogisticClassifierSlider = getModeScopedElement('nonreqLogisticClassifierSlider')
         if (nonreqLogisticClassifierSlider.checked){
             nonreq=true
-            let Class_LogisticDual = document.getElementById('Class_LogisticDual').value
-            let Class_LogisticFitIntercept = document.getElementById('Class_LogisticFitIntercept').value
-            let Class_LogisticSolver = document.getElementById('Class_LogisticSolver').value
-            let Class_LogisticMultiClass = document.getElementById('Class_LogisticMultiClass').value
-            let Class_LogisticWarmStart = document.getElementById('Class_LogisticWarmStart').value
-            let Class_CLogistic = document.getElementById('Class_CLogistic').value
-            let Class_Logistic_penalty = document.getElementById('Class_Logistic_penalty').value
-            let Class_LogisticTol = document.getElementById('Class_LogisticTol').value
-            let Class_Logisticintercept_scaling = document.getElementById('Class_Logisticintercept_scaling').value
-            let Class_LogisticClassWeight = document.getElementById('Class_LogisticClassWeight').value
-            let Class_LogisticMaxIterations = document.getElementById('Class_LogisticMaxIterations').value
-            let Class_LogisticVerbose = document.getElementById('Class_LogisticVerbose').value
-            let Class_LogisticNJobs = document.getElementById('Class_LogisticNJobs').value
-            let Class_Logisticl1Ratio = document.getElementById('Class_Logisticl1Ratio').value
+            let Class_LogisticDual = getModeScopedElement('Class_LogisticDual').value
+            let Class_LogisticFitIntercept = getModeScopedElement('Class_LogisticFitIntercept').value
+            let Class_LogisticSolver = getModeScopedElement('Class_LogisticSolver').value
+            let Class_LogisticMultiClass = getModeScopedElement('Class_LogisticMultiClass').value
+            let Class_LogisticWarmStart = getModeScopedElement('Class_LogisticWarmStart').value
+            let Class_CLogistic = getModeScopedElement('Class_CLogistic').value
+            let Class_Logistic_penalty = getModeScopedElement('Class_Logistic_penalty').value
+            let Class_LogisticTol = getModeScopedElement('Class_LogisticTol').value
+            let Class_Logisticintercept_scaling = getModeScopedElement('Class_Logisticintercept_scaling').value
+            let Class_LogisticClassWeight = getModeScopedElement('Class_LogisticClassWeight').value
+            let Class_LogisticMaxIterations = getModeScopedElement('Class_LogisticMaxIterations').value
+            let Class_LogisticVerbose = getModeScopedElement('Class_LogisticVerbose').value
+            let Class_LogisticNJobs = getModeScopedElement('Class_LogisticNJobs').value
+            let Class_Logisticl1Ratio = getModeScopedElement('Class_Logisticl1Ratio').value
 
             hyperparameters['Class_LogisticDual'] = Class_LogisticDual
             hyperparameters['Class_LogisticFitIntercept'] = Class_LogisticFitIntercept
@@ -757,27 +765,27 @@ processForm.addEventListener('submit', async (e) => {
         hyperparameters['activation'] = activation.value
         hyperparameters['solver'] = solver.value
 
-        let nonreqMLPSlider = document.getElementById('nonreqMLPClassifierSlider')
+        let nonreqMLPSlider = getModeScopedElement('nonreqMLPClassifierSlider')
         if (nonreqMLPSlider.checked){
             nonreq=true
-            let MLPNesterovsMomentum = document.getElementById('Class_MLPNesterovsMomentum').value
-            let MLPEarlyStopping = document.getElementById('Class_MLPEarlyStopping').value
-            let MLPShuffle = document.getElementById('Class_MLPShuffle').value
-            let MLPVerbose = document.getElementById('Class_MLPVerbose').value
-            let MLPWarmStart = document.getElementById('Class_MLPWarmStart').value
-            let MLPBatchSize = document.getElementById('Class_MLPBatchSize').value
-            let MLPLearningRateInit = document.getElementById('Class_MLPLearningRateInit').value
-            let MLPPowerT = document.getElementById('Class_MLPPowerT').value
-            let MLPMaxIter = document.getElementById('Class_MLPMaxIter').value
+            let MLPNesterovsMomentum = getModeScopedElement('Class_MLPNesterovsMomentum').value
+            let MLPEarlyStopping = getModeScopedElement('Class_MLPEarlyStopping').value
+            let MLPShuffle = getModeScopedElement('Class_MLPShuffle').value
+            let MLPVerbose = getModeScopedElement('Class_MLPVerbose').value
+            let MLPWarmStart = getModeScopedElement('Class_MLPWarmStart').value
+            let MLPBatchSize = getModeScopedElement('Class_MLPBatchSize').value
+            let MLPLearningRateInit = getModeScopedElement('Class_MLPLearningRateInit').value
+            let MLPPowerT = getModeScopedElement('Class_MLPPowerT').value
+            let MLPMaxIter = getModeScopedElement('Class_MLPMaxIter').value
             //let MLPRandomState = document.getElementById('MLPRandomState').value
-            let MLPTol = document.getElementById('Class_MLPTol').value
-            let MLPMomentum = document.getElementById('Class_MLPMomentum').value
-            let MLPValidationFraction = document.getElementById('Class_MLPValidationFraction').value
-            let MLPBeta1 = document.getElementById('Class_MLPBeta1').value
-            let MLPBeta2 = document.getElementById('Class_MLPBeta2').value
-            let MLPEpsilon = document.getElementById('Class_MLPEpsilon').value
-            const alpha = document.getElementById('Class_MLPAlpha');
-            const learning_rate = document.getElementById('Class_MLPLearning_rate');
+            let MLPTol = getModeScopedElement('Class_MLPTol').value
+            let MLPMomentum = getModeScopedElement('Class_MLPMomentum').value
+            let MLPValidationFraction = getModeScopedElement('Class_MLPValidationFraction').value
+            let MLPBeta1 = getModeScopedElement('Class_MLPBeta1').value
+            let MLPBeta2 = getModeScopedElement('Class_MLPBeta2').value
+            let MLPEpsilon = getModeScopedElement('Class_MLPEpsilon').value
+            const alpha = getModeScopedElement('Class_MLPAlpha');
+            const learning_rate = getModeScopedElement('Class_MLPLearning_rate');
             
             hyperparameters['learning_rate'] = learning_rate.value
             hyperparameters['alpha'] = parseFloat(alpha.value)
@@ -816,22 +824,22 @@ processForm.addEventListener('submit', async (e) => {
         }
         
 
-        let nonreqRFSlider = document.getElementById('nonreqRFClassifierSlider')
+        let nonreqRFSlider = getModeScopedElement('nonreqRFClassifierSlider')
         if (nonreqRFSlider.checked){
             nonreq=true
-            let RFBoostrap = document.getElementById('Class_RFBoostrap').value
-            let RFoobScore = document.getElementById('Class_RFoobScore').value
-            let RFWarmStart = document.getElementById('Class_RFWarmStart').value
-            let RFmin_weight_fraction_leaf = document.getElementById('Class_RFmin_weight_fraction_leaf').value
-            let RFMaxLeafNodes = document.getElementById('Class_RFMaxLeafNodes').value
-            let RFMinImpurityDecrease = document.getElementById('Class_RFMinImpurityDecrease').value
-            let RFNJobs = document.getElementById('Class_RFNJobs').value
+            let RFBoostrap = getModeScopedElement('Class_RFBoostrap').value
+            let RFoobScore = getModeScopedElement('Class_RFoobScore').value
+            let RFWarmStart = getModeScopedElement('Class_RFWarmStart').value
+            let RFmin_weight_fraction_leaf = getModeScopedElement('Class_RFmin_weight_fraction_leaf').value
+            let RFMaxLeafNodes = getModeScopedElement('Class_RFMaxLeafNodes').value
+            let RFMinImpurityDecrease = getModeScopedElement('Class_RFMinImpurityDecrease').value
+            let RFNJobs = getModeScopedElement('Class_RFNJobs').value
             //let RFRandomState = document.getElementById('RFRandomState').value
-            let RFVerbose  = document.getElementById('Class_RFVerbose').value
+            let RFVerbose  = getModeScopedElement('Class_RFVerbose').value
 
-            const min_samples_split = document.getElementById('Class_min_samples_split');
-            const min_samples_leaf = document.getElementById('Class_min_samples_leaf');
-            const max_depth = document.getElementById('Class_RFMax_depth');
+            const min_samples_split = getModeScopedElement('Class_min_samples_split');
+            const min_samples_leaf = getModeScopedElement('Class_min_samples_leaf');
+            const max_depth = getModeScopedElement('Class_RFMax_depth');
             if (max_depth !== null) {
                 hyperparameters['max_depth'] = parseFloat(max_depth.value)
             }
@@ -876,19 +884,19 @@ processForm.addEventListener('submit', async (e) => {
             }
         }
 
-        let nonreqSVMSlider = document.getElementById('nonreqSVCClassifierSlider')
+        let nonreqSVMSlider = getModeScopedElement('nonreqSVCClassifierSlider')
         if (nonreqSVMSlider.checked){
             nonreq=true
-            let SVCshrinking = document.getElementById('SVCshrinking').value
-            let SVCprobability = document.getElementById('SVCprobability').value
-            let SVCBreakTies = document.getElementById('SVCBreakTies').value
-            let SVCverbose = document.getElementById('SVCverbose').value
-            let SVCcoef0 = document.getElementById('SVCcoef0').value
-            let SVCtol = document.getElementById('SVCtol').value
-            let SVCCacheSize = document.getElementById('SVCCacheSize').value
-            let SVCClassWeight = document.getElementById('SVCClassWeight').value
-            let SVCmaxIter = document.getElementById('SVCmaxIter').value
-            let SVCdecisionFunctionShape = document.getElementById('SVCdecisionFunctionShape').value
+            let SVCshrinking = getModeScopedElement('SVCshrinking').value
+            let SVCprobability = getModeScopedElement('SVCprobability').value
+            let SVCBreakTies = getModeScopedElement('SVCBreakTies').value
+            let SVCverbose = getModeScopedElement('SVCverbose').value
+            let SVCcoef0 = getModeScopedElement('SVCcoef0').value
+            let SVCtol = getModeScopedElement('SVCtol').value
+            let SVCCacheSize = getModeScopedElement('SVCCacheSize').value
+            let SVCClassWeight = getModeScopedElement('SVCClassWeight').value
+            let SVCmaxIter = getModeScopedElement('SVCmaxIter').value
+            let SVCdecisionFunctionShape = getModeScopedElement('SVCdecisionFunctionShape').value
             //let SVMrandomState = document.getElementById('SVMrandomState').value
             
             hyperparameters['SVCshrinking'] = SVCshrinking
@@ -910,16 +918,16 @@ processForm.addEventListener('submit', async (e) => {
         const n_clusters = document.getElementById('Agg_n_clusters').value
         hyperparameters['n_clusters'] = parseInt(n_clusters)
         
-        let nonreqAgglomerativeSlider = document.getElementById('nonreqAgglomerativeSlider')
+        let nonreqAgglomerativeSlider = getModeScopedElement('nonreqAgglomerativeSlider')
         if (nonreqAgglomerativeSlider.checked){
             nonreq=true
-            let metric = document.getElementById('Aggmetric').value
-            let memory = document.getElementById('Aggmemory').value
-            let connectivity = document.getElementById('Aggconnectivity').value
-            let compute_full_tree = document.getElementById('aggcompute_full_tree').value
-            let linkage = document.getElementById('Agglinkage').value
-            let distance_threshold = document.getElementById('Aggdistance_threshold').value
-            let compute_distances = document.getElementById('aggcompute_distances').value
+            let metric = getModeScopedElement('Aggmetric').value
+            let memory = getModeScopedElement('Aggmemory').value
+            let connectivity = getModeScopedElement('Aggconnectivity').value
+            let compute_full_tree = getModeScopedElement('aggcompute_full_tree').value
+            let linkage = getModeScopedElement('Agglinkage').value
+            let distance_threshold = getModeScopedElement('Aggdistance_threshold').value
+            let compute_distances = getModeScopedElement('aggcompute_distances').value
 
             hyperparameters['metric']=metric
             hyperparameters['memory']=memory
@@ -937,21 +945,21 @@ processForm.addEventListener('submit', async (e) => {
         const n_components = document.getElementById('Gaun_components').value
         hyperparameters['n_components'] = parseInt(n_components)
         
-        let nonreqGaussianSlider = document.getElementById('nonreqGaussianSlider')
+        let nonreqGaussianSlider = getModeScopedElement('nonreqGaussianSlider')
         if (nonreqGaussianSlider.checked){
             nonreq=true
-            let covariance_type = document.getElementById('Gaucovariance_type').value
-            let tol = document.getElementById('GauTol').value
-            let reg_covar = document.getElementById('Gaureg_covar').value
-            let max_iter = document.getElementById('GauMax_iter').value
-            let n_init = document.getElementById('Gaun_init').value
-            let init_params = document.getElementById('Gauinit_params').value
-            let weights_init = document.getElementById('Gauweights_init').value
-            let means_init = document.getElementById('Gaumeans_init').value
-            let precisions_init = document.getElementById('Gauprecisions_init').value
-            let warm_start = document.getElementById('GauWarmStart').value
-            let verbose = document.getElementById('GauVerbose').value
-            let verbose_interval = document.getElementById('GauVerbose_interval').value
+            let covariance_type = getModeScopedElement('Gaucovariance_type').value
+            let tol = getModeScopedElement('GauTol').value
+            let reg_covar = getModeScopedElement('Gaureg_covar').value
+            let max_iter = getModeScopedElement('GauMax_iter').value
+            let n_init = getModeScopedElement('Gaun_init').value
+            let init_params = getModeScopedElement('Gauinit_params').value
+            let weights_init = getModeScopedElement('Gauweights_init').value
+            let means_init = getModeScopedElement('Gaumeans_init').value
+            let precisions_init = getModeScopedElement('Gauprecisions_init').value
+            let warm_start = getModeScopedElement('GauWarmStart').value
+            let verbose = getModeScopedElement('GauVerbose').value
+            let verbose_interval = getModeScopedElement('GauVerbose_interval').value
 
             hyperparameters['covariance_type']=covariance_type
             hyperparameters['tol']=parseFloat(tol)
@@ -973,16 +981,16 @@ processForm.addEventListener('submit', async (e) => {
         const n_clusters = document.getElementById('Kmeansn_clusters').value
         hyperparameters['n_clusters'] = parseInt(n_clusters)
         
-        let nonreqKmeansSlider = document.getElementById('nonreqKmeansSlider')
+        let nonreqKmeansSlider = getModeScopedElement('nonreqKmeansSlider')
         if (nonreqKmeansSlider.checked){
             nonreq=true
-            let init = document.getElementById('kmeansInit').value
-            let n_init = document.getElementById('kmeansn_init').value
-            let max_iter = document.getElementById('kmeansmax_iter').value
-            let tol = document.getElementById('kmeanstol').value
-            let verbose = document.getElementById('kmeansverbose').value
-            let copy_x = document.getElementById('kmeansCopyX').value
-            let algorithm = document.getElementById('Kmeansalgorithm').value
+            let init = getModeScopedElement('kmeansInit').value
+            let n_init = getModeScopedElement('kmeansn_init').value
+            let max_iter = getModeScopedElement('kmeansmax_iter').value
+            let tol = getModeScopedElement('kmeanstol').value
+            let verbose = getModeScopedElement('kmeansverbose').value
+            let copy_x = getModeScopedElement('kmeansCopyX').value
+            let algorithm = getModeScopedElement('Kmeansalgorithm').value
 
             hyperparameters['init'] = init
             hyperparameters['n_init'] = n_init
@@ -1115,7 +1123,6 @@ processForm.addEventListener('submit', async (e) => {
             if (nIterNoChange) hyperparameters['n_iter_no_change'] = parseInt(nIterNoChange.value);
             if (warmStart) hyperparameters['warm_start'] = warmStart.value === 'true';
             if (average) hyperparameters['average'] = average.value === 'true';
-            if (nJobs && nJobs.value) hyperparameters['n_jobs'] = parseInt(nJobs.value);
         }
     }
     else if (selectedModel === "HistGradientBoosting") {
@@ -1217,7 +1224,7 @@ processForm.addEventListener('submit', async (e) => {
             if (tol) hyperparameters['tol'] = parseFloat(tol.value);
             if (fitIntercept) hyperparameters['fit_intercept'] = fitIntercept.value === 'true';
             if (interceptScaling) hyperparameters['intercept_scaling'] = parseFloat(interceptScaling.value);
-            if (dual) hyperparameters['dual'] = dual.value === 'true';
+            if (dual) hyperparameters['dual'] = dual.value === 'auto' ? 'auto' : dual.value === 'true';
             if (verbose) hyperparameters['verbose'] = parseInt(verbose.value);
             if (maxIter) hyperparameters['max_iter'] = parseInt(maxIter.value);
         }
@@ -1729,7 +1736,7 @@ processForm.addEventListener('submit', async (e) => {
             const verbose = document.getElementById('LinearSVCVerbose');
             if (loss) hyperparameters['loss'] = loss.value;
             if (penalty) hyperparameters['penalty'] = penalty.value;
-            if (dual) hyperparameters['dual'] = dual.value === 'true';
+            if (dual) hyperparameters['dual'] = dual.value === 'auto' ? 'auto' : dual.value === 'true';
             if (tol) hyperparameters['tol'] = parseFloat(tol.value);
             if (multiClass) hyperparameters['multi_class'] = multiClass.value;
             if (fitIntercept) hyperparameters['fit_intercept'] = fitIntercept.value === 'true';
@@ -2035,7 +2042,7 @@ processForm.addEventListener('submit', async (e) => {
             if (computeLabels) hyperparameters['compute_labels'] = computeLabels.value === 'true';
             if (tol) hyperparameters['tol'] = parseFloat(tol.value);
             if (maxNoImprovement) hyperparameters['max_no_improvement'] = parseInt(maxNoImprovement.value);
-            if (nInit) hyperparameters['n_init'] = parseInt(nInit.value);
+            if (nInit) hyperparameters['n_init'] = nInit.value.trim() === 'auto' ? 'auto' : parseInt(nInit.value);
             if (reassignmentRatio) hyperparameters['reassignment_ratio'] = parseFloat(reassignmentRatio.value);
         }
     }
@@ -2140,18 +2147,42 @@ processForm.addEventListener('submit', async (e) => {
     }
     // Simple mode: all remain 'none' (defaults above)
     
+    // Split method and column are Advanced-mode controls. The column is a
+    // column letter, converted to a 0-based index like stratifyColumn; the server
+    // resolves the name.
+    let splitMethod = 'random';
+    let splitColumn = '';
+    let allowUnsafe = false;
+    let allowUnsafeReason = '';
+    if (currentMode === 'advanced') {
+        const splitMethodEl = document.getElementById('advancedSplitMethod');
+        const splitColumnEl = document.getElementById('advancedSplitColumn');
+        splitMethod = splitMethodEl ? splitMethodEl.value : 'random';
+        const splitLetter = splitColumnEl ? splitColumnEl.value.trim() : '';
+        splitColumn = splitLetter !== '' ? columnToIndex(splitLetter.toUpperCase()) : '';
+        const allowUnsafeEl = document.getElementById('advancedAllowUnsafe');
+        allowUnsafe = allowUnsafeEl ? allowUnsafeEl.value === 'yes' : false;
+        const reasonEl = document.getElementById('advancedAllowUnsafeReason');
+        allowUnsafeReason = reasonEl ? reasonEl.value.trim() : '';
+    }
+
     //sending all the data to the backend
     const requestData = {
         filename: uploadedFileName,
         indicators: indicatorCols,
         predictors: predictorCols,
         models: selectedModel,
+        taskType: selectedOutputType,
         scaler: scaler.value,
         hyperparameters: hyperparameters,
         nonreq: nonreq,
         units: unitStr,
         sigfig: parseInt(sigfig),
         stratifyColumn: stratifyColumnNumber,
+        splitMethod: splitMethod,
+        splitColumn: splitColumn,
+        allowUnsafe: allowUnsafe,
+        allowUnsafeReason: allowUnsafeReason,
         stratifyBool: stratifyBool,
         seedValue: parseInt(seedValue),
         testSize: parseFloat(testSize),
@@ -2221,7 +2252,7 @@ processForm.addEventListener('submit', async (e) => {
                         processResultData(progress.data);
                         return; // Exit early - callback handles cleanup
                     } else {
-                        console.error('processResultData function not set!');
+                        console.error('processResultData function not set');
                         // Fallback: process directly (with empty defaults for variables)
                         // Try to get unitStr from DOM if available
                         const unitNameElement = getCachedElement('unitName');
@@ -2390,7 +2421,7 @@ processForm.addEventListener('submit', async (e) => {
             if (currentLoadingDiv) {
                 currentLoadingDiv.innerHTML = `
                     <p style="color: #d32f2f; font-weight: 600;">Connection Error</p>
-                    <p style="color: #666;">Unable to establish connection with the server. Please try again.</p>
+                    <p style="color: #666;">The connection to the server failed.</p>
                 `;
             }
             
@@ -2401,6 +2432,7 @@ processForm.addEventListener('submit', async (e) => {
     
     // Function to update progress display
     function updateProgressDisplay(progress, container) {
+        if (typeof narrativeSetStages === 'function') narrativeSetStages(progress);
         if (!container || !progress) return;
         
         const stages = progress.stages || {};
@@ -2482,6 +2514,7 @@ processForm.addEventListener('submit', async (e) => {
     }
     
     let isAsyncProcessing = false;
+    if (typeof narrativeSetStep === 'function') narrativeSetStep('run');
     try {
         const response = await fetch('/process', {
             method: 'POST',
@@ -2562,7 +2595,7 @@ processForm.addEventListener('submit', async (e) => {
         if (response.ok) {
             processModelResult(data, unitStr, predictorCols, hyperparameters);
         } else {
-            showError(errorDiv, data.error ? `Error: ${data.error}` : 'Request failed. See console for details.');
+            showError(errorDiv, data.error ? `Error: ${data.error}` : 'The request failed. Open the browser console for the details.');
         }
     } catch (error) {
         console.error('Error:', error);
@@ -2572,7 +2605,7 @@ processForm.addEventListener('submit', async (e) => {
             progressEventSource.close();
             progressEventSource = null;
         }
-        showError(errorDiv, 'Something went wrong. See console for details.');
+        showError(errorDiv, 'The run failed. Open the browser console for the details.');
         
         // Determine which loading div and button to use based on current mode
         const simpleMode = document.getElementById('simpleMode');
@@ -2680,7 +2713,55 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Extract result processing into a separate function
+// Run notes shown above every result: data checks from the server, the split
+// method, and the comparison against a baseline that predicts the training mean
+// or the most common class on the same split.
+function renderRunNotes(data) {
+    const parts = [];
+    const checks = data && data.data_checks;
+    if (checks) {
+        const blocking = Array.isArray(checks.blocking) ? checks.blocking : [];
+        const warnings = Array.isArray(checks.warnings) ? checks.warnings : [];
+        if (blocking.length > 0) {
+            const reason = checks.override_reason ? ` Reason given: ${escapeHtml(checks.override_reason)}` : '';
+            parts.push(`<p class="run-note run-note-block"><strong>Not valid for decision use. Data checks blocked this run and the override trained it anyway.</strong> ${escapeHtml(blocking.map(f => f.message).join(' '))}${reason}</p>`);
+        }
+        if (warnings.length > 0) {
+            parts.push(`<p class="run-note run-note-warn"><strong>Data checks.</strong> ${escapeHtml(warnings.map(f => f.message).join(' '))}</p>`);
+        }
+        if (blocking.length === 0 && warnings.length === 0) {
+            parts.push(`<p class="run-note field-note">Data checks passed on ${escapeHtml(String(checks.n_rows))} rows and ${escapeHtml(String(checks.n_features))} features.</p>`);
+        }
+    }
+    const cmp = data && data.model_comparison;
+    if (cmp && cmp.chosen) {
+        const rows = Array.isArray(cmp.summary) ? cmp.summary.map(r => `${escapeHtml(String(r.model).replace('_classifier', ''))} ${Number(r.mean).toFixed(3)} ± ${Number(r.std).toFixed(3)}`).join('; ') : '';
+        parts.push(`<p class="run-note field-note"><strong>AutoML chose ${escapeHtml(String(cmp.chosen).replace('_classifier', ''))}.</strong> ${escapeHtml(String(cmp.note || ''))} Mean ± SD over ${escapeHtml(String(cmp.folds))} folds and ${escapeHtml(String(cmp.seeds))} seed${cmp.seeds === 1 ? '' : 's'}: ${rows}. The comparison is drawn under Graphics.</p>`);
+    }
+    if (data && data.capacity_note) {
+        parts.push(`<p class="run-note run-note-warn"><strong>Model not kept.</strong> ${escapeHtml(String(data.capacity_note))}</p>`);
+    }
+    if (data && data.split_note) {
+        parts.push(`<p class="run-note field-note">${escapeHtml(String(data.split_note))}</p>`);
+    }
+    const base = data && data.baseline;
+    if (base && base.metric) {
+        const better = base.model_beats_baseline;
+        const verdict = better === true ? 'The model beats the baseline.' : (better === false ? 'The model does not beat the baseline. The score adds nothing beyond the target distribution.' : '');
+        parts.push(`<p class="run-note ${better === false ? 'run-note-warn' : 'field-note'}"><strong>Baseline.</strong> ${escapeHtml(base.description)} scores ${escapeHtml(String(base.baseline_value))} ${escapeHtml(base.metric)} on the validation split against ${escapeHtml(String(base.model_value))} for the model. ${verdict}</p>`);
+    }
+    if (data && data.model_card_url) {
+        parts.push(`<p class="run-note field-note"><a href="${escapeHtml(data.model_card_url)}" target="_blank" rel="noopener">Model card</a> and <a href="${escapeHtml(data.bundle_url)}">model bundle (.zip)</a> for this run.</p>`);
+    }
+    return parts.length ? `<div class="run-notes">${parts.join('')}</div>` : '';
+}
+
 function processModelResult(data, unitStr = '', predictorCols = [], hyperparameters = {}) {
+    if (typeof narrativeSetStep === 'function') narrativeSetStep('results');
+    // The way on shows once there is a model to apply, inside the results panel.
+    // Queued rather than called: the panel this appends to is revealed by the render
+    // that is still running, so a direct call finds every panel hidden.
+    if (typeof showInferenceForward === 'function') window.setTimeout(showInferenceForward, 0);
     console.log('processModelResult called with data:', data);
     try {
         const errorDiv = getCachedElement('errorDiv');
@@ -2805,7 +2886,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
 
                 //if multiple targets then need to let users select which graphic they want to see for each target
                 // Check if we're on Simple Modeling page (not Advanced Modeling)
-                // True when not on the standalone legacy advanced page (#advancedOptimization); unified advanced tab is still "simple" for this flag (CV button placement).
+                // True when not on the standalone legacy advanced page (#advancedOptimization); unified advanced tab is still "simple" for this value (CV button placement).
                 const isLegacyAdvancedPageVisible = document.getElementById('advancedOptimization') && !document.getElementById('advancedOptimization').classList.contains('hidden');
                 const isSimpleModelingPage = !isLegacyAdvancedPageVisible;
                 const crossValidationButton = isSimpleModelingPage ? '' : (data.cross_validation_file ? `
@@ -2867,9 +2948,9 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                                 <tr><td>Original Features</td><td>${data.feature_selection_info.original_count || 'N/A'}</td></tr>
                                 <tr><td>Selected Features</td><td>${data.feature_selection_info.selected_count || 'N/A'}</td></tr>
                                 ${data.feature_selection_info.selected_features && data.feature_selection_info.selected_features.length > 0 ? 
-                                    `<tr><td colspan="2"><strong>Selected Feature Names:</strong><br>${data.feature_selection_info.selected_features.join(', ')}</td></tr>` : ''}
+                                    `<tr><td colspan="2"><strong>Selected Feature Names:</strong><br>${escapeHtml(data.feature_selection_info.selected_features.join(', '))}</td></tr>` : ''}
                             </table>
-                        </div>` : '<p>No feature selection data available</p>';
+                        </div>` : (Array.isArray(data.skipped_options) && data.skipped_options.length > 0 ? `<p class="field-note">${escapeHtml(data.skipped_options.map(o => `${o.option}: ${o.reason}`).join('. '))}.</p>` : '<p>No feature selection data available</p>');
                     
                     // Build outlier handling table HTML
                     const outlierHandlingTableHtml = data.outlier_info ? `
@@ -2885,6 +2966,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                         </div>` : '<p>No outlier handling data available</p>';
                     
                     NumericResultDiv.innerHTML = `
+                    ${renderRunNotes(data)}
                     <div class="resultValues">
                         <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start;">
                             <div style="flex: 1; min-width: 300px;">
@@ -2902,10 +2984,10 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                                 </div>
                                 <div class="download-buttons" style="margin-top: 12px; display: flex; gap: 12px; align-items: center;">
                                     <a href="/download/model_performance.xlsx?download_name=${encodeURIComponent(performanceDownloadName)}" onclick="return downloadFile('model_performance.xlsx', '${performanceDownloadName}')">
-                                        <button type="button" class='downloadperformanceButton export-button'>Model Performance XLSX</button>
+                                        <button type="button" class='downloadperformanceButton export-button'>Performance XLSX</button>
                                     </a>
                                     <a href="/download/visualizations.pdf?download_name=${encodeURIComponent(visualizationsDownloadName)}" onclick="return downloadFile('visualizations.pdf', '${visualizationsDownloadName}')">
-                                        <button class="export-button" style="font-size: 0.95rem;">Visualizations PDF</button>
+                                        <button class="export-button" style="font-size: 0.95rem;">Graphics PDF</button>
                                     </a>
                                     ${crossValidationButton}
                                 </div>
@@ -2939,10 +3021,6 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                             <br>
                         </div>
 
-                    <div class="results-header" style="margin-top: 24px; margin-bottom: 16px;">
-                        <h2>Modeling Results</h2>
-                        <p>Charts, tables, and downloads will appear here.</p>
-                    </div>
                     <div class="result-graphic-row-train-test" style="display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;">
                         <div class="result-graphic-box" style="flex: 1; min-width: 320px;">
                             <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">Visualization 1</h4>
@@ -3128,9 +3206,9 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                                 <tr><td>Original Features</td><td>${data.feature_selection_info.original_count || 'N/A'}</td></tr>
                                 <tr><td>Selected Features</td><td>${data.feature_selection_info.selected_count || 'N/A'}</td></tr>
                                 ${data.feature_selection_info.selected_features && data.feature_selection_info.selected_features.length > 0 ? 
-                                    `<tr><td colspan="2"><strong>Selected Feature Names:</strong><br>${data.feature_selection_info.selected_features.join(', ')}</td></tr>` : ''}
+                                    `<tr><td colspan="2"><strong>Selected Feature Names:</strong><br>${escapeHtml(data.feature_selection_info.selected_features.join(', '))}</td></tr>` : ''}
                             </table>
-                        </div>` : '<p>No feature selection data available</p>';
+                        </div>` : (Array.isArray(data.skipped_options) && data.skipped_options.length > 0 ? `<p class="field-note">${escapeHtml(data.skipped_options.map(o => `${o.option}: ${o.reason}`).join('. '))}.</p>` : '<p>No feature selection data available</p>');
                     
                     // Build outlier handling table HTML for single target
                     const outlierHandlingTableHtmlSingle = data.outlier_info ? `
@@ -3146,7 +3224,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                         </div>` : '<p>No outlier handling data available</p>';
                     
                     NumericResultDiv.innerHTML = `
-                
+                ${renderRunNotes(data)}
                 <div class="resultValues">
                     <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start;">
                         <div style="flex: 1; min-width: 300px;">
@@ -3164,10 +3242,10 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                             </div>
                             <div class="download-buttons" style="margin-top: 12px; display: flex; gap: 12px; align-items: center;">
                                 <a href="/download/model_performance.xlsx?download_name=${encodeURIComponent(performanceDownloadName)}" onclick="return downloadFile('model_performance.xlsx', '${performanceDownloadName}')">
-                                    <button type="button" class='downloadperformanceButton export-button'>Model Performance XLSX</button>
+                                    <button type="button" class='downloadperformanceButton export-button'>Performance XLSX</button>
                                 </a>
                                 <a href="/download/visualizations.pdf?download_name=${encodeURIComponent(visualizationsDownloadName)}" onclick="return downloadFile('visualizations.pdf', '${visualizationsDownloadName}')">
-                                    <button class="export-button" style="font-size: 0.95rem;">Visualizations PDF</button>
+                                    <button class="export-button" style="font-size: 0.95rem;">Graphics PDF</button>
                                 </a>
                                 ${crossValidationButton}
                             </div>
@@ -3201,10 +3279,6 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                         <br>
                     </div>
 
-                    <div class="results-header" style="margin-top: 24px; margin-bottom: 16px;">
-                        <h2>Modeling Results</h2>
-                        <p>Charts, tables, and downloads will appear here.</p>
-                    </div>
                     <div class="result-graphic-row-train-test" style="display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;">
                         <div class="result-graphic-box" style="flex: 1; min-width: 320px;">
                             <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">Visualization 1</h4>
@@ -3338,9 +3412,9 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                             <tr><td>Original Features</td><td>${data.feature_selection_info.original_count || 'N/A'}</td></tr>
                             <tr><td>Selected Features</td><td>${data.feature_selection_info.selected_count || 'N/A'}</td></tr>
                             ${data.feature_selection_info.selected_features && data.feature_selection_info.selected_features.length > 0 ? 
-                                `<tr><td colspan="2"><strong>Selected Feature Names:</strong><br>${data.feature_selection_info.selected_features.join(', ')}</td></tr>` : ''}
+                                `<tr><td colspan="2"><strong>Selected Feature Names:</strong><br>${escapeHtml(data.feature_selection_info.selected_features.join(', '))}</td></tr>` : ''}
                         </table>
-                    </div>` : '<p>No feature selection data available</p>';
+                    </div>` : (Array.isArray(data.skipped_options) && data.skipped_options.length > 0 ? `<p class="field-note">${escapeHtml(data.skipped_options.map(o => `${o.option}: ${o.reason}`).join('. '))}.</p>` : '<p>No feature selection data available</p>');
                 
                 // Build outlier handling table HTML
                 const outlierHandlingTableHtml = data.outlier_info ? `
@@ -3359,6 +3433,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                 const _hasAdvancedOptions = data.feature_selection_info || data.outlier_info;
                 
                 ClassifierResultDiv.innerHTML = ` 
+                ${renderRunNotes(data)}
                 <div class="resultValues">
                     <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start;">
                         <div style="flex: 1; min-width: 300px;">
@@ -3380,10 +3455,10 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                             </div>
                             <div class="download-buttons" style="margin-top: 12px; display: flex; gap: 12px; align-items: center;">
                                 <a href="/download/model_performance.xlsx?download_name=${encodeURIComponent(performanceDownloadName)}" onclick="return downloadFile('model_performance.xlsx', '${performanceDownloadName}')">
-                                    <button type="button" class='downloadperformanceButton export-button'>Model Performance XLSX</button>
+                                    <button type="button" class='downloadperformanceButton export-button'>Performance XLSX</button>
                                 </a>
                                 <a href="/download/visualizations.pdf?download_name=${encodeURIComponent(visualizationsDownloadName)}" onclick="return downloadFile('visualizations.pdf', '${visualizationsDownloadName}')">
-                                    <button class="export-button" style="font-size: 0.95rem;">Visualizations PDF</button>
+                                    <button class="export-button" style="font-size: 0.95rem;">Graphics PDF</button>
                                 </a>
                             </div>
                         </div>
@@ -3418,12 +3493,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                     <br>
                 </div>
 
-                <div class="results-header" style="margin-top: 24px; margin-bottom: 16px;">
-                    <h2>Modeling Results</h2>
-                    <p>Charts, tables, and downloads will appear here.</p>
-                </div>
                 <h3>Graphics</h3>
-                <p style="margin-top: 4px; margin-bottom: 12px; color: #666; font-size: 0.95rem;">Modeling graphics will be displayed here</p>
                 <div class="result-graphic-row-train-test" style="display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;">
                     <div class="result-graphic-box" style="flex: 1; min-width: 320px;">
                         <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">Visualization 1</h4>
@@ -3484,6 +3554,16 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                 
                 const classifierImageSelector = document.getElementById('classifierImageSelector');
                 const classifierImageSelector2 = document.getElementById('classifierImageSelector2');
+                // The candidate comparison exists only for an AutoML run with no model named.
+                if (data.model_comparison && data.model_comparison.figure) {
+                    [classifierImageSelector, classifierImageSelector2].forEach((sel, i) => {
+                        if (!sel) return;
+                        const o = document.createElement('option');
+                        o.value = 'model_comparison'; o.textContent = 'Candidate model comparison';
+                        sel.insertBefore(o, sel.firstChild);
+                        if (i === 1) sel.value = 'model_comparison';
+                    });
+                }
                 const classifierGraphic = document.getElementById('classifierGraphic');
                 const classifierGraphic2 = document.getElementById('classifierGraphic2');
                 const classifierGraphicUrl = (value) => withApiRoot(`/user-visualizations/${value}.png?t=${Date.now()}`);
@@ -3518,6 +3598,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                     </table>` : '<p>No hyperparameters to display</p>';
                 
                 if (ClusterResultDiv) ClusterResultDiv.innerHTML = ` 
+                    ${renderRunNotes(data)}
                     <div class="resultValues">
                         <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start;">
                             <div style="flex: 1; min-width: 300px;">
@@ -3533,10 +3614,10 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                                 <p style="margin-top: 12px;"><strong>Best K:</strong> ${data.best_k}</p>
                                 <div class="download-buttons" style="margin-top: 12px; display: flex; gap: 12px; align-items: center;">
                                     <a href="${withApiRoot('/download/model_performance.xlsx')}?download_name=${encodeURIComponent(performanceDownloadName)}" onclick="return downloadFile('model_performance.xlsx', '${performanceDownloadName}')">
-                                        <button class='downloadperformanceButton export-button'>Model Performance XLSX</button>
+                                        <button class='downloadperformanceButton export-button'>Performance XLSX</button>
                                     </a>
                                     <a href="${withApiRoot('/download/visualizations.pdf')}?download_name=${encodeURIComponent(visualizationsDownloadName)}" onclick="return downloadFile('visualizations.pdf', '${visualizationsDownloadName}')">
-                                        <button class="export-button" style="font-size: 0.95rem;">Visualizations PDF</button>
+                                        <button class="export-button" style="font-size: 0.95rem;">Graphics PDF</button>
                                     </a>
                                 </div>
                             </div>
@@ -3551,12 +3632,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                         <br>
                     </div>
 
-                    <div class="results-header" style="margin-top: 24px; margin-bottom: 16px;">
-                        <h2>Modeling Results</h2>
-                        <p>Charts, tables, and downloads will appear here.</p>
-                    </div>
                     <h3>Graphics</h3>
-                    <p style="margin-top: 4px; margin-bottom: 12px; color: #666; font-size: 0.95rem;">Modeling graphics will be displayed here</p>
                     <div class="result-graphic-row-train-test" style="display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;">
                         <div class="result-graphic-box" style="flex: 1; min-width: 320px;">
                             <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">Visualization 1</h4>
@@ -3611,7 +3687,33 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
     } catch (error) {
         console.error('Error processing result:', error);
         const errDiv = getCachedElement('errorDiv');
-        if (errDiv) showError(errDiv, 'Result processing failed. See console for details.');
+        if (errDiv) showError(errDiv, 'DiGiTerra cannot process the result. Open the browser console for the details.');
     }
 }
 
+
+
+/* Put "Continue to Inference on New Data" in the results panel of the visible mode.
+   It appears only after a run has finished, because before that there is no model to
+   apply and the button would lead to a page that refuses. */
+function showInferenceForward() {
+    const panels = ['NumericResultDiv', 'ClusterResultDiv', 'ClassifierResultDiv']
+    for (const id of panels) {
+        const panel = document.getElementById(id)
+        if (!panel || panel.classList.contains('hidden')) continue
+        if (panel.querySelector('.results-forward')) return
+        const wrap = document.createElement('div')
+        wrap.className = 'results-forward'
+        const button = document.createElement('button')
+        button.type = 'button'
+        button.className = 'success-button'
+        button.id = 'continueToInferenceButton'
+        button.textContent = 'Continue to Inference on New Data'
+        button.addEventListener('click', () => {
+            if (typeof showTab === 'function') showTab('historic')
+        })
+        wrap.appendChild(button)
+        panel.appendChild(wrap)
+        return
+    }
+}

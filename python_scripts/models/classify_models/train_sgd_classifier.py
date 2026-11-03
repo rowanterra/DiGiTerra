@@ -1,15 +1,33 @@
 from sklearn.linear_model import SGDClassifier
 from sklearn.multioutput import MultiOutputClassifier
+
 from python_scripts.preprocessing.run_classification_pipeline import run_classification
 
 
-def train_sgd_classifier(train_data, target_variables, use_stratified_split,
-                         X, y, stratifyColumn, units,
-                         X_scaler_type,
-                         seed, quantileBinDict, sigfig, useTransformer, categorical_cols, testSize,
-                         feature_selection_method='none', feature_selection_k=None,
-                         outlier_method='none', outlier_action='remove',
-                         hyperparameter_search='none', search_cv_folds=5, search_n_iter=50, **kwargs):
+def train_sgd_classifier(
+    train_data,
+    target_variables,
+    use_stratified_split,
+    X,
+    y,
+    stratifyColumn,
+    units,
+    X_scaler_type,
+    seed,
+    quantileBinDict,
+    sigfig,
+    useTransformer,
+    categorical_cols,
+    testSize,
+    feature_selection_method="none",
+    feature_selection_k=None,
+    outlier_method="none",
+    outlier_action="remove",
+    hyperparameter_search="none",
+    search_cv_folds=5,
+    search_n_iter=50,
+    **kwargs,
+):
     base = SGDClassifier(
         loss=kwargs.get("loss", "hinge"),
         penalty=kwargs.get("penalty", "l2"),
@@ -24,7 +42,8 @@ def train_sgd_classifier(train_data, target_variables, use_stratified_split,
         n_jobs=kwargs.get("n_jobs", None),
         random_state=kwargs.get("random_state", seed),
         learning_rate=kwargs.get("learning_rate", "optimal"),
-        eta0=kwargs.get("eta0", 0.0),
+        # scikit-learn 1.7 and later reject eta0 = 0; 0.01 is the library default.
+        eta0=kwargs.get("eta0") or 0.01,
         power_t=kwargs.get("power_t", 0.5),
         early_stopping=kwargs.get("early_stopping", False),
         validation_fraction=kwargs.get("validation_fraction", 0.1),
@@ -36,13 +55,28 @@ def train_sgd_classifier(train_data, target_variables, use_stratified_split,
     model = base if (target_variables is not None and len(target_variables) == 1) else MultiOutputClassifier(base)
 
     return run_classification(
-        model, "SGDClassifier",
-        train_data, target_variables, use_stratified_split,
-        X, y, stratifyColumn,
-        units, X_scaler_type,
-        seed, sigfig, quantileBinDict, useTransformer, categorical_cols, testSize,
-        feature_selection_method=feature_selection_method, feature_selection_k=feature_selection_k,
-        outlier_method=outlier_method, outlier_action=outlier_action,
-        hyperparameter_search=hyperparameter_search, search_cv_folds=search_cv_folds, search_n_iter=search_n_iter,
-        modeling_mode=kwargs.get('modeling_mode', 'simple')
+        model,
+        "SGDClassifier",
+        train_data,
+        target_variables,
+        use_stratified_split,
+        X,
+        y,
+        stratifyColumn,
+        units,
+        X_scaler_type,
+        seed,
+        sigfig,
+        quantileBinDict,
+        useTransformer,
+        categorical_cols,
+        testSize,
+        feature_selection_method=feature_selection_method,
+        feature_selection_k=feature_selection_k,
+        outlier_method=outlier_method,
+        outlier_action=outlier_action,
+        hyperparameter_search=hyperparameter_search,
+        search_cv_folds=search_cv_folds,
+        search_n_iter=search_n_iter,
+        modeling_mode=kwargs.get("modeling_mode", "simple"),
     )

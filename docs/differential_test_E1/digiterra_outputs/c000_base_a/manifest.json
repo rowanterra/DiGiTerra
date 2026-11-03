@@ -1,0 +1,211 @@
+{
+  "format": "digiterra-bundle/2",
+  "created_at": "2026-09-24T18:29:44+00:00",
+  "data": {
+    "filename": "diabetes_E1_base.csv",
+    "sha256": "993f239564d1f21e468b9a28df595662536c3e7273e1d3d033b019dd0fcab138",
+    "bytes": 96803,
+    "rows": 442,
+    "columns": 12,
+    "uploaded_at": "2026-09-24T18:29:38+00:00"
+  },
+  "model": {
+    "name": "Linear",
+    "problem_type": "regression",
+    "estimator": "LinearRegression",
+    "params": {
+      "copy_X": true,
+      "fit_intercept": true,
+      "n_jobs": null,
+      "positive": false,
+      "tol": 1e-06
+    },
+    "features": [
+      "age",
+      "sex",
+      "bmi",
+      "bp",
+      "s1",
+      "s2",
+      "s3",
+      "s4",
+      "s5",
+      "s6"
+    ],
+    "targets": [
+      "target"
+    ],
+    "seed": 20260924
+  },
+  "request": {
+    "crossValidationType": "None",
+    "dropMissing": "none",
+    "dropZero": "none",
+    "featureSelectionMethod": "none",
+    "hyperparameterSearch": "none",
+    "hyperparameters": {},
+    "imputeStrategy": "none",
+    "indicators": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "modelingMode": "advanced",
+    "models": "Linear",
+    "nonreq": false,
+    "outlierMethod": "none",
+    "predictors": [
+      11
+    ],
+    "quantileBinDict": {
+      "bin": 0,
+      "binsLabel": "",
+      "quantile": 0
+    },
+    "scaler": "none",
+    "seedValue": 20260924,
+    "sigfig": 10,
+    "splitColumn": "order",
+    "splitMethod": "time",
+    "stratifyBool": false,
+    "testSize": "0.20",
+    "transformerCols": [],
+    "units": "",
+    "useTransformer": "No",
+    "zeroHandle": "none"
+  },
+  "preprocessing": {
+    "inference_config": {
+      "indicator_names": [
+        "age",
+        "sex",
+        "bmi",
+        "bp",
+        "s1",
+        "s2",
+        "s3",
+        "s4",
+        "s5",
+        "s6"
+      ],
+      "predictor_names": [
+        "target"
+      ],
+      "drop_missing": "none",
+      "impute_strategy": "none",
+      "drop_zero": "none",
+      "zero_handle": "none",
+      "useTransformer": "No"
+    },
+    "impute_fill_values": {},
+    "zero_fill_values": {},
+    "split_note": "Time-ordered holdout on column 'order': the latest 20% of rows (89 of 442) are the test set.",
+    "feature_selection": null,
+    "outliers": null
+  },
+  "applicability": {
+    "detector": "IsolationForest",
+    "threshold": -0.5710060853960561,
+    "percentile": 1.0,
+    "n_train": 353,
+    "feature_min": {
+      "age": -0.1072256316073538,
+      "sex": -0.0446416365069891,
+      "bmi": -0.0848862355291054,
+      "bp": -0.1123988025440844,
+      "s1": -0.1267806699165132,
+      "s2": -0.1156130659793989,
+      "s3": -0.1023070505174159,
+      "s4": -0.0763945037500033,
+      "s5": -0.1260971208333046,
+      "s6": -0.137767225690003
+    },
+    "feature_max": {
+      "age": 0.1107266754538114,
+      "sex": 0.0506801187398186,
+      "bmi": 0.170555225980644,
+      "bp": 0.132043616741213,
+      "s1": 0.1539137131565154,
+      "s2": 0.198787989657294,
+      "s3": 0.1811790603972785,
+      "s4": 0.1852344432601986,
+      "s5": 0.1335972819219135,
+      "s6": 0.135611830689071
+    }
+  },
+  "uncertainty": {
+    "method": "split conformal",
+    "alpha": 0.1,
+    "coverage": 0.9,
+    "n_validation": 89,
+    "half_width": {
+      "target": 92.70015425304807
+    },
+    "per_row": true
+  },
+  "metrics": {
+    "trainscore": "0.5160004587",
+    "valscore": "0.5195043978",
+    "trainrmse": "53.4590502658",
+    "valrmse": "53.8084298037",
+    "trainmae": "43.1348242468",
+    "valmae": "44.4422914892",
+    "train_n": 353,
+    "test_n": 89
+  },
+  "cross_validation": null,
+  "baseline": {
+    "kind": "regression",
+    "description": "Predicting the training mean",
+    "metric": "R\u00b2",
+    "baseline_value": -0.0008,
+    "model_value": 0.5195,
+    "baseline_rmse": 77.658296,
+    "training_mean": [
+      152.58640226628896
+    ],
+    "model_beats_baseline": true
+  },
+  "data_checks": {
+    "n_rows": 442,
+    "n_features": 10,
+    "blocking": [],
+    "warnings": [],
+    "allow_unsafe": false,
+    "forced": false,
+    "override_reason": null,
+    "decision_use": "no blocking findings"
+  },
+  "environment": {
+    "packages": {
+      "python": "3.11.15",
+      "numpy": "1.26.4",
+      "pandas": "2.3.3",
+      "scikit-learn": "1.9.0",
+      "scipy": "1.17.1",
+      "shap": "0.49.1",
+      "xgboost": null,
+      "lightgbm": null,
+      "catboost": null,
+      "joblib": "1.6.0",
+      "digiterra": "0.1.0"
+    },
+    "platform": "Linux-6.18.44-fc-v37-x86_64-with-glibc2.39"
+  },
+  "artifact": {
+    "file": "model.skops",
+    "sha256": "e82834fd90f96b72461d52a9f69bccc79360e9bb8ed806e4ee664e3dca09efa1",
+    "bytes": 3426742,
+    "serializer": "skops 0.14.0",
+    "signature": "9c85384150c23ee26fcdfda3dd385350f9ec26c4921bce982aba5fb72f9bd9c4",
+    "signature_algorithm": "HMAC-SHA256",
+    "key_id": "735ace13996bcc3c"
+  }
+}
