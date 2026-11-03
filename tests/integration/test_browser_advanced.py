@@ -20,6 +20,9 @@ playwright_sync = pytest.importorskip("playwright.sync_api")
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 EXAMPLES = os.path.join(ROOT, "examples")
+RESULTS_STEP_CURRENT = (
+    "document.querySelector('#narrativeFlow .narrative-step[data-step=\"results\"].is-current') !== null"
+)
 
 
 def _free_port():
@@ -430,7 +433,7 @@ def test_the_rail_carries_a_run_from_a_cold_load(live_session):
     # arrives over the progress stream. Wait for the strip to reach Results, which
     # is the page's own statement that the run finished.
     assert run.value.status in (200, 202), f"run refused: {run.value.status} {run.value.text()[:200]}"
-    p.wait_for_function("document.querySelector('#narrativeFlow .narrative-step[data-step=\"results\"].is-current') !== null", timeout=180000)
+    p.wait_for_function(RESULTS_STEP_CURRENT, timeout=180000)
 
     # Inference is reachable from the rail once a model exists.
     _rail_entry(s, "historic").click()
@@ -636,7 +639,10 @@ def test_the_page_states_what_the_detection_found(session):
     assert "island and sex are text" in text, text
     # The controls stay behind the sentence until a reader asks for them.
     # Each sentence opens its own panel (pass 4); the wrapper itself is not toggled.
-    panel_hidden = "() => document.getElementById('dataCleaningMissingWrapper').closest('.preprocess-panel').classList.contains('hidden')"
+    panel_hidden = (
+        "() => document.getElementById('dataCleaningMissingWrapper')"
+        ".closest('.preprocess-panel').classList.contains('hidden')"
+    )
     assert p.evaluate(panel_hidden)
     p.click("#preprocessFindings .preprocess-change")
     p.wait_for_timeout(300)
@@ -665,7 +671,7 @@ def test_the_example_path_runs_from_the_welcome_screen_to_a_prediction(live_sess
     with p.expect_response(lambda r: r.url.endswith("/process"), timeout=180000) as run:
         p.click("#processButton", force=True)
     assert run.value.status in (200, 202), run.value.text()[:300]
-    p.wait_for_function("document.querySelector('#narrativeFlow .narrative-step[data-step=\"results\"].is-current') !== null", timeout=300000)
+    p.wait_for_function(RESULTS_STEP_CURRENT, timeout=300000)
     p.wait_for_timeout(800)
     # The figures are the first thing in the results and both are in the window.
     _figures_in_view(p, ".result-graphic-box img")

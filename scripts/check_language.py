@@ -42,8 +42,17 @@ STE_JS = (
 )
 
 # Standard B: the prose.
-PROSE = ("README.md", "CHANGELOG.md", "CONTRIBUTING.md", "docs/reviews/AUDIT_RESUME.md", "deploy/README.md", "examples/README.md")
+PROSE = (
+    "README.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "docs/reviews/AUDIT_RESUME.md",
+    "deploy/README.md",
+    "examples/README.md",
+)
 PROSE_DIRS = ("docs",)
+# A deposited review, kept as written: it quotes the old interface text it reviewed.
+PROSE_SKIP = ("docs/COMMIT_REVIEW_2026-09-04.md",)
 
 STE_PROCEDURAL_WORDS = 20
 STE_DESCRIPTIVE_WORDS = 25
@@ -245,7 +254,7 @@ def _prose_files() -> list[Path]:
     files = [ROOT / p for p in PROSE if (ROOT / p).exists()]
     for d in PROSE_DIRS:
         files += sorted((ROOT / d).glob("*.md"))
-    return files
+    return [f for f in files if str(f.relative_to(ROOT)) not in PROSE_SKIP]
 
 
 def scan_prose(report: Report) -> None:
