@@ -89,9 +89,9 @@ its `RESULT_2026-09-24_partial.txt` names the three defects it found and their f
 (a crafted artifact, path traversal, a foreign session, formula cells, a CSV with markup in its
 headers through both pages, cleared fields, a model-change race, Escape on a focused
 tooltip, figures in a 720 px window, and the review's pipeline tests) and prints one line
-per probe; `docs/adversarial_check_2026-09-25b.json` is its record at commit 15fe96c, 10 of 10. Run it before
+per probe; `docs/adversarial_check_2026-09-25b.json` is its record at commit b0589ff, 10 of 10. Run it before
 a release and after any change to the routes, the pipeline or the two pages.
-`tests/integration/test_browser_advanced.py` drives the page in Chromium through Playwright
+`tests/integration/test_browser_advanced.py` runs the page in Chromium through Playwright
 and checks that values typed into Advanced-mode controls reach the training request; the
 test skips itself when Playwright or the browser is absent.
 
@@ -133,7 +133,7 @@ two processor types agree.
 
 ## Regression stability across seeds
 
-`python_scripts/preprocessing/evaluate_regression_robustness.py` repeats the train/test split and cross-validation over a range of seeds and records the spread:
+`python_scripts/preprocessing/evaluate_regression_robustness.py` repeats the train/test split and cross-validation over a set of seeds and records the spread:
 
 ```bash
 python python_scripts/preprocessing/evaluate_regression_robustness.py \

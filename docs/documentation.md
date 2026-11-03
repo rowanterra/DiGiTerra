@@ -15,7 +15,7 @@ Indicators are the input columns. Targets are the output columns to predict or c
 
 ## Regression stability across seeds
 
-`python_scripts/preprocessing/evaluate_regression_robustness.py` repeats the train/test split and cross-validation over a range of seeds, keeps the split consistent within each seed, and writes per-seed metrics for every model and feature-set combination together with aggregate statistics (median, mean, standard deviation, and 95% empirical interval). A run of 30 seeds is a reasonable screen. The finalist is then confirmed on an external validation dataset.
+`python_scripts/preprocessing/evaluate_regression_robustness.py` repeats the train/test split and cross-validation over a set of seeds, keeps the split consistent within each seed, and writes per-seed metrics for every model and feature-set combination together with aggregate statistics (median, mean, standard deviation, and 95% empirical interval). A run of 30 seeds is a reasonable screen. The finalist is then confirmed on an external validation dataset.
 
 ## File format and column entry
 
@@ -84,9 +84,9 @@ for that row falls outside the range seen in training, and is empty when none do
 
 A regression run also writes `lower_90` and `upper_90`, a 90 percent interval from
 split conformal. The half-width is the quantile of the absolute residuals on the
-validation rows, in the units of the target. The interval holds for at least nine rows
-in ten, provided the new rows are exchangeable with the validation rows. Where they are
-not, it does not hold, and the novelty score is the check on that: a row reported as
+validation rows, in the units of the target. The interval contains the observed value for at least nine
+rows in ten, provided the new rows are exchangeable with the validation rows. Where they are
+not, that coverage is not guaranteed, and the novelty score is the check on that: a row reported as
 unlike the training data is a row whose interval should not be relied on.
 
 A classification run writes one `probability_` column per class and `max_probability`.

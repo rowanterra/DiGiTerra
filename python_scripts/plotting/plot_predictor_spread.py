@@ -71,7 +71,7 @@ def plot_predictor_spread(
         return None
 
     n = len(predictors)
-    fig, axes = plt.subplots(n, 1, figsize=(7.0, max(2.2, 0.62 * n + 1.0)), squeeze=False)
+    fig, axes = plt.subplots(n, 1, figsize=(8.0, max(2.6, 1.05 * n + 0.8)), squeeze=False)
     axes = axes[:, 0]
     for ax, p in zip(axes, predictors, strict=True):
         col = p["column"]
@@ -85,7 +85,7 @@ def plot_predictor_spread(
         boxes = ax.bxp(
             stats,
             positions=positions,
-            vert=False,
+            orientation="horizontal",
             widths=0.6,
             patch_artist=True,
             showfliers=False,

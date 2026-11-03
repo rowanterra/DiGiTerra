@@ -1,7 +1,7 @@
 Differential test E1, DiGiTerra side rerun of 2026-09-25 after the change to scikit-learn defaults.
 
 What was rerun: scripts/run_digiterra.py from docs/differential_test_E1, unchanged, against the
-DiGiTerra tree of this commit (0b0ae6e with the Polynomial, Perceptron and Birch changes that
+DiGiTerra tree of this commit (ac12fb3 with the Polynomial, Perceptron and Birch changes that
 follow it), in a Linux x86_64 container with Python 3.11.15, scikit-learn 1.9.0, numpy 1.26.4 and
 pandas 2.3.3 (digiterra_outputs/versions.txt). The reference programs (R, Excel, Orange, AI Studio)
 and the arbiter were not rerun; their saved outputs in docs/differential_test_E1 do not depend on

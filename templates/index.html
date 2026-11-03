@@ -36,7 +36,6 @@
         </nav>
         <div class="header-links">
             <button type="button" class="tab-button documentation-button" data-tab="documentation" id="documentationButton">Documentation</button>
-            <button type="button" class="tab-button documentation-button" id="tutorialButton">Tutorial</button>
         </div>
         <div class="right"></div>
     </header>
@@ -54,10 +53,18 @@
             </h1>
             <h4>A Machine Learning Exploration Tool</h4>
             <div class="welcome-actions">
-                <button class="welcomebutton" id='startModelingButton' aria-label="Start modeling process">Start Modeling</button>
-                <button type="button" class="welcomebutton welcomebutton--secondary" id="tryExampleButton" aria-label="Load the example penguin dataset">Try an Example</button>
+                <div class="welcome-action">
+                    <button class="welcomebutton" id='startModelingButton' aria-label="Start modeling process">Start Modeling</button>
+                </div>
+                <div class="welcome-action">
+                    <button type="button" class="welcomebutton welcomebutton--secondary" id="tryExampleButton" aria-label="Load the example penguin dataset" aria-describedby="welcomeExampleNote">Try an Example</button>
+                    <p class="welcome-example-note" id="welcomeExampleNote">Loads <code>penguins.csv</code>, 344 rows of Palmer penguin measurements, and opens Data Exploration. Nothing is uploaded from this computer.</p>
+                </div>
+                <div class="welcome-action">
+                    <button type="button" class="welcomebutton welcomebutton--secondary" id="tryPresetButton" aria-describedby="welcomePresetNote">Mine Drainage Example</button>
+                    <p class="welcome-example-note" id="welcomePresetNote">Choose one of the rare earth tables from the study package (regression or classes). The table is not included with DiGiTerra; the columns are recognized and the run is filled in.</p>
+                </div>
             </div>
-            <p class="welcome-example-note">Loads <code>penguins.csv</code>, 344 rows of Palmer penguin measurements, and opens Data Exploration. Nothing is uploaded from your computer.</p>
         </div>
         <div class="welcomesection logos">
             <img src='{{ static_root }}/ORISELogo.png' class="ORISE" alt="Oak Ridge Institute for Science and Education logo">
@@ -104,7 +111,7 @@
                     <p>The interface says <em>Model</em> throughout. The documentation and the code say <em>estimator</em> in one place, and the two mean different things. An estimator is the registry entry a person selects. A model is what exists after that estimator is fitted to data.</p>
                 <svg class="dg-flow" viewBox="0 0 1080 1150" role="img" aria-labelledby="dgFlowTitle dgFlowDesc" xmlns="http://www.w3.org/2000/svg">
                   <title id="dgFlowTitle">How one DiGiTerra run moves through the application</title>
-                  <desc id="dgFlowDesc">A two-lane flow chart. The left lane holds the steps a user takes and the right lane holds the steps the application takes. A shaded band behind each group of steps names the page they belong to: Upload, Data Exploration, Model Preprocessing, Modeling, and Inference on New Data. Rectangles are steps and diamonds are decisions. A blocking data check stops the run, a run with no free training slot is queued, and a prediction file whose columns do not match is refused.</desc>
+                  <desc id="dgFlowDesc">A two-lane flow chart. The left lane contains the steps a user takes and the right lane contains the steps the application takes. A shaded band behind each group of steps names the page they belong to: Upload, Data Exploration, Model Preprocessing, Modeling, and Inference on New Data. Rectangles are steps and diamonds are decisions. A blocking data check stops the run, a run with no free training slot is queued, and a prediction file whose columns do not match is refused.</desc>
                   <defs>
                     <marker id="dgArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                       <path class="dg-arrowhead" d="M 0 0 L 10 5 L 0 10 z"/>
@@ -221,46 +228,46 @@
                     <h3>Tutorial</h3>
                 </summary>
                 <div class="doc-section-body">
-                    <p>This tutorial trains one classifier on <code>examples/penguins.csv</code>, a file that ships with DiGiTerra. It holds 344 rows of Palmer penguin measurements in 7 columns. The target is the species. Two columns hold text and eleven rows have a missing value, so the run uses one-hot encoding, missing-value handling and a stratified split.</p>
+                    <p>This tutorial trains one classifier on <code>examples/penguins.csv</code>, a file included with DiGiTerra. It contains 344 rows of Palmer penguin measurements in 7 columns. The target is the species. Two columns contain text and eleven rows have a missing value, so the run uses one-hot encoding, missing-value handling and a stratified split.</p>
                     <p>Column A is <code>species</code>, the target. B is <code>island</code>, text. C to F are the measurements. G is <code>sex</code>, text.</p>
 
                     <h4>1. Load the file</h4>
                     <p class="doc-step">Click <strong>Try an Example</strong> on the welcome screen.</p>
-                    <p class="doc-note">The rail appears on the left. Its Data panel reads <em>penguins.csv, 344 &times; 7</em>. DiGiTerra fills the run in: the task, the columns, the cleaning, the transform, the stratified split and the seed all arrive set. Every field stays editable, and step 8 shows where to change one.</p>
+                    <p class="doc-note">The rail appears on the left. Its Data panel reads <em>penguins.csv, 344 &times; 7</em>. DiGiTerra fills in the task, columns, cleaning, transform, stratified split and seed. Every field stays editable, and step 8 shows where to change one.</p>
 
                     <h4>2. Look at the data</h4>
                     <p class="doc-step">Click <strong>Data Exploration</strong> in the rail. Click <strong>Evaluate</strong>.</p>
-                    <p class="doc-note">The correlation columns arrive set to C-F, the four measurements. A heat map and the descriptive statistics appear. Flipper length and body mass correlate most.</p>
+                    <p class="doc-note">The correlation columns are preset to C-F, the four measurements. A heat map and the descriptive statistics appear. Flipper length and body mass correlate most.</p>
 
                     <h4>3. Read what the data needs</h4>
                     <p class="doc-step">Click <strong>Model Preprocessing</strong> in the rail.</p>
                     <p class="doc-note">The page checks the columns itself and states what it found: <em>11 rows have a blank. DiGiTerra will remove them.</em> and <em>island and sex are text. DiGiTerra will one-hot encode them.</em> The task reads Classification, the indicators B-G and the target A.</p>
 
-                    <h4>4. Change an action, if you want to</h4>
+                    <h4>4. Optional: change an action</h4>
                     <p class="doc-step">Click <strong>change</strong> beside a sentence.</p>
                     <p class="doc-note">The controls behind that sentence appear. The blanks can be filled with a mean or a median instead of the rows being removed. Leave them as they are to follow the tutorial.</p>
 
                     <h4>5. Check the split</h4>
-                    <p class="doc-step">Open <strong>More settings</strong>.</p>
-                    <p class="doc-note">Stratify is set to Yes on column A. The classes are uneven, at 152, 124 and 68, and a stratified split holds those proportions in the training rows and the test rows, so the smallest class is not left out of one of them. Quantiles and bins are not offered, because they cut a continuous column into groups and the species column is text. The seed reads 33.</p>
+                    <p class="doc-step">Click <strong>change</strong> beside the stratify sentence.</p>
+                    <p class="doc-note">Stratify is set to Yes on column A. The classes are uneven, at 152, 124 and 68, and a stratified split keeps those proportions in the training rows and the test rows, so the smallest class is not left out of one of them. Quantiles and bins are not offered, because they cut a continuous column into groups and the species column is text. The seed reads 33.</p>
 
                     <h4>6. Train the model</h4>
                     <p class="doc-step">Click <strong>Continue to Modeling</strong> at the foot of the rail.</p>
-                    <p class="doc-step">The example arrives with <strong>Random Forest Classifier</strong> chosen; any model in the Models panel can take its place. Click <strong>Run This Model</strong>.</p>
+                    <p class="doc-step">The example arrives with <strong>Random Forest Classifier</strong> chosen; any model in the <strong>Select Model</strong> list can take its place. Click <strong>Run This Model</strong>.</p>
                     <p class="doc-note">The strip at the top moves to Run and then to Results. The result gives an accuracy near 0.99 on the test rows, a confusion matrix over the three species, and a comparison with the baseline. The baseline predicts Adelie every time and reaches about 0.44, so the model earns its place. The exact numbers move with the seed.</p>
 
                     <h4>7. Predict on new rows</h4>
                     <p class="doc-step">Click <strong>Continue to Inference on New Data</strong> at the foot of the rail, once a run has finished.</p>
                     <p class="doc-step">Click <strong>Use the Example Rows</strong>.</p>
                     <p class="doc-note">DiGiTerra scores <code>examples/penguins_new.csv</code>, 22 rows drawn from the three species with no blanks. One predicted species comes back for each row, and a line under the summary says how many match the species each row was drawn from. The rows are synthetic, so the count is a check on the run rather than a score.</p>
-                    <p class="doc-note">Two more lines say how much to trust the predictions. One reports how many rows score as unlike the training data and how many hold a value outside the training range; the other reports the lowest class probability. The results file carries <code>novelty_score</code>, <code>novel_row</code> and <code>out_of_range_columns</code> for every row, and one probability column per class. The next section explains them.</p>
+                    <p class="doc-note">Two more lines say how much to trust the predictions. One reports how many rows score as unlike the training data and how many have a value outside the training range; the other reports the lowest class probability. The results file contains <code>novelty_score</code>, <code>novel_row</code> and <code>out_of_range_columns</code> for every row, and one probability column per class. The next section explains them.</p>
 
                     <h4>How far the new rows are from the training data</h4>
                     <p>A model returns a prediction for any row whose columns parse, including a row nothing like the data it was trained on. Two sets of columns in the results file say which of those a prediction is.</p>
                     <p><code>novelty_score</code> comes from an IsolationForest fitted on the training rows, on the same features the model reads. A higher score means a row more like the training rows. <code>novel_row</code> is true when the score falls below the first percentile of the training rows' own scores. That threshold is recorded when the model is trained and is not recomputed from the new file, because a file of unusual rows would otherwise look ordinary against itself. <code>out_of_range_columns</code> lists the numeric columns whose value for that row falls outside the range seen in training.</p>
-                    <p>A regression run also writes <code>lower_90</code> and <code>upper_90</code>, a 90 percent interval from split conformal, in the units of the target. The interval holds for at least nine rows in ten, provided the new rows are exchangeable with the validation rows. The novelty score is the check on that: a row reported as unlike the training data is a row whose interval should not be relied on.</p>
+                    <p>A regression run also writes <code>lower_90</code> and <code>upper_90</code>, a 90 percent interval from split conformal, in the units of the target. The interval contains the observed value for at least nine rows in ten, provided the new rows are exchangeable with the validation rows. The novelty score is the check on that: a row reported as unlike the training data is a row whose interval should not be relied on.</p>
                     <p>A classification run writes one probability column per class and <code>max_probability</code>. An estimator with no probability of its own writes neither, and the model card records that it could not.</p>
-                    <p>The results page states both in one line each, and the model card carries the detector, the threshold, the training ranges, alpha and the validation size.</p>
+                    <p>The results page states both in one line each, and the model card records the detector, the threshold, the training ranges, alpha and the validation size.</p>
 
                     <h4>8. Watch a data check stop a run</h4>
                     <p>A data check refuses a run whose result would mislead. This step causes one on purpose.</p>
@@ -268,7 +275,7 @@
                     <p class="doc-step">Click <strong>Replace</strong> beside the file name in the rail, and upload the new file. Set the task type to <em>Classification</em>. Enter <code>B-H</code> in <strong>Indicator Columns</strong> and <code>A</code> in <strong>Target Columns</strong>. Continue, select a model, and run it.</p>
                     <p class="doc-note">The run stops. The page reads: <em>DiGiTerra stopped the run. The data checks found a problem that makes the result misleading. Every value of &#39;leak&#39; maps to exactly one class of &#39;species&#39;. The column is the target in another form. Remove the column, then train again.</em></p>
                     <p>The message is correct. A column that copies the target predicts it perfectly, and a score from that column says nothing about new data. Remove the column and run the model again.</p>
-                    <p class="doc-note">The desktop build allows a run past a data check. Open <strong>More settings</strong>, then <strong>Data Checks</strong>, and give a reason. A served installation does not allow it unless the operator turns it on. A run that skips a check is recorded as not valid for decision use.</p>
+                    <p class="doc-note">The desktop build allows a run past a data check. On the Modeling page, open <strong>Advanced</strong>, then <strong>Data Checks</strong>, and give a reason. A served installation does not allow it unless the operator turns it on. A run that skips a check is recorded as not valid for decision use.</p>
                 </div>
             </details>
         </div>
@@ -362,7 +369,7 @@
                     <h3>Modeling Approaches</h3>
                 </summary>
                 <div class="doc-section-body">
-                    <p>The registry holds 69 trainable estimators: 33 for regression, 24 for classification and 12 for clustering. Every mode offers all of them for its task, so the rail catalog reads 33, 24 or 12 with the task type. <code>tests/unit/test_catalog_reachable.py</code> reads the sweep record and fails when an estimator trains but no select offers it.</p>
+                    <p>The registry contains 69 trainable estimators: 33 for regression, 24 for classification and 12 for clustering. Every mode offers all of them for its task, so the model list contains 33, 24 or 12 with the task type. <code>tests/unit/test_catalog_reachable.py</code> reads the sweep record and fails when an estimator trains but no select offers it.</p>
             <p>Regression and classification offer three modeling modes after Model Preprocessing. The modes are independent, and clustering has one interface with no mode selection.</p>
             <p><strong>AutoML</strong> selects and tunes the model without manual configuration. It chooses the estimator (or takes the one named), selects features by recursive feature elimination, removes outliers with Isolation Forest, tunes hyperparameters by randomized search, and scores by cross-validation.</p>
             <p><strong>Simple Modeling</strong> fits one chosen estimator with its main hyperparameters and reports the score against a baseline.</p>
@@ -666,7 +673,7 @@
                             </div>
                         </div>
 
-                        <h3 class="preprocess-section-title">Transformer</h3>
+                        <h3 class="preprocess-section-title">Text columns</h3>
                         <div id="transformerOptionWrapper">
                         <div class="scaling-container" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
                             <label for="useTransformer">Are any columns non-numeric?</label>
@@ -870,7 +877,7 @@
         
         <!-- Model Selection in Header (will be moved into each mode section) -->
         <div class="preprocess-card" style="margin: 20px 0; max-width: 600px; display: none;" id="headerModelSelection">
-            <h3 style="margin-top: 0; margin-bottom: 12px;">Select Model</h3>
+            <h3>Select Model</h3>
             
             
             <!-- Simple Mode Model Selection -->
@@ -1081,7 +1088,7 @@
             
             <!-- AutoML Mode Model Selection -->
             <div id="headerAutomlNumericModels" class="hidden">
-                <label for="headerAutomlNModels" style="display: block; margin-bottom: 8px; font-weight: 600;">Regression Model (optional; blank compares nine candidates by cross-validation and trains the best):</label>
+                <label for="headerAutomlNModels" style="display: block; margin-bottom: 8px; font-weight: 600;" data-help="Optional. Left blank, nine candidates are compared by cross-validation and the best is trained.">Regression Model</label>
                 <select name="headerAutomlNModels" id="headerAutomlNModels" style="width: 100%; max-width: 400px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
                     <option value="" selected>Let AutoML choose</option>
                     <optgroup label="Most Common">
@@ -1124,7 +1131,7 @@
             </div>
             
             <div id="headerAutomlClusterModels" class="hidden">
-                <label for="headerAutomlClModels" style="display: block; margin-bottom: 8px; font-weight: 600;">Clustering Model (KMeans unless another is chosen; candidates are not compared for clustering):</label>
+                <label for="headerAutomlClModels" style="display: block; margin-bottom: 8px; font-weight: 600;" data-help="KMeans unless another is chosen. Candidates are not compared for clustering.">Clustering Model</label>
                 <select name="headerAutomlClModels" id="headerAutomlClModels" style="width: 100%; max-width: 400px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
                     <option value="" selected>Default (KMeans)</option>
                     <optgroup label="Most Common">
@@ -1147,7 +1154,7 @@
             </div>
             
             <div id="headerAutomlClassifierModels" class="hidden">
-                <label for="headerAutomlClassModels" style="display: block; margin-bottom: 8px; font-weight: 600;">Classification Model (optional; blank compares seven candidates by cross-validation and trains the best):</label>
+                <label for="headerAutomlClassModels" style="display: block; margin-bottom: 8px; font-weight: 600;" data-help="Optional. Left blank, seven candidates are compared by cross-validation and the best is trained.">Classification Model</label>
                 <select name="headerAutomlClassModels" id="headerAutomlClassModels" style="width: 100%; max-width: 400px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
                     <option value="" selected>Let AutoML choose</option>
                     <optgroup label="Most Common">
@@ -1196,7 +1203,7 @@
             
             <!-- Model Selection -->
             <div class="preprocess-card" style="margin-bottom: 20px;">
-                <h3 style="margin-top: 0; margin-bottom: 12px;">Select Model</h3>
+                <h3>Select Model</h3>
                 
                 
                 <!-- Simple Mode Model Selection -->
@@ -2575,8 +2582,7 @@
                         </div>
                         
                         <div class="preprocess-card" style="margin-bottom: 16px;">
-                            <h3 style="margin-top: 0; margin-bottom: 8px;">Select Model</h3>
-                            <p class="field-note" style="margin-bottom: 12px;">Model for the selected output type.</p>
+                            <h3>Select Model</h3>
                             
                             <div id="advancedNumericModels" class="hidden">
                                 <label for="advancedNModels" style="display: block; margin-bottom: 8px; font-weight: 600;">Regression Model:</label>
@@ -2685,7 +2691,6 @@
                         
                         <div class="model-card">
                             <h2 style="margin-top: 0; margin-bottom: 16px;">Hyperparameters</h2>
-                            <p class="field-note" style="margin-bottom: 16px;">Main settings for the selected model. More options shows the rest.</p>
                             
                             <div style="margin-bottom: 30px;">
                                 
@@ -5760,9 +5765,8 @@
                                 <h3 style="margin-top: 0; margin-bottom: 16px; font-size: 1.2em; font-weight: 600;">Advanced Options</h3>
                                 
                                 <h4 style="margin-top: 24px; margin-bottom: 12px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 1.1em; font-weight: 600; color: #000000;">Feature Selection</h4>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Keeps a subset of the indicator columns.</p>
-                                <div class="scaling-container">
-                                    <label for="featureSelectionMethod">Feature Selection Method</label>
+                                                                <div class="scaling-container">
+                                    <label for="featureSelectionMethod" data-help="Keeps a subset of the indicator columns.">Feature Selection Method</label>
                                     <select name="featureSelectionMethod" id="featureSelectionMethod">
                                         <option value="none">None</option>
                                         <option value="SelectKBest">Select K Best (Filter)</option>
@@ -5776,9 +5780,8 @@
                                 </div>
 
                                 <h4 style="margin-top: 24px; margin-bottom: 12px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 1.1em; font-weight: 600; color: #000000;">Outlier Handling</h4>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Removes or caps outlier rows in the training data.</p>
-                                <div class="scaling-container">
-                                    <label for="outlierMethod">Outlier Detection Method</label>
+                                                                <div class="scaling-container">
+                                    <label for="outlierMethod" data-help="Removes or caps outlier rows in the training data.">Outlier Detection Method</label>
                                     <select name="outlierMethod" id="outlierMethod">
                                         <option value="none">None</option>
                                         <option value="IQR">Interquartile Range (IQR)</option>
@@ -5796,9 +5799,8 @@
                                 </div>
 
                                 <h4 style="margin-top: 24px; margin-bottom: 12px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 1.1em; font-weight: 600; color: #000000;">Train/Test Split</h4>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">A random split leaks when rows are ordered in time or when several rows come from one site or sample.</p>
-                                <div class="scaling-container">
-                                    <label for="advancedSplitMethod">Split Method</label>
+                                                                <div class="scaling-container">
+                                    <label for="advancedSplitMethod" data-help="A random split leaks when rows are ordered in time or when several rows come from one site or sample.">Split Method</label>
                                     <select name="advancedSplitMethod" id="advancedSplitMethod">
                                         <option value="random">Random</option>
                                         <option value="time">Time-ordered holdout</option>
@@ -5806,13 +5808,11 @@
                                     </select>
                                 </div>
                                 <div class="scaling-container">
-                                    <label for="advancedSplitColumn">Split Column</label>
+                                    <label for="advancedSplitColumn" data-help="Column letter of the date column for a time-ordered holdout, or of the site, well, or sample id for a grouped holdout. Stratification is not applied by these two methods.">Split Column</label>
                                     <input type="text" id="advancedSplitColumn" name="advancedSplitColumn" placeholder="Ex: A">
-                                    <p class="field-note" style="margin-top: 6px;">Column letter of the date column for a time-ordered holdout, or of the site, well, or sample id for a grouped holdout. Stratification is not applied by these two methods.</p>
                                 </div>
 
-                                <h4 style="margin-top: 24px; margin-bottom: 12px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 1.1em; font-weight: 600; color: #000000;">Data Checks</h4>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Before training, the columns are checked for a feature that duplicates the target, constant or identifier columns, heavy missingness, duplicate rows, class imbalance, and too few rows for the requested split. A blocking finding stops the run.</p>
+                                <h4 style="margin-top: 24px; margin-bottom: 12px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 1.1em; font-weight: 600; color: #000000;"><span data-help="Before training, the columns are checked for a feature that duplicates the target, constant or identifier columns, heavy missingness, duplicate rows, class imbalance, and too few rows for the requested split. A blocking finding stops the run.">Data Checks</span></h4>
                                 {% if allow_unsafe_override %}
                                 <div class="scaling-container">
                                     <label for="advancedAllowUnsafe">Run Despite Blocking Findings</label>
@@ -5822,18 +5822,16 @@
                                     </select>
                                 </div>
                                 <div class="scaling-container">
-                                    <label for="advancedAllowUnsafeReason">Reason for Overriding</label>
-                                    <input type="text" id="advancedAllowUnsafeReason" name="advancedAllowUnsafeReason" placeholder="Ex: the flagged column is a known proxy kept for a sensitivity check" maxlength="500">
-                                    <p class="field-note" style="margin-top: 6px;">Required with the override. The reason is recorded in the result, the manifest, and the model card.</p>
+                                    <label for="advancedAllowUnsafeReason" data-help="Required with the override. The reason is recorded in the result, the manifest, and the model card.">Reason for Overriding</label>
+                                    <input type="text" id="advancedAllowUnsafeReason" name="advancedAllowUnsafeReason" placeholder="Ex: the marked column is a known proxy kept for a sensitivity check" maxlength="500">
                                 </div>
                                 {% else %}
                                 <p class="field-note">This deployment has no override; a blocking finding stops the run.</p>
                                 {% endif %}
 
                                 <h4 style="margin-top: 24px; margin-bottom: 12px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 1.1em; font-weight: 600; color: #000000;">Hyperparameter Search</h4>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Searches hyperparameter values in place of the manual settings. Run time grows with the grid.</p>
-                                <div class="scaling-container">
-                                    <label for="hyperparameterSearch">Enable Hyperparameter Search</label>
+                                                                <div class="scaling-container">
+                                    <label for="hyperparameterSearch" data-help="Searches hyperparameter values in place of the manual settings. The grid is generated for the selected model; run time grows with its size.">Enable Hyperparameter Search</label>
                                     <select name="hyperparameterSearch" id="hyperparameterSearch">
                                         <option value="none">None (use manual settings)</option>
                                         <option value="grid">Grid Search</option>
@@ -5846,13 +5844,11 @@
                                     <input type="number" min="2" max="10" value="5" id="searchCVFolds" name="searchCVFolds">
                                     <label for="searchNIter">Number of Iterations (Randomized/Bayesian)</label>
                                     <input type="number" min="10" max="100" value="50" id="searchNIter" name="searchNIter">
-                                    <p class="field-note">The grid is generated for the selected model</p>
                                 </div>
 
                                 <h4 style="margin-top: 24px; margin-bottom: 12px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 1.1em; font-weight: 600; color: #000000;">Cross-Validation</h4>
-                                <p class="field-note" style="margin-bottom: 12px; margin-top: 0;">Scores the model on repeated splits and reports the mean and spread.</p>
-                                <div class="scaling-container">
-                                    <label for="advancedCrossValidationType">Cross-Validation Type</label>
+                                                                <div class="scaling-container">
+                                    <label for="advancedCrossValidationType" data-help="Scores the model on repeated splits and reports the mean and spread.">Cross-Validation Type</label>
                                     <select name="advancedCrossValidationType" id="advancedCrossValidationType">
                                         <option value="None">None</option>
                                         <option value="KFold">K-Fold</option>
@@ -5936,11 +5932,10 @@
                         
                         <!-- Model Selection -->
                         <div class="preprocess-card" style="margin-bottom: 20px;">
-                            <h3 style="margin-top: 0; margin-bottom: 12px;">Select Model (Optional)</h3>
-                            <p class="field-note" style="margin-bottom: 16px;">A model, or blank for AutoML to select one.</p>
+                            <h3>Select Model</h3>
                             
                             <div id="automlNumericModels" class="hidden">
-                                <label for="automlNModels" style="display: block; margin-bottom: 8px; font-weight: 600;">Regression Model (optional; blank compares nine candidates by cross-validation and trains the best):</label>
+                                <label for="automlNModels" style="display: block; margin-bottom: 8px; font-weight: 600;" data-help="Optional. Left blank, nine candidates are compared by cross-validation and the best is trained.">Regression Model</label>
                                 <select name="automlNModels" id="automlNModels" style="width: 100%; max-width: 400px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
                                     <option value="" selected>Let AutoML choose</option>
                                     <optgroup label="Most Common">
@@ -5984,7 +5979,7 @@
                             </div>
                             
                             <div id="automlClusterModels" class="hidden">
-                                <label for="automlClModels" style="display: block; margin-bottom: 8px; font-weight: 600;">Clustering Model (KMeans unless another is chosen; candidates are not compared for clustering):</label>
+                                <label for="automlClModels" style="display: block; margin-bottom: 8px; font-weight: 600;" data-help="KMeans unless another is chosen. Candidates are not compared for clustering.">Clustering Model</label>
                                 <select name="automlClModels" id="automlClModels" style="width: 100%; max-width: 400px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
                                     <option value="" selected>Default (KMeans)</option>
                                     <optgroup label="Most Common">
@@ -6007,7 +6002,7 @@
                             </div>
                             
                             <div id="automlClassifierModels" class="hidden">
-                                <label for="automlClassModels" style="display: block; margin-bottom: 8px; font-weight: 600;">Classification Model (optional; blank compares seven candidates by cross-validation and trains the best):</label>
+                                <label for="automlClassModels" style="display: block; margin-bottom: 8px; font-weight: 600;" data-help="Optional. Left blank, seven candidates are compared by cross-validation and the best is trained.">Classification Model</label>
                                 <select name="automlClassModels" id="automlClassModels" style="width: 100%; max-width: 400px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
                                     <option value="" selected>Let AutoML choose</option>
                                     <optgroup label="Most Common">
@@ -6046,25 +6041,18 @@
                         
                         <div class="preprocess-card">
                             <h2>AutoML Configuration</h2>
-                            <p class="field-note" style="margin-bottom: 16px;">AutoML selects the model, searches hyperparameters, runs feature selection and outlier handling, and cross-validates.</p>
                             
                             <div class="scaling-container" style="margin-bottom: 20px;">
-                                <label for="automlIntensity" style="display: block; margin-bottom: 8px; font-weight: 600;">AutoML Intensity Level:</label>
+                                <label for="automlIntensity" style="display: block; margin-bottom: 8px; font-weight: 600;" data-help="AutoML selects the model, searches hyperparameters, runs feature selection and outlier handling, and cross-validates. Quick runs the hyperparameter search only. Medium adds feature selection and outlier detection, with a randomized search. Long uses a grid search and is the slowest.">Intensity</label>
                                 <select name="automlIntensity" id="automlIntensity" style="width: 100%; max-width: 400px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                                    <option value="quick">Quick (hyperparameter search only)</option>
-                                    <option value="medium" selected>Medium (feature selection, outliers, randomized search)</option>
-                                    <option value="long">Long (feature selection, outliers, grid search)</option>
+                                    <option value="quick">Quick</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="long">Long</option>
                                 </select>
-                                <p class="field-note" style="margin-top: 8px; font-size: 0.9em;">
-                                    <strong>Quick:</strong> hyperparameter search only.<br>
-                                    <strong>Medium:</strong> feature selection, outlier detection, and randomized search.<br>
-                                    <strong>Long:</strong> feature selection, outlier detection, and grid search. Slowest.
-                                </p>
                             </div>
                             
                             <div class="preprocess-card" style="margin-top: 20px;">
-                                <h2>AutoML Settings Summary</h2>
-                                <p class="field-note" style="margin-bottom: 16px;">AutoML configuration:</p>
+                                <h2>Settings</h2>
                                 <div id="automlSettingsDisplay" class="app-panel app-panel--accent">
                                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 0.95rem;">
                                         <div><strong>Model:</strong> <span id="automlDisplayModel" style="color: #2c3e50;">-</span></div>
@@ -6162,11 +6150,13 @@
         <form id="uploadPredictDf" enctype="multipart/form-data">
             <h3>Upload New Data File to Predict With</h3>
             <input type="file" name="predictFile" id="predictFile" accept=".csv,.xlsx,.xlsm,.parquet" required>
-            <div id="uploadPredictDFButton">
+            <div id="uploadPredictDFButton" class="predict-actions">
                 <button type="submit">Upload</button>
-                <button type="button" id="usePenguinRowsButton" class="secondary-button hidden">Use the Example Rows</button>
+                <div class="predict-example">
+                    <button type="button" id="usePenguinRowsButton" class="secondary-button hidden" aria-describedby="usePenguinRowsNote">Use the Example Rows</button>
+                    <p id="usePenguinRowsNote" class="field-note hidden">22 rows drawn from the three species, with no blanks. Nothing is uploaded from this computer.</p>
+                </div>
             </div>
-            <p id="usePenguinRowsNote" class="field-note hidden">22 rows drawn from the three species, with no blanks. Nothing is uploaded from your computer.</p>
         </form>
 
         <div id="predictionResults" class="hidden">

@@ -241,26 +241,26 @@ corrForm.addEventListener('submit', async(e) => {
                 <div class="exploration-graphic">
                     <div class="matrix-heading">
                         <h3>Correlation Matrix</h3>
-                        <label for="correlationMatrixSelect">Matrix type</label>
+                        <span class="matrix-control"><label for="correlationMatrixSelect">Matrix type</label>
                         <select id="correlationMatrixSelect">
                             ${correlationOptions
                                 .map((option) => `<option value="${option.key}">${option.label}</option>`)
                                 .join('')}
-                        </select>
+                        </select></span>
                     </div>
                     <img id="correlationMatrixImage" src="${withCacheBust(initialSrc)}" alt="Correlation matrix heatmap">
                 </div>
                 <div class="exploration-graphic pairplot-graphic">
                     <div class="matrix-heading">
                         <h3>Pairplot</h3>
-                        <label for="pairplotXSelect">X</label>
+                        <span class="matrix-control"><label for="pairplotXSelect">X</label>
                         <select id="pairplotXSelect">
                             ${pairplotOptions}
-                        </select>
-                        <label for="pairplotYSelect">Y</label>
+                        </select></span>
+                        <span class="matrix-control"><label for="pairplotYSelect">Y</label>
                         <select id="pairplotYSelect">
                             ${pairplotOptions}
-                        </select>
+                        </select></span>
                     </div>
                     <div id="pairplotError" class="hidden"></div>
                     <img id="pairplotImage" src="${withCacheBust(pairplotImage)}" alt="Pairplot preview">

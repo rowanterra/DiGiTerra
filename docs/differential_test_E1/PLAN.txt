@@ -9,7 +9,7 @@ same rows, the same predictors, the same train and test halves and the same
 model settings?
 
 DATA
-Program under test: DiGiTerra, branch audit-fixes at 99dea69, working tree
+Program under test: DiGiTerra, branch audit-fixes at 0942e0c, working tree
   Terra Cognita LLC/DiGiTerra_audit_2026-09-03/DiGiTerra, run through its own
   browser interface. scikit-learn 1.9.0, numpy 1.26.4, pandas 2.3.3 per
   requirements.txt. The manifest DiGiTerra writes for each run records the

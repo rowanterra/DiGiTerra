@@ -67,7 +67,7 @@ by running the probe with the prefix linux3 in the container.
 
 Follow-up, same day: cause, depth limits, saved models, and the code change
 The paragraph "What this means for DiGiTerra" above describes the state at commit
-f4d1805. The tests below were stated before they ran, and their output is in
+d9cd311. The tests below were stated before they ran, and their output is in
 outputs/experiment_2026-09-25.txt.
 
 Test. scripts/platform_experiment_2026-09-25.py fits RF (20 trees), ExtraTrees
@@ -100,7 +100,7 @@ contracts by default.
    Linux and read on the Mac give bitwise-identical predictions on all 2,000 rows.
    Only retraining is affected.
 
-Code change after f4d1805
+Code change after d9cd311
 - python_scripts/reporting/bundle.py: the manifest's environment records system and
   machine as well as the platform string; platform_change() compares them with the
   current machine (older bundles are read from the string) and returns a note,

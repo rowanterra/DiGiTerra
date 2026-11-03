@@ -99,7 +99,7 @@ test_decimal_setting.py holds four regression tests. pytest tests/: 193
 passed, 1 skipped; ruff clean. E1 rerun on the fixed tree: R1 318 cells
 same with no rounded class, D1 and D2 at six decimals, controls and input
 checks pass. The pre-fix outputs are kept as
-digiterra_outputs_pre_fix_99dea69/. Patch: E1_fixes_2026-09-24.patch;
+digiterra_outputs_pre_fix_0942e0c/. Patch: E1_fixes_2026-09-24.patch;
 commit message: COMMIT_MESSAGE_2026-09-24.txt.
 F5 (route level, inferred for the browser): Logistic_classifier with a
 partial hyperparameter set and nonreq on fails in scikit-learn with

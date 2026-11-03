@@ -240,6 +240,11 @@ def run_predict(
                         predictions_preview[col] = s.dropna().head(200).tolist()
             except Exception as e:
                 logger.warning("Could not build prediction summary: %s", e)
+        # A check against measured values, when the file carries them. The person
+        # decides: a file with the target column, or the target name followed by
+        # _measured, _true or _actual, is scored; a file without one is scored
+        # blind, and the reply names the column that would have made the check.
+        check = _score_against_measured(pred_df, target_names, store.get("model_type", "regression"))
         training_visualization = store.get("training_visualization")
         if training_visualization and not (user_vis_dir / training_visualization).exists():
             training_visualization = None
@@ -308,6 +313,7 @@ def run_predict(
                 "spread_visualization_version": spread_visualization_version,
                 "filename": filename,
                 "summary": summary,
+                "check": check,
                 "applicability_summary": applicability_summary,
                 "uncertainty_summary": uncertainty_summary,
                 "predictions_preview": predictions_preview,
@@ -324,3 +330,71 @@ def run_predict(
         logger.error("Error in predict: %s", e, exc_info=True)
         err_msg = str(e) if e else "An error occurred during prediction."
         return ({"error": err_msg}, 500)
+
+
+def _score_against_measured(pred_df, target_names, model_type):
+    """Score Predicted_* columns against a measured column in the scored file, if any.
+
+    Returns a dict for the page: found=False with the column names that would be
+    read, or found=True with the metrics. Regression: R2, RMSE, MAE and the count.
+    Classification: accuracy, macro F1, and a confusion table over the union of
+    labels. Rows with a blank on either side are left out and counted.
+    """
+    names = list(target_names) if target_names else []
+    candidates = []
+    for t in names or ["Target"]:
+        candidates += [t, f"{t}_measured", f"{t}_true", f"{t}_actual"]
+    if pred_df is None:
+        return {"found": False, "accepted": candidates}
+    pred_cols = [c for c in pred_df.columns if c.startswith("Predicted_")]
+    if len(pred_cols) != 1:
+        return {"found": False, "accepted": candidates}
+    truth_col = next((c for c in candidates if c in pred_df.columns), None)
+    if truth_col is None:
+        return {"found": False, "accepted": candidates}
+    y_true = pred_df[truth_col]
+    y_pred = pred_df[pred_cols[0]]
+    keep = y_true.notna() & y_pred.notna()
+    n_dropped = int((~keep).sum())
+    y_true, y_pred = y_true[keep], y_pred[keep]
+    out = {"found": True, "column": truth_col, "n": int(len(y_true)), "dropped": n_dropped}
+    if int(len(y_true)) < 2:
+        out["error"] = "Fewer than two rows carry both a prediction and a measured value."
+        return out
+    if model_type == "regression" and pd.api.types.is_numeric_dtype(y_pred):
+        yt = pd.to_numeric(y_true, errors="coerce")
+        ok = yt.notna()
+        yt, yp = yt[ok].astype(float), y_pred[ok].astype(float)
+        resid = yt - yp
+        ss_tot = float(((yt - yt.mean()) ** 2).sum())
+        out.update(
+            {
+                "kind": "regression",
+                "n": int(len(yt)),
+                "r2": float(1.0 - float((resid**2).sum()) / ss_tot) if ss_tot > 0 else None,
+                "rmse": float((resid**2).mean() ** 0.5),
+                "mae": float(resid.abs().mean()),
+                "bias": float(resid.mean() * -1.0),
+            }
+        )
+        return out
+    yt = y_true.astype(str).str.strip()
+    yp = y_pred.astype(str).str.strip()
+    labels = sorted(set(yt) | set(yp))
+    matrix = [[int(((yt == a) & (yp == b)).sum()) for b in labels] for a in labels]
+    per_class_f1 = []
+    for i, _ in enumerate(labels):
+        tp = matrix[i][i]
+        fp = sum(matrix[r][i] for r in range(len(labels))) - tp
+        fn = sum(matrix[i]) - tp
+        per_class_f1.append(0.0 if tp == 0 else 2 * tp / (2 * tp + fp + fn))
+    out.update(
+        {
+            "kind": "classification",
+            "accuracy": float((yt == yp).mean()),
+            "macro_f1": float(sum(per_class_f1) / len(per_class_f1)) if per_class_f1 else None,
+            "labels": labels,
+            "confusion": matrix,
+        }
+    )
+    return out

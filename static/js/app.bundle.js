@@ -1755,6 +1755,95 @@ function initTryExample() {
     });
 }
 
+
+/* ==========================================================================
+   Presets recognized from a file's header (2026-09-27).
+
+   A second worked example is a mine-drainage table that is not distributed with
+   the application: the person uploads it, and the header row says which preset
+   applies. The presets set the task, the columns, the seed and the model the
+   same way the penguins example does. A header that matches nothing changes
+   nothing. The regression table predicts log10 of the rare earth sum from pH
+   and the log10 concentrations of Fe, Mn, SO4 and Al (micrograms per liter);
+   the class table predicts a five-class bin of the same quantity.
+   ========================================================================== */
+const HEADER_PRESETS = [
+    {
+        name: 'rare earth regression',
+        columns: ['Study', 'Site', 'pH', 'log10_Fe_ugL', 'log10_Mn_ugL', 'log10_SO4_ugL', 'log10_Al_ugL', 'log10_REE_ugL'],
+        fields: { outputType1: 'Numeric', indicators: 'C-G', predictors: 'H', corrCols: 'C-H', seedValue: '42', scaler: 'none' },
+        model: { select: 'simpleNModels', value: 'ExtraTrees' },
+        inferenceNote: 'For inference, upload AMD_REE_backvalidation_inflow_2026-09-27.csv: the 36 field inflow samples with the same five columns and the measured value beside them.',
+    },
+    {
+        name: 'rare earth classes',
+        columns: ['Study', 'Site', 'pH', 'log10_Fe_ugL', 'log10_Mn_ugL', 'log10_SO4_ugL', 'log10_Al_ugL', 'REE_class'],
+        fields: { outputType1: 'Classifier', indicators: 'C-G', predictors: 'H', corrCols: 'C-G', seedValue: '42', scaler: 'none', scalingYesNo: 'Yes', specificVariableSelect: 'H' },
+        model: { select: 'simpleClassModels', value: 'RF_classifier' },
+        inferenceNote: 'For inference, upload AMD_REE_backvalidation_inflow_classes_2026-09-27.csv: the 36 field inflow samples with the measured class beside them.',
+    },
+];
+
+function headerPresetFor(columns) {
+    if (!Array.isArray(columns)) return null;
+    const head = columns.map((c) => String(c).trim());
+    return HEADER_PRESETS.find((p) => p.columns.length === head.length && p.columns.every((c, i) => c === head[i])) || null;
+}
+
+function applyHeaderPreset(preset) {
+    Object.entries(preset.fields).forEach(([id, value]) => setExampleField(id, value));
+    const host = document.getElementById('columnSelection');
+    const select = document.getElementById(preset.model.select);
+    if (host && select) {
+        const fill = () => {
+            if (host.classList.contains('hidden')) return false;
+            if (!select.value) setExampleField(preset.model.select, preset.model.value);
+            return true;
+        };
+        if (!fill()) {
+            const watch = new MutationObserver(() => { if (fill()) watch.disconnect(); });
+            watch.observe(host, { attributes: true, attributeFilter: ['class'] });
+        }
+    }
+    window.activeHeaderPreset = preset;
+    updatePresetInferenceNote();
+}
+
+/* The inference page names the matching back-validation file for a preset. */
+function updatePresetInferenceNote() {
+    const form = document.getElementById('uploadPredictDf');
+    if (!form) return;
+    let note = document.getElementById('presetInferenceNote');
+    const preset = window.activeHeaderPreset;
+    if (!preset) { if (note) note.remove(); return; }
+    if (!note) {
+        note = document.createElement('p');
+        note.id = 'presetInferenceNote';
+        note.className = 'field-note';
+        form.appendChild(note);
+    }
+    note.textContent = preset.inferenceNote;
+}
+
+function initHeaderPresets() {
+    document.addEventListener('digiterra:upload-complete', (event) => {
+        if (event && event.detail && event.detail.ok === false) return;
+        window.activeHeaderPreset = null;
+        const preset = headerPresetFor(window.uploadedColumnNames);
+        if (preset) applyHeaderPreset(preset);
+        else updatePresetInferenceNote();
+    });
+    // The welcome button opens the file chooser; the header does the rest.
+    const button = document.getElementById('tryPresetButton');
+    const input = document.getElementById('file');
+    if (button && input) {
+        button.addEventListener('click', () => {
+            if (typeof showTab === 'function') showTab('upload');
+            input.click();
+        });
+    }
+}
+
 /* The example rows for the inference page.
    Shown only for a session that loaded penguins.csv, because the file holds that
    file's six indicator columns and nothing else would accept them. */
@@ -1810,6 +1899,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initDocContents();
     initTutorialEntry();
     initTryExample();
+    initHeaderPresets();
     initUsePenguinRows();
 });
 
@@ -2058,26 +2148,26 @@ corrForm.addEventListener('submit', async(e) => {
                 <div class="exploration-graphic">
                     <div class="matrix-heading">
                         <h3>Correlation Matrix</h3>
-                        <label for="correlationMatrixSelect">Matrix type</label>
+                        <span class="matrix-control"><label for="correlationMatrixSelect">Matrix type</label>
                         <select id="correlationMatrixSelect">
                             ${correlationOptions
                                 .map((option) => `<option value="${option.key}">${option.label}</option>`)
                                 .join('')}
-                        </select>
+                        </select></span>
                     </div>
                     <img id="correlationMatrixImage" src="${withCacheBust(initialSrc)}" alt="Correlation matrix heatmap">
                 </div>
                 <div class="exploration-graphic pairplot-graphic">
                     <div class="matrix-heading">
                         <h3>Pairplot</h3>
-                        <label for="pairplotXSelect">X</label>
+                        <span class="matrix-control"><label for="pairplotXSelect">X</label>
                         <select id="pairplotXSelect">
                             ${pairplotOptions}
-                        </select>
-                        <label for="pairplotYSelect">Y</label>
+                        </select></span>
+                        <span class="matrix-control"><label for="pairplotYSelect">Y</label>
                         <select id="pairplotYSelect">
                             ${pairplotOptions}
-                        </select>
+                        </select></span>
                     </div>
                     <div id="pairplotError" class="hidden"></div>
                     <img id="pairplotImage" src="${withCacheBust(pairplotImage)}" alt="Pairplot preview">
@@ -3892,10 +3982,12 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
    every handler still works, and a "change" link reveals them.
    ========================================================================== */
 
-/* The blocks each sentence reveals, and the settings that fold away. */
+/* The blocks each finding sentence reveals. Each set lives in its own panel under
+   its sentence (review of 2026-09-27: the text-column controls opened inside the
+   blanks panel). Blank and zero findings share the cleaning panel. */
 const CLEANING_BLOCKS = ['dataCleaningMissingWrapper', 'imputeDiv', 'dataCleaningZerosWrapper'];
 const TRANSFORM_BLOCKS = ['transformerOptionWrapper', 'transformerYes'];
-const MORE_SETTINGS_BLOCKS = ['scalingQuestion', 'scalingYes', 'preprocessScaler', 'preprocessSeed', 'preprocessSplit'];
+const FINDING_PANELS = { cleaning: CLEANING_BLOCKS, text: TRANSFORM_BLOCKS };
 
 function preprocessColumnsChosen() {
     const indicators = (document.getElementById('indicators') || {}).value || '';
@@ -3904,7 +3996,35 @@ function preprocessColumnsChosen() {
     return Boolean(indicators.trim()) && (isCluster || Boolean(target.trim()));
 }
 
-/** Build the findings block and the More settings disclosure, once. */
+/* The settings behind the sentences: each group is one sentence in the page's
+   own words with a "change" link, and the controls open in a panel under it
+   (review of 2026-09-27: one More settings disclosure opened everything at once
+   and the transform controls appeared without a panel). */
+const SETTING_GROUPS = [
+    { key: 'stratify', heading: 'Stratify', ids: ['scalingQuestion', 'scalingYes'], text: () => {
+        const yn = document.getElementById('scalingYesNo');
+        const col = document.getElementById('specificVariableSelect');
+        if (!yn) return '';
+        if (yn.value !== 'Yes' && yn.value !== 'yes') return 'The split is not stratified.';
+        const name = col && col.value ? (col.options && col.options[col.selectedIndex] ? col.options[col.selectedIndex].text : col.value) : '';
+        return name ? `The split keeps the mix of column ${name} the same in both halves.` : 'The split is stratified; choose the column.';
+    } },
+    { key: 'scaler', ids: ['preprocessScaler'], text: () => {
+        const e = document.getElementById('scaler');
+        if (!e) return '';
+        const label = (e.options && e.options[e.selectedIndex] ? e.options[e.selectedIndex].text : e.value) || 'None';
+        return /^none$/i.test(e.value || label) ? 'Predictors are not scaled.' : `Predictors are scaled (${label}).`;
+    } },
+    { key: 'split', ids: ['preprocessSplit', 'preprocessSeed'], text: () => {
+        const t = document.getElementById('trainSize');
+        const seed = document.getElementById('seedValue');
+        const train = t && t.value ? Math.round(Number(t.value) * 100) : 80;
+        const seedText = seed && seed.value ? `Seed ${seed.value}.` : 'No seed set; one is drawn for the run.';
+        return `${train} percent of the rows train the model and ${100 - train} percent are held out. ${seedText}`;
+    } },
+];
+
+/** Build the findings block and the setting sentences, once. */
 function buildPreprocessLayout() {
     const form = document.getElementById('preprocessform');
     if (!form || document.getElementById('preprocessFindings')) return;
@@ -3914,62 +4034,184 @@ function buildPreprocessLayout() {
     findings.className = 'preprocess-findings';
     findings.innerHTML = '<p class="narrative-empty">Enter the indicator and target columns.</p>';
 
-    const more = document.createElement('details');
-    more.id = 'preprocessMoreSettings';
-    more.className = 'preprocess-more';
-    more.innerHTML = '<summary class="doc-summary"><span class="doc-chevron" aria-hidden="true"></span><h3>More settings</h3></summary>';
-    const moreBody = document.createElement('div');
-    moreBody.className = 'preprocess-more-body';
-    more.appendChild(moreBody);
-
-    // The cleaning and transform controls hide behind their sentences.
-    const hidden = document.createElement('div');
-    hidden.id = 'preprocessControls';
-    hidden.className = 'preprocess-controls';
+    // The cleaning and transform controls wait in two panels, parked out of the
+    // page until a finding sentence adopts one. The blocks themselves stay
+    // visible inside their panel; the panel is what opens and closes.
+    const parked = document.createElement('div');
+    parked.id = 'preprocessControls';
+    parked.className = 'preprocess-controls hidden';
 
     const firstCard = form.querySelector('.preprocess-card');
     if (firstCard) firstCard.insertAdjacentElement('afterend', findings);
     else form.insertBefore(findings, form.firstChild);
-    findings.insertAdjacentElement('afterend', hidden);
-    hidden.insertAdjacentElement('afterend', more);
+    findings.insertAdjacentElement('afterend', parked);
 
-    CLEANING_BLOCKS.concat(TRANSFORM_BLOCKS).forEach((id) => {
+    const transformHead = (document.getElementById('transformerOptionWrapper') || {}).previousElementSibling;
+    const makePanel = (key) => {
+        const panel = document.createElement('div');
+        panel.className = 'preprocess-panel hidden';
+        panel.id = `preprocessPanel_${key}`;
+        parked.appendChild(panel);
+        return panel;
+    };
+    const cleaningPanel = makePanel('cleaning');
+    const textPanel = makePanel('text');
+    const move = (panel, id, show) => {
         const el = document.getElementById(id);
         if (el) {
-            el.classList.add('hidden');
-            hidden.appendChild(el);
+            if (show) el.classList.remove('hidden');
+            panel.appendChild(el);
         }
-    });
-    MORE_SETTINGS_BLOCKS.forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) moreBody.appendChild(el);
-    });
-}
+    };
+    move(cleaningPanel, 'dataCleaningMissingWrapper', true);
+    move(cleaningPanel, 'imputeDiv', false);           // its own handler shows it for a fill
+    move(cleaningPanel, 'dataCleaningZerosWrapper', true);
+    if (transformHead && transformHead.tagName === 'H3') {
+        transformHead.classList.remove('hidden');
+        textPanel.appendChild(transformHead);
+    }
+    move(textPanel, 'transformerOptionWrapper', true);
+    move(textPanel, 'transformerYes', false);           // opens when "Yes" is chosen
+    // A stray "Or" preceded a hidden autodetect button; it is not drawn.
+    const optionWrap = document.getElementById('transformerOptionWrapper');
+    if (optionWrap) {
+        const walker = document.createTreeWalker(optionWrap, NodeFilter.SHOW_TEXT);
+        let node;
+        while ((node = walker.nextNode())) {
+            if (node.textContent.trim().toLowerCase() === 'or') node.textContent = '';
+        }
+    }
 
-/** Reveal the controls a sentence stands for. */
-function revealPreprocessBlocks(ids) {
-    ids.forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) el.classList.remove('hidden');
-    });
-}
-
-function preprocessSentence(text, blocks) {
-    const line = document.createElement('p');
-    line.className = 'preprocess-finding';
-    line.appendChild(document.createTextNode(text + ' '));
-    if (blocks && blocks.length) {
+    // One sentence and one panel per setting group, in the order of the run.
+    const lines = document.createElement('div');
+    lines.id = 'preprocessSettingLines';
+    lines.className = 'preprocess-setting-lines';
+    parked.insertAdjacentElement('afterend', lines);
+    SETTING_GROUPS.forEach((group) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'preprocess-setting-line';
+        wrap.dataset.group = group.key;
+        const line = document.createElement('p');
+        line.className = 'preprocess-finding';
+        const text = document.createElement('span');
+        text.className = 'preprocess-setting-text';
+        line.appendChild(text);
+        line.appendChild(document.createTextNode(' '));
         const link = document.createElement('button');
         link.type = 'button';
         link.className = 'preprocess-change';
         link.textContent = 'change';
+        line.appendChild(link);
+        const panel = document.createElement('div');
+        panel.className = 'preprocess-panel hidden';
+        panel.id = `preprocessPanel_${group.key}`;
+        if (group.heading) {
+            const h = document.createElement('h3');
+            h.className = 'preprocess-section-title';
+            h.textContent = group.heading;
+            panel.appendChild(h);
+        }
+        group.ids.forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) panel.appendChild(el);
+        });
         link.addEventListener('click', () => {
-            revealPreprocessBlocks(blocks);
-            link.remove();
+            panel.classList.toggle('hidden');
+            syncPreprocessLinks();
+        });
+        wrap.appendChild(line);
+        wrap.appendChild(panel);
+        lines.appendChild(wrap);
+    });
+    // The two cards the blocks came from are empty now.
+    form.querySelectorAll('.preprocess-card').forEach((card) => {
+        if (card !== firstCard && !card.querySelector('input, select, textarea')) card.classList.add('hidden');
+    });
+    refreshPreprocessSettingLines();
+    form.addEventListener('change', refreshPreprocessSettingLines);
+    form.addEventListener('input', refreshPreprocessSettingLines);
+}
+
+/** Rewrite each setting sentence from its controls. */
+function refreshPreprocessSettingLines() {
+    SETTING_GROUPS.forEach((group) => {
+        const el = document.querySelector(`.preprocess-setting-line[data-group="${group.key}"] .preprocess-setting-text`);
+        if (el) el.textContent = group.text();
+    });
+}
+
+/** The finding panel a block belongs to, if any. */
+function findingPanelFor(id) {
+    const el = document.getElementById(id);
+    return el ? el.closest('.preprocess-panel') : null;
+}
+
+/* exported revealPreprocessBlocks */
+/** Open the panel a sentence stands for (a setting panel too, from the rail). Called from narrative.js. */
+function revealPreprocessBlocks(ids) {
+    ids.forEach((id) => {
+        const panel = findingPanelFor(id);
+        if (panel) panel.classList.remove('hidden');
+    });
+    syncPreprocessLinks();
+}
+
+/** Every change/done link reads the state of its panel. */
+function syncPreprocessLinks() {
+    document.querySelectorAll('#preprocessform .preprocess-change[data-panel]').forEach((link) => {
+        const panel = document.getElementById(link.dataset.panel);
+        if (panel) link.textContent = panel.classList.contains('hidden') ? 'change' : 'done';
+    });
+    document.querySelectorAll('#preprocessSettingLines .preprocess-setting-line').forEach((wrap) => {
+        const panel = wrap.querySelector('.preprocess-panel');
+        const link = wrap.querySelector('.preprocess-change');
+        if (panel && link) link.textContent = panel.classList.contains('hidden') ? 'change' : 'done';
+    });
+}
+
+/** A finding sentence; `panelKey` names the panel its change link toggles. */
+function preprocessSentence(text, panelKey) {
+    const line = document.createElement('p');
+    line.className = 'preprocess-finding';
+    line.appendChild(document.createTextNode(text + ' '));
+    const panel = panelKey ? document.getElementById(`preprocessPanel_${panelKey}`) : null;
+    if (panel) {
+        const link = document.createElement('button');
+        link.type = 'button';
+        link.className = 'preprocess-change';
+        link.dataset.panel = panel.id;
+        link.textContent = panel.classList.contains('hidden') ? 'change' : 'done';
+        link.addEventListener('click', () => {
+            panel.classList.toggle('hidden');
+            syncPreprocessLinks();
         });
         line.appendChild(link);
     }
     return line;
+}
+
+/** Place a finding panel directly under the last sentence that opens it. */
+function seatFindingPanel(host, key) {
+    const panel = document.getElementById(`preprocessPanel_${key}`);
+    if (!panel) return;
+    const links = host.querySelectorAll(`.preprocess-change[data-panel="${panel.id}"]`);
+    if (links.length) {
+        links[links.length - 1].closest('.preprocess-finding').insertAdjacentElement('afterend', panel);
+    } else {
+        const parked = document.getElementById('preprocessControls');
+        if (parked) parked.appendChild(panel);
+        panel.classList.add('hidden');
+    }
+}
+
+/** Move the finding panels out of the findings block before it is rewritten. */
+function parkFindingPanels() {
+    const parked = document.getElementById('preprocessControls');
+    if (!parked) return;
+    Object.keys(FINDING_PANELS).forEach((key) => {
+        const panel = document.getElementById(`preprocessPanel_${key}`);
+        if (panel) { panel.classList.add('hidden'); parked.appendChild(panel); }
+    });
 }
 
 /** Run both detections and say what they found. */
@@ -3977,6 +4219,7 @@ async function runPreprocessDetection() {
     const host = document.getElementById('preprocessFindings');
     if (!host) return;
     if (!preprocessColumnsChosen()) {
+        parkFindingPanels();
         host.innerHTML = '<p class="narrative-empty">Enter the indicator and target columns.</p>';
         return;
     }
@@ -3984,6 +4227,7 @@ async function runPreprocessDetection() {
     const indicators = getColumnIndices(document.getElementById('indicators').value.toUpperCase().replace(/\s/g, ''));
     const target = isCluster ? [] : getColumnIndices(document.getElementById('predictors').value.toUpperCase().replace(/\s/g, ''));
     if (!indicators.length) {
+        parkFindingPanels();
         host.innerHTML = '<p class="narrative-empty">DiGiTerra cannot read the indicator columns. Use the form "A-D" or "A,B,C".</p>';
         return;
     }
@@ -3994,39 +4238,47 @@ async function runPreprocessDetection() {
 
     const [clean, text] = await Promise.all([post('/auto-detect-nan-zeros'), post('/auto-detect-transformers')]);
     lastNumericColumns = clean && Array.isArray(clean.numeric_columns) ? clean.numeric_columns : [];
+    // A panel opened while the detection ran (the rail's change button) stays open.
+    const wasOpen = Object.keys(FINDING_PANELS).filter((key) => {
+        const panel = document.getElementById(`preprocessPanel_${key}`);
+        return panel && !panel.classList.contains('hidden');
+    });
+    parkFindingPanels();
     host.innerHTML = '';
 
     let found = false;
     if (clean && clean.blank_rows) {
         found = true;
         const rows = clean.blank_rows === 1 ? '1 row has a blank.' : `${clean.blank_rows} rows have a blank.`;
-        host.appendChild(preprocessSentence(`${rows} DiGiTerra will remove them.`, CLEANING_BLOCKS));
+        host.appendChild(preprocessSentence(`${rows} DiGiTerra will remove them.`, 'cleaning'));
         setPreprocessDefault('missScopeAll', true);
         setPreprocessDefault('imputeStrategy', 'none');
     }
     if (clean && clean.zero_columns && clean.zero_columns.length) {
         found = true;
         const names = clean.zero_columns.join(' and ');
-        host.appendChild(preprocessSentence(`${names} hold a zero. DiGiTerra will keep the zeros.`, CLEANING_BLOCKS));
+        host.appendChild(preprocessSentence(`${names} contain a zero. DiGiTerra will keep the zeros.`, 'cleaning'));
     }
     if (text && Array.isArray(text.transformer_indices) && text.transformer_indices.length) {
         found = true;
         const names = window.uploadedColumnNames || [];
         const labels = text.transformer_indices.map((i) => names[i] || indexToColumn(i)).join(' and ');
         const verb = text.transformer_indices.length === 1 ? 'is text' : 'are text';
-        host.appendChild(preprocessSentence(`${labels} ${verb}. DiGiTerra will one-hot encode them.`, TRANSFORM_BLOCKS));
+        host.appendChild(preprocessSentence(`${labels} ${verb}. DiGiTerra will one-hot encode them.`, 'text'));
         setPreprocessDefault('useTransformer', 'Yes');
         setPreprocessDefault('transformerColumn', text.transformer_indices.map(indexToColumn).join(', '));
     }
     if (!found) {
-        host.appendChild(preprocessSentence('No blanks or zeros in the selected columns.', CLEANING_BLOCKS));
+        host.appendChild(preprocessSentence('No blanks or zeros in the selected columns.', 'cleaning'));
     }
-    // Setting a default fires the change the old handlers listen for, and one of them
-    // opens the transformer block. The sentence is what opens it, so it closes again.
-    CLEANING_BLOCKS.concat(TRANSFORM_BLOCKS).forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) el.classList.add('hidden');
+    // Each panel sits under the last sentence that opens it and starts closed; a
+    // panel no sentence needs goes back to the parking block.
+    Object.keys(FINDING_PANELS).forEach((key) => {
+        const panel = document.getElementById(`preprocessPanel_${key}`);
+        if (panel) panel.classList.toggle('hidden', !wasOpen.includes(key));
+        seatFindingPanel(host, key);
     });
+    syncPreprocessLinks();
     applyStratifyDefault();
 }
 
@@ -7843,7 +8095,7 @@ function showInferenceForward() {
 // === narrative.js ===
 /**
  * The application as a narrative: one rail down the left carrying navigation, the
- * loaded data and the model catalog, with the views to its right.
+ * loaded data and the choices for the run, with the views to its right.
  *
  * The rail is a sibling of the views, built once on DOMContentLoaded, so it is
  * there from a cold load rather than appearing after an upload. Its navigation is
@@ -7856,7 +8108,7 @@ function showInferenceForward() {
  *
  * Everything is built from the page that is already there. The mode sections keep
  * their markup, their element ids and their listeners; nodes are moved, never
- * rebuilt, so nothing that reads a control by id is affected. The catalog is read
+ * rebuilt, so nothing that reads a control by id is affected. The chosen model is read
  * from the model <select> elements rather than from a second list, so it cannot
  * drift from the registry. Depends on core.js.
  */
@@ -7884,7 +8136,7 @@ const RAIL_VIEWS = ['upload', 'processing', 'model-preprocessing', 'modeling', '
 const RAIL_NEEDS_DATA = 'Upload a file first.';
 
 // The model select of each mode, by task. switchModelingMode shows one mode at a
-// time; the catalog writes to whichever select belongs to the visible mode.
+// time; the choices list reads whichever select belongs to the visible mode.
 const MODEL_SELECTS = {
     simple: { regression: 'simpleNModels', classification: 'simpleClassModels', cluster: 'simpleClModels' },
     advanced: { regression: 'advancedNModels', classification: 'advancedClassModels', cluster: 'advancedClModels' },
@@ -7911,7 +8163,7 @@ function narrativeTaskKey() {
 }
 
 /**
- * The model select the catalog reads.
+ * The model select the choices list reads.
  *
  * The task comes from the recorded choice rather than from which select happens to
  * be on screen. Picking by visibility made the count follow the page: on Modeling a
@@ -7955,7 +8207,7 @@ function narrativeHasData() {
     return Boolean(typeof uploadedFileName === 'string' && uploadedFileName);
 }
 
-/** Whether a task type has been chosen, which is what makes the catalog live. */
+/** Whether a task type has been chosen, which is what gives the model line a value. */
 function narrativeTaskChosen() {
     const el = document.getElementById('outputType1');
     return Boolean(el && el.value);
@@ -7979,7 +8231,7 @@ function narrativeBuildShell() {
     const rail = document.createElement('aside');
     rail.id = 'narrativeRail';
     rail.className = 'narrative-rail';
-    rail.setAttribute('aria-label', 'Navigation, data and models');
+    rail.setAttribute('aria-label', 'Navigation and data');
     rail.innerHTML = `
         <nav class="narrative-nav" id="narrativeNav" aria-label="Main navigation"></nav>
         <section class="narrative-panel" id="narrativeDataPanel">
@@ -7989,19 +8241,6 @@ function narrativeBuildShell() {
             </div>
             <div class="narrative-panel-body" id="narrativeDataBody">
                 <p class="narrative-empty">No data loaded.</p>
-            </div>
-        </section>
-        <section class="narrative-panel narrative-apps" id="narrativeAppsPanel">
-            <div class="narrative-panel-head">
-                <h3>Models</h3>
-                <span class="narrative-count" id="narrativeAppsCount">0</span>
-            </div>
-            <div class="narrative-search">
-                <label class="sr-only" for="narrativeAppSearch">Search models</label>
-                <input type="search" id="narrativeAppSearch" placeholder="Search models" autocomplete="off">
-            </div>
-            <div class="narrative-panel-body" id="narrativeAppsBody">
-                <p class="narrative-empty">No models listed.</p>
             </div>
         </section>
     `;
@@ -8154,6 +8393,10 @@ function narrativeSetStep(key) {
         li.classList.toggle('is-done', at > -1 && i < at);
         li.classList.toggle('is-current', i === at);
     });
+    // Before a run the strip repeats the rail, so it is drawn only from the moment
+    // a run starts: then it is progress the rail does not show.
+    if (key === 'run' || key === 'results') flow.classList.add('is-live');
+    if (key === 'upload' || key === 'preprocess' || key === 'setup') flow.classList.remove('is-live');
 }
 
 /** Draw the stages the server reports underneath the run strip.
@@ -8237,63 +8480,115 @@ function narrativeRefreshData() {
                 ${columns ? `<p class="narrative-selection">${escapeHtml(columns)}</p>` : ''}
             </div>
         </div>
+        ${narrativeChoicesHtml()}
     `;
     if (count) count.textContent = '1';
 }
 
-/** Rebuild the catalog from the visible mode's model select. */
-function narrativeRefreshApps() {
-    const body = document.getElementById('narrativeAppsBody');
-    const count = document.getElementById('narrativeAppsCount');
-    if (!body) return;
-    const select = narrativeActiveSelect();
-    if (!select) {
-        body.innerHTML = '<p class="narrative-empty">No models listed.</p>';
-        if (count) count.textContent = '0';
-        return;
-    }
-    // Before a task type is known the catalog still shows the registry and its
-    // group counts, so the rail reads as the application rather than as a gap.
-    // The entries are inert: choosing one would write to a select the run does
-    // not use yet.
-    const live = narrativeTaskChosen();
-    const filter = (document.getElementById('narrativeAppSearch')?.value || '').trim().toLowerCase();
-    let total = 0;
+/* The choices the run will use, read from the controls on each page and listed
+   under the file. The list is the same whichever page is open, so a person can
+   see what Preprocessing decided while on Modeling. "change" opens the page and
+   the setting. */
+const CHOICE_PAGES = [
+    { tab: 'model-preprocessing', label: 'Preprocessing', items: [
+        { name: 'Blanks', read: () => {
+            const drop = document.getElementById('dropMissing');
+            const impute = document.getElementById('imputeStrategy');
+            if (!drop) return '';
+            const scope = { indicatorAndTarget: 'indicators and target', indicator: 'indicators', target: 'target', all: 'all columns' }[drop.value];
+            if (!scope) return 'kept';
+            const fill = impute && impute.value && impute.value !== 'none' ? (/^[0-9.]+$/.test(impute.value) ? `filled with ${impute.value}` : `filled with the ${impute.value}`) : 'rows removed';
+            return `${fill} (${scope})`;
+        }, ids: ['dataCleaningMissingWrapper', 'imputeDiv'] },
+        { name: 'Text columns', read: () => {
+            const use = document.getElementById('useTransformer');
+            const cols = document.getElementById('transformerColumn');
+            if (!use) return '';
+            if (use.value !== 'Yes' && use.value !== 'yes') return 'none';
+            return cols && cols.value ? `one-hot: ${cols.value}` : 'one-hot encoded';
+        }, ids: ['transformerOptionWrapper', 'transformerYes'] },
+        { name: 'Stratify', read: () => {
+            const yn = document.getElementById('scalingYesNo');
+            const col = document.getElementById('specificVariableSelect');
+            if (!yn) return '';
+            return (yn.value === 'Yes' || yn.value === 'yes') ? (col && col.value ? `by ${(col.options && col.options[col.selectedIndex]) ? col.options[col.selectedIndex].text : col.value}` : 'yes') : 'no';
+        }, ids: ['scalingQuestion', 'scalingYes'] },
+        { name: 'Scaler', read: () => { const e = document.getElementById('scaler'); return e ? (e.options[e.selectedIndex] || {}).text || e.value : ''; }, ids: ['preprocessScaler'] },
+        { name: 'Split', read: () => { const e = document.getElementById('trainSize'); return e && e.value ? `${Math.round(Number(e.value) * 100)} / ${Math.round((1 - Number(e.value)) * 100)}` : ''; }, ids: ['preprocessSplit'] },
+        { name: 'Seed', read: () => { const e = document.getElementById('seedValue'); return e && e.value ? String(e.value) : ''; }, ids: ['preprocessSeed'] },
+    ] },
+    // The model is chosen on Modeling, so its lines appear from Modeling onward.
+    { tab: 'modeling', label: 'Modeling', views: ['modeling', 'historic'], items: [
+        { name: 'Mode', read: () => ({ automl: 'AutoML', simple: 'Simple', advanced: 'Advanced' }[narrativeCurrentMode()] || ''), ids: ['modelingModeCard'] },
+        { name: 'Model', read: () => {
+            if (!narrativeTaskChosen()) return '';
+            const sel = narrativeActiveSelect();
+            if (!sel) return '';
+            const opt = sel.value ? sel.options[sel.selectedIndex] : null;
+            if (opt) return opt.textContent.trim();
+            return narrativeCurrentMode() === 'automl' ? 'best of the compared candidates' : 'not chosen';
+        }, ids: () => { const sel = narrativeActiveSelect(); return sel ? [sel.id] : []; } },
+        { name: 'Search', read: () => {
+            if (narrativeCurrentMode() !== 'advanced') return '';
+            const e = document.getElementById('hyperparameterSearch');
+            return e && e.value && e.value !== 'none' ? (e.options[e.selectedIndex] || {}).text || e.value : '';
+        }, ids: ['hyperparameterSearch'] },
+    ] },
+];
+
+const CHOICE_VIEWS = new Set(['model-preprocessing', 'modeling', 'historic']);
+
+function narrativeChoicesHtml() {
+    if (typeof preprocessColumnsChosen === 'function' && !preprocessColumnsChosen()) return '';
+    // Upload and Data Exploration come before the choices are made; listing
+    // them there confuses a first run, so the list starts at Model Preprocessing.
+    const active = document.querySelector('#narrativeNav .tab-button.active');
+    if (!active || !CHOICE_VIEWS.has(active.dataset.tab)) return '';
     let html = '';
-    const groups = select.querySelectorAll('optgroup');
-    const render = (label, options) => {
-        const items = options.filter(
-            (o) => o.value && (!filter || o.textContent.toLowerCase().includes(filter) || o.value.toLowerCase().includes(filter))
-        );
-        if (!items.length) return '';
-        total += items.length;
-        return (
-            `<p class="narrative-group">${escapeHtml(label)} <span>${items.length}</span></p>` +
-            items
-                .map(
-                    (o) =>
-                        `<button type="button" class="narrative-item narrative-app${o.value === select.value && live ? ' is-selected' : ''}${live ? '' : ' is-inert'}"${live ? '' : ' disabled title="Choose a task type in Model Preprocessing."'} data-model="${escapeHtml(o.value)}">` +
-                        `<span class="narrative-tile">${escapeHtml(narrativeInitials(o.textContent))}</span>` +
-                        `<span class="narrative-app-name">${escapeHtml(o.textContent.trim())}</span></button>`
-                )
-                .join('')
-        );
-    };
-    if (groups.length) {
-        groups.forEach((g) => {
-            html += render(g.label, Array.from(g.querySelectorAll('option')));
+    CHOICE_PAGES.forEach((page) => {
+        if (page.views && !page.views.includes(active.dataset.tab)) return;
+        const rows = page.items.map((it) => ({ it, value: it.read() })).filter((r) => r.value);
+        if (!rows.length) return;
+        html += `<li class="narrative-choice-page">${escapeHtml(page.label)}</li>`;
+        rows.forEach(({ it, value }) => {
+            html += `<li><strong>${escapeHtml(it.name)}</strong> ${escapeHtml(value)}<button type="button" class="narrative-choice-change" data-tab="${page.tab}" data-ids="${(typeof it.ids === 'function' ? it.ids() : it.ids).join(',')}">change</button></li>`;
         });
-    } else {
-        html += render('Models', Array.from(select.querySelectorAll('option')));
-    }
-    body.innerHTML = html || '<p class="narrative-empty">No model matches that search.</p>';
-    if (count) count.textContent = String(total);
+    });
+    return html ? `<ul class="narrative-choices" aria-label="Choices for this run">${html}</ul>` : '';
 }
+
+document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.narrative-choice-change');
+    if (!btn) return;
+    const entry = document.querySelector(`#narrativeNav .tab-button[data-tab="${btn.dataset.tab}"]`);
+    if (entry && !entry.disabled) entry.click();
+    const ids = (btn.dataset.ids || '').split(',').filter(Boolean);
+    if (typeof revealPreprocessBlocks === 'function') revealPreprocessBlocks(ids);
+    const first = ids.map((id) => document.getElementById(id)).find((el) => el);
+    if (first) {
+        first.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        const ctl = first.matches('select, input, textarea') ? first : first.querySelector('select, input:not([type=hidden]), textarea');
+        if (ctl) ctl.focus({ preventScroll: true });
+    }
+});
+
+// The list follows the controls: any change on the preprocessing form redraws it.
+document.addEventListener('change', (e) => {
+    if (e.target.closest && e.target.closest('#preprocessform')) narrativeRefreshData();
+});
+document.addEventListener('input', (e) => {
+    if (e.target.closest && e.target.closest('#preprocessform') && (e.target.id === 'trainSize' || e.target.id === 'seedValue')) narrativeRefreshData();
+});
+document.addEventListener('click', (e) => {
+    if (e.target.closest && e.target.closest('#narrativeNav .tab-button, .narrative-next, #continueToPreprocessButton, #continueToModelingButton, #continueToInferenceButton')) {
+        window.setTimeout(narrativeRefreshData, 80);
+    }
+});
 
 /**
  * Show the rail once a file is loaded, and keep it from then on.
  *
- * With no data the rail would carry an empty data panel, an inert catalog and five
+ * With no data the rail would carry an empty data panel and five
  * entries that all refuse, so the welcome and upload screens take the whole page
  * instead. The shell is the same one either way: a class collapses the grid to one
  * column rather than a second layout being built.
@@ -8308,46 +8603,15 @@ function narrativeApplyLayout() {
     if (narrativeHasData()) page.dataset.railShown = 'true';
 }
 
-/* The catalog is for choosing a model and for reading which one is applied, so it
-   shows on Modeling and on Inference and nowhere else. Upload, Data Exploration and
-   Model Preprocessing have no use for it and it crowds the step they are on. */
-const CATALOG_VIEWS = new Set(['modeling', 'historic']);
-
-function narrativeApplyCatalogVisibility() {
-    const panel = document.getElementById('narrativeAppsPanel');
-    if (!panel) return;
-    const active = document.querySelector('#narrativeNav .tab-button.active');
-    const tab = active ? active.dataset.tab : '';
-    panel.classList.toggle('hidden', !CATALOG_VIEWS.has(tab));
-}
-
 /** Bring the rail's parts up to date with whatever the app now knows. */
 function narrativeSync() {
     narrativeApplyLayout();
-    narrativeApplyCatalogVisibility();
     narrativeGateNav();
     narrativeRefreshNext();
     narrativeRefreshData();
-    narrativeRefreshApps();
 }
 
 function narrativeWire() {
-    const body = document.getElementById('narrativeAppsBody');
-    if (body) {
-        body.addEventListener('click', (e) => {
-            const btn = e.target.closest('.narrative-app');
-            if (!btn || btn.disabled) return;
-            const select = narrativeActiveSelect();
-            if (!select) return;
-            select.value = btn.dataset.model;
-            select.dispatchEvent(new Event('change', { bubbles: true }));
-            narrativeRefreshApps();
-            narrativeSetStep('setup');
-        });
-    }
-    const search = document.getElementById('narrativeAppSearch');
-    if (search) search.addEventListener('input', narrativeRefreshApps);
-
     // The Data panel is redrawn, so the click is caught on the panel rather than
     // bound to a button that will not be the same node next time.
     const dataBody = document.getElementById('narrativeDataBody');
@@ -8367,7 +8631,6 @@ function narrativeWire() {
         const radio = document.getElementById(id);
         if (radio) {
             radio.addEventListener('change', () => {
-                narrativeRefreshApps();
                 narrativeRefreshData();
             });
         }
@@ -8375,7 +8638,7 @@ function narrativeWire() {
     Object.values(MODEL_SELECTS).forEach((byTask) => {
         Object.values(byTask).forEach((id) => {
             const el = document.getElementById(id);
-            if (el) el.addEventListener('change', narrativeRefreshApps);
+            if (el) el.addEventListener('change', narrativeRefreshData);
         });
     });
 }
@@ -8433,6 +8696,24 @@ document.addEventListener('DOMContentLoaded', () => {
     build();
     new MutationObserver(build).observe(host, { attributes: true, attributeFilter: ['class'] });
 });
+
+
+/* Documentation is reading, not the run, so it takes the whole page whether or
+   not data is loaded. The section's own hidden class is the signal: the layout
+   follows it, so every route into the documentation behaves the same. */
+(function narrativeDocumentationLayout() {
+    const start = () => {
+        const doc = document.getElementById('documentation');
+        const page = document.getElementById('narrativePage');
+        if (!doc || !page) return false;
+        const apply = () => page.classList.toggle('is-doc', !doc.classList.contains('hidden'));
+        new MutationObserver(apply).observe(doc, { attributes: true, attributeFilter: ['class'] });
+        apply();
+        return true;
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { if (!start()) setTimeout(start, 0); });
+    else if (!start()) setTimeout(start, 0);
+})();
 
 
 // === inference.js ===
@@ -8674,7 +8955,7 @@ predictionForm.addEventListener('submit', async (e) => {
                 spreadUrl ? { key: 'spread', label: 'Predictor spread: training rows against new rows', url: spreadUrl, alt: 'Predictor spread of training rows and new rows' } : null,
                 perfUrl ? { key: 'performance', label: 'Model used (training performance)', url: perfUrl, alt: 'Training performance' } : null,
             ].filter(Boolean);
-            const imgStyle = 'display: block; max-height: calc(100vh - var(--header-offset, 88px) - 360px); width: auto; max-width: 100%; object-fit: contain;';
+            const imgStyle = 'display: block; width: 100%; max-width: 860px; height: auto; object-fit: contain;';
             const modelGraphicSectionHtml = graphicChoices.length ? `
                 <h3 style="margin: 0 0 8px 0;">Graphic</h3>
                 <label for="inferenceGraphicSelect" class="sr-only">Select graphic</label>
@@ -8684,7 +8965,7 @@ predictionForm.addEventListener('submit', async (e) => {
                 <img id="inferenceGraphic" src="${graphicChoices[0].url}" alt="${escapeHtml(graphicChoices[0].alt)}" class="inference-model-graphic-img" style="${imgStyle}">
             ` : '';
             const rightPanelHtml = (trainingSummaryTableHtml || modelGraphicSectionHtml) ? `
-                <div class="inference-model-graphic" style="flex: 0 0 calc(50% - 12px); min-width: 200px; overflow: auto; align-self: flex-start;">
+                <div class="inference-model-graphic" style="flex: 1.6 1 480px; min-width: 0; align-self: flex-start;">
                     ${modelGraphicSectionHtml}
                     ${trainingSummaryTableHtml}
                 </div>
@@ -8701,8 +8982,8 @@ predictionForm.addEventListener('submit', async (e) => {
                     <button class="secondary-button" onclick="backToModel()">Back to Modeling</button>
                     <button class="secondary-button" onclick="newPredict()">Run inference on another dataset</button>
                 </div>
-                <div class="inference-results-content" style="display: flex; flex-wrap: nowrap; gap: 24px; align-items: flex-start;">
-                    <div class="inference-summary-section" style="flex: 0 0 calc(50% - 12px); min-width: 200px; overflow: auto; align-self: flex-start;">
+                <div class="inference-results-content" style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+                    <div class="inference-summary-section" style="flex: 1 1 360px; min-width: 0; align-self: flex-start;">
                         <h3 style="margin: 0 0 8px 0;">Inference summary</h3>
                         <p style="margin: 0 0 12px 0; font-size: 0.95rem; color: #666;">Descriptive statistics for inferred (predicted) values (same style as Data Exploration).</p>
                         ${classificationNote}
@@ -8714,6 +8995,7 @@ predictionForm.addEventListener('submit', async (e) => {
             `
             showApplicabilityLine(data.applicability_summary)
             showUncertaintyLine(data.uncertainty_summary)
+            showCheckBlock(data.check)
             // The example rows were drawn from a known species each, so the page can
             // say how many came back the way they were drawn. Only for those rows:
             // a person's own file has no key to compare against.
@@ -8973,6 +9255,51 @@ function showUncertaintyLine(summary) {
     line.className = 'field-note'
     line.textContent = text
     host.appendChild(line)
+}
+
+
+/* The check against measured values. A file that carries the target column (or the
+   target name with _measured, _true or _actual) is scored against it here; a file
+   without one is scored blind, and one line says which column would make the check.
+   Both are ordinary uses: the person decides whether the answers travel with the
+   rows. */
+function showCheckBlock(check) {
+    const host = document.querySelector('.inference-summary-section')
+    if (!host || !check) return
+    const block = document.createElement('div')
+    block.id = 'inferenceCheck'
+    block.className = 'inference-check'
+    const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+    if (!check.found) {
+        const names = (check.accepted || []).slice(0, 2).map((n) => `<code>${esc(n)}</code>`).join(' or ')
+        block.innerHTML = `<p class="field-note">Scored blind. To check the predictions against measured values, include a column named ${names} in the file.</p>`
+        host.appendChild(block)
+        return
+    }
+    // The note that says there are no true labels no longer applies.
+    const note = document.querySelector('.inference-classification-note')
+    if (note) note.remove()
+    const dropped = check.dropped ? ` ${check.dropped} row${check.dropped === 1 ? '' : 's'} without both values left out.` : ''
+    let body = ''
+    if (check.error) {
+        body = `<p class="field-note">${esc(check.error)}</p>`
+    } else if (check.kind === 'regression') {
+        const f = (v, d = 3) => (v === null || v === undefined ? 'n/a' : Number(v).toFixed(d))
+        body = `<table class="inference-check-table"><tbody>
+            <tr><th>n</th><td>${check.n}</td></tr>
+            <tr><th>R&sup2;</th><td>${f(check.r2)}</td></tr>
+            <tr><th>RMSE</th><td>${f(check.rmse)}</td></tr>
+            <tr><th>MAE</th><td>${f(check.mae)}</td></tr>
+            <tr><th>Mean bias (predicted minus measured)</th><td>${f(check.bias)}</td></tr>
+        </tbody></table>`
+    } else {
+        const labels = check.labels || []
+        const rows = (check.confusion || []).map((row, i) => `<tr><th>${esc(labels[i])}</th>${row.map((v, j) => `<td class="num${i === j ? ' diag' : ''}">${v}</td>`).join('')}</tr>`).join('')
+        body = `<p>Accuracy ${(check.accuracy * 100).toFixed(1)}%, macro F1 ${Number(check.macro_f1).toFixed(3)} on ${check.n} rows.</p>
+            <table class="inference-check-table confusion"><thead><tr><th>measured \\ predicted</th>${labels.map((l) => `<th>${esc(l)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`
+    }
+    block.innerHTML = `<h4>Check against measured values</h4><p class="field-note">Column <code>${esc(check.column)}</code> in the scored file.${dropped}</p>${body}`
+    host.appendChild(block)
 }
 
 
@@ -9574,4 +9901,181 @@ function stopModelRun() {
 (function() {
     document.documentElement.classList.remove('dark-mode');
     document.body.classList.remove('dark-mode');
+})();
+
+/* ==========================================================================
+   Hover explanations on the classic page (review of 2026-09-27).
+
+   The guided page explains every control on hover of its label and on keyboard
+   focus of the control. The classic page had none. The same mechanism is used
+   here: the words of a label take a dotted underline, the explanation opens on
+   hover or focus, stays open while the pointer is over it, and closes on Escape
+   (WCAG 1.4.13). Page controls are explained by id; hyperparameter fields by the
+   scikit-learn name their label carries ("Max Depth (int or None):" reads as
+   max_depth), so one sentence serves every model that has the parameter.
+   ========================================================================== */
+(function classicHelp() {
+    const HELP = {
+        file: 'A table with one header row. CSV, Excel (.xlsx, .xlsm) and Parquet are read. Nothing is sent anywhere except this server.',
+        corrCols: 'The columns the statistics, correlation matrix and pairplot read, as letters: "C-F" or "B,D,F". Text columns are skipped by the correlation.',
+        exploreDropMissing: 'Whether rows with a blank in the explored columns are left out of the statistics.',
+        exploreZeroHandle: 'What to do with zeros in the explored columns, for data where zero means not measured.',
+        outputType1: 'Classification predicts a class label. Regression predicts a number. Clustering groups rows without a target. The example sets this; change it if the proposal is wrong for your data.',
+        indicators: 'The columns the model reads, as spreadsheet letters: "B-G" or "B,C,E". Identifier columns and anything that leaks the target should be left out.',
+        predictors: 'The column the model predicts, as a letter. A text column or a number with few distinct values is treated as a class; other numbers as a quantity.',
+        useTransformer: 'Text columns cannot enter an estimator as they are. One-hot encoding turns each text value into its own 0/1 column. The page detects text columns itself; this only overrides it.',
+        transformerColumn: 'The text columns to one-hot encode, as letters.',
+        imputeStrategy: 'What to do with a blank in a modeling column: remove the row, or fill the blank with the column mean, median or mode computed on the training rows only.',
+        zeroHandle: 'What to do with zeros in the modeling columns, for data where zero means not measured: keep them, remove the rows, or fill them.',
+        scalingYesNo: 'Keeps the mix of one column the same in both halves of the split, so a rare class or a site is not left out of the test rows by chance.',
+        specificVariableSelect: 'The column whose mix the split preserves.',
+        quantileBins: 'A numeric column is stratified by binning it first: equal-count quantiles, or thresholds you type.',
+        scaler: 'Rescales the predictors before fitting. Trees do not need it; distance and linear models often do. Standard centres to mean zero and unit variance; min-max maps to 0 to 1; robust uses the median and quartiles.',
+        seedValue: 'The random seed. The same seed and settings give the same split and the same fit. It is written to the run record.',
+        trainSize: 'The fraction of rows the model is fitted on; the rest is held out as the test set. 0.80 keeps one row in five for testing.',
+        testSize: 'The fraction held out for the test score. It follows the train size.',
+        simpleClassModels: 'The estimator to fit, from scikit-learn. Every model in the list is trained through the same route.',
+        simpleRegModels: 'The estimator to fit, from scikit-learn. Every model in the list is trained through the same route.',
+        simpleClusterModels: 'The clustering method. The number of groups is a setting of the model.',
+        units: 'Written beside the metrics in the result and the model card; it changes no number. "u*" is read as the micro sign.',
+        sigfig: 'Decimal places shown for the metrics. The predictions file is always written at full precision.',
+        predictFile: 'A table with the same predictor columns as the training file. Predictions are written with a novelty score and a note for rows outside the training range.',
+    };
+    const PARAM_HELP = {
+        n_estimators: 'Number of trees or rounds. More is slower and usually a little better, with diminishing returns.',
+        max_depth: 'Deepest a tree may grow. Smaller values fit less closely to the training rows.',
+        n_neighbors: 'How many nearest rows vote for a prediction. Small values follow the training rows closely.',
+        weights: 'uniform gives every neighbour one vote; distance gives nearer neighbours more.',
+        learning_rate: 'How much each round or step changes the model. Smaller needs more rounds.',
+        learning_rate_init: 'The starting step size of the optimizer.',
+        c: 'Inverse regularization strength. Smaller values regularize more.',
+        alpha: 'Regularization strength. Larger values regularize more.',
+        l1_ratio: 'Mix of L1 and L2 penalty: 0 is ridge, 1 is lasso.',
+        max_iter: 'Cap on solver iterations.',
+        max_iterations: 'Cap on solver iterations.',
+        tol: 'Stopping tolerance for the solver.',
+        random_state: 'Seed for this estimator. The run seed is used when blank.',
+        class_weight: 'Reweights classes; balanced counters an uneven class mix.',
+        criterion: 'The split quality measure the trees use.',
+        splitter: 'How each split is chosen: the best split, or a random one among the best.',
+        min_samples_leaf: 'Fewest rows a leaf may contain; larger values smooth the tree.',
+        min_samples_split: 'Fewest rows a node needs before it can split.',
+        max_features: 'How many predictors each split considers; fewer decorrelates the trees.',
+        max_leaf_nodes: 'Cap on leaves per tree; blank means no cap.',
+        min_impurity_decrease: 'A split must reduce impurity by at least this much.',
+        ccp_alpha: 'Cost-complexity pruning strength; larger prunes more.',
+        bootstrap: 'Whether each tree is fitted on a resample of the rows.',
+        oob_score: 'Scores each tree on the rows its resample left out; a free validation estimate.',
+        kernel: 'The kernel function of the support vector machine.',
+        gamma: 'Kernel width for rbf, poly and sigmoid kernels.',
+        degree: 'Degree of the polynomial kernel or features.',
+        solver: 'The optimization routine; the default suits most data.',
+        penalty: 'The regularization type.',
+        n_jobs: 'CPU cores to use; blank means one.',
+        p: 'Power of the Minkowski distance: 1 is Manhattan, 2 is Euclidean.',
+        metric: 'The distance measure between rows.',
+        hidden_layer_sizes: 'Neurons in each hidden layer, one box per layer; blank boxes are unused layers.',
+        activation: 'The nonlinearity between layers; relu suits most data.',
+        batch_size: 'Rows per optimizer step; auto picks min(200, rows).',
+        momentum: 'Momentum of the sgd solver.',
+        nesterovs_momentum: 'Uses the Nesterov form of momentum with the sgd solver.',
+        early_stopping: 'Holds out a fraction of the training rows and stops when its score stops improving.',
+        validation_fraction: 'The fraction of training rows early stopping holds out.',
+        beta_1: 'Decay rate of the first-moment estimate in adam.',
+        beta_2: 'Decay rate of the second-moment estimate in adam.',
+        epsilon: 'Numerical stability term of adam, or the tube width of epsilon-insensitive loss.',
+        shuffle: 'Whether rows are shuffled each iteration.',
+        warm_start: 'Continues from the previous fit instead of starting over.',
+        verbose: 'Prints solver progress to the server log; the result is unchanged.',
+        power_t: 'Exponent of the inverse-scaling learning rate schedule.',
+        n_clusters: 'Number of groups to form.',
+        n_init: 'How many times the clustering is started from new centres; the best is kept.',
+        init: 'How the starting centres are chosen.',
+        eps: 'Neighbourhood radius of DBSCAN.',
+        min_samples: 'Rows a neighbourhood needs to form a core point.',
+        loss: 'The loss the model minimizes.',
+        n_components: 'Number of components kept.',
+        fit_intercept: 'Whether an intercept is fitted.',
+        positive: 'Constrains the coefficients to be non-negative.',
+        subsample: 'Fraction of rows each round is fitted on; below 1 adds randomness.',
+        damping: 'Damping factor of affinity propagation, between 0.5 and 1.',
+        linkage: 'How the distance between clusters is measured when they merge.',
+        threshold: 'Radius of a subcluster in Birch.',
+        branching_factor: 'Maximum subclusters per node in Birch.',
+        quantile: 'Quantile the estimator targets or uses for its bandwidth.',
+        nu: 'Upper bound on the fraction of margin errors and support vectors.',
+        cv: 'Number of cross-validation folds the estimator uses internally.',
+    };
+    let tipCounter = 0;
+    // Chrome marks a text field :focus-visible after a mouse click too, so the
+    // focus tip opens only when the focus came from the keyboard. Otherwise the
+    // tip covers the buttons under the field while a person types.
+    let focusFromKeyboard = false;
+    document.addEventListener('keydown', (ev) => { if (ev.key === 'Tab') focusFromKeyboard = true; }, true);
+    document.addEventListener('pointerdown', () => { focusFromKeyboard = false; }, true);
+    function attachHelp(target, text, control) {
+        if (!target || !text || target.classList.contains('tipword')) return null;
+        const id = 'tip' + (++tipCounter);
+        const tip = document.createElement('span');
+        tip.className = 'tip'; tip.id = id; tip.setAttribute('role', 'tooltip'); tip.textContent = text;
+        const wrap = document.createElement('span'); wrap.className = 'helpwrap';
+        wrap.appendChild(tip);
+        target.classList.add('tipword');
+        target.insertAdjacentElement('afterend', wrap);
+        const open = () => { wrap.classList.remove('dismissed'); wrap.classList.add('open'); };
+        const close = () => wrap.classList.remove('open');
+        target.addEventListener('mouseenter', open);
+        target.addEventListener('mouseleave', (ev) => { if (!wrap.contains(ev.relatedTarget)) close(); });
+        wrap.addEventListener('mouseleave', (ev) => { if (ev.relatedTarget !== target && !target.contains(ev.relatedTarget)) close(); });
+        if (control) {
+            control.addEventListener('focusin', () => { if (focusFromKeyboard) open(); });
+            control.addEventListener('focusout', (ev) => { if (!control.contains(ev.relatedTarget)) close(); });
+            control.setAttribute('aria-describedby', id);
+        }
+        return id;
+    }
+    document.addEventListener('keydown', (ev) => {
+        if (ev.key !== 'Escape') return;
+        document.querySelectorAll('.helpwrap.open').forEach((w) => { w.classList.remove('open'); w.classList.add('dismissed'); });
+    });
+    function paramName(labelText) {
+        let t = String(labelText).trim().replace(/:\s*$/, '');
+        t = t.split(' - ')[0].split(' (')[0].trim();
+        return t.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+    }
+    function init() {
+        Object.keys(HELP).forEach((id) => {
+            const ctl = document.getElementById(id);
+            if (!ctl) return;
+            // Buttons get no hover tip: an open tip would sit over the button.
+            const label = document.querySelector('label[for="' + id + '"]');
+            if (label) attachHelp(label, HELP[id], ctl);
+        });
+        // A label or heading that carries its explanation in the markup as
+        // data-help shows it on hover in place of a note under the control.
+        document.querySelectorAll('[data-help]').forEach((el) => {
+            const ctl = el.htmlFor ? document.getElementById(el.htmlFor) : null;
+            attachHelp(el, el.dataset.help, ctl);
+        });
+        // Hyperparameter labels read as one line: the name alone. The descriptor
+        // the markup carried ("# of trees (integer >=1)") moves into the hover
+        // explanation, after the sentence for the parameter when there is one.
+        document.querySelectorAll('[id$="Fields"] > label, [id^="nonreq"][id$="Params"] > label, [id^="advancedNonreq"][id$="Params"] > label, [id^="advanced"][id$="Fields"] label').forEach((label) => {
+            if (label.querySelector('input, select')) return;
+            const full = label.textContent.trim().replace(/:\s*$/, '');
+            const name = paramName(full);
+            const m = full.match(/^(.*?)(?:\s+-\s+|\s+\()(.*)$/);
+            const short = m ? m[1].trim() : full;
+            let descriptor = m ? full.slice(short.length).trim().replace(/^-\s*/, '') : '';
+            descriptor = descriptor.replace(/^\((.*)\)$/, '$1');
+            if (short && short !== full) label.textContent = short;
+            const sentence = PARAM_HELP[name] || PARAM_HELP[name.replace(/^class_/, '')] || '';
+            const text = [sentence, descriptor ? 'Accepts: ' + descriptor + '.' : ''].filter(Boolean).join(' ');
+            if (!text) return;
+            const ctl = label.htmlFor ? document.getElementById(label.htmlFor) : null;
+            attachHelp(label, text, ctl);
+        });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+    else init();
 })();

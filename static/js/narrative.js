@@ -1,6 +1,6 @@
 /**
  * The application as a narrative: one rail down the left carrying navigation, the
- * loaded data and the model catalog, with the views to its right.
+ * loaded data and the choices for the run, with the views to its right.
  *
  * The rail is a sibling of the views, built once on DOMContentLoaded, so it is
  * there from a cold load rather than appearing after an upload. Its navigation is
@@ -13,7 +13,7 @@
  *
  * Everything is built from the page that is already there. The mode sections keep
  * their markup, their element ids and their listeners; nodes are moved, never
- * rebuilt, so nothing that reads a control by id is affected. The catalog is read
+ * rebuilt, so nothing that reads a control by id is affected. The chosen model is read
  * from the model <select> elements rather than from a second list, so it cannot
  * drift from the registry. Depends on core.js.
  */
@@ -41,7 +41,7 @@ const RAIL_VIEWS = ['upload', 'processing', 'model-preprocessing', 'modeling', '
 const RAIL_NEEDS_DATA = 'Upload a file first.';
 
 // The model select of each mode, by task. switchModelingMode shows one mode at a
-// time; the catalog writes to whichever select belongs to the visible mode.
+// time; the choices list reads whichever select belongs to the visible mode.
 const MODEL_SELECTS = {
     simple: { regression: 'simpleNModels', classification: 'simpleClassModels', cluster: 'simpleClModels' },
     advanced: { regression: 'advancedNModels', classification: 'advancedClassModels', cluster: 'advancedClModels' },
@@ -68,7 +68,7 @@ function narrativeTaskKey() {
 }
 
 /**
- * The model select the catalog reads.
+ * The model select the choices list reads.
  *
  * The task comes from the recorded choice rather than from which select happens to
  * be on screen. Picking by visibility made the count follow the page: on Modeling a
@@ -112,7 +112,7 @@ function narrativeHasData() {
     return Boolean(typeof uploadedFileName === 'string' && uploadedFileName);
 }
 
-/** Whether a task type has been chosen, which is what makes the catalog live. */
+/** Whether a task type has been chosen, which is what gives the model line a value. */
 function narrativeTaskChosen() {
     const el = document.getElementById('outputType1');
     return Boolean(el && el.value);
@@ -136,7 +136,7 @@ function narrativeBuildShell() {
     const rail = document.createElement('aside');
     rail.id = 'narrativeRail';
     rail.className = 'narrative-rail';
-    rail.setAttribute('aria-label', 'Navigation, data and models');
+    rail.setAttribute('aria-label', 'Navigation and data');
     rail.innerHTML = `
         <nav class="narrative-nav" id="narrativeNav" aria-label="Main navigation"></nav>
         <section class="narrative-panel" id="narrativeDataPanel">
@@ -146,19 +146,6 @@ function narrativeBuildShell() {
             </div>
             <div class="narrative-panel-body" id="narrativeDataBody">
                 <p class="narrative-empty">No data loaded.</p>
-            </div>
-        </section>
-        <section class="narrative-panel narrative-apps" id="narrativeAppsPanel">
-            <div class="narrative-panel-head">
-                <h3>Models</h3>
-                <span class="narrative-count" id="narrativeAppsCount">0</span>
-            </div>
-            <div class="narrative-search">
-                <label class="sr-only" for="narrativeAppSearch">Search models</label>
-                <input type="search" id="narrativeAppSearch" placeholder="Search models" autocomplete="off">
-            </div>
-            <div class="narrative-panel-body" id="narrativeAppsBody">
-                <p class="narrative-empty">No models listed.</p>
             </div>
         </section>
     `;
@@ -311,6 +298,10 @@ function narrativeSetStep(key) {
         li.classList.toggle('is-done', at > -1 && i < at);
         li.classList.toggle('is-current', i === at);
     });
+    // Before a run the strip repeats the rail, so it is drawn only from the moment
+    // a run starts: then it is progress the rail does not show.
+    if (key === 'run' || key === 'results') flow.classList.add('is-live');
+    if (key === 'upload' || key === 'preprocess' || key === 'setup') flow.classList.remove('is-live');
 }
 
 /** Draw the stages the server reports underneath the run strip.
@@ -394,63 +385,115 @@ function narrativeRefreshData() {
                 ${columns ? `<p class="narrative-selection">${escapeHtml(columns)}</p>` : ''}
             </div>
         </div>
+        ${narrativeChoicesHtml()}
     `;
     if (count) count.textContent = '1';
 }
 
-/** Rebuild the catalog from the visible mode's model select. */
-function narrativeRefreshApps() {
-    const body = document.getElementById('narrativeAppsBody');
-    const count = document.getElementById('narrativeAppsCount');
-    if (!body) return;
-    const select = narrativeActiveSelect();
-    if (!select) {
-        body.innerHTML = '<p class="narrative-empty">No models listed.</p>';
-        if (count) count.textContent = '0';
-        return;
-    }
-    // Before a task type is known the catalog still shows the registry and its
-    // group counts, so the rail reads as the application rather than as a gap.
-    // The entries are inert: choosing one would write to a select the run does
-    // not use yet.
-    const live = narrativeTaskChosen();
-    const filter = (document.getElementById('narrativeAppSearch')?.value || '').trim().toLowerCase();
-    let total = 0;
+/* The choices the run will use, read from the controls on each page and listed
+   under the file. The list is the same whichever page is open, so a person can
+   see what Preprocessing decided while on Modeling. "change" opens the page and
+   the setting. */
+const CHOICE_PAGES = [
+    { tab: 'model-preprocessing', label: 'Preprocessing', items: [
+        { name: 'Blanks', read: () => {
+            const drop = document.getElementById('dropMissing');
+            const impute = document.getElementById('imputeStrategy');
+            if (!drop) return '';
+            const scope = { indicatorAndTarget: 'indicators and target', indicator: 'indicators', target: 'target', all: 'all columns' }[drop.value];
+            if (!scope) return 'kept';
+            const fill = impute && impute.value && impute.value !== 'none' ? (/^[0-9.]+$/.test(impute.value) ? `filled with ${impute.value}` : `filled with the ${impute.value}`) : 'rows removed';
+            return `${fill} (${scope})`;
+        }, ids: ['dataCleaningMissingWrapper', 'imputeDiv'] },
+        { name: 'Text columns', read: () => {
+            const use = document.getElementById('useTransformer');
+            const cols = document.getElementById('transformerColumn');
+            if (!use) return '';
+            if (use.value !== 'Yes' && use.value !== 'yes') return 'none';
+            return cols && cols.value ? `one-hot: ${cols.value}` : 'one-hot encoded';
+        }, ids: ['transformerOptionWrapper', 'transformerYes'] },
+        { name: 'Stratify', read: () => {
+            const yn = document.getElementById('scalingYesNo');
+            const col = document.getElementById('specificVariableSelect');
+            if (!yn) return '';
+            return (yn.value === 'Yes' || yn.value === 'yes') ? (col && col.value ? `by ${(col.options && col.options[col.selectedIndex]) ? col.options[col.selectedIndex].text : col.value}` : 'yes') : 'no';
+        }, ids: ['scalingQuestion', 'scalingYes'] },
+        { name: 'Scaler', read: () => { const e = document.getElementById('scaler'); return e ? (e.options[e.selectedIndex] || {}).text || e.value : ''; }, ids: ['preprocessScaler'] },
+        { name: 'Split', read: () => { const e = document.getElementById('trainSize'); return e && e.value ? `${Math.round(Number(e.value) * 100)} / ${Math.round((1 - Number(e.value)) * 100)}` : ''; }, ids: ['preprocessSplit'] },
+        { name: 'Seed', read: () => { const e = document.getElementById('seedValue'); return e && e.value ? String(e.value) : ''; }, ids: ['preprocessSeed'] },
+    ] },
+    // The model is chosen on Modeling, so its lines appear from Modeling onward.
+    { tab: 'modeling', label: 'Modeling', views: ['modeling', 'historic'], items: [
+        { name: 'Mode', read: () => ({ automl: 'AutoML', simple: 'Simple', advanced: 'Advanced' }[narrativeCurrentMode()] || ''), ids: ['modelingModeCard'] },
+        { name: 'Model', read: () => {
+            if (!narrativeTaskChosen()) return '';
+            const sel = narrativeActiveSelect();
+            if (!sel) return '';
+            const opt = sel.value ? sel.options[sel.selectedIndex] : null;
+            if (opt) return opt.textContent.trim();
+            return narrativeCurrentMode() === 'automl' ? 'best of the compared candidates' : 'not chosen';
+        }, ids: () => { const sel = narrativeActiveSelect(); return sel ? [sel.id] : []; } },
+        { name: 'Search', read: () => {
+            if (narrativeCurrentMode() !== 'advanced') return '';
+            const e = document.getElementById('hyperparameterSearch');
+            return e && e.value && e.value !== 'none' ? (e.options[e.selectedIndex] || {}).text || e.value : '';
+        }, ids: ['hyperparameterSearch'] },
+    ] },
+];
+
+const CHOICE_VIEWS = new Set(['model-preprocessing', 'modeling', 'historic']);
+
+function narrativeChoicesHtml() {
+    if (typeof preprocessColumnsChosen === 'function' && !preprocessColumnsChosen()) return '';
+    // Upload and Data Exploration come before the choices are made; listing
+    // them there confuses a first run, so the list starts at Model Preprocessing.
+    const active = document.querySelector('#narrativeNav .tab-button.active');
+    if (!active || !CHOICE_VIEWS.has(active.dataset.tab)) return '';
     let html = '';
-    const groups = select.querySelectorAll('optgroup');
-    const render = (label, options) => {
-        const items = options.filter(
-            (o) => o.value && (!filter || o.textContent.toLowerCase().includes(filter) || o.value.toLowerCase().includes(filter))
-        );
-        if (!items.length) return '';
-        total += items.length;
-        return (
-            `<p class="narrative-group">${escapeHtml(label)} <span>${items.length}</span></p>` +
-            items
-                .map(
-                    (o) =>
-                        `<button type="button" class="narrative-item narrative-app${o.value === select.value && live ? ' is-selected' : ''}${live ? '' : ' is-inert'}"${live ? '' : ' disabled title="Choose a task type in Model Preprocessing."'} data-model="${escapeHtml(o.value)}">` +
-                        `<span class="narrative-tile">${escapeHtml(narrativeInitials(o.textContent))}</span>` +
-                        `<span class="narrative-app-name">${escapeHtml(o.textContent.trim())}</span></button>`
-                )
-                .join('')
-        );
-    };
-    if (groups.length) {
-        groups.forEach((g) => {
-            html += render(g.label, Array.from(g.querySelectorAll('option')));
+    CHOICE_PAGES.forEach((page) => {
+        if (page.views && !page.views.includes(active.dataset.tab)) return;
+        const rows = page.items.map((it) => ({ it, value: it.read() })).filter((r) => r.value);
+        if (!rows.length) return;
+        html += `<li class="narrative-choice-page">${escapeHtml(page.label)}</li>`;
+        rows.forEach(({ it, value }) => {
+            html += `<li><strong>${escapeHtml(it.name)}</strong> ${escapeHtml(value)}<button type="button" class="narrative-choice-change" data-tab="${page.tab}" data-ids="${(typeof it.ids === 'function' ? it.ids() : it.ids).join(',')}">change</button></li>`;
         });
-    } else {
-        html += render('Models', Array.from(select.querySelectorAll('option')));
-    }
-    body.innerHTML = html || '<p class="narrative-empty">No model matches that search.</p>';
-    if (count) count.textContent = String(total);
+    });
+    return html ? `<ul class="narrative-choices" aria-label="Choices for this run">${html}</ul>` : '';
 }
+
+document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.narrative-choice-change');
+    if (!btn) return;
+    const entry = document.querySelector(`#narrativeNav .tab-button[data-tab="${btn.dataset.tab}"]`);
+    if (entry && !entry.disabled) entry.click();
+    const ids = (btn.dataset.ids || '').split(',').filter(Boolean);
+    if (typeof revealPreprocessBlocks === 'function') revealPreprocessBlocks(ids);
+    const first = ids.map((id) => document.getElementById(id)).find((el) => el);
+    if (first) {
+        first.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        const ctl = first.matches('select, input, textarea') ? first : first.querySelector('select, input:not([type=hidden]), textarea');
+        if (ctl) ctl.focus({ preventScroll: true });
+    }
+});
+
+// The list follows the controls: any change on the preprocessing form redraws it.
+document.addEventListener('change', (e) => {
+    if (e.target.closest && e.target.closest('#preprocessform')) narrativeRefreshData();
+});
+document.addEventListener('input', (e) => {
+    if (e.target.closest && e.target.closest('#preprocessform') && (e.target.id === 'trainSize' || e.target.id === 'seedValue')) narrativeRefreshData();
+});
+document.addEventListener('click', (e) => {
+    if (e.target.closest && e.target.closest('#narrativeNav .tab-button, .narrative-next, #continueToPreprocessButton, #continueToModelingButton, #continueToInferenceButton')) {
+        window.setTimeout(narrativeRefreshData, 80);
+    }
+});
 
 /**
  * Show the rail once a file is loaded, and keep it from then on.
  *
- * With no data the rail would carry an empty data panel, an inert catalog and five
+ * With no data the rail would carry an empty data panel and five
  * entries that all refuse, so the welcome and upload screens take the whole page
  * instead. The shell is the same one either way: a class collapses the grid to one
  * column rather than a second layout being built.
@@ -465,46 +508,15 @@ function narrativeApplyLayout() {
     if (narrativeHasData()) page.dataset.railShown = 'true';
 }
 
-/* The catalog is for choosing a model and for reading which one is applied, so it
-   shows on Modeling and on Inference and nowhere else. Upload, Data Exploration and
-   Model Preprocessing have no use for it and it crowds the step they are on. */
-const CATALOG_VIEWS = new Set(['modeling', 'historic']);
-
-function narrativeApplyCatalogVisibility() {
-    const panel = document.getElementById('narrativeAppsPanel');
-    if (!panel) return;
-    const active = document.querySelector('#narrativeNav .tab-button.active');
-    const tab = active ? active.dataset.tab : '';
-    panel.classList.toggle('hidden', !CATALOG_VIEWS.has(tab));
-}
-
 /** Bring the rail's parts up to date with whatever the app now knows. */
 function narrativeSync() {
     narrativeApplyLayout();
-    narrativeApplyCatalogVisibility();
     narrativeGateNav();
     narrativeRefreshNext();
     narrativeRefreshData();
-    narrativeRefreshApps();
 }
 
 function narrativeWire() {
-    const body = document.getElementById('narrativeAppsBody');
-    if (body) {
-        body.addEventListener('click', (e) => {
-            const btn = e.target.closest('.narrative-app');
-            if (!btn || btn.disabled) return;
-            const select = narrativeActiveSelect();
-            if (!select) return;
-            select.value = btn.dataset.model;
-            select.dispatchEvent(new Event('change', { bubbles: true }));
-            narrativeRefreshApps();
-            narrativeSetStep('setup');
-        });
-    }
-    const search = document.getElementById('narrativeAppSearch');
-    if (search) search.addEventListener('input', narrativeRefreshApps);
-
     // The Data panel is redrawn, so the click is caught on the panel rather than
     // bound to a button that will not be the same node next time.
     const dataBody = document.getElementById('narrativeDataBody');
@@ -524,7 +536,6 @@ function narrativeWire() {
         const radio = document.getElementById(id);
         if (radio) {
             radio.addEventListener('change', () => {
-                narrativeRefreshApps();
                 narrativeRefreshData();
             });
         }
@@ -532,7 +543,7 @@ function narrativeWire() {
     Object.values(MODEL_SELECTS).forEach((byTask) => {
         Object.values(byTask).forEach((id) => {
             const el = document.getElementById(id);
-            if (el) el.addEventListener('change', narrativeRefreshApps);
+            if (el) el.addEventListener('change', narrativeRefreshData);
         });
     });
 }
@@ -590,3 +601,21 @@ document.addEventListener('DOMContentLoaded', () => {
     build();
     new MutationObserver(build).observe(host, { attributes: true, attributeFilter: ['class'] });
 });
+
+
+/* Documentation is reading, not the run, so it takes the whole page whether or
+   not data is loaded. The section's own hidden class is the signal: the layout
+   follows it, so every route into the documentation behaves the same. */
+(function narrativeDocumentationLayout() {
+    const start = () => {
+        const doc = document.getElementById('documentation');
+        const page = document.getElementById('narrativePage');
+        if (!doc || !page) return false;
+        const apply = () => page.classList.toggle('is-doc', !doc.classList.contains('hidden'));
+        new MutationObserver(apply).observe(doc, { attributes: true, attributeFilter: ['class'] });
+        apply();
+        return true;
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { if (!start()) setTimeout(start, 0); });
+    else if (!start()) setTimeout(start, 0);
+})();

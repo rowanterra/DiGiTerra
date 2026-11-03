@@ -123,6 +123,12 @@ def get_param_grid(model_name: str, problem_type: str = "regression") -> dict[st
             }
         elif model_name in ["GaussianNB_classifier", "GaussianNB"]:
             grids = {"var_smoothing": [1e-9, 1e-8, 1e-7, 1e-6]}
+        elif model_name in ["Perceptron", "Perceptron_classifier"]:
+            grids = {
+                "penalty": ["l2", "l1", "elasticnet", None],
+                "alpha": [0.0001, 0.001, 0.01],
+                "eta0": [0.1, 1.0],
+            }
         elif model_name in ["SGD_classifier", "SGDClassifier"]:
             grids = {
                 "loss": ["hinge", "log_loss", "modified_huber", "squared_hinge"],
@@ -222,12 +228,27 @@ def apply_hyperparameter_search(
         if needs_prefix:
             param_grid = {f"estimator__{k}": v for k, v in param_grid.items()}
 
+    # The fallback grids are guesses by name (C for an unlisted classifier), so a
+    # parameter the estimator does not take is dropped here rather than failing
+    # the whole search inside joblib.
+    if param_grid:
+        valid = set(model.get_params().keys())
+        dropped = [k for k in param_grid if k not in valid]
+        if dropped:
+            logger.warning(
+                "Dropped search parameter(s) %s: not accepted by %s.",
+                ", ".join(dropped),
+                inner_model_name if is_multioutput else model.__class__.__name__,
+            )
+            param_grid = {k: v for k, v in param_grid.items() if k in valid}
+
     if not param_grid:
         # No grid available, return original model
         final_model_name = (
             model_name if model_name else (inner_model_name if is_multioutput else model.__class__.__name__)
         )
         logger.warning(f"No parameter grid available for {final_model_name}. Skipping hyperparameter search.")
+        model.fit(X_train, y_train_array)
         return model
 
     # Set default scoring
@@ -331,11 +352,13 @@ def apply_hyperparameter_search(
         progress_thread = threading.Thread(target=update_progress_estimate, daemon=True)
         progress_thread.start()
 
-    search_model.fit(X_train, y_train_array)
-
-    # Signal that search is complete so the progress thread exits
-    if search_complete:
-        search_complete.set()
+    # The progress thread must stop whether the search finishes or raises;
+    # otherwise it keeps writing "Searching..." after the run has failed.
+    try:
+        search_model.fit(X_train, y_train_array)
+    finally:
+        if search_complete:
+            search_complete.set()
 
     if progress_tracker:
         progress_tracker.update_stage("hyperparameter_search", "running", 95, "Finalizing best parameters...")

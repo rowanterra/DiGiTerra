@@ -214,7 +214,7 @@ def plot_comparison(scores: dict, summary: list[dict], task: str, seeds: int, fo
     fig, ax = plt.subplots(figsize=(6.5, max(2.4, 0.42 * len(order) + 1.2)))
     box = ax.boxplot(
         data,
-        vert=False,
+        orientation="horizontal",
         widths=0.6,
         patch_artist=True,
         showfliers=False,

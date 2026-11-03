@@ -1,6 +1,6 @@
 # Audit fixes: state and what is left
 
-Branch `audit-fixes`, off `147d313` (ADA Boost, 2026-03-25).
+Branch `audit-fixes`, off `7c511f0` (ADA Boost, 2026-03-25).
 
 ## Done and verified
 
@@ -85,7 +85,7 @@ Frontend
 branch.
 
 `docs/COMMIT_REVIEW_2026-09-04.md` is a second-reader review of the fifteen commits after
-16cbcc7. It records eight findings with file and line, how each was confirmed, and the
+04bd431. It records eight findings with file and line, how each was confirmed, and the
 smallest fix. F1 is fixed and committed. F2, F3, F4, F6 and F7 are not.
 
 The work in progress on F2 and F3 is **committed on the branch

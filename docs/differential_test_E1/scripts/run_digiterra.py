@@ -7,7 +7,7 @@ manifest and model card, POST /predict on the _test file for the predictions
 file, and POST /correlationMatrices for the descriptive statistics. The
 browser layer (templates and JavaScript) is not exercised; the run records
 are the ones the application writes.
-Input: the DiGiTerra tree at 99dea69 (path in DGT), data/<name>_E1_base.csv
+Input: the DiGiTerra tree at 0942e0c (path in DGT), data/<name>_E1_base.csv
 and _test.csv. Settings per PLAN.txt: Advanced mode, split method time on
 "order", test size 0.20, stratify off, scaler none, seed 20260924, sigfig 10.
 Test: each manifest must record split method time on "order", 89 or 30 test

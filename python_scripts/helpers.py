@@ -1002,11 +1002,19 @@ def prediction(
             raise ValueError(
                 f"Prediction preprocessing mismatch. Missing transformed features: {missing_model_features}"
             )
-        X_new_scaled = X_scaled_full[model_feature_order].values
+        X_new_frame = X_scaled_full[model_feature_order]
     elif feature_order and set(feature_order).issubset(set(X_scaled_full.columns)):
-        X_new_scaled = X_scaled_full[feature_order].values
+        X_new_frame = X_scaled_full[feature_order]
     else:
-        X_new_scaled = X_scaled_full.values
+        X_new_frame = X_scaled_full
+    # A model fitted on a frame keeps feature_names_in_; handing it the frame with
+    # those names avoids the "X does not have valid feature names" warning and lets
+    # scikit-learn check the order. A model fitted on an array gets an array.
+    _fitted_names = getattr(getattr(best_model, "best_estimator_", best_model), "feature_names_in_", None)
+    if _fitted_names is not None and list(map(str, _fitted_names)) == [str(c) for c in X_new_frame.columns]:
+        X_new_scaled = X_new_frame
+    else:
+        X_new_scaled = X_new_frame.values
 
     # --- 3. Predict ---
     y_pred = best_model.predict(X_new_scaled)
@@ -1113,7 +1121,7 @@ def prediction(
                 X_scaled_full.reindex(columns=applicability.feature_order)
                 if isinstance(X_scaled_full, pd.DataFrame)
                 and set(applicability.feature_order).issubset(X_scaled_full.columns)
-                else pd.DataFrame(X_new_scaled, columns=applicability.feature_order)
+                else pd.DataFrame(np.asarray(X_new_scaled), columns=applicability.feature_order)
             )
             scored = score_rows(applicability, app_frame)
             df_clean["novelty_score"] = scored["novelty_score"]

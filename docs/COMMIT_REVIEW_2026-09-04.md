@@ -1,11 +1,11 @@
-# Review 2: the fifteen commits after 16cbcc7
+# Review 2: the fifteen commits after 04bd431
 
 Review only. No file outside this one was changed.
 
 ## Scope and baseline
 
-The request named HEAD as `ac9c15c`. HEAD is **`29532c2`**; `ac9c15c` is its parent.
-`git log 16cbcc7..HEAD` is **15** commits, not 14. This review covers all fifteen.
+The request named HEAD as `8a516a7`. HEAD is **`05e8ee0`**; `8a516a7` is its parent.
+`git log 04bd431..HEAD` is **15** commits, not 14. This review covers all fifteen.
 
     pytest tests/unit    184 passed, 34 warnings, 122.52s
     make lint            exit 0 (ruff check, ruff format --check on 193 files,
@@ -144,7 +144,7 @@ boolean OR at `applicability.py:103`. Naming the missing columns in
 
 `python_scripts/reporting/bundle.py:47` still declares `BUNDLE_FORMAT =
 "digiterra-bundle/2"`. `bundle.py:293` and `:294` added `applicability` and
-`uncertainty` as top-level manifest keys in `c8272ae` and `4b39424`. A bundle written
+`uncertainty` as top-level manifest keys in `db309aa` and `bff31c9`. A bundle written
 before those commits and one written after both claim format 2 and have different
 schemas.
 
@@ -219,7 +219,7 @@ Headings visible in the form, in DOM order:
      'Train/Test Split', 'Data cleaning', 'Split, scaling and seed', 'Stratify']
 
 - **Orphan `Transformer` heading**, `templates/index.html` inside the first
-  `.preprocess-card`. `c82b244` moved `transformerOptionWrapper` and `transformerYes`
+  `.preprocess-card`. `2f0a24e` moved `transformerOptionWrapper` and `transformerYes`
   into the hidden `#preprocessControls`, leaving the heading behind.
 - **Two shell panels.** Their entire visible text is a heading and a stranded fragment:
   `'Data cleaning Check selected columns for blanks or zeros:'` and

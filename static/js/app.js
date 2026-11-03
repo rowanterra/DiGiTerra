@@ -596,3 +596,180 @@ function stopModelRun() {
     document.documentElement.classList.remove('dark-mode');
     document.body.classList.remove('dark-mode');
 })();
+
+/* ==========================================================================
+   Hover explanations on the classic page (review of 2026-09-27).
+
+   The guided page explains every control on hover of its label and on keyboard
+   focus of the control. The classic page had none. The same mechanism is used
+   here: the words of a label take a dotted underline, the explanation opens on
+   hover or focus, stays open while the pointer is over it, and closes on Escape
+   (WCAG 1.4.13). Page controls are explained by id; hyperparameter fields by the
+   scikit-learn name their label carries ("Max Depth (int or None):" reads as
+   max_depth), so one sentence serves every model that has the parameter.
+   ========================================================================== */
+(function classicHelp() {
+    const HELP = {
+        file: 'A table with one header row. CSV, Excel (.xlsx, .xlsm) and Parquet are read. Nothing is sent anywhere except this server.',
+        corrCols: 'The columns the statistics, correlation matrix and pairplot read, as letters: "C-F" or "B,D,F". Text columns are skipped by the correlation.',
+        exploreDropMissing: 'Whether rows with a blank in the explored columns are left out of the statistics.',
+        exploreZeroHandle: 'What to do with zeros in the explored columns, for data where zero means not measured.',
+        outputType1: 'Classification predicts a class label. Regression predicts a number. Clustering groups rows without a target. The example sets this; change it if the proposal is wrong for your data.',
+        indicators: 'The columns the model reads, as spreadsheet letters: "B-G" or "B,C,E". Identifier columns and anything that leaks the target should be left out.',
+        predictors: 'The column the model predicts, as a letter. A text column or a number with few distinct values is treated as a class; other numbers as a quantity.',
+        useTransformer: 'Text columns cannot enter an estimator as they are. One-hot encoding turns each text value into its own 0/1 column. The page detects text columns itself; this only overrides it.',
+        transformerColumn: 'The text columns to one-hot encode, as letters.',
+        imputeStrategy: 'What to do with a blank in a modeling column: remove the row, or fill the blank with the column mean, median or mode computed on the training rows only.',
+        zeroHandle: 'What to do with zeros in the modeling columns, for data where zero means not measured: keep them, remove the rows, or fill them.',
+        scalingYesNo: 'Keeps the mix of one column the same in both halves of the split, so a rare class or a site is not left out of the test rows by chance.',
+        specificVariableSelect: 'The column whose mix the split preserves.',
+        quantileBins: 'A numeric column is stratified by binning it first: equal-count quantiles, or thresholds you type.',
+        scaler: 'Rescales the predictors before fitting. Trees do not need it; distance and linear models often do. Standard centres to mean zero and unit variance; min-max maps to 0 to 1; robust uses the median and quartiles.',
+        seedValue: 'The random seed. The same seed and settings give the same split and the same fit. It is written to the run record.',
+        trainSize: 'The fraction of rows the model is fitted on; the rest is held out as the test set. 0.80 keeps one row in five for testing.',
+        testSize: 'The fraction held out for the test score. It follows the train size.',
+        simpleClassModels: 'The estimator to fit, from scikit-learn. Every model in the list is trained through the same route.',
+        simpleRegModels: 'The estimator to fit, from scikit-learn. Every model in the list is trained through the same route.',
+        simpleClusterModels: 'The clustering method. The number of groups is a setting of the model.',
+        units: 'Written beside the metrics in the result and the model card; it changes no number. "u*" is read as the micro sign.',
+        sigfig: 'Decimal places shown for the metrics. The predictions file is always written at full precision.',
+        predictFile: 'A table with the same predictor columns as the training file. Predictions are written with a novelty score and a note for rows outside the training range.',
+    };
+    const PARAM_HELP = {
+        n_estimators: 'Number of trees or rounds. More is slower and usually a little better, with diminishing returns.',
+        max_depth: 'Deepest a tree may grow. Smaller values fit less closely to the training rows.',
+        n_neighbors: 'How many nearest rows vote for a prediction. Small values follow the training rows closely.',
+        weights: 'uniform gives every neighbour one vote; distance gives nearer neighbours more.',
+        learning_rate: 'How much each round or step changes the model. Smaller needs more rounds.',
+        learning_rate_init: 'The starting step size of the optimizer.',
+        c: 'Inverse regularization strength. Smaller values regularize more.',
+        alpha: 'Regularization strength. Larger values regularize more.',
+        l1_ratio: 'Mix of L1 and L2 penalty: 0 is ridge, 1 is lasso.',
+        max_iter: 'Cap on solver iterations.',
+        max_iterations: 'Cap on solver iterations.',
+        tol: 'Stopping tolerance for the solver.',
+        random_state: 'Seed for this estimator. The run seed is used when blank.',
+        class_weight: 'Reweights classes; balanced counters an uneven class mix.',
+        criterion: 'The split quality measure the trees use.',
+        splitter: 'How each split is chosen: the best split, or a random one among the best.',
+        min_samples_leaf: 'Fewest rows a leaf may contain; larger values smooth the tree.',
+        min_samples_split: 'Fewest rows a node needs before it can split.',
+        max_features: 'How many predictors each split considers; fewer decorrelates the trees.',
+        max_leaf_nodes: 'Cap on leaves per tree; blank means no cap.',
+        min_impurity_decrease: 'A split must reduce impurity by at least this much.',
+        ccp_alpha: 'Cost-complexity pruning strength; larger prunes more.',
+        bootstrap: 'Whether each tree is fitted on a resample of the rows.',
+        oob_score: 'Scores each tree on the rows its resample left out; a free validation estimate.',
+        kernel: 'The kernel function of the support vector machine.',
+        gamma: 'Kernel width for rbf, poly and sigmoid kernels.',
+        degree: 'Degree of the polynomial kernel or features.',
+        solver: 'The optimization routine; the default suits most data.',
+        penalty: 'The regularization type.',
+        n_jobs: 'CPU cores to use; blank means one.',
+        p: 'Power of the Minkowski distance: 1 is Manhattan, 2 is Euclidean.',
+        metric: 'The distance measure between rows.',
+        hidden_layer_sizes: 'Neurons in each hidden layer, one box per layer; blank boxes are unused layers.',
+        activation: 'The nonlinearity between layers; relu suits most data.',
+        batch_size: 'Rows per optimizer step; auto picks min(200, rows).',
+        momentum: 'Momentum of the sgd solver.',
+        nesterovs_momentum: 'Uses the Nesterov form of momentum with the sgd solver.',
+        early_stopping: 'Holds out a fraction of the training rows and stops when its score stops improving.',
+        validation_fraction: 'The fraction of training rows early stopping holds out.',
+        beta_1: 'Decay rate of the first-moment estimate in adam.',
+        beta_2: 'Decay rate of the second-moment estimate in adam.',
+        epsilon: 'Numerical stability term of adam, or the tube width of epsilon-insensitive loss.',
+        shuffle: 'Whether rows are shuffled each iteration.',
+        warm_start: 'Continues from the previous fit instead of starting over.',
+        verbose: 'Prints solver progress to the server log; the result is unchanged.',
+        power_t: 'Exponent of the inverse-scaling learning rate schedule.',
+        n_clusters: 'Number of groups to form.',
+        n_init: 'How many times the clustering is started from new centres; the best is kept.',
+        init: 'How the starting centres are chosen.',
+        eps: 'Neighbourhood radius of DBSCAN.',
+        min_samples: 'Rows a neighbourhood needs to form a core point.',
+        loss: 'The loss the model minimizes.',
+        n_components: 'Number of components kept.',
+        fit_intercept: 'Whether an intercept is fitted.',
+        positive: 'Constrains the coefficients to be non-negative.',
+        subsample: 'Fraction of rows each round is fitted on; below 1 adds randomness.',
+        damping: 'Damping factor of affinity propagation, between 0.5 and 1.',
+        linkage: 'How the distance between clusters is measured when they merge.',
+        threshold: 'Radius of a subcluster in Birch.',
+        branching_factor: 'Maximum subclusters per node in Birch.',
+        quantile: 'Quantile the estimator targets or uses for its bandwidth.',
+        nu: 'Upper bound on the fraction of margin errors and support vectors.',
+        cv: 'Number of cross-validation folds the estimator uses internally.',
+    };
+    let tipCounter = 0;
+    // Chrome marks a text field :focus-visible after a mouse click too, so the
+    // focus tip opens only when the focus came from the keyboard. Otherwise the
+    // tip covers the buttons under the field while a person types.
+    let focusFromKeyboard = false;
+    document.addEventListener('keydown', (ev) => { if (ev.key === 'Tab') focusFromKeyboard = true; }, true);
+    document.addEventListener('pointerdown', () => { focusFromKeyboard = false; }, true);
+    function attachHelp(target, text, control) {
+        if (!target || !text || target.classList.contains('tipword')) return null;
+        const id = 'tip' + (++tipCounter);
+        const tip = document.createElement('span');
+        tip.className = 'tip'; tip.id = id; tip.setAttribute('role', 'tooltip'); tip.textContent = text;
+        const wrap = document.createElement('span'); wrap.className = 'helpwrap';
+        wrap.appendChild(tip);
+        target.classList.add('tipword');
+        target.insertAdjacentElement('afterend', wrap);
+        const open = () => { wrap.classList.remove('dismissed'); wrap.classList.add('open'); };
+        const close = () => wrap.classList.remove('open');
+        target.addEventListener('mouseenter', open);
+        target.addEventListener('mouseleave', (ev) => { if (!wrap.contains(ev.relatedTarget)) close(); });
+        wrap.addEventListener('mouseleave', (ev) => { if (ev.relatedTarget !== target && !target.contains(ev.relatedTarget)) close(); });
+        if (control) {
+            control.addEventListener('focusin', () => { if (focusFromKeyboard) open(); });
+            control.addEventListener('focusout', (ev) => { if (!control.contains(ev.relatedTarget)) close(); });
+            control.setAttribute('aria-describedby', id);
+        }
+        return id;
+    }
+    document.addEventListener('keydown', (ev) => {
+        if (ev.key !== 'Escape') return;
+        document.querySelectorAll('.helpwrap.open').forEach((w) => { w.classList.remove('open'); w.classList.add('dismissed'); });
+    });
+    function paramName(labelText) {
+        let t = String(labelText).trim().replace(/:\s*$/, '');
+        t = t.split(' - ')[0].split(' (')[0].trim();
+        return t.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+    }
+    function init() {
+        Object.keys(HELP).forEach((id) => {
+            const ctl = document.getElementById(id);
+            if (!ctl) return;
+            // Buttons get no hover tip: an open tip would sit over the button.
+            const label = document.querySelector('label[for="' + id + '"]');
+            if (label) attachHelp(label, HELP[id], ctl);
+        });
+        // A label or heading that carries its explanation in the markup as
+        // data-help shows it on hover in place of a note under the control.
+        document.querySelectorAll('[data-help]').forEach((el) => {
+            const ctl = el.htmlFor ? document.getElementById(el.htmlFor) : null;
+            attachHelp(el, el.dataset.help, ctl);
+        });
+        // Hyperparameter labels read as one line: the name alone. The descriptor
+        // the markup carried ("# of trees (integer >=1)") moves into the hover
+        // explanation, after the sentence for the parameter when there is one.
+        document.querySelectorAll('[id$="Fields"] > label, [id^="nonreq"][id$="Params"] > label, [id^="advancedNonreq"][id$="Params"] > label, [id^="advanced"][id$="Fields"] label').forEach((label) => {
+            if (label.querySelector('input, select')) return;
+            const full = label.textContent.trim().replace(/:\s*$/, '');
+            const name = paramName(full);
+            const m = full.match(/^(.*?)(?:\s+-\s+|\s+\()(.*)$/);
+            const short = m ? m[1].trim() : full;
+            let descriptor = m ? full.slice(short.length).trim().replace(/^-\s*/, '') : '';
+            descriptor = descriptor.replace(/^\((.*)\)$/, '$1');
+            if (short && short !== full) label.textContent = short;
+            const sentence = PARAM_HELP[name] || PARAM_HELP[name.replace(/^class_/, '')] || '';
+            const text = [sentence, descriptor ? 'Accepts: ' + descriptor + '.' : ''].filter(Boolean).join(' ');
+            if (!text) return;
+            const ctl = label.htmlFor ? document.getElementById(label.htmlFor) : null;
+            attachHelp(label, text, ctl);
+        });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+    else init();
+})();

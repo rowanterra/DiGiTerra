@@ -63,7 +63,7 @@
     random_state: 'Seed for this estimator. The run seed is used when blank.',
     class_weight: 'Reweights classes; balanced counters an uneven class mix.',
     criterion: 'The split quality measure the trees use.',
-    min_samples_leaf: 'Fewest rows a leaf may hold; larger values smooth the tree.',
+    min_samples_leaf: 'Fewest rows a leaf may contain; larger values smooth the tree.',
     min_samples_split: 'Fewest rows a node needs before it can split.',
     kernel: 'The kernel function of the support vector machine.',
     gamma: 'Kernel width for rbf, poly and sigmoid kernels.',

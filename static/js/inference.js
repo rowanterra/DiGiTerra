@@ -236,7 +236,7 @@ predictionForm.addEventListener('submit', async (e) => {
                 spreadUrl ? { key: 'spread', label: 'Predictor spread: training rows against new rows', url: spreadUrl, alt: 'Predictor spread of training rows and new rows' } : null,
                 perfUrl ? { key: 'performance', label: 'Model used (training performance)', url: perfUrl, alt: 'Training performance' } : null,
             ].filter(Boolean);
-            const imgStyle = 'display: block; max-height: calc(100vh - var(--header-offset, 88px) - 360px); width: auto; max-width: 100%; object-fit: contain;';
+            const imgStyle = 'display: block; width: 100%; max-width: 860px; height: auto; object-fit: contain;';
             const modelGraphicSectionHtml = graphicChoices.length ? `
                 <h3 style="margin: 0 0 8px 0;">Graphic</h3>
                 <label for="inferenceGraphicSelect" class="sr-only">Select graphic</label>
@@ -246,7 +246,7 @@ predictionForm.addEventListener('submit', async (e) => {
                 <img id="inferenceGraphic" src="${graphicChoices[0].url}" alt="${escapeHtml(graphicChoices[0].alt)}" class="inference-model-graphic-img" style="${imgStyle}">
             ` : '';
             const rightPanelHtml = (trainingSummaryTableHtml || modelGraphicSectionHtml) ? `
-                <div class="inference-model-graphic" style="flex: 0 0 calc(50% - 12px); min-width: 200px; overflow: auto; align-self: flex-start;">
+                <div class="inference-model-graphic" style="flex: 1.6 1 480px; min-width: 0; align-self: flex-start;">
                     ${modelGraphicSectionHtml}
                     ${trainingSummaryTableHtml}
                 </div>
@@ -263,8 +263,8 @@ predictionForm.addEventListener('submit', async (e) => {
                     <button class="secondary-button" onclick="backToModel()">Back to Modeling</button>
                     <button class="secondary-button" onclick="newPredict()">Run inference on another dataset</button>
                 </div>
-                <div class="inference-results-content" style="display: flex; flex-wrap: nowrap; gap: 24px; align-items: flex-start;">
-                    <div class="inference-summary-section" style="flex: 0 0 calc(50% - 12px); min-width: 200px; overflow: auto; align-self: flex-start;">
+                <div class="inference-results-content" style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+                    <div class="inference-summary-section" style="flex: 1 1 360px; min-width: 0; align-self: flex-start;">
                         <h3 style="margin: 0 0 8px 0;">Inference summary</h3>
                         <p style="margin: 0 0 12px 0; font-size: 0.95rem; color: #666;">Descriptive statistics for inferred (predicted) values (same style as Data Exploration).</p>
                         ${classificationNote}
@@ -276,6 +276,7 @@ predictionForm.addEventListener('submit', async (e) => {
             `
             showApplicabilityLine(data.applicability_summary)
             showUncertaintyLine(data.uncertainty_summary)
+            showCheckBlock(data.check)
             // The example rows were drawn from a known species each, so the page can
             // say how many came back the way they were drawn. Only for those rows:
             // a person's own file has no key to compare against.
@@ -535,4 +536,49 @@ function showUncertaintyLine(summary) {
     line.className = 'field-note'
     line.textContent = text
     host.appendChild(line)
+}
+
+
+/* The check against measured values. A file that carries the target column (or the
+   target name with _measured, _true or _actual) is scored against it here; a file
+   without one is scored blind, and one line says which column would make the check.
+   Both are ordinary uses: the person decides whether the answers travel with the
+   rows. */
+function showCheckBlock(check) {
+    const host = document.querySelector('.inference-summary-section')
+    if (!host || !check) return
+    const block = document.createElement('div')
+    block.id = 'inferenceCheck'
+    block.className = 'inference-check'
+    const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+    if (!check.found) {
+        const names = (check.accepted || []).slice(0, 2).map((n) => `<code>${esc(n)}</code>`).join(' or ')
+        block.innerHTML = `<p class="field-note">Scored blind. To check the predictions against measured values, include a column named ${names} in the file.</p>`
+        host.appendChild(block)
+        return
+    }
+    // The note that says there are no true labels no longer applies.
+    const note = document.querySelector('.inference-classification-note')
+    if (note) note.remove()
+    const dropped = check.dropped ? ` ${check.dropped} row${check.dropped === 1 ? '' : 's'} without both values left out.` : ''
+    let body = ''
+    if (check.error) {
+        body = `<p class="field-note">${esc(check.error)}</p>`
+    } else if (check.kind === 'regression') {
+        const f = (v, d = 3) => (v === null || v === undefined ? 'n/a' : Number(v).toFixed(d))
+        body = `<table class="inference-check-table"><tbody>
+            <tr><th>n</th><td>${check.n}</td></tr>
+            <tr><th>R&sup2;</th><td>${f(check.r2)}</td></tr>
+            <tr><th>RMSE</th><td>${f(check.rmse)}</td></tr>
+            <tr><th>MAE</th><td>${f(check.mae)}</td></tr>
+            <tr><th>Mean bias (predicted minus measured)</th><td>${f(check.bias)}</td></tr>
+        </tbody></table>`
+    } else {
+        const labels = check.labels || []
+        const rows = (check.confusion || []).map((row, i) => `<tr><th>${esc(labels[i])}</th>${row.map((v, j) => `<td class="num${i === j ? ' diag' : ''}">${v}</td>`).join('')}</tr>`).join('')
+        body = `<p>Accuracy ${(check.accuracy * 100).toFixed(1)}%, macro F1 ${Number(check.macro_f1).toFixed(3)} on ${check.n} rows.</p>
+            <table class="inference-check-table confusion"><thead><tr><th>measured \\ predicted</th>${labels.map((l) => `<th>${esc(l)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`
+    }
+    block.innerHTML = `<h4>Check against measured values</h4><p class="field-note">Column <code>${esc(check.column)}</code> in the scored file.${dropped}</p>${body}`
+    host.appendChild(block)
 }

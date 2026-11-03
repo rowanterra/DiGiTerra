@@ -301,9 +301,11 @@ def test_no_rail_before_a_file_is_loaded(session):
     assert p.evaluate("() => document.getElementById('narrativeRail').offsetParent === null"), (
         "the rail is drawn with no data"
     )
-    # Documentation and Tutorial are in the banner, so they work with no data.
+    # Documentation is in the banner, so it works with no data; the tutorial is a
+    # section of the documentation, not a second banner entry.
     assert p.query_selector('.header-links [data-tab="documentation"]'), "Documentation left the banner"
-    assert p.query_selector("#tutorialButton"), "no Tutorial entry in the banner"
+    assert not p.query_selector("#tutorialButton"), "the banner carries a separate Tutorial button"
+    assert p.query_selector("#doc-tutorial"), "the documentation has no tutorial section"
     # The bar the view buttons came from must not still be drawing them.
     assert p.evaluate(
         "() => { const b=document.getElementById('appTabs');"
@@ -349,18 +351,13 @@ def test_the_rail_appears_when_a_file_loads_and_every_entry_reaches_its_view(ses
 
 
 def test_the_empty_states_read_as_the_application(session):
-    """Once the rail exists but before a task type is chosen: registry listed, inert."""
+    """Once the rail exists but before an upload: an empty data panel and no model catalog."""
     p = session.page
     p.evaluate("() => { const pg=document.getElementById('narrativePage'); pg.classList.remove('is-single'); }")
     assert p.inner_text("#narrativeDataCount").strip() == "0"
     assert "No data loaded" in p.inner_text("#narrativeDataBody")
-    # The catalog lists the registry with its group counts rather than vanishing.
-    count = int(p.inner_text("#narrativeAppsCount").strip())
-    assert count > 0, "the catalog is empty before an upload"
-    items = p.query_selector_all("#narrativeAppsBody .narrative-app")
-    assert len(items) == count, f"{count} claimed, {len(items)} listed"
-    assert p.query_selector_all("#narrativeAppsBody .narrative-group"), "no group counts"
-    assert all(i.get_attribute("disabled") is not None for i in items), "catalog is live before a task type"
+    # The model is reported in the choices list, so the rail has no catalog panel.
+    assert not p.query_selector("#narrativeAppsPanel"), "the rail still carries a model catalog"
     assert not session.errors, session.errors
 
 
@@ -421,13 +418,11 @@ def test_the_rail_carries_a_run_from_a_cold_load(live_session):
     assert p.query_selector("#columnSelection #narrativeFlow"), "the run strip left the Modeling view"
     assert not p.query_selector("#narrativeRail #narrativeFlow"), "the run strip became rail navigation"
 
-    # Choose a model from the catalog, which is live now that a task type is known.
-    model = p.query_selector('#narrativeAppsBody .narrative-app[data-model="Logistic_classifier"]')
-    assert model, "the catalog does not list the classifier"
-    assert model.get_attribute("disabled") is None, "the catalog is still inert after preprocessing"
-    model.click()
+    # Choose the model on the page; the rail reports it under Modeling.
+    p.select_option("#simpleClassModels", "Logistic_classifier")
     p.wait_for_timeout(200)
-    assert p.eval_on_selector("#simpleClassModels", "e => e.value") == "Logistic_classifier"
+    label = p.eval_on_selector("#simpleClassModels", "e => e.options[e.selectedIndex].textContent.trim()")
+    assert label in p.inner_text("#narrativeDataBody .narrative-choices"), "the rail does not report the chosen model"
 
     with p.expect_response(lambda r: r.url.endswith("/process"), timeout=120000) as run:
         p.click("#processButton", force=True)
@@ -435,7 +430,7 @@ def test_the_rail_carries_a_run_from_a_cold_load(live_session):
     # arrives over the progress stream. Wait for the strip to reach Results, which
     # is the page's own statement that the run finished.
     assert run.value.status in (200, 202), f"run refused: {run.value.status} {run.value.text()[:200]}"
-    p.wait_for_selector('#narrativeFlow .narrative-step[data-step="results"].is-current', timeout=180000)
+    p.wait_for_function("document.querySelector('#narrativeFlow .narrative-step[data-step=\"results\"].is-current') !== null", timeout=180000)
 
     # Inference is reachable from the rail once a model exists.
     _rail_entry(s, "historic").click()
@@ -489,21 +484,26 @@ def test_the_rail_carries_the_forward_step(session):
     assert not session.errors, session.errors
 
 
-def test_the_catalog_count_does_not_change_with_the_page(session):
-    """The chip followed whichever select was visible, so it read 23 (now 24) on Modeling and
-    31 on Documentation in one session. It now follows the recorded task."""
+def test_the_rail_reports_the_model_from_modeling_on(session):
+    """The Modeling lines join the choices list on Modeling and stay on Inference;
+    Model Preprocessing, where no model is chosen yet, does not show them."""
     p = session.page
     session.upload_and_preprocess("iris.csv", "Classification", "A-D", "E")
-    on_modeling = p.inner_text("#narrativeAppsCount").strip()
-    assert on_modeling == "24", f"classification catalog reads {on_modeling}"
+    _rail_entry(session, "modeling").click()
+    p.wait_for_timeout(400)
+    p.select_option("#simpleClassModels", "Logistic_classifier")
+    p.wait_for_timeout(200)
+    label = p.eval_on_selector("#simpleClassModels", "e => e.options[e.selectedIndex].textContent.trim()")
+    choices = p.inner_text("#narrativeDataBody .narrative-choices")
+    assert "Mode " in choices and label in choices, choices
 
-    p.click('.header-links [data-tab="documentation"]')
-    p.wait_for_timeout(500)
-    assert p.inner_text("#narrativeAppsCount").strip() == on_modeling, "the catalog count changed when the page did"
+    _rail_entry(session, "model-preprocessing").click()
+    p.wait_for_timeout(400)
+    assert label not in p.inner_text("#narrativeDataBody"), "the model line shows before Modeling"
 
     _rail_entry(session, "modeling").click()
     p.wait_for_timeout(400)
-    assert p.inner_text("#narrativeAppsCount").strip() == on_modeling
+    assert label in p.inner_text("#narrativeDataBody .narrative-choices")
     assert not session.errors, session.errors
 
 
@@ -593,13 +593,13 @@ def test_try_an_example_fills_the_run_in(session):
         assert actual == expected, f"{field} is {actual!r}, expected {expected!r}"
     assert p.evaluate("() => document.getElementById('missScopeAll').checked"), "the blank scope is not set"
 
-    # Stratify is in More settings and is open, because the run uses it. The cleaning
+    # Stratify is open, because the run uses it. The cleaning
     # and transform controls stay behind their sentences until a reader asks: the
     # value is set either way, and the page says what it will do.
     assert p.evaluate("() => !document.getElementById('scalingYes').classList.contains('hidden')"), (
         "the stratify controls did not open"
     )
-    for section in ("transformerYes", "dataCleaningMissingWrapper"):
+    for section in ("preprocessPanel_text", "preprocessPanel_cleaning"):
         assert p.evaluate("(id) => document.getElementById(id).classList.contains('hidden')", section), (
             f"{section} should stay behind its sentence"
         )
@@ -635,10 +635,12 @@ def test_the_page_states_what_the_detection_found(session):
     assert "11 rows have a blank" in text, text
     assert "island and sex are text" in text, text
     # The controls stay behind the sentence until a reader asks for them.
-    assert p.evaluate("() => document.getElementById('dataCleaningMissingWrapper').classList.contains('hidden')")
+    # Each sentence opens its own panel (pass 4); the wrapper itself is not toggled.
+    panel_hidden = "() => document.getElementById('dataCleaningMissingWrapper').closest('.preprocess-panel').classList.contains('hidden')"
+    assert p.evaluate(panel_hidden)
     p.click("#preprocessFindings .preprocess-change")
     p.wait_for_timeout(300)
-    assert not p.evaluate("() => document.getElementById('dataCleaningMissingWrapper').classList.contains('hidden')")
+    assert not p.evaluate(panel_hidden)
     assert not session.errors, session.errors
 
 
@@ -663,7 +665,7 @@ def test_the_example_path_runs_from_the_welcome_screen_to_a_prediction(live_sess
     with p.expect_response(lambda r: r.url.endswith("/process"), timeout=180000) as run:
         p.click("#processButton", force=True)
     assert run.value.status in (200, 202), run.value.text()[:300]
-    p.wait_for_selector('#narrativeFlow .narrative-step[data-step="results"].is-current', timeout=300000)
+    p.wait_for_function("document.querySelector('#narrativeFlow .narrative-step[data-step=\"results\"].is-current') !== null", timeout=300000)
     p.wait_for_timeout(800)
     # The figures are the first thing in the results and both are in the window.
     _figures_in_view(p, ".result-graphic-box img")

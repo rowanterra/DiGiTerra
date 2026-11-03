@@ -4924,3 +4924,664 @@ label:has(input[type="radio"][name="modelingMode"]:checked) { background: none; 
 .model-run-row .scaling-container input {
     width: 100%;
 }
+
+
+/* =====================================================================
+   Review pass of 2026-09-27. Appended last so it wins on source order.
+   ===================================================================== */
+
+/* Welcome: the two buttons and the logos stand on the page, with no card
+   around them. The example note belongs to Try an Example alone, so it is
+   set under that button and no wider than it. */
+.welcomesection:not(.disclaimer) {
+    background: none;
+    border: 0;
+    box-shadow: none;
+}
+.welcome-actions {
+    align-items: flex-start;
+    gap: 16px;
+}
+.welcome-action {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    max-width: 280px;
+}
+.welcome-action .welcome-example-note {
+    max-width: none;
+    margin: 8px 2px 0;
+    text-align: left;
+    font-size: 0.82rem;
+    line-height: 1.4;
+}
+.welcomesection.logos {
+    gap: 48px;
+    margin-top: 28px;
+}
+.welcomesection.logos img { max-height: none; max-width: 340px; }
+.welcomesection.logos img.ORISE { height: 104px; }
+.welcomesection.logos img.doe { height: 112px; }
+.welcomesection.logos img.bottomlogo { height: 92px; }
+/* The welcome block sits higher: less air between the banner and the title. */
+.welcome { padding-top: 12px; }
+.welcome .welcomesection:first-child { padding-top: 0; }
+
+/* Rail: one muted green ground the full height of the left column, so the
+   column reads as the place the run is kept rather than a stack of cards to
+   work through. The panels sit on the ground without borders or shadows; the
+   active entry is marked by weight and a bar, and the Continue button is the
+   one strong element. */
+:root {
+    --app-rail-bg: #e7ede8;
+    --app-rail-rule: #d3dcd5;
+    --app-rail-ink: #3a4a40;
+}
+.narrative-page:not(.is-single) {
+    position: relative;
+    min-height: calc(100vh - var(--header-offset, 88px));
+    padding-left: 0;
+    column-gap: 24px;
+}
+.narrative-page:not(.is-single)::before {
+    content: "";
+    position: absolute;
+    top: -12px;
+    bottom: -40px;
+    left: -12px;
+    width: 312px;
+    background: var(--app-rail-bg);
+    border-right: 1px solid var(--app-rail-rule);
+    z-index: 0;
+}
+.narrative-page:not(.is-single) > .narrative-rail {
+    position: sticky;
+    z-index: 1;
+    padding: 10px 12px 12px 12px;
+    gap: 18px;
+}
+.narrative-nav,
+.narrative-panel,
+.narrative-panel-head,
+.narrative-search {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    border-radius: 0;
+}
+.narrative-nav {
+    padding: 0;
+}
+.narrative-nav .tab-button {
+    padding: 6px 10px 6px 12px;
+    font-size: 0.88em;
+    font-weight: 500;
+    color: var(--app-rail-ink);
+    border-left: 3px solid transparent;
+    border-radius: 0;
+}
+.narrative-nav .tab-button:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.55);
+}
+.narrative-nav .tab-button.active {
+    color: var(--app-accent-deep);
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.7);
+    border-left-color: var(--app-accent);
+    border-top-color: transparent;
+    border-right-color: transparent;
+    border-bottom-color: transparent;
+}
+.narrative-nav .tab-button:disabled,
+.narrative-nav .tab-button.is-gated {
+    opacity: 0.5;
+}
+.narrative-nav .narrative-next {
+    margin-top: 12px;
+    border-radius: var(--app-radius-sm);
+}
+.narrative-nav-aside {
+    border-top-color: var(--app-rail-rule);
+}
+.narrative-panel-head {
+    padding: 0 12px 4px;
+    border-bottom: 1px solid var(--app-rail-rule);
+}
+.narrative-panel-head h3 {
+    font-size: 0.78em;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--app-rail-ink);
+}
+.narrative-count {
+    background: transparent;
+    border-color: var(--app-rail-rule);
+    color: var(--app-rail-ink);
+}
+.narrative-panel-body {
+    padding: 8px 4px;
+}
+.narrative-item-data strong { color: var(--app-ink); }
+.narrative-item-data p { color: var(--app-rail-ink); }
+.narrative-tile {
+    background: var(--app-accent-deep);
+}
+.narrative-search input {
+    background: rgba(255, 255, 255, 0.75);
+    border-color: var(--app-rail-rule);
+}
+.narrative-app:hover {
+    background: rgba(255, 255, 255, 0.6);
+    border-color: transparent;
+}
+.narrative-app.is-selected {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: var(--app-accent);
+}
+.narrative-group { color: var(--app-rail-ink); }
+
+/* The choices the run will use, listed in the Data panel by page. Each line
+   says the setting and its current value; "change" opens the page and the
+   control. */
+.narrative-choices {
+    margin: 10px 0 0;
+    padding: 8px 0 0;
+    border-top: 1px solid var(--app-rail-rule);
+    list-style: none;
+}
+.narrative-choices li {
+    margin: 0;
+    padding: 3px 0;
+    font-size: 0.8em;
+    line-height: 1.35;
+    color: var(--app-rail-ink);
+}
+.narrative-choices li strong {
+    font-weight: 600;
+    color: var(--app-ink);
+}
+.narrative-choices .narrative-choice-page {
+    margin-top: 6px;
+    font-size: 0.72em;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--app-muted);
+}
+.narrative-choices button {
+    margin-left: 4px;
+    padding: 0;
+    font: inherit;
+    font-size: 0.95em;
+    color: var(--app-accent-deep);
+    background: none;
+    border: 0;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* Model preprocessing: the two setting cards live inside More settings, so
+   nothing stands below the disclosure looking like its content. The orphaned
+   Transformer heading in the first card hides once its controls have moved. */
+.preprocess-more-body > .preprocess-card {
+    margin-top: 12px;
+    box-shadow: none;
+}
+.preprocess-card > h3.preprocess-section-title.is-orphan {
+    display: none;
+}
+
+/* Hover explanations on the classic page, the guided page's mechanism. The
+   words of a label take a dotted underline; the explanation opens on hover and
+   on keyboard focus of the control, and closes on Escape. */
+.tipword {
+    text-decoration: underline dotted 1px;
+    text-underline-offset: 3px;
+    cursor: help;
+}
+.helpwrap {
+    position: relative;
+    display: inline-block;
+    width: 0;
+    height: 0;
+    vertical-align: top;
+}
+.helpwrap .tip {
+    display: none;
+    position: absolute;
+    left: 0;
+    top: 1.3rem;
+    z-index: 30;
+    pointer-events: auto;
+    width: 22rem;
+    max-width: 60vw;
+    padding: 0.5rem 0.65rem;
+    background: var(--app-panel);
+    border: 1px solid var(--app-accent);
+    border-radius: var(--app-radius-sm);
+    box-shadow: 0 2px 6px rgba(7, 34, 20, 0.15);
+    font-size: 0.85rem;
+    line-height: 1.35;
+    font-weight: normal;
+    color: var(--app-ink);
+    text-align: left;
+    white-space: normal;
+}
+.helpwrap.open .tip { display: block; }
+.helpwrap.dismissed .tip { display: none; }
+
+/* Documentation takes the full page; the rail and its ground are not drawn. */
+.narrative-page.is-doc {
+    grid-template-columns: minmax(0, 1fr);
+    padding-left: 12px;
+}
+.narrative-page.is-doc::before { display: none; }
+.narrative-page.is-doc > .narrative-rail { display: none; }
+
+/* The run strip is progress: drawn from the moment a run starts, not before. */
+.narrative-flow { display: none; }
+.narrative-flow.is-live { display: block; }
+
+/* Hyperparameter forms (Simple and Advanced). Each parameter is one row: the
+   label on its own line, the control under it at one width, so a long form
+   reads as a list rather than as labels and boxes wrapping into each other.
+   Several inputs in a row (hidden layer sizes) stay side by side. The <div><br>
+   spacers the markup carries are not drawn. */
+[id$="Fields"] > label,
+[id^="nonreq"][id$="Params"] > label,
+[id^="advancedNonreq"][id$="Params"] > label {
+    display: block;
+    margin: 12px 0 4px;
+    font-size: 0.92em;
+    font-weight: 500;
+    color: var(--app-soft);
+}
+[id$="Fields"] > label:first-child,
+[id^="nonreq"][id$="Params"] > label:first-child {
+    margin-top: 4px;
+}
+[id$="Fields"] > input:not([type=checkbox]):not([type=radio]),
+[id$="Fields"] > select,
+[id^="nonreq"][id$="Params"] > input:not([type=checkbox]):not([type=radio]),
+[id^="nonreq"][id$="Params"] > select,
+[id^="advancedNonreq"][id$="Params"] > input:not([type=checkbox]):not([type=radio]),
+[id^="advancedNonreq"][id$="Params"] > select {
+    display: inline-block;
+    width: 200px;
+    max-width: 100%;
+    margin: 0 8px 0 0;
+    vertical-align: middle;
+}
+[id$="Fields"] > br,
+[id^="nonreq"][id$="Params"] > br {
+    display: none;
+}
+[id$="Fields"] > div:has(> br:only-child),
+[id^="nonreq"][id$="Params"] > div:has(> br:only-child) {
+    display: none;
+}
+[id$="Fields"] .toggle-container {
+    margin: 16px 0 4px;
+}
+
+/* Focus rings drawn inside the control, so a panel that clips its overflow cannot
+   cut them off (the Evaluate button sat at a panel edge). Two rings: a white gap
+   and the deep green, visible on filled and outlined buttons alike. */
+.narrative-views button:focus-visible,
+.narrative-views .welcomebutton:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px #ffffff, inset 0 0 0 4px var(--app-accent-deep);
+}
+.narrative-views input:focus-visible,
+.narrative-views select:focus-visible,
+.narrative-views textarea:focus-visible {
+    outline: 2px solid var(--app-accent);
+    outline-offset: 0;
+}
+
+/* Exploration results: a heading with a rule, not a filled band. */
+.exploration-results .results-header {
+    background: none;
+    border: 0;
+    border-bottom: 1px solid var(--app-hairline);
+    border-radius: 0;
+    padding: 0 0 8px;
+    margin-bottom: 12px;
+}
+.exploration-results .results-header h2 {
+    margin: 0;
+    font-size: 1.05em;
+}
+.exploration-results .results-header p {
+    margin: 4px 0 0;
+    color: var(--app-muted);
+    font-size: 0.9em;
+}
+
+/* Form rows: one label column and one control column, so the controls in a card
+   share a left edge. Applies to the exploration, preprocessing and inference
+   cards; the hyperparameter forms keep their stacked rows. */
+.exploration-card .selectcolumns,
+.exploration-card .scaling-container,
+.preprocess-card .scaling-container:not(.cleaning-scope-checkboxes),
+.preprocess-setting .scaling-container {
+    display: grid;
+    grid-template-columns: minmax(160px, 38%) minmax(0, 1fr);
+    align-items: center;
+    column-gap: 12px;
+    row-gap: 6px;
+    margin: 8px 0;
+}
+.exploration-card .selectcolumns > label,
+.exploration-card .scaling-container > label,
+.preprocess-card .scaling-container > label {
+    margin: 0;
+}
+.exploration-card .scaling-container > select,
+.exploration-card .scaling-container > input,
+.exploration-card .selectcolumns > input,
+.preprocess-card .scaling-container > select,
+.preprocess-card .scaling-container > input {
+    width: 100%;
+    max-width: 320px;
+    box-sizing: border-box;
+}
+
+/* Buttons in a row share one height and type size; the primary one is filled,
+   the others outlined. */
+.narrative-views .button-group,
+.exploration-card .button-row,
+.exploration-card form > .button-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+.narrative-views .button-group > button,
+.narrative-views .button-group > a > button,
+.exploration-card button,
+.preprocess-card button:not(.preprocess-change),
+.narrative-views .secondary-button,
+.narrative-views .button-secondary,
+.narrative-views .export-button {
+    min-height: 38px;
+    padding: 8px 16px;
+    font-size: 0.95rem;
+    line-height: 1.2;
+    border-radius: var(--app-radius-sm);
+}
+
+/* Inference results: room between the blocks, and the spread figure at the
+   width of its column. */
+.inference-results-content > div { min-width: 0; }
+.inference-model-graphic > h3,
+.inference-summary-section > h3 { margin-top: 0; }
+.inference-model-graphic .model-stats-table-wrapper,
+.inference-model-graphic h3 + p,
+.inference-model-graphic > h3:not(:first-child) { margin-top: 20px; }
+.inference-model-graphic-img { margin: 4px 0 8px; }
+
+/* A mouse click leaves :focus on a button; the ring is for keyboard focus only. */
+.narrative-views button:focus:not(:focus-visible) {
+    outline: none;
+    box-shadow: none;
+}
+/* The exploration action row no longer clips (it scrolled sideways), and the
+   download buttons join the same row as Evaluate. */
+.narrative-views .corr-actions { overflow: visible; }
+.narrative-views .corr-downloads { display: contents; }
+.narrative-views .corr-actions button {
+    padding: 8px 16px;
+    font-size: 0.95rem;
+}
+/* The hover explanation anchor is taken out of grid flow. */
+.helpwrap { position: absolute; }
+.exploration-card .scaling-container,
+.exploration-card .selectcolumns,
+.preprocess-card .scaling-container { position: relative; }
+
+/* Inference upload: the example note belongs to its button, set under it and
+   no wider than it, aligned with the controls above. */
+.predict-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-start;
+}
+.predict-example {
+    display: flex;
+    flex-direction: column;
+    max-width: 300px;
+}
+.predict-example .field-note {
+    margin: 6px 2px 0;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    text-align: left;
+}
+
+/* Units and decimal places stay inside their card. */
+.model-run-row { min-width: 0; }
+.model-run-row .scaling-container { min-width: 0; max-width: 100%; }
+.model-run-row .scaling-container input { max-width: 100%; box-sizing: border-box; }
+
+/* The check block on the inference page. */
+.inference-check { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--app-hairline); }
+.inference-check h4 { margin: 0 0 4px; font-size: 0.98em; color: var(--app-heading); }
+.inference-check-table { border-collapse: collapse; margin-top: 6px; font-size: 0.9em; }
+.inference-check-table th, .inference-check-table td { padding: 3px 10px 3px 0; text-align: left; border-bottom: 1px solid var(--app-hairline); }
+.inference-check-table td.num { text-align: right; padding-left: 10px; }
+.inference-check-table td.diag { font-weight: 600; }
+.inference-check-table.confusion th { font-weight: 600; padding-right: 10px; }
+
+/* The banner: the documentation masthead's evergreen and contour map, on every
+   page. A scrim keeps the wordmark and the button legible over the lines. */
+:root { --doc-evergreen: #122e24; }
+.header {
+    background-color: var(--doc-evergreen);
+    background-image: url("doc_banner.jpg");
+    background-position: center 45%;
+    background-size: cover;
+    box-shadow: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+.header::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(10, 26, 20, 0.88) 0%, rgba(10, 26, 20, 0.62) 45%, rgba(10, 26, 20, 0.35) 100%);
+    pointer-events: none;
+}
+.header > * { position: relative; }
+.header .tab-button,
+.header .documentation-button {
+    opacity: 1;
+    color: #f6f3ee;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+}
+.header .tab-button:hover { background: rgba(255, 255, 255, 0.18); }
+.header .tab-button.active { background: rgba(255, 255, 255, 0.22); border-color: #f6f3ee; }
+
+/* Rail: the same evergreen for the active entry and the Continue button; the
+   other entries stay muted. */
+.narrative-nav .tab-button.active {
+    color: var(--doc-evergreen);
+    border-left-color: var(--doc-evergreen);
+}
+.narrative-nav .narrative-next,
+.narrative-nav .narrative-next:hover:not(:disabled) {
+    background: var(--doc-evergreen);
+    border-color: var(--doc-evergreen);
+    color: #f6f3ee;
+}
+.narrative-tile { background: var(--doc-evergreen); }
+
+/* Exploration results: the matrix type and the pairplot axes share their
+   heading's line. */
+.matrix-heading { flex-wrap: nowrap; gap: 8px; }
+.matrix-heading h3 { flex: 0 0 auto; margin: 0 4px 0 0; }
+.matrix-heading label { flex: 0 0 auto; margin: 0; }
+.matrix-heading select { flex: 1 1 90px; min-width: 0; max-width: 200px; }
+
+/* The run strip is gone; progress is read from the result area. The element
+   stays for the tests that read the run state from it. */
+.narrative-flow, .narrative-flow.is-live { display: none; }
+
+/* Model preprocessing: a sentence per setting, its controls in a panel under it. */
+.preprocess-setting-lines { margin-top: 12px; }
+.preprocess-setting-line { margin: 0 0 6px; }
+.preprocess-setting-line .preprocess-finding { margin: 0; padding: 8px 12px; }
+.preprocess-panel {
+    margin: 4px 0 10px;
+    padding: 10px 14px;
+    background: var(--app-panel);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius);
+}
+.preprocess-panel.hidden { display: none; }
+/* The cleaning and transform panel draws only while one of its blocks is open. */
+#preprocessControls:not(:has(> :not(.hidden))) { display: none; }
+#preprocessControls > h3 { margin: 4px 0 6px; font-size: 0.95em; }
+.preprocess-more { display: none; }
+
+/* The setting sentences share the findings block's band. */
+.preprocess-setting-lines {
+    margin-top: 10px;
+    padding: 6px 0;
+    background: var(--app-sunken);
+    border-left: 3px solid var(--app-accent);
+    border-radius: 0 var(--app-radius) var(--app-radius) 0;
+}
+.preprocess-setting-line .preprocess-panel { margin: 4px 12px 10px; }
+/* Rail buttons: no ring after a mouse click, inset ring for keyboard focus. */
+.narrative-rail button:focus:not(:focus-visible) { outline: none; box-shadow: none; }
+.narrative-rail button:focus-visible { outline: none; box-shadow: inset 0 0 0 2px #ffffff, inset 0 0 0 4px var(--app-accent-deep); }
+
+/* A label and its select stay together on one line; the pairs wrap as units. */
+.matrix-heading { flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+.matrix-heading h3 { flex: 0 0 auto; margin: 0; }
+.matrix-control { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.matrix-control select { flex: 0 1 auto; min-width: 110px; max-width: 180px; }
+.exploration-card .selectcolumns > input { max-width: none; }
+
+/* Modeling: the form column takes a larger share, so the Advanced form is not a
+   narrow strip beside an empty results panel; results still get the wider side. */
+.model-layout { grid-template-columns: minmax(360px, 5fr) minmax(0, 7fr); }
+
+/* One heading style inside every preprocessing panel; no rules above sections. */
+.preprocess-panel h3,
+.preprocess-panel .preprocess-section-title,
+.preprocess-panel .field-label-block,
+#preprocessControls > h3 {
+    margin: 10px 0 6px;
+    padding: 0;
+    border: 0;
+    font-size: 0.95em;
+    font-weight: 600;
+    color: var(--app-heading);
+}
+.preprocess-panel > :first-child,
+.preprocess-panel h3:first-child { margin-top: 0; }
+.preprocess-panel .preprocess-setting { border-top: 0; padding-top: 0; margin-top: 8px; }
+.preprocess-panel .preprocess-setting:first-child { margin-top: 0; }
+
+/* The banner logo, drawn in black, reads white on the evergreen. */
+.header img.logo { filter: brightness(0) invert(1); }
+
+/* Pairplot: heading, X and Y on one line; the selects shrink to fit. */
+.pairplot-graphic .matrix-heading { flex-wrap: nowrap; }
+.pairplot-graphic .matrix-control { flex: 1 1 0; min-width: 0; }
+.pairplot-graphic .matrix-control select { flex: 1 1 0; min-width: 0; max-width: 220px; width: 100%; }
+.exploration-graphic .matrix-heading select { min-width: 0; }
+
+/* The two exploration graphics sit side by side only when each gets 420px;
+   below that they stack, so the pairplot's selects keep their labels. */
+/* The two graphics stay side by side; each takes half the row, and the images
+   scale to the column. The X and Y selects are a fixed width and clip a long
+   column name rather than pushing the row apart. */
+.narrative-views .exploration-graphic-row { display: flex; flex-wrap: nowrap; gap: 24px; }
+.narrative-views .exploration-graphic-row > .exploration-graphic { flex: 1 1 0; min-width: 0; }
+.narrative-views .exploration-graphic img { max-width: 100%; height: auto; }
+.pairplot-graphic .matrix-control { flex: 0 1 auto; min-width: 0; }
+.pairplot-graphic .matrix-control select { flex: 0 1 auto; width: 130px; min-width: 70px; max-width: 130px; text-overflow: ellipsis; }
+.exploration-graphic:not(.pairplot-graphic) .matrix-control select { width: 120px; min-width: 70px; max-width: 120px; }
+
+/* Exports. Anything that writes a file (PDF, XLSX, CSV, the model bundle) is
+   outlined in the documentation's plum, so a download reads apart from a step
+   in the run. The wording and the arrows are unchanged. */
+:root { --app-export: #6a4a74; --app-export-wash: #f3eef5; }
+.narrative-views .export-button,
+.narrative-views .corr-downloads button,
+.narrative-views .download-buttons button,
+.narrative-views .predictionresultButton,
+.narrative-views .downloadperformanceButton,
+.narrative-views a[href*="/download/"] > button {
+    background: var(--app-panel);
+    color: var(--app-export);
+    border: 1.5px solid var(--app-export);
+    font-weight: 600;
+}
+.narrative-views .export-button:hover,
+.narrative-views .corr-downloads button:hover,
+.narrative-views .download-buttons button:hover,
+.narrative-views a[href*="/download/"] > button:hover {
+    background: var(--app-export-wash);
+    color: var(--app-export);
+}
+.narrative-views .run-note a[href*="bundle"],
+.narrative-views .run-note a[href*="model_card"],
+.narrative-views .run-note a[href*="model-card"] { color: var(--app-export); }
+
+/* The forward step. The same white ground the active rail entry has, the
+   evergreen as a full border and as the text, the arrow kept. */
+.narrative-nav .narrative-next,
+.narrative-nav .narrative-next:hover:not(:disabled),
+.narrative-views .success-button {
+    background: rgba(255, 255, 255, 0.85);
+    color: var(--doc-evergreen);
+    border: 1.5px solid var(--doc-evergreen);
+    font-weight: 700;
+}
+.narrative-nav .narrative-next:hover:not(:disabled),
+.narrative-views .success-button:hover {
+    background: #ffffff;
+}
+.narrative-nav .narrative-next::after,
+.narrative-views .success-button::after {
+    border-left-color: var(--doc-evergreen);
+    color: var(--doc-evergreen);
+}
+.narrative-nav .narrative-next:disabled {
+    color: var(--app-muted);
+    border-color: var(--app-rail-rule);
+    background: transparent;
+}
+
+/* Model preprocessing findings: each sentence's panel sits under it inside the band,
+   like the setting sentences; the parking block never draws. */
+.preprocess-findings .preprocess-finding { margin: 0; padding: 8px 0; }
+.preprocess-findings .preprocess-panel { margin: 4px 0 10px; }
+#preprocessControls { display: none; }
+/* The stratify column row lines up with the question above it. */
+.preprocess-panel .stratify-options { margin-left: 0; }
+
+/* Every card title carries the rule under it, as Explore does. The modeling
+   mode card gives up its inline heading so its title reads like the others. */
+.narrative-views .preprocess-card > h3:first-child,
+.narrative-views .mode-select > h2 {
+    display: block;
+    font-size: 0.98em;
+    margin: 0 0 8px;
+    padding: 0 0 6px;
+    border-bottom: 1px solid var(--app-hairline);
+}
+.narrative-views .mode-select-options { display: flex; }
+
+/* Correlation matrix and pairplot: the title on its own line, the controls on
+   the line below. The pairplot's X and Y share that line and clip long names. */
+.matrix-heading,
+.pairplot-graphic .matrix-heading { flex-wrap: wrap; }
+.matrix-heading h3 { flex: 0 0 100%; }
+.pairplot-graphic .matrix-control { flex: 1 1 0; min-width: 0; }
+.pairplot-graphic .matrix-control select { flex: 1 1 auto; width: auto; min-width: 0; max-width: 200px; text-overflow: ellipsis; }

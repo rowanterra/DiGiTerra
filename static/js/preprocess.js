@@ -1624,10 +1624,12 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
    every handler still works, and a "change" link reveals them.
    ========================================================================== */
 
-/* The blocks each sentence reveals, and the settings that fold away. */
+/* The blocks each finding sentence reveals. Each set lives in its own panel under
+   its sentence (review of 2026-09-27: the text-column controls opened inside the
+   blanks panel). Blank and zero findings share the cleaning panel. */
 const CLEANING_BLOCKS = ['dataCleaningMissingWrapper', 'imputeDiv', 'dataCleaningZerosWrapper'];
 const TRANSFORM_BLOCKS = ['transformerOptionWrapper', 'transformerYes'];
-const MORE_SETTINGS_BLOCKS = ['scalingQuestion', 'scalingYes', 'preprocessScaler', 'preprocessSeed', 'preprocessSplit'];
+const FINDING_PANELS = { cleaning: CLEANING_BLOCKS, text: TRANSFORM_BLOCKS };
 
 function preprocessColumnsChosen() {
     const indicators = (document.getElementById('indicators') || {}).value || '';
@@ -1636,7 +1638,35 @@ function preprocessColumnsChosen() {
     return Boolean(indicators.trim()) && (isCluster || Boolean(target.trim()));
 }
 
-/** Build the findings block and the More settings disclosure, once. */
+/* The settings behind the sentences: each group is one sentence in the page's
+   own words with a "change" link, and the controls open in a panel under it
+   (review of 2026-09-27: one More settings disclosure opened everything at once
+   and the transform controls appeared without a panel). */
+const SETTING_GROUPS = [
+    { key: 'stratify', heading: 'Stratify', ids: ['scalingQuestion', 'scalingYes'], text: () => {
+        const yn = document.getElementById('scalingYesNo');
+        const col = document.getElementById('specificVariableSelect');
+        if (!yn) return '';
+        if (yn.value !== 'Yes' && yn.value !== 'yes') return 'The split is not stratified.';
+        const name = col && col.value ? (col.options && col.options[col.selectedIndex] ? col.options[col.selectedIndex].text : col.value) : '';
+        return name ? `The split keeps the mix of column ${name} the same in both halves.` : 'The split is stratified; choose the column.';
+    } },
+    { key: 'scaler', ids: ['preprocessScaler'], text: () => {
+        const e = document.getElementById('scaler');
+        if (!e) return '';
+        const label = (e.options && e.options[e.selectedIndex] ? e.options[e.selectedIndex].text : e.value) || 'None';
+        return /^none$/i.test(e.value || label) ? 'Predictors are not scaled.' : `Predictors are scaled (${label}).`;
+    } },
+    { key: 'split', ids: ['preprocessSplit', 'preprocessSeed'], text: () => {
+        const t = document.getElementById('trainSize');
+        const seed = document.getElementById('seedValue');
+        const train = t && t.value ? Math.round(Number(t.value) * 100) : 80;
+        const seedText = seed && seed.value ? `Seed ${seed.value}.` : 'No seed set; one is drawn for the run.';
+        return `${train} percent of the rows train the model and ${100 - train} percent are held out. ${seedText}`;
+    } },
+];
+
+/** Build the findings block and the setting sentences, once. */
 function buildPreprocessLayout() {
     const form = document.getElementById('preprocessform');
     if (!form || document.getElementById('preprocessFindings')) return;
@@ -1646,62 +1676,184 @@ function buildPreprocessLayout() {
     findings.className = 'preprocess-findings';
     findings.innerHTML = '<p class="narrative-empty">Enter the indicator and target columns.</p>';
 
-    const more = document.createElement('details');
-    more.id = 'preprocessMoreSettings';
-    more.className = 'preprocess-more';
-    more.innerHTML = '<summary class="doc-summary"><span class="doc-chevron" aria-hidden="true"></span><h3>More settings</h3></summary>';
-    const moreBody = document.createElement('div');
-    moreBody.className = 'preprocess-more-body';
-    more.appendChild(moreBody);
-
-    // The cleaning and transform controls hide behind their sentences.
-    const hidden = document.createElement('div');
-    hidden.id = 'preprocessControls';
-    hidden.className = 'preprocess-controls';
+    // The cleaning and transform controls wait in two panels, parked out of the
+    // page until a finding sentence adopts one. The blocks themselves stay
+    // visible inside their panel; the panel is what opens and closes.
+    const parked = document.createElement('div');
+    parked.id = 'preprocessControls';
+    parked.className = 'preprocess-controls hidden';
 
     const firstCard = form.querySelector('.preprocess-card');
     if (firstCard) firstCard.insertAdjacentElement('afterend', findings);
     else form.insertBefore(findings, form.firstChild);
-    findings.insertAdjacentElement('afterend', hidden);
-    hidden.insertAdjacentElement('afterend', more);
+    findings.insertAdjacentElement('afterend', parked);
 
-    CLEANING_BLOCKS.concat(TRANSFORM_BLOCKS).forEach((id) => {
+    const transformHead = (document.getElementById('transformerOptionWrapper') || {}).previousElementSibling;
+    const makePanel = (key) => {
+        const panel = document.createElement('div');
+        panel.className = 'preprocess-panel hidden';
+        panel.id = `preprocessPanel_${key}`;
+        parked.appendChild(panel);
+        return panel;
+    };
+    const cleaningPanel = makePanel('cleaning');
+    const textPanel = makePanel('text');
+    const move = (panel, id, show) => {
         const el = document.getElementById(id);
         if (el) {
-            el.classList.add('hidden');
-            hidden.appendChild(el);
+            if (show) el.classList.remove('hidden');
+            panel.appendChild(el);
         }
-    });
-    MORE_SETTINGS_BLOCKS.forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) moreBody.appendChild(el);
-    });
-}
+    };
+    move(cleaningPanel, 'dataCleaningMissingWrapper', true);
+    move(cleaningPanel, 'imputeDiv', false);           // its own handler shows it for a fill
+    move(cleaningPanel, 'dataCleaningZerosWrapper', true);
+    if (transformHead && transformHead.tagName === 'H3') {
+        transformHead.classList.remove('hidden');
+        textPanel.appendChild(transformHead);
+    }
+    move(textPanel, 'transformerOptionWrapper', true);
+    move(textPanel, 'transformerYes', false);           // opens when "Yes" is chosen
+    // A stray "Or" preceded a hidden autodetect button; it is not drawn.
+    const optionWrap = document.getElementById('transformerOptionWrapper');
+    if (optionWrap) {
+        const walker = document.createTreeWalker(optionWrap, NodeFilter.SHOW_TEXT);
+        let node;
+        while ((node = walker.nextNode())) {
+            if (node.textContent.trim().toLowerCase() === 'or') node.textContent = '';
+        }
+    }
 
-/** Reveal the controls a sentence stands for. */
-function revealPreprocessBlocks(ids) {
-    ids.forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) el.classList.remove('hidden');
-    });
-}
-
-function preprocessSentence(text, blocks) {
-    const line = document.createElement('p');
-    line.className = 'preprocess-finding';
-    line.appendChild(document.createTextNode(text + ' '));
-    if (blocks && blocks.length) {
+    // One sentence and one panel per setting group, in the order of the run.
+    const lines = document.createElement('div');
+    lines.id = 'preprocessSettingLines';
+    lines.className = 'preprocess-setting-lines';
+    parked.insertAdjacentElement('afterend', lines);
+    SETTING_GROUPS.forEach((group) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'preprocess-setting-line';
+        wrap.dataset.group = group.key;
+        const line = document.createElement('p');
+        line.className = 'preprocess-finding';
+        const text = document.createElement('span');
+        text.className = 'preprocess-setting-text';
+        line.appendChild(text);
+        line.appendChild(document.createTextNode(' '));
         const link = document.createElement('button');
         link.type = 'button';
         link.className = 'preprocess-change';
         link.textContent = 'change';
+        line.appendChild(link);
+        const panel = document.createElement('div');
+        panel.className = 'preprocess-panel hidden';
+        panel.id = `preprocessPanel_${group.key}`;
+        if (group.heading) {
+            const h = document.createElement('h3');
+            h.className = 'preprocess-section-title';
+            h.textContent = group.heading;
+            panel.appendChild(h);
+        }
+        group.ids.forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) panel.appendChild(el);
+        });
         link.addEventListener('click', () => {
-            revealPreprocessBlocks(blocks);
-            link.remove();
+            panel.classList.toggle('hidden');
+            syncPreprocessLinks();
+        });
+        wrap.appendChild(line);
+        wrap.appendChild(panel);
+        lines.appendChild(wrap);
+    });
+    // The two cards the blocks came from are empty now.
+    form.querySelectorAll('.preprocess-card').forEach((card) => {
+        if (card !== firstCard && !card.querySelector('input, select, textarea')) card.classList.add('hidden');
+    });
+    refreshPreprocessSettingLines();
+    form.addEventListener('change', refreshPreprocessSettingLines);
+    form.addEventListener('input', refreshPreprocessSettingLines);
+}
+
+/** Rewrite each setting sentence from its controls. */
+function refreshPreprocessSettingLines() {
+    SETTING_GROUPS.forEach((group) => {
+        const el = document.querySelector(`.preprocess-setting-line[data-group="${group.key}"] .preprocess-setting-text`);
+        if (el) el.textContent = group.text();
+    });
+}
+
+/** The finding panel a block belongs to, if any. */
+function findingPanelFor(id) {
+    const el = document.getElementById(id);
+    return el ? el.closest('.preprocess-panel') : null;
+}
+
+/* exported revealPreprocessBlocks */
+/** Open the panel a sentence stands for (a setting panel too, from the rail). Called from narrative.js. */
+function revealPreprocessBlocks(ids) {
+    ids.forEach((id) => {
+        const panel = findingPanelFor(id);
+        if (panel) panel.classList.remove('hidden');
+    });
+    syncPreprocessLinks();
+}
+
+/** Every change/done link reads the state of its panel. */
+function syncPreprocessLinks() {
+    document.querySelectorAll('#preprocessform .preprocess-change[data-panel]').forEach((link) => {
+        const panel = document.getElementById(link.dataset.panel);
+        if (panel) link.textContent = panel.classList.contains('hidden') ? 'change' : 'done';
+    });
+    document.querySelectorAll('#preprocessSettingLines .preprocess-setting-line').forEach((wrap) => {
+        const panel = wrap.querySelector('.preprocess-panel');
+        const link = wrap.querySelector('.preprocess-change');
+        if (panel && link) link.textContent = panel.classList.contains('hidden') ? 'change' : 'done';
+    });
+}
+
+/** A finding sentence; `panelKey` names the panel its change link toggles. */
+function preprocessSentence(text, panelKey) {
+    const line = document.createElement('p');
+    line.className = 'preprocess-finding';
+    line.appendChild(document.createTextNode(text + ' '));
+    const panel = panelKey ? document.getElementById(`preprocessPanel_${panelKey}`) : null;
+    if (panel) {
+        const link = document.createElement('button');
+        link.type = 'button';
+        link.className = 'preprocess-change';
+        link.dataset.panel = panel.id;
+        link.textContent = panel.classList.contains('hidden') ? 'change' : 'done';
+        link.addEventListener('click', () => {
+            panel.classList.toggle('hidden');
+            syncPreprocessLinks();
         });
         line.appendChild(link);
     }
     return line;
+}
+
+/** Place a finding panel directly under the last sentence that opens it. */
+function seatFindingPanel(host, key) {
+    const panel = document.getElementById(`preprocessPanel_${key}`);
+    if (!panel) return;
+    const links = host.querySelectorAll(`.preprocess-change[data-panel="${panel.id}"]`);
+    if (links.length) {
+        links[links.length - 1].closest('.preprocess-finding').insertAdjacentElement('afterend', panel);
+    } else {
+        const parked = document.getElementById('preprocessControls');
+        if (parked) parked.appendChild(panel);
+        panel.classList.add('hidden');
+    }
+}
+
+/** Move the finding panels out of the findings block before it is rewritten. */
+function parkFindingPanels() {
+    const parked = document.getElementById('preprocessControls');
+    if (!parked) return;
+    Object.keys(FINDING_PANELS).forEach((key) => {
+        const panel = document.getElementById(`preprocessPanel_${key}`);
+        if (panel) { panel.classList.add('hidden'); parked.appendChild(panel); }
+    });
 }
 
 /** Run both detections and say what they found. */
@@ -1709,6 +1861,7 @@ async function runPreprocessDetection() {
     const host = document.getElementById('preprocessFindings');
     if (!host) return;
     if (!preprocessColumnsChosen()) {
+        parkFindingPanels();
         host.innerHTML = '<p class="narrative-empty">Enter the indicator and target columns.</p>';
         return;
     }
@@ -1716,6 +1869,7 @@ async function runPreprocessDetection() {
     const indicators = getColumnIndices(document.getElementById('indicators').value.toUpperCase().replace(/\s/g, ''));
     const target = isCluster ? [] : getColumnIndices(document.getElementById('predictors').value.toUpperCase().replace(/\s/g, ''));
     if (!indicators.length) {
+        parkFindingPanels();
         host.innerHTML = '<p class="narrative-empty">DiGiTerra cannot read the indicator columns. Use the form "A-D" or "A,B,C".</p>';
         return;
     }
@@ -1726,39 +1880,47 @@ async function runPreprocessDetection() {
 
     const [clean, text] = await Promise.all([post('/auto-detect-nan-zeros'), post('/auto-detect-transformers')]);
     lastNumericColumns = clean && Array.isArray(clean.numeric_columns) ? clean.numeric_columns : [];
+    // A panel opened while the detection ran (the rail's change button) stays open.
+    const wasOpen = Object.keys(FINDING_PANELS).filter((key) => {
+        const panel = document.getElementById(`preprocessPanel_${key}`);
+        return panel && !panel.classList.contains('hidden');
+    });
+    parkFindingPanels();
     host.innerHTML = '';
 
     let found = false;
     if (clean && clean.blank_rows) {
         found = true;
         const rows = clean.blank_rows === 1 ? '1 row has a blank.' : `${clean.blank_rows} rows have a blank.`;
-        host.appendChild(preprocessSentence(`${rows} DiGiTerra will remove them.`, CLEANING_BLOCKS));
+        host.appendChild(preprocessSentence(`${rows} DiGiTerra will remove them.`, 'cleaning'));
         setPreprocessDefault('missScopeAll', true);
         setPreprocessDefault('imputeStrategy', 'none');
     }
     if (clean && clean.zero_columns && clean.zero_columns.length) {
         found = true;
         const names = clean.zero_columns.join(' and ');
-        host.appendChild(preprocessSentence(`${names} hold a zero. DiGiTerra will keep the zeros.`, CLEANING_BLOCKS));
+        host.appendChild(preprocessSentence(`${names} contain a zero. DiGiTerra will keep the zeros.`, 'cleaning'));
     }
     if (text && Array.isArray(text.transformer_indices) && text.transformer_indices.length) {
         found = true;
         const names = window.uploadedColumnNames || [];
         const labels = text.transformer_indices.map((i) => names[i] || indexToColumn(i)).join(' and ');
         const verb = text.transformer_indices.length === 1 ? 'is text' : 'are text';
-        host.appendChild(preprocessSentence(`${labels} ${verb}. DiGiTerra will one-hot encode them.`, TRANSFORM_BLOCKS));
+        host.appendChild(preprocessSentence(`${labels} ${verb}. DiGiTerra will one-hot encode them.`, 'text'));
         setPreprocessDefault('useTransformer', 'Yes');
         setPreprocessDefault('transformerColumn', text.transformer_indices.map(indexToColumn).join(', '));
     }
     if (!found) {
-        host.appendChild(preprocessSentence('No blanks or zeros in the selected columns.', CLEANING_BLOCKS));
+        host.appendChild(preprocessSentence('No blanks or zeros in the selected columns.', 'cleaning'));
     }
-    // Setting a default fires the change the old handlers listen for, and one of them
-    // opens the transformer block. The sentence is what opens it, so it closes again.
-    CLEANING_BLOCKS.concat(TRANSFORM_BLOCKS).forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) el.classList.add('hidden');
+    // Each panel sits under the last sentence that opens it and starts closed; a
+    // panel no sentence needs goes back to the parking block.
+    Object.keys(FINDING_PANELS).forEach((key) => {
+        const panel = document.getElementById(`preprocessPanel_${key}`);
+        if (panel) panel.classList.toggle('hidden', !wasOpen.includes(key));
+        seatFindingPanel(host, key);
     });
+    syncPreprocessLinks();
     applyStratifyDefault();
 }
 

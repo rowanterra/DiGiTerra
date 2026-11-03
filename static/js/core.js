@@ -1718,6 +1718,95 @@ function initTryExample() {
     });
 }
 
+
+/* ==========================================================================
+   Presets recognized from a file's header (2026-09-27).
+
+   A second worked example is a mine-drainage table that is not distributed with
+   the application: the person uploads it, and the header row says which preset
+   applies. The presets set the task, the columns, the seed and the model the
+   same way the penguins example does. A header that matches nothing changes
+   nothing. The regression table predicts log10 of the rare earth sum from pH
+   and the log10 concentrations of Fe, Mn, SO4 and Al (micrograms per liter);
+   the class table predicts a five-class bin of the same quantity.
+   ========================================================================== */
+const HEADER_PRESETS = [
+    {
+        name: 'rare earth regression',
+        columns: ['Study', 'Site', 'pH', 'log10_Fe_ugL', 'log10_Mn_ugL', 'log10_SO4_ugL', 'log10_Al_ugL', 'log10_REE_ugL'],
+        fields: { outputType1: 'Numeric', indicators: 'C-G', predictors: 'H', corrCols: 'C-H', seedValue: '42', scaler: 'none' },
+        model: { select: 'simpleNModels', value: 'ExtraTrees' },
+        inferenceNote: 'For inference, upload AMD_REE_backvalidation_inflow_2026-09-27.csv: the 36 field inflow samples with the same five columns and the measured value beside them.',
+    },
+    {
+        name: 'rare earth classes',
+        columns: ['Study', 'Site', 'pH', 'log10_Fe_ugL', 'log10_Mn_ugL', 'log10_SO4_ugL', 'log10_Al_ugL', 'REE_class'],
+        fields: { outputType1: 'Classifier', indicators: 'C-G', predictors: 'H', corrCols: 'C-G', seedValue: '42', scaler: 'none', scalingYesNo: 'Yes', specificVariableSelect: 'H' },
+        model: { select: 'simpleClassModels', value: 'RF_classifier' },
+        inferenceNote: 'For inference, upload AMD_REE_backvalidation_inflow_classes_2026-09-27.csv: the 36 field inflow samples with the measured class beside them.',
+    },
+];
+
+function headerPresetFor(columns) {
+    if (!Array.isArray(columns)) return null;
+    const head = columns.map((c) => String(c).trim());
+    return HEADER_PRESETS.find((p) => p.columns.length === head.length && p.columns.every((c, i) => c === head[i])) || null;
+}
+
+function applyHeaderPreset(preset) {
+    Object.entries(preset.fields).forEach(([id, value]) => setExampleField(id, value));
+    const host = document.getElementById('columnSelection');
+    const select = document.getElementById(preset.model.select);
+    if (host && select) {
+        const fill = () => {
+            if (host.classList.contains('hidden')) return false;
+            if (!select.value) setExampleField(preset.model.select, preset.model.value);
+            return true;
+        };
+        if (!fill()) {
+            const watch = new MutationObserver(() => { if (fill()) watch.disconnect(); });
+            watch.observe(host, { attributes: true, attributeFilter: ['class'] });
+        }
+    }
+    window.activeHeaderPreset = preset;
+    updatePresetInferenceNote();
+}
+
+/* The inference page names the matching back-validation file for a preset. */
+function updatePresetInferenceNote() {
+    const form = document.getElementById('uploadPredictDf');
+    if (!form) return;
+    let note = document.getElementById('presetInferenceNote');
+    const preset = window.activeHeaderPreset;
+    if (!preset) { if (note) note.remove(); return; }
+    if (!note) {
+        note = document.createElement('p');
+        note.id = 'presetInferenceNote';
+        note.className = 'field-note';
+        form.appendChild(note);
+    }
+    note.textContent = preset.inferenceNote;
+}
+
+function initHeaderPresets() {
+    document.addEventListener('digiterra:upload-complete', (event) => {
+        if (event && event.detail && event.detail.ok === false) return;
+        window.activeHeaderPreset = null;
+        const preset = headerPresetFor(window.uploadedColumnNames);
+        if (preset) applyHeaderPreset(preset);
+        else updatePresetInferenceNote();
+    });
+    // The welcome button opens the file chooser; the header does the rest.
+    const button = document.getElementById('tryPresetButton');
+    const input = document.getElementById('file');
+    if (button && input) {
+        button.addEventListener('click', () => {
+            if (typeof showTab === 'function') showTab('upload');
+            input.click();
+        });
+    }
+}
+
 /* The example rows for the inference page.
    Shown only for a session that loaded penguins.csv, because the file holds that
    file's six indicator columns and nothing else would accept them. */
@@ -1773,5 +1862,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initDocContents();
     initTutorialEntry();
     initTryExample();
+    initHeaderPresets();
     initUsePenguinRows();
 });
