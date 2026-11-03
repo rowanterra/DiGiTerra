@@ -1649,7 +1649,7 @@ const SETTING_GROUPS = [
         if (!yn) return '';
         if (yn.value !== 'Yes' && yn.value !== 'yes') return 'The split is not stratified.';
         const name = col && col.value ? (col.options && col.options[col.selectedIndex] ? col.options[col.selectedIndex].text : col.value) : '';
-        return name ? `The split keeps the mix of column ${name} the same in both halves.` : 'The split is stratified; choose the column.';
+        return name ? `The split keeps the mix of column ${name} the same in both halves.` : 'The split is stratified. Choose the column.';
     } },
     { key: 'scaler', ids: ['preprocessScaler'], text: () => {
         const e = document.getElementById('scaler');
@@ -1661,7 +1661,7 @@ const SETTING_GROUPS = [
         const t = document.getElementById('trainSize');
         const seed = document.getElementById('seedValue');
         const train = t && t.value ? Math.round(Number(t.value) * 100) : 80;
-        const seedText = seed && seed.value ? `Seed ${seed.value}.` : 'No seed set; one is drawn for the run.';
+        const seedText = seed && seed.value ? `Seed ${seed.value}.` : 'No seed is set. One is drawn for the run.';
         return `${train} percent of the rows train the model and ${100 - train} percent are held out. ${seedText}`;
     } },
 ];
