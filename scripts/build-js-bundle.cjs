@@ -15,6 +15,7 @@ const FILES = [
   'upload.js',
   'preprocess.js',
   'modeling.js',
+  'narrative.js',
   'inference.js',
   'app.js',
 ];

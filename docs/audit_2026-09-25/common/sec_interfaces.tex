@@ -1,0 +1,85 @@
+\section{The interfaces, side by side}
+\label{sec:interfaces}
+
+Every screenshot in this section was taken from the product running on the same Mac on 2026-09-25 (DiGiTerra and H2O Flow in a Linux container on the same day), at the point where a user has data loaded and is about to choose or configure a model. Where a product offers more than one path to a model, the screenshot shows the path its own welcome screen or documentation puts first. The comparison rests on four measurable properties rather than on a judgment of taste: how many separate screens or objects a user must create before a model is fitted; whether the model's settings are visible on the screen where the model is chosen; whether the interface can be used without composing a graph or writing a command; and whether a machine-readable record of the run is written without a further action.
+
+\subsection{DiGiTerra}
+
+\shot{shot_digiterra_guided_step3_full}{0.95}{DiGiTerra guided page, step 3 of 4, Full mode, after \code{iris.csv} was uploaded and \code{species} chosen as the target. The task, the model, the hyperparameter table with scikit-learn's defaults, the split, the scaler, feature selection, outlier handling, cross-validation and search are on one screen; each control carries a help button whose text is the explanation the screen reader gets. Guided mode hides everything below the model select.}
+
+\shot{shot_digiterra_guided_step4}{0.95}{DiGiTerra guided page, step 4, after the run: the figures first, then the metrics against the baseline, then the downloads (predictions, manifest, model card, bundle).}
+
+The guided page holds four steps, each filling the window with no scrolling: upload, target, model and run, result. A model is fitted after three steps (upload, choose the target, fit), with the fourth step showing the result. In Full mode the hyperparameter table is filled from the estimator's own signature through a route, so the names and defaults cannot drift from scikit-learn; a blank cell keeps the default. The manifest, model card and bundle are written by the run itself, and the manifest carries the SHA-256 of the uploaded bytes, the seed, the request as submitted, the fitted parameters, the split, the metrics, the baseline, the data-check findings and the version of every installed package.
+
+\subsection{Node-graph tools: Orange, KNIME, AI Studio}
+
+\shot{shot_orange_workflow}{0.95}{Orange 3.39.0, the Classification Tree example workflow from its own welcome screen. A model exists once a File widget, a learner widget and a viewer widget are placed and wired; the learner's settings are in a separate dialog opened by double-clicking the widget.}
+
+\shot{shot_orange_tree_dialog}{0.95}{Orange, the Classification Tree widget's settings dialog opened over the workflow. Five parameters are exposed; the learner has more in scikit-learn, and the widget passes fixed values for the rest.}
+
+\shot{shot_knime_workflow}{0.95}{KNIME Analytics Platform 5.12.0, the ``Combine Clean and Summarize Spreadsheet Data'' example from its welcome screen (no learner is in this example; the modeling nodes follow the same pattern). Each node opens its own configuration dialog; execution state is the traffic light under the node.}
+
+\shot{shot_aistudio_design}{0.95}{Altair AI Studio 2026.0.1, Design view, with the E1 statistics process loaded and the Aggregate operator selected. The parameters of the selected operator appear in the right pane; the operator tree on the left lists the catalogue (Data Access 62, Blending 81, Cleansing 28, Modeling 167, Scoring 13, Validation 30, Utility 85 operators in this installation).}
+
+\shot{shot_aistudio_automodel}{0.95}{AI Studio, the Auto Model wizard: six screens (Load Data, Select Task, Prepare Target, Select Inputs, Model Types, Results). Its output can be opened as a process in the Design view, which is the novice-to-expert path the feature survey recorded.}
+
+In the three node-graph tools a model is the result of a graph: the user places a reader, a learner and an applier or evaluator, wires them, and runs the graph. The settings of any one node are in a dialog or pane that belongs to that node, so the model's hyperparameters and the split are never on the same screen unless the user arranges the panes so. Orange's example reaches a fitted tree with three widgets and two connections; the KNIME example carries about ten nodes; the E1 statistics process in AI Studio needed three operators per dataset. AI Studio's Auto Model wizard is the exception that proves the pattern: it walks a novice through six screens without a graph, then hands over a graph to edit. Orange writes a report file on request and KNIME keeps a log; AI Studio saves the process. None of the three documents a hash of the input or the installed package versions in that record (survey column ``Run record'').
+
+\subsection{Notebook cells: H2O Flow}
+
+\shot{shot_h2o_flow_model_menu}{0.95}{H2O Flow (H2O-3 3.46.0.7), the Assistance list that a new flow opens with. Every action is a routine name (\code{importFiles}, \code{buildModel}, \code{predict}) that runs in a cell; the cell above shows the command \code{assist}.}
+
+\shot{shot_h2o_flow_glm_form}{0.95}{H2O Flow, the Build a Model form for a generalized linear model, scrolled to the regularization settings. Each field carries its description at the right; the form is long enough to need several screens of scrolling, and the frame, the response column and the model type are chosen higher on the same form.}
+
+Flow is a notebook. A user clicks a routine in the Assistance list or types its name in a cell, runs the cell, and reads the output below it; building a model opens a form inside a cell whose length depends on the algorithm (the GLM form runs to several screens). The frame must be imported and parsed in earlier cells before the form can name it. The notebook is the run record, and a seed field is on the form. H2O's documentation marks Flow as deprecated (Section~\ref{sec:sources}, H2O), so the interface is compared here as the current no-code path to H2O-3 rather than as a maintained product.
+
+\subsection{Form-driven statistics packages: JASP and jamovi}
+
+\shot{shot_jasp_knn_form}{0.95}{JASP 0.98.1, k-nearest neighbors classification from the Machine Learning module, with the telco churn example loaded. The analysis is a form beside the data; the results table on the right fills as soon as a target and features are dropped in. The module lists nine regression, nine classification and five clustering methods.}
+
+\shot{shot_jamovi_regression}{0.95}{jamovi 2.7.37, Linear Regression with Anderson's iris data. The analysis panel and the results panel share the window; jamovi's own machine learning module is a separate install from its library.}
+
+JASP and jamovi are the closest in shape to DiGiTerra's guided page: a form beside the data, with results that update as the form changes, and no graph. Both are built for classical statistics, and their machine learning is a module: JASP ships one with 23 methods; jamovi's arrives from its module library. Both expose model settings in collapsible sections of the same form. Neither writes a run record beyond its own file format (\code{.jasp}, \code{.omv}), and neither documents a hash of the input or the package versions. JASP's own accessibility statement says screen readers are not supported; jamovi's says the interface can be operated from the keyboard and works with NVDA and JAWS (Section~\ref{sec:sources}).
+
+\subsection{Dialog trees: Weka Explorer}
+
+\shot{shot_weka_explorer_classify}{0.95}{Weka 3.8.7 Explorer, Classify tab, with \code{iris.arff} loaded. The classifier is chosen from a tree of package names; the test options and the class column are on the same tab.}
+
+\shot{shot_weka_object_editor}{0.95}{Weka, the GenericObjectEditor dialog for the chosen classifier. Every option of the Java class is a field; the field names are the Java property names.}
+
+Weka's Explorer is four tabs and two dialogs to a model: open a file, switch to Classify, choose a classifier from a package tree, edit its options in the object editor, start. Every option of the estimator is reachable, named as in the Java source. The run information in the output pane records the seed and the options; there is no file-level record without a further action.
+
+\subsection{Spreadsheet: Excel}
+
+\shot{shot_excel_r1_linest}{0.95}{Microsoft Excel 16.03, the E1 workbook's R1 sheet: the intercept and coefficients from \code{INDEX(LINEST(\ldots))}, the coefficient row, and the 89 test predictions from \code{SUMPRODUCT}. Excel is in E1 as a reference engine, not as a machine learning interface.}
+
+Excel is in this comparison because it is the tool a research group already has and because its \code{LINEST} agreed with the arbiter on every R1 value (Figure~\ref{fig:e1r1}). It has no classifier, no split, no cross-validation and no run record; the workbook is the record, and the formulas are visible in it.
+
+\subsection{Steps to a first model}
+
+Table~\ref{tab:steps} restates the survey's count of steps to a first model for every product, with the installed products checked against the screens above. A step is a separate screen, dialog, widget or cell that the user must open or create; a click that changes a value on a screen already open is not a step.
+
+\begin{table}[htbp]
+\caption{Steps to a first fitted model, and where the model's settings are. From \code{docs/competitor\_survey\_2026-09-24.txt}, checked against the installed products on 2026-09-25 where a copy was available.}
+\label{tab:steps}
+\small
+\begin{tabular}{@{}L{4.0cm}L{2.6cm}L{4.4cm}L{4.0cm}@{}}
+\toprule
+Product & Steps & Settings shown & Run record without a further action \\
+\midrule
+DiGiTerra guided page & 3 (upload, target, fit) & On the model step, one screen & Manifest, model card, bundle \\
+Orange 3 & About 4 (3 widgets, wiring) & Widget dialog, per widget & Report on request \\
+KNIME Analytics Platform & About 5 to 6 (3 to 5 nodes) & Node dialog, per node & \code{knime.log}, Hub versions \\
+AI Studio, Auto Model & 6 wizard screens & Model Types screen & Saved process \\
+AI Studio, Design & 3 operators and wiring & Parameters pane of the selected operator & Saved process \\
+H2O-3 Flow & About 5 cells & Build Model form in a cell & The flow notebook \\
+SageMaker Canvas & About 5 to 6 screens & Metric, algorithms, split only & Model versions, leaderboard \\
+Azure Machine Learning AutoML & About 6 screens & Not per model in the UI & Jobs and child jobs \\
+Vertex AI AutoML tabular & Not retrievable & Not stated & Not stated \\
+Weka Explorer & 4 (2 tabs, 2 dialogs) & Object editor dialog & Run information in the output pane \\
+JASP & About 4 & On the analysis form & \code{.jasp} file \\
+jamovi & About 5 with a module & On the analysis form & \code{.omv} file \\
+DataRobot & About 4 screens & Advanced Tuning & Seed, compliance DOCX \\
+\bottomrule
+\end{tabular}
+\end{table}

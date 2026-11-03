@@ -73,7 +73,40 @@ let pywebviewReady = false;
 let headerResizeObserver = null;
 
 let uploadedFileName = '';
+// Rows and columns of the uploaded file, as the server counted them. Read by the
+// Data panel of the modeling page; written by upload.js.
+/* eslint-disable-next-line no-unused-vars */
+let uploadedShape = { rows: null, columns: null };
 const API_ROOT = (window.API_ROOT || '').replace(/\/+$/, '');
+
+// The server sets a CSRF cookie that script can read; every request the page makes
+// echoes it in a header. A cross-site form can cause the cookie to be sent but
+// cannot read it, so it cannot set the header. On a desktop build the server does
+// not check the header, and sending it costs nothing.
+function csrfToken() {
+    const match = document.cookie.match(/(?:^|;\s*)digiterra_csrf=([^;]*)/);
+    return match ? decodeURIComponent(match[1]) : '';
+}
+
+// fetch is wrapped once, so no call site has to remember the header.
+(function addCsrfHeaderToFetch() {
+    const original = window.fetch;
+    window.fetch = function (input, init) {
+        const options = init ? { ...init } : {};
+        const method = (options.method || (typeof input === 'object' && input && input.method) || 'GET').toUpperCase();
+        const url = typeof input === 'string' ? input : (input && input.url) || '';
+        const sameOrigin = !/^https?:\/\//i.test(url) || url.startsWith(window.location.origin);
+        if (sameOrigin && method !== 'GET' && method !== 'HEAD') {
+            const token = csrfToken();
+            if (token) {
+                const headers = new Headers(options.headers || (typeof input === 'object' && input ? input.headers : undefined));
+                headers.set('X-DiGiTerra-CSRF', token);
+                options.headers = headers;
+            }
+        }
+        return original.call(this, input, options);
+    };
+})();
 
 function withApiRoot(path) {
     if (!path) return API_ROOT || '';
@@ -212,11 +245,15 @@ function initModelingModeSelectionSync() {
     });
 }
 
-// HTML escape utility to prevent XSS
+// HTML escape utility. Escapes the five characters that matter in both text and
+// attribute position, so the result is safe inside value="..." as well.
 function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    return String(text ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 // Error display utility
@@ -416,61 +453,30 @@ function switchModelingMode(mode) {
     // No need to sync here since each mode has its own note element
 }
 
-// Ensure hyperparameter fields are available in the unified Advanced section
-function ensureAdvancedHyperparametersAvailable() {
-    // Find the hyperparameter card in unified Advanced section
-    const unifiedSection = document.getElementById('advancedModelingSection');
-    if (!unifiedSection) return;
-    
-    const hyperparamsCard = unifiedSection.querySelector('.preprocess-card h2');
-    if (!hyperparamsCard || hyperparamsCard.textContent !== 'Model Hyperparameters') return;
-    
-    const hyperparamsContainer = hyperparamsCard.closest('.preprocess-card');
-    if (!hyperparamsContainer) return;
-    
-    // Check if hyperparameter fields already exist (they should be copied)
-    const hasRidgeFields = document.getElementById('advancedRidgeFields');
-    if (hasRidgeFields && hasRidgeFields.closest('#advancedModelingSection')) {
-        // Fields already exist in unified section
-        return;
+
+/**
+ * Resolve a hyperparameter control for the modeling mode in use.
+ *
+ * The Simple and Advanced sections offer the same optional parameters. The
+ * Advanced copies have an "advanced" prefix so the document has unique ids;
+ * this returns the Advanced node while Advanced or AutoML mode is selected and
+ * the plain node otherwise.
+ */
+function getModeScopedElement(id) {
+    const advanced = document.getElementById('advancedMode');
+    const automl = document.getElementById('automlMode');
+    const useAdvanced = (advanced && advanced.checked) || (automl && automl.checked);
+    if (useAdvanced) {
+        const scoped = document.getElementById('advanced' + id.charAt(0).toUpperCase() + id.slice(1));
+        if (scoped) return scoped;
     }
-    
-    // If fields don't exist, clone them from old container
-    const oldContainer = document.getElementById('advancedOptimization');
-    if (!oldContainer) return;
-    
-    // Temporarily show old container to access its content
-    const wasHidden = oldContainer.classList.contains('hidden');
-    if (wasHidden) oldContainer.classList.remove('hidden');
-    
-    // Find all hyperparameter field divs in old container
-    const oldHyperparamsCard = oldContainer.querySelector('.preprocess-card h2');
-    if (!oldHyperparamsCard || oldHyperparamsCard.textContent !== 'Model Hyperparameters') {
-        if (wasHidden) oldContainer.classList.add('hidden');
-        return;
-    }
-    
-    const oldHyperparamsContainer = oldHyperparamsCard.closest('.preprocess-card');
-    if (!oldHyperparamsContainer) {
-        if (wasHidden) oldContainer.classList.add('hidden');
-        return;
-    }
-    
-    // Clone all hyperparameter field divs (all divs with IDs containing "Fields")
-    const hyperparamFields = oldHyperparamsContainer.querySelectorAll('div[id*="Fields"]');
-    hyperparamFields.forEach(field => {
-        // Check if it already exists in unified section
-        const existing = document.getElementById(field.id);
-        if (!existing || !existing.closest('#advancedModelingSection')) {
-            // Clone and append to unified section's hyperparameter card
-            const cloned = field.cloneNode(true);
-            hyperparamsContainer.appendChild(cloned);
-        }
-    });
-    
-    // Re-hide old container if it was hidden
-    if (wasHidden) oldContainer.classList.add('hidden');
+    return document.getElementById(id);
 }
+window.getModeScopedElement = getModeScopedElement;
+
+// The Advanced section has its own hyperparameter fields, so nothing is cloned
+// at runtime any more. Kept as a no-op because switchModelingMode still calls it.
+function ensureAdvancedHyperparametersAvailable() {}
 
 // Initialize modeling mode selector
 const modelingModeRadios = document.querySelectorAll('input[name="modelingMode"]');
@@ -834,9 +840,24 @@ function getColumnLetter(index) {
         }
         return column;
     }
+// Column letters: single letters or ranges joined by a hyphen, separated by commas.
+// Any other character (a colon, a digit, a space inside a letter) is refused here
+// so the server never receives an index computed from the wrong character.
+const COLUMN_SPEC = /^[A-Z]+(-[A-Z]+)?(,[A-Z]+(-[A-Z]+)?)*$/;
+
+/* eslint-disable-next-line no-unused-vars */
+function isValidColumnSpec(input) {
+    return COLUMN_SPEC.test((input || '').toUpperCase().replace(/\s/g, ''));
+}
+
 /* eslint-disable-next-line no-unused-vars */
 function getColumnIndices(input) {
     const columns = [];
+    // An invalid selection yields no columns rather than an index computed from
+    // the wrong character; the submit handlers check isValidColumnSpec first.
+    if (!COLUMN_SPEC.test(input)) {
+        return columns;
+    }
     input.split(',').forEach(part => {
         if (part.includes('-')) {
             const [start, end] = part.split('-').map(c => columnToIndex(c.trim()));
@@ -1462,21 +1483,20 @@ if (trainSizeInput && testSizeInput) {
     testSizeInput.addEventListener('blur', () => syncTrainTest(testSizeInput));
 }
 
-// Enable/disable "Continue to Modeling" button based on modeling type selection
-const modelingTypeSelect = document.getElementById('modelingType');
+// "Continue to Modeling" waits for a task type. The select is #outputType1 (an
+// earlier #modelingType never existed on the page, so this ran for nothing and the
+// form went to the server empty, to be refused there).
+const modelingTypeSelect = document.getElementById('outputType1');
 const continueToModelingButton = document.getElementById('continueToModelingButton');
 if (modelingTypeSelect && continueToModelingButton) {
-    // Initially disable the button
-    continueToModelingButton.disabled = true;
-    
-    // Enable/disable button when modeling type changes
-    modelingTypeSelect.addEventListener('change', function() {
-        if (this.value) {
-            continueToModelingButton.disabled = false;
-        } else {
-            continueToModelingButton.disabled = true;
-        }
-    });
+    const gate = () => {
+        const ready = Boolean(modelingTypeSelect.value);
+        continueToModelingButton.disabled = !ready;
+        if (ready) continueToModelingButton.removeAttribute('title');
+        else continueToModelingButton.setAttribute('title', 'Choose a modeling task type first.');
+    };
+    gate();
+    modelingTypeSelect.addEventListener('change', gate);
 }
 
 // Initialize tab button event listeners
@@ -1531,7 +1551,7 @@ function downloadFile(filename, downloadName = filename) {
 function showCrossValidationUnavailable() {
     const errDiv = getCachedElement('errorDiv');
     if (errDiv) {
-        showError(errDiv, 'Cross-validation results are unavailable because cross-validation was not run.');
+        showError(errDiv, 'DiGiTerra has no cross-validation results, because the run did not use cross-validation.');
         errDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
     return false;
@@ -1549,7 +1569,7 @@ function downloadAdditionalInfoTable(tableData, sheetName, timestamp) {
         .then(data => {
             if (data.error) {
                 const errDiv = getCachedElement('errorDiv');
-                if (errDiv) { showError(errDiv, 'Error generating download: ' + data.error); }
+                if (errDiv) { showError(errDiv, 'DiGiTerra cannot make the download. ' + data.error); }
                 return;
             }
             const downloadName = `additional_info_${sheetName.toLowerCase().replace(/\s+/g, '_')}_${ts}.xlsx`;
@@ -1562,7 +1582,7 @@ function downloadAdditionalInfoTable(tableData, sheetName, timestamp) {
         .catch(error => {
             console.error('Error downloading additional information:', error);
             const errDiv = getCachedElement('errorDiv');
-            if (errDiv) { showError(errDiv, 'Error downloading file. Please try again.'); }
+            if (errDiv) { showError(errDiv, 'The file download failed.'); }
         });
 }
 
@@ -1586,10 +1606,310 @@ window.showError = _showError;
 window.manageFocus = _manageFocus;
 
 
+/* An anchor into a closed <details> lands nowhere, because the target has no box.
+   Each Contents entry opens its section first, then scrolls to it. */
+function initDocContents() {
+    const toc = document.querySelector('.doc-toc');
+    if (!toc) return;
+    toc.addEventListener('click', (e) => {
+        const link = e.target.closest('a[href^="#"]');
+        if (!link) return;
+        const card = document.getElementById(link.getAttribute('href').slice(1));
+        if (!card) return;
+        e.preventDefault();
+        const section = card.querySelector('details.doc-section') || card.closest('details.doc-section');
+        if (section) section.open = true;
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Move the reading position as well as the viewport, so a keyboard or screen
+        // reader user arrives where the pointer user does.
+        const summary = section ? section.querySelector('summary') : null;
+        if (summary) summary.focus({ preventScroll: true });
+    });
+}
+
+/* The banner's Tutorial entry opens the documentation and goes to that section. */
+function initTutorialEntry() {
+    const button = document.getElementById('tutorialButton');
+    if (!button) return;
+    button.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (typeof showTab === 'function') showTab('documentation');
+        const card = document.getElementById('doc-tutorial');
+        if (!card) return;
+        const section = card.querySelector('details.doc-section');
+        if (section) section.open = true;
+        window.setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+    });
+}
+
+/* The settings the tutorial tells a reader to enter, applied once for them.
+   A person who uploads their own file gets none of this: the values only make sense
+   for the columns penguins.csv has. Every field stays editable. */
+const EXAMPLE_PREFILL = {
+    outputType1: 'Classifier',
+    indicators: 'B-G',
+    predictors: 'A',
+    imputeStrategy: 'none',
+    useTransformer: 'Yes',
+    transformerColumn: 'B, G',
+    scalingYesNo: 'Yes',
+    specificVariableSelect: 'A',
+    seedValue: '33',
+    corrCols: 'C-F',
+    model: 'RF_classifier',
+};
+
+/* Set a value and tell the page, so a section that opens on change opens now. */
+function setExampleField(id, value) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.type === 'checkbox') el.checked = Boolean(value);
+    else el.value = value;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+/* Fill the preprocessing form with the tutorial's run.
+   The order matters: the select that reveals a section is set before the field
+   inside it, or the field is written into a section that is still closed. */
+function applyExamplePrefill() {
+    setExampleField('outputType1', EXAMPLE_PREFILL.outputType1);
+    setExampleField('indicators', EXAMPLE_PREFILL.indicators);
+    setExampleField('predictors', EXAMPLE_PREFILL.predictors);
+    setExampleField('corrCols', EXAMPLE_PREFILL.corrCols);
+
+    // Remove the rows with a blank: the scope first, then the action.
+    setExampleField('missScopeAll', true);
+    setExampleField('imputeStrategy', EXAMPLE_PREFILL.imputeStrategy);
+
+    // island and sex are text, so the transformer section has to open first.
+    setExampleField('useTransformer', EXAMPLE_PREFILL.useTransformer);
+    setExampleField('transformerColumn', EXAMPLE_PREFILL.transformerColumn);
+
+    // Stratify on the species column, which is what the tutorial's step 5 asks for.
+    setExampleField('scalingYesNo', EXAMPLE_PREFILL.scalingYesNo);
+    setExampleField('specificVariableSelect', EXAMPLE_PREFILL.specificVariableSelect);
+
+    setExampleField('seedValue', EXAMPLE_PREFILL.seedValue);
+    prefillExampleModel();
+}
+
+/* Choose the tutorial's model once the Modeling view opens, so the example run is
+   one click from there. The view is revealed by a class change after preprocessing,
+   so the choice waits for that; it is made once, and only into an empty select, so a
+   person's own choice is never overwritten. */
+function prefillExampleModel() {
+    const host = document.getElementById('columnSelection');
+    const select = document.getElementById('simpleClassModels');
+    if (!host || !select) return;
+    const fill = () => {
+        if (host.classList.contains('hidden')) return false;
+        if (!select.value) setExampleField('simpleClassModels', EXAMPLE_PREFILL.model);
+        return true;
+    };
+    if (fill()) return;
+    const watch = new MutationObserver(() => {
+        if (fill()) watch.disconnect();
+    });
+    watch.observe(host, { attributes: true, attributeFilter: ['class'] });
+}
+
+/* Load an example through the ordinary upload, so it meets the same parse, the same
+   limits and the same data checks a chosen file meets. The file is fetched from the
+   server and handed to the existing form rather than a second code path being built. */
+function initTryExample() {
+    const button = document.getElementById('tryExampleButton');
+    if (!button) return;
+    button.addEventListener('click', async () => {
+        const name = 'penguins.csv';
+        const input = document.getElementById('file');
+        const form = document.getElementById('uploadForm');
+        if (!input || !form) return;
+        const original = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Loading the example...';
+        try {
+            const response = await fetch(`${API_ROOT}/example-data/${name}`);
+            if (!response.ok) throw new Error('status ' + response.status);
+            const blob = await response.blob();
+            const transfer = new DataTransfer();
+            transfer.items.add(new File([blob], name, { type: 'text/csv' }));
+            input.files = transfer.files;
+            if (typeof showTab === 'function') showTab('upload');
+            // The prefill runs on the upload's own response rather than on a timer,
+            // so the fields are set once the columns the app read are on the page.
+            const fill = (event) => {
+                if (!event || !event.detail || event.detail.ok !== false) applyExamplePrefill();
+            };
+            document.addEventListener('digiterra:upload-complete', fill, { once: true });
+            form.requestSubmit();
+        } catch (err) {
+            console.error('Example not loaded:', err);
+            button.disabled = false;
+            button.textContent = original;
+            const box = document.getElementById('uploadErrorDiv') || document.getElementById('errorDiv');
+            if (box && typeof showError === 'function') {
+                showError(box, 'DiGiTerra cannot load the example file. Choose a file instead.');
+            }
+        }
+    });
+}
+
+
+/* ==========================================================================
+   Presets recognized from a file's header (2026-09-27).
+
+   A second worked example is a mine-drainage table that is not distributed with
+   the application: the person uploads it, and the header row says which preset
+   applies. The presets set the task, the columns, the seed and the model the
+   same way the penguins example does. A header that matches nothing changes
+   nothing. The regression table predicts log10 of the rare earth sum from pH
+   and the log10 concentrations of Fe, Mn, SO4 and Al (micrograms per liter);
+   the class table predicts a five-class bin of the same quantity.
+   ========================================================================== */
+const HEADER_PRESETS = [
+    {
+        name: 'rare earth regression',
+        columns: ['Study', 'Site', 'pH', 'log10_Fe_ugL', 'log10_Mn_ugL', 'log10_SO4_ugL', 'log10_Al_ugL', 'log10_REE_ugL'],
+        fields: { outputType1: 'Numeric', indicators: 'C-G', predictors: 'H', corrCols: 'C-H', seedValue: '42', scaler: 'none' },
+        model: { select: 'simpleNModels', value: 'ExtraTrees' },
+        inferenceNote: 'For inference, upload AMD_REE_backvalidation_inflow_2026-09-27.csv: the 36 field inflow samples with the same five columns and the measured value beside them.',
+    },
+    {
+        name: 'rare earth classes',
+        columns: ['Study', 'Site', 'pH', 'log10_Fe_ugL', 'log10_Mn_ugL', 'log10_SO4_ugL', 'log10_Al_ugL', 'REE_class'],
+        fields: { outputType1: 'Classifier', indicators: 'C-G', predictors: 'H', corrCols: 'C-G', seedValue: '42', scaler: 'none', scalingYesNo: 'Yes', specificVariableSelect: 'H' },
+        model: { select: 'simpleClassModels', value: 'RF_classifier' },
+        inferenceNote: 'For inference, upload AMD_REE_backvalidation_inflow_classes_2026-09-27.csv: the 36 field inflow samples with the measured class beside them.',
+    },
+];
+
+function headerPresetFor(columns) {
+    if (!Array.isArray(columns)) return null;
+    const head = columns.map((c) => String(c).trim());
+    return HEADER_PRESETS.find((p) => p.columns.length === head.length && p.columns.every((c, i) => c === head[i])) || null;
+}
+
+function applyHeaderPreset(preset) {
+    Object.entries(preset.fields).forEach(([id, value]) => setExampleField(id, value));
+    const host = document.getElementById('columnSelection');
+    const select = document.getElementById(preset.model.select);
+    if (host && select) {
+        const fill = () => {
+            if (host.classList.contains('hidden')) return false;
+            if (!select.value) setExampleField(preset.model.select, preset.model.value);
+            return true;
+        };
+        if (!fill()) {
+            const watch = new MutationObserver(() => { if (fill()) watch.disconnect(); });
+            watch.observe(host, { attributes: true, attributeFilter: ['class'] });
+        }
+    }
+    window.activeHeaderPreset = preset;
+    updatePresetInferenceNote();
+}
+
+/* The inference page names the matching back-validation file for a preset. */
+function updatePresetInferenceNote() {
+    const form = document.getElementById('uploadPredictDf');
+    if (!form) return;
+    let note = document.getElementById('presetInferenceNote');
+    const preset = window.activeHeaderPreset;
+    if (!preset) { if (note) note.remove(); return; }
+    if (!note) {
+        note = document.createElement('p');
+        note.id = 'presetInferenceNote';
+        note.className = 'field-note';
+        form.appendChild(note);
+    }
+    note.textContent = preset.inferenceNote;
+}
+
+function initHeaderPresets() {
+    document.addEventListener('digiterra:upload-complete', (event) => {
+        if (event && event.detail && event.detail.ok === false) return;
+        window.activeHeaderPreset = null;
+        const preset = headerPresetFor(window.uploadedColumnNames);
+        if (preset) applyHeaderPreset(preset);
+        else updatePresetInferenceNote();
+    });
+    // The welcome button opens the file chooser; the header does the rest.
+    const button = document.getElementById('tryPresetButton');
+    const input = document.getElementById('file');
+    if (button && input) {
+        button.addEventListener('click', () => {
+            if (typeof showTab === 'function') showTab('upload');
+            input.click();
+        });
+    }
+}
+
+/* The example rows for the inference page.
+   Shown only for a session that loaded penguins.csv, because the file holds that
+   file's six indicator columns and nothing else would accept them. */
+function penguinsIsLoaded() {
+    return typeof uploadedFileName === 'string' && uploadedFileName === 'penguins.csv';
+}
+
+function updateExampleRowsVisibility() {
+    const button = document.getElementById('usePenguinRowsButton');
+    const note = document.getElementById('usePenguinRowsNote');
+    const show = penguinsIsLoaded();
+    if (button) button.classList.toggle('hidden', !show);
+    if (note) note.classList.toggle('hidden', !show);
+}
+
+function initUsePenguinRows() {
+    const button = document.getElementById('usePenguinRowsButton');
+    if (!button) return;
+    updateExampleRowsVisibility();
+    // The button appears with the view, and the view is revealed by a class change.
+    const host = document.getElementById('predictionDiv');
+    if (host) {
+        new MutationObserver(updateExampleRowsVisibility).observe(host, {
+            attributes: true,
+            attributeFilter: ['class'],
+        });
+    }
+    button.addEventListener('click', async () => {
+        const input = document.getElementById('predictFile');
+        const form = document.getElementById('uploadPredictDf');
+        if (!input || !form) return;
+        const original = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Loading the rows...';
+        try {
+            const response = await fetch(`${API_ROOT}/example-data/penguins_new.csv`);
+            if (!response.ok) throw new Error('status ' + response.status);
+            const blob = await response.blob();
+            const transfer = new DataTransfer();
+            transfer.items.add(new File([blob], 'penguins_new.csv', { type: 'text/csv' }));
+            input.files = transfer.files;
+            window.digiterraExampleRows = true;
+            form.requestSubmit();
+        } catch (err) {
+            console.error('Example rows not loaded:', err);
+            button.disabled = false;
+            button.textContent = original;
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initDocContents();
+    initTutorialEntry();
+    initTryExample();
+    initHeaderPresets();
+    initUsePenguinRows();
+});
+
+
 // === upload.js ===
 /**
  * Upload and Data Exploration (correlation matrices, pairplot). Depends on core.js (refs, helpers).
  */
+// Shared across the split files (they run in one script scope).
+let corrColsIndices = 'all';
 uploadForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const formData = new FormData(uploadForm);
@@ -1597,14 +1917,15 @@ uploadForm.addEventListener('submit', async (e) => {
     // Validate file is selected
     const fileInput = document.getElementById('file');
     if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-        alert('Please select a CSV file to upload.');
+        alert('No file is selected.');
         return;
     }
     
     // Validate file extension
-    const fileName = fileInput.files[0].name;
-    if (!fileName.toLowerCase().endsWith('.csv')) {
-        alert('Please select a CSV file. Only .csv files are allowed.');
+    const fileName = fileInput.files[0].name.toLowerCase();
+    const accepted = ['.csv', '.xlsx', '.xlsm', '.parquet'];
+    if (!accepted.some(ext => fileName.endsWith(ext))) {
+        alert('Accepted file types are .csv, .xlsx, .xlsm, and .parquet.');
         return;
     }
     
@@ -1634,6 +1955,10 @@ uploadForm.addEventListener('submit', async (e) => {
 
         // once recieves column names
         uploadedFileName = formData.get('file').name;
+        // The shape the server measured, kept for the Data panel of the modeling page.
+        uploadedShape = { rows: data.rows || null, columns: data.numcols || null };
+        // The rail names the column behind a letter, so it needs the header row.
+        window.uploadedColumnNames = Array.isArray(data.columns) ? data.columns : null;
 
         // show the divs for preprocessing and selecting targets, indicators, output type, etc
         let columnDiv = document.getElementById('columnsection');
@@ -1642,6 +1967,8 @@ uploadForm.addEventListener('submit', async (e) => {
         columnSelection.dataset.ready = 'false';
         columnSelection.style.display = 'none';
         setActiveTab('processing');
+        // Anything that has to run once the columns are on the page listens for this.
+        document.dispatchEvent(new CustomEvent('digiterra:upload-complete', { detail: { ok: true } }));
 
         // getting names of the first and last columns and their letter index
         indicatorsSelect.innerHTML = '';
@@ -1671,7 +1998,7 @@ uploadForm.addEventListener('submit', async (e) => {
                 <div class="upload-warning" style="background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; padding: 12px; margin-top: 12px; margin-bottom: 12px;">
                     <strong style="color: #856404;">Warning:</strong>
                     <ul style="margin: 8px 0 0 0; padding-left: 20px; color: #856404;">
-                        ${data.warnings.map(w => `<li>${w}</li>`).join('')}
+                        ${data.warnings.map(w => `<li>${escapeHtml(w)}</li>`).join('')}
                     </ul>
                 </div>
             `;
@@ -1682,7 +2009,7 @@ uploadForm.addEventListener('submit', async (e) => {
                 <tbody>
                     <tr>
                         <th>File name</th>
-                        <td>${shortFileName}</td>
+                        <td>${escapeHtml(shortFileName)}</td>
                     </tr>
                     <tr>
                         <th>Total columns</th>
@@ -1690,11 +2017,11 @@ uploadForm.addEventListener('submit', async (e) => {
                     </tr>
                     <tr>
                         <th>First column</th>
-                        <td>A: ${data.firstcol}</td>
+                        <td>A: ${escapeHtml(data.firstcol)}</td>
                     </tr>
                     <tr>
                         <th>Last column</th>
-                        <td>${lastColVal}: ${data.lastcol}</td>
+                        <td>${escapeHtml(lastColVal)}: ${escapeHtml(data.lastcol)}</td>
                     </tr>
                     ${data.rows ? `<tr><th>Total rows</th><td>${data.rows.toLocaleString()}</td></tr>` : ''}
                     ${data.total_cells ? `<tr><th>Total cells</th><td>${data.total_cells.toLocaleString()}</td></tr>` : ''}
@@ -1712,7 +2039,7 @@ uploadForm.addEventListener('submit', async (e) => {
 
     } catch (error) {
         console.error('Upload error:', error);
-        alert('An error occurred while uploading the file. Please check the console for details.');
+        alert('The upload failed. Open the browser console for the details.');
     }
     
 });
@@ -1748,7 +2075,7 @@ corrForm.addEventListener('submit', async(e) => {
         });
         let data = await response.json();
         if (!response.ok) {
-            throw new Error(data.error || 'An error occurred.');
+            throw new Error(data.error || 'The upload failed.');
         }
 
         // show div to tell user they can download resutls
@@ -1792,7 +2119,7 @@ corrForm.addEventListener('submit', async(e) => {
                         <tbody>
                             ${statsRows.map((row) => `
                                 <tr>
-                                    ${headers.map((header) => `<td>${row[header.key] ?? ''}</td>`).join('')}
+                                    ${headers.map((header) => `<td>${escapeHtml(row[header.key] ?? '')}</td>`).join('')}
                                 </tr>
                             `).join('')}
                         </tbody>
@@ -1813,7 +2140,7 @@ corrForm.addEventListener('submit', async(e) => {
         const initialKey = correlationOptions[0]?.key
         const initialSrc = initialKey ? correlationImages[initialKey] : data.correlation_image
         const pairplotOptions = numericColumns
-            .map((column) => `<option value="${column}">${column}</option>`)
+            .map((column) => `<option value="${escapeHtml(column)}">${escapeHtml(column)}</option>`)
             .join('')
 
         explorationOutput.innerHTML = `
@@ -1821,27 +2148,28 @@ corrForm.addEventListener('submit', async(e) => {
                 <div class="exploration-graphic">
                     <div class="matrix-heading">
                         <h3>Correlation Matrix</h3>
-                        <label for="correlationMatrixSelect">Matrix type</label>
+                        <span class="matrix-control"><label for="correlationMatrixSelect">Matrix type</label>
                         <select id="correlationMatrixSelect">
                             ${correlationOptions
                                 .map((option) => `<option value="${option.key}">${option.label}</option>`)
                                 .join('')}
-                        </select>
+                        </select></span>
                     </div>
                     <img id="correlationMatrixImage" src="${withCacheBust(initialSrc)}" alt="Correlation matrix heatmap">
                 </div>
                 <div class="exploration-graphic pairplot-graphic">
                     <div class="matrix-heading">
                         <h3>Pairplot</h3>
-                        <label for="pairplotXSelect">X</label>
+                        <span class="matrix-control"><label for="pairplotXSelect">X</label>
                         <select id="pairplotXSelect">
                             ${pairplotOptions}
-                        </select>
-                        <label for="pairplotYSelect">Y</label>
+                        </select></span>
+                        <span class="matrix-control"><label for="pairplotYSelect">Y</label>
                         <select id="pairplotYSelect">
                             ${pairplotOptions}
-                        </select>
+                        </select></span>
                     </div>
+                    <div id="pairplotError" class="hidden"></div>
                     <img id="pairplotImage" src="${withCacheBust(pairplotImage)}" alt="Pairplot preview">
                 </div>
             </div>
@@ -1864,11 +2192,24 @@ corrForm.addEventListener('submit', async(e) => {
         const pairplotXSelect = document.getElementById('pairplotXSelect')
         const pairplotYSelect = document.getElementById('pairplotYSelect')
         const pairplotImageEl = document.getElementById('pairplotImage')
+        // Pairplot messages go to the box inside the pairplot panel. The page-wide
+        // #errorDiv sits in the Modeling form, where a pairplot message appeared
+        // after the user had left Data Exploration.
+        const pairplotErrorEl = document.getElementById('pairplotError')
         if (pairplotXSelect && pairplotYSelect && pairplotImageEl && numericColumns.length >= 2) {
             // Set initial values without triggering change events
             pairplotXSelect.value = numericColumns[0]
             pairplotYSelect.value = numericColumns[1]
             
+            // Ends a request and, when X or Y changed while it ran, draws the latest pair.
+            const finishPairplot = () => {
+                pairplotImageEl.dataset.updating = 'false';
+                if (pairplotImageEl.dataset.pending === 'true') {
+                    pairplotImageEl.dataset.pending = 'false';
+                    updatePairplot();
+                }
+            };
+
             const updatePairplot = async () => {
                 // Validate that both selects have values
                 if (!pairplotXSelect.value || !pairplotYSelect.value) {
@@ -1876,11 +2217,21 @@ corrForm.addEventListener('submit', async(e) => {
                     return;
                 }
                 
-                // Prevent duplicate requests if one is already in progress
+                // One request at a time. A change made while one is running is not
+                // dropped: the plot is redrawn once more for the latest X and Y when
+                // the running request ends, so the image matches the selects.
                 if (pairplotImageEl.dataset.updating === 'true') {
+                    pairplotImageEl.dataset.pending = 'true';
                     return;
                 }
                 pairplotImageEl.dataset.updating = 'true';
+                pairplotImageEl.dataset.pending = 'false';
+                const requestId = String(Number(pairplotImageEl.dataset.request || 0) + 1);
+                pairplotImageEl.dataset.request = requestId;
+                if (pairplotErrorEl) {
+                    pairplotErrorEl.innerHTML = '';
+                    hideElement(pairplotErrorEl);
+                }
                 
                 // Add a slight opacity change to show it's updating
                 pairplotImageEl.style.opacity = '0.6';
@@ -1910,8 +2261,9 @@ corrForm.addEventListener('submit', async(e) => {
                     if (!response.ok) {
                         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
                         console.error('Pairplot update failed:', errorData.error || response.statusText);
+                        showError(pairplotErrorEl, `Pairplot update failed: ${errorData.error || response.statusText}`);
                         pairplotImageEl.style.opacity = '1';
-                        pairplotImageEl.dataset.updating = 'false';
+                        finishPairplot();
                         return;
                     }
                     
@@ -1947,16 +2299,17 @@ corrForm.addEventListener('submit', async(e) => {
                                 // Wait for image to actually load
                                 const imgLoadHandler = () => {
                                     currentImg.style.opacity = '1';
-                                    currentImg.dataset.updating = 'false';
+                                    finishPairplot();
                                     currentImg.removeEventListener('load', imgLoadHandler);
                                     currentImg.removeEventListener('error', imgErrorHandler);
                                 };
                                 
                                 const imgErrorHandler = () => {
                                     console.error('Pairplot: Failed to load image');
+                                    showError(pairplotErrorEl, 'The pairplot image did not load.');
                                     currentImg.style.opacity = '1';
                                     currentImg.style.display = '';
-                                    currentImg.dataset.updating = 'false';
+                                    finishPairplot();
                                     currentImg.removeEventListener('load', imgLoadHandler);
                                     currentImg.removeEventListener('error', imgErrorHandler);
                                 };
@@ -1967,23 +2320,25 @@ corrForm.addEventListener('submit', async(e) => {
                                 
                                 // Fallback timeout in case events don't fire
                                 setTimeout(() => {
-                                    if (currentImg.dataset.updating === 'true') {
+                                    if (currentImg.dataset.updating === 'true' && currentImg.dataset.request === requestId) {
                                         currentImg.style.opacity = '1';
                                         currentImg.style.display = '';
-                                        currentImg.dataset.updating = 'false';
+                                        finishPairplot();
                                     }
                                 }, 5000);
                             });
                         });
                     } else {
                         console.warn('Pairplot: No image returned from server');
+                        showError(pairplotErrorEl, 'The server returned no pairplot image.');
                         pairplotImageEl.style.opacity = '1';
-                        pairplotImageEl.dataset.updating = 'false';
+                        finishPairplot();
                     }
                 } catch (error) {
                     console.error('Pairplot update error:', error);
+                    showError(pairplotErrorEl, `Pairplot update failed: ${error.message || 'request error'}`);
                     pairplotImageEl.style.opacity = '1';
-                    pairplotImageEl.dataset.updating = 'false';
+                    finishPairplot();
                 }
             };
             
@@ -1993,7 +2348,7 @@ corrForm.addEventListener('submit', async(e) => {
         }
     }
     catch (error) {
-        showError(errorDiv, error.message || 'Request failed. See console for details.');
+        showError(document.getElementById('explorationErrorDiv') || errorDiv, error.message || 'The request failed. Open the browser console for the details.');
     }
 
 });
@@ -2004,6 +2359,8 @@ corrForm.addEventListener('submit', async(e) => {
 /**
  * Preprocess tab: handlePreprocessFormSubmit, preprocess-form and exploration UI. Depends on core.js.
  */
+// Shared across the split files (they run in one script scope).
+let stratifyColumnNumber = '';
 async function handlePreprocessFormSubmit(e) {
     if (!e.target || e.target.id !== 'preprocessform') return;
     const stratErrorDiv = document.getElementById('stratErrorDiv');
@@ -2025,7 +2382,7 @@ async function handlePreprocessFormSubmit(e) {
     //Error checking for if using stratify or quantiles/bins
     if ((quantileBins =='quantiles' || quantileBins =='Bins') && stratifyColumn.trim()==""){
         e.preventDefault();
-        showError(stratErrorDiv, 'Must fill out stratify variable if using quantiles or Bins', false);
+        showError(stratErrorDiv, 'Enter a stratify variable. Quantiles and bins both need one.', false);
         // Set aria-invalid on the stratify field
         const stratifyInput = document.getElementById('specificVariableSelect');
         if (stratifyInput) {
@@ -2036,7 +2393,7 @@ async function handlePreprocessFormSubmit(e) {
 
     else if (quantileBins =='quantiles' && quantiles==''){
         e.preventDefault();
-        showError(stratErrorDiv, 'Must fill out quantiles', false);
+        showError(stratErrorDiv, 'Enter the number of quantiles.', false);
         const quantilesInput = document.getElementById('quantiles');
         if (quantilesInput) {
             quantilesInput.setAttribute('aria-invalid', 'true');
@@ -2046,7 +2403,7 @@ async function handlePreprocessFormSubmit(e) {
 
     else if (quantileBins =='Bins' && (bins=='' || binsLabel=='')){
         e.preventDefault();
-        showError(stratErrorDiv, 'Must fill out bins thresholds and labels', false);
+        showError(stratErrorDiv, 'Enter the bin thresholds and the bin labels.', false);
         const binsInput = document.getElementById('bins');
         const binsLabelInput = document.getElementById('binsLabel');
         if (binsInput && !binsInput.value) {
@@ -2058,30 +2415,25 @@ async function handlePreprocessFormSubmit(e) {
         }
     }
 
-    else if (stratifyColumn.trim()!=='' && quantileBins=='None'){
-        e.preventDefault();
-        showError(stratErrorDiv, 'Must fill use bins or quantiles if using stratify value', false);
-        const quantileBinsSelect = document.getElementById('quantileBins');
-        if (quantileBinsSelect) {
-            quantileBinsSelect.setAttribute('aria-invalid', 'true');
-            manageFocus(quantileBinsSelect);
-        }
-    }
+    // A stratify column with neither bins nor quantiles is the categorical case: the
+    // split holds the proportions of the column's own values. Only a continuous
+    // column needs to be cut into groups first. The server decides whether the
+    // column can carry a split and says so if it cannot.
     else if (!predictors && outputType!=='Cluster'){
         e.preventDefault();
-        showError(stratErrorDiv, 'Must have targets for Classification and Regression Models', false);
+        showError(stratErrorDiv, 'Enter a target column. Classification and regression both need one.', false);
         const predictorsInput = document.getElementById('predictors');
         if (predictorsInput) {
             predictorsInput.setAttribute('aria-invalid', 'true');
             manageFocus(predictorsInput);
         }
     }
-    else if (stratifyColumn.trim() !== '' && (quantileBins === 'quantiles' || quantileBins === 'Bins') && predictors.trim() !== '' && outputType !== 'Cluster') {
+    else if (stratifyColumn.trim() !== '' && (quantileBins === 'quantiles' || quantileBins === 'Bins') && predictors.trim() !== '' && outputType !== 'Cluster' && outputType !== 'Classifier') {
         const pCols = getColumnIndices(predictors.toUpperCase().replace(/\s/g, ''));
         const stratNum = columnToIndex(stratifyColumn.trim().toUpperCase());
         if (pCols.indexOf(stratNum) !== -1) {
             e.preventDefault();
-            showError(stratErrorDiv, 'Do not stratify by your target column. That would leak target information into the train/test split. Choose a different column to stratify by.', false);
+            showError(stratErrorDiv, 'Stratifying by the target column leaks target information into the train/test split, so a different stratify column is required.', false);
             const stratifyInput = document.getElementById('specificVariableSelect');
             if (stratifyInput) {
                 stratifyInput.setAttribute('aria-invalid', 'true');
@@ -2109,6 +2461,12 @@ async function handlePreprocessFormSubmit(e) {
         });
 
         stratErrorDiv.innerHTML = '';
+        const badSpec = [indicators, predictors].find(v => v && !isValidColumnSpec(v));
+        if (badSpec !== undefined) {
+            const target = stratErrorDiv || errorDiv;
+            if (target) showError(target, `Column letters are written like A-D or A-D,F,H. "${badSpec}" is not a valid column selection.`, false);
+            return;
+        }
         const predictorCols = getColumnIndices((predictors || '').toUpperCase().replace(/\s/g, ''));
         const indicatorCols = getColumnIndices((indicators || '').toUpperCase().replace(/\s/g, ''));
         stratifyColumnNumber = columnToIndex((stratifyColumn || '').toUpperCase());
@@ -2132,8 +2490,8 @@ async function handlePreprocessFormSubmit(e) {
             const data = await response.json();
 
             if (!response.ok) {
-                if (stratErrorDiv) showError(stratErrorDiv, data.error || 'Preprocess failed. Please check your selections.', false);
-                else if (errorDiv) showError(errorDiv, data.error || 'Preprocess failed.', false);
+                if (stratErrorDiv) showError(stratErrorDiv, data.error || 'DiGiTerra cannot preprocess the selected columns. Check the column letters, then try again.', false);
+                else if (errorDiv) showError(errorDiv, data.error || 'DiGiTerra cannot preprocess the file.', false);
                 return;
             }
 
@@ -2151,11 +2509,6 @@ async function handlePreprocessFormSubmit(e) {
             }
             if (typeof showTab === 'function') showTab('modeling');
 
-            stratifyStr = '';
-            if (stratifyColumn && stratifyColumn.trim() !== '' && data.stratify) {
-                stratifyStr = 'with stratification by ' + data.stratify + ' value';
-            }
-
             const preds = data.predictors;
             let predictorsColNameString = Array.isArray(preds) ? preds.join(',').substring(0, 10) : (preds || '').substring(0, 10);
             if (predictorsColNameString.length >= 10) {
@@ -2166,7 +2519,7 @@ async function handlePreprocessFormSubmit(e) {
             const outputTypeLabel = outputType === 'Numeric' ? 'Regression' : outputType;
 
             if (!IndicatorsPredictorsSection) {
-                if (errorDiv) showError(errorDiv, 'Modeling header section not found.');
+                if (errorDiv) showError(errorDiv, 'DiGiTerra cannot find the modeling header section. Reload the page.');
                 return;
             }
 
@@ -2181,7 +2534,7 @@ async function handlePreprocessFormSubmit(e) {
                 if (automlNote) automlNote.innerHTML = noteText;
                 IndicatorsPredictorsSection.innerHTML = `
                 <div class='columnOutputSection' style="display: flex; gap: 12px; align-items: center;">
-                    <button class="success-button" onclick="predictionPage()">Move Forward to Apply this Model for Inferencing on New Data</button>
+                    <button class="success-button" onclick="predictionPage()">Continue to Inference on New Data</button>
                 </div>`;
             }
             else {
@@ -2194,12 +2547,12 @@ async function handlePreprocessFormSubmit(e) {
                 if (automlNote) automlNote.innerHTML = noteText;
                 IndicatorsPredictorsSection.innerHTML = `
                 <div class='columnOutputSection' style="display: flex; gap: 12px; align-items: center;">
-                    <button class="success-button" onclick="predictionPage()">Move Forward to Apply this Model for Inferencing on New Data</button>
+                    <button class="success-button" onclick="predictionPage()">Continue to Inference on New Data</button>
                 </div>`;
             }
         } catch (error) {
             console.error('Preprocess submit error:', error);
-            const msg = error && error.message ? error.message : 'Request failed. See console for details.';
+            const msg = error && error.message ? error.message : 'The request failed. Open the browser console for the details.';
             if (stratErrorDiv) showError(stratErrorDiv, msg, false);
             else if (errorDiv) showError(errorDiv, msg, false);
         }
@@ -2509,11 +2862,11 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
             const outputTypeEl = document.getElementById('outputType1');
             const isCluster = outputTypeEl && outputTypeEl.value === 'Cluster';
             if (!indicatorsSelect || !indicatorsSelect.value.trim()) {
-                alert('Please enter Indicator columns first (e.g., A-D).');
+                alert('Enter the indicator columns first, for example A-D.');
                 return;
             }
             if (!isCluster && (!predictorsSelect || !predictorsSelect.value.trim())) {
-                alert('Please enter Indicator and Target columns first (e.g., A-D and A).');
+                alert('Enter the indicator columns and the target columns first, for example A-D and E.');
                 return;
             }
             const indicatorIndices = getColumnIndices(indicatorsSelect.value.toUpperCase().replace(/\s/g, ""));
@@ -2521,11 +2874,11 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
                 ? []
                 : getColumnIndices(predictorsSelect.value.toUpperCase().replace(/\s/g, ""));
             if (indicatorIndices.length === 0) {
-                alert('Could not parse indicator column indices. Use format like "A-D" or "A,B,C".');
+                alert('DiGiTerra cannot read the indicator columns. Use the form "A-D" or "A,B,C".');
                 return;
             }
             if (!isCluster && predictorIndices.length === 0) {
-                alert('Could not parse target column indices. Use format like "A-D" or "A,B,C".');
+                alert('DiGiTerra cannot read the target columns. Use the form "A-D" or "A,B,C".');
                 return;
             }
             try {
@@ -2568,7 +2921,7 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
                 }
             } catch (err) {
                 console.error(err);
-                dataCleaningAutodetectMessage.textContent = 'Autodetect failed. Check console.';
+                dataCleaningAutodetectMessage.textContent = 'Autodetect failed. Open the browser console for the details.';
                 if (dataCleaningMissingWrapper) dataCleaningMissingWrapper.classList.remove('autodetect-greyed');
                 if (dataCleaningZerosWrapper) dataCleaningZerosWrapper.classList.remove('autodetect-greyed');
                 if (dropMissingSelect) dropMissingSelect.disabled = false;
@@ -2615,12 +2968,12 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
     if (autoDetectTransformersTopBtn) {
         autoDetectTransformersTopBtn.addEventListener('click', async function() {
             if (!indicatorsSelect || !indicatorsSelect.value.trim()) {
-                alert('Please enter indicator columns first (e.g., A-D).');
+                alert('Enter the indicator columns first, for example A-D.');
                 return;
             }
             const indicatorIndices = getColumnIndices(indicatorsSelect.value.toUpperCase().replace(/\s/g, ""));
             if (indicatorIndices.length === 0) {
-                alert('Could not parse indicator column indices. Use format like "A-D" or "A,B,C".');
+                alert('DiGiTerra cannot read the indicator columns. Use the form "A-D" or "A,B,C".');
                 return;
             }
             try {
@@ -2653,12 +3006,12 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
         autoDetectTransformersBtn.addEventListener('click', async function() {
             const indicatorsInput = document.getElementById('indicators');
             if (!indicatorsInput || !indicatorsInput.value.trim()) {
-                alert('Please enter indicator columns first (e.g., A-D).');
+                alert('Enter the indicator columns first, for example A-D.');
                 return;
             }
             const indicatorIndices = getColumnIndices(indicatorsInput.value.toUpperCase().replace(/\s/g, ""));
             if (indicatorIndices.length === 0) {
-                alert('Could not parse indicator column indices. Please use format like "A-D" or "A,B,C".');
+                alert('DiGiTerra cannot read the indicator columns. Use the form "A-D" or "A,B,C".');
                 return;
             }
             try {
@@ -2681,7 +3034,7 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
                 }
             } catch (error) {
                 console.error('Error auto-detecting transformers:', error);
-                if (transformerAutodetectMessage) transformerAutodetectMessage.textContent = 'Error detecting categorical columns.';
+                if (transformerAutodetectMessage) transformerAutodetectMessage.textContent = 'DiGiTerra cannot detect the categorical columns.';
                 transformerOptionWrapper.classList.remove('autodetect-greyed');
                 if (useTransformerSelect) useTransformerSelect.disabled = false;
             } finally {
@@ -3618,11 +3971,413 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
     }
 
 
+/* ==========================================================================
+   Model Preprocessing as one column.
+
+   The page asked a person to press two Detect buttons and then read a grid of
+   controls for findings that had not been made yet. It now runs both detections
+   itself, on arrival and whenever the columns change, and states what it found as
+   a sentence with the action already chosen. The controls behind each sentence are
+   the ones that were always there: they are moved, not rebuilt, so every id and
+   every handler still works, and a "change" link reveals them.
+   ========================================================================== */
+
+/* The blocks each finding sentence reveals. Each set lives in its own panel under
+   its sentence (review of 2026-09-27: the text-column controls opened inside the
+   blanks panel). Blank and zero findings share the cleaning panel. */
+const CLEANING_BLOCKS = ['dataCleaningMissingWrapper', 'imputeDiv', 'dataCleaningZerosWrapper'];
+const TRANSFORM_BLOCKS = ['transformerOptionWrapper', 'transformerYes'];
+const FINDING_PANELS = { cleaning: CLEANING_BLOCKS, text: TRANSFORM_BLOCKS };
+
+function preprocessColumnsChosen() {
+    const indicators = (document.getElementById('indicators') || {}).value || '';
+    const target = (document.getElementById('predictors') || {}).value || '';
+    const isCluster = (document.getElementById('outputType1') || {}).value === 'Cluster';
+    return Boolean(indicators.trim()) && (isCluster || Boolean(target.trim()));
+}
+
+/* The settings behind the sentences: each group is one sentence in the page's
+   own words with a "change" link, and the controls open in a panel under it
+   (review of 2026-09-27: one More settings disclosure opened everything at once
+   and the transform controls appeared without a panel). */
+const SETTING_GROUPS = [
+    { key: 'stratify', heading: 'Stratify', ids: ['scalingQuestion', 'scalingYes'], text: () => {
+        const yn = document.getElementById('scalingYesNo');
+        const col = document.getElementById('specificVariableSelect');
+        if (!yn) return '';
+        if (yn.value !== 'Yes' && yn.value !== 'yes') return 'The split is not stratified.';
+        const name = col && col.value ? (col.options && col.options[col.selectedIndex] ? col.options[col.selectedIndex].text : col.value) : '';
+        return name ? `The split keeps the mix of column ${name} the same in both halves.` : 'The split is stratified; choose the column.';
+    } },
+    { key: 'scaler', ids: ['preprocessScaler'], text: () => {
+        const e = document.getElementById('scaler');
+        if (!e) return '';
+        const label = (e.options && e.options[e.selectedIndex] ? e.options[e.selectedIndex].text : e.value) || 'None';
+        return /^none$/i.test(e.value || label) ? 'Predictors are not scaled.' : `Predictors are scaled (${label}).`;
+    } },
+    { key: 'split', ids: ['preprocessSplit', 'preprocessSeed'], text: () => {
+        const t = document.getElementById('trainSize');
+        const seed = document.getElementById('seedValue');
+        const train = t && t.value ? Math.round(Number(t.value) * 100) : 80;
+        const seedText = seed && seed.value ? `Seed ${seed.value}.` : 'No seed set; one is drawn for the run.';
+        return `${train} percent of the rows train the model and ${100 - train} percent are held out. ${seedText}`;
+    } },
+];
+
+/** Build the findings block and the setting sentences, once. */
+function buildPreprocessLayout() {
+    const form = document.getElementById('preprocessform');
+    if (!form || document.getElementById('preprocessFindings')) return;
+
+    const findings = document.createElement('div');
+    findings.id = 'preprocessFindings';
+    findings.className = 'preprocess-findings';
+    findings.innerHTML = '<p class="narrative-empty">Enter the indicator and target columns.</p>';
+
+    // The cleaning and transform controls wait in two panels, parked out of the
+    // page until a finding sentence adopts one. The blocks themselves stay
+    // visible inside their panel; the panel is what opens and closes.
+    const parked = document.createElement('div');
+    parked.id = 'preprocessControls';
+    parked.className = 'preprocess-controls hidden';
+
+    const firstCard = form.querySelector('.preprocess-card');
+    if (firstCard) firstCard.insertAdjacentElement('afterend', findings);
+    else form.insertBefore(findings, form.firstChild);
+    findings.insertAdjacentElement('afterend', parked);
+
+    const transformHead = (document.getElementById('transformerOptionWrapper') || {}).previousElementSibling;
+    const makePanel = (key) => {
+        const panel = document.createElement('div');
+        panel.className = 'preprocess-panel hidden';
+        panel.id = `preprocessPanel_${key}`;
+        parked.appendChild(panel);
+        return panel;
+    };
+    const cleaningPanel = makePanel('cleaning');
+    const textPanel = makePanel('text');
+    const move = (panel, id, show) => {
+        const el = document.getElementById(id);
+        if (el) {
+            if (show) el.classList.remove('hidden');
+            panel.appendChild(el);
+        }
+    };
+    move(cleaningPanel, 'dataCleaningMissingWrapper', true);
+    move(cleaningPanel, 'imputeDiv', false);           // its own handler shows it for a fill
+    move(cleaningPanel, 'dataCleaningZerosWrapper', true);
+    if (transformHead && transformHead.tagName === 'H3') {
+        transformHead.classList.remove('hidden');
+        textPanel.appendChild(transformHead);
+    }
+    move(textPanel, 'transformerOptionWrapper', true);
+    move(textPanel, 'transformerYes', false);           // opens when "Yes" is chosen
+    // A stray "Or" preceded a hidden autodetect button; it is not drawn.
+    const optionWrap = document.getElementById('transformerOptionWrapper');
+    if (optionWrap) {
+        const walker = document.createTreeWalker(optionWrap, NodeFilter.SHOW_TEXT);
+        let node;
+        while ((node = walker.nextNode())) {
+            if (node.textContent.trim().toLowerCase() === 'or') node.textContent = '';
+        }
+    }
+
+    // One sentence and one panel per setting group, in the order of the run.
+    const lines = document.createElement('div');
+    lines.id = 'preprocessSettingLines';
+    lines.className = 'preprocess-setting-lines';
+    parked.insertAdjacentElement('afterend', lines);
+    SETTING_GROUPS.forEach((group) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'preprocess-setting-line';
+        wrap.dataset.group = group.key;
+        const line = document.createElement('p');
+        line.className = 'preprocess-finding';
+        const text = document.createElement('span');
+        text.className = 'preprocess-setting-text';
+        line.appendChild(text);
+        line.appendChild(document.createTextNode(' '));
+        const link = document.createElement('button');
+        link.type = 'button';
+        link.className = 'preprocess-change';
+        link.textContent = 'change';
+        line.appendChild(link);
+        const panel = document.createElement('div');
+        panel.className = 'preprocess-panel hidden';
+        panel.id = `preprocessPanel_${group.key}`;
+        if (group.heading) {
+            const h = document.createElement('h3');
+            h.className = 'preprocess-section-title';
+            h.textContent = group.heading;
+            panel.appendChild(h);
+        }
+        group.ids.forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) panel.appendChild(el);
+        });
+        link.addEventListener('click', () => {
+            panel.classList.toggle('hidden');
+            syncPreprocessLinks();
+        });
+        wrap.appendChild(line);
+        wrap.appendChild(panel);
+        lines.appendChild(wrap);
+    });
+    // The two cards the blocks came from are empty now.
+    form.querySelectorAll('.preprocess-card').forEach((card) => {
+        if (card !== firstCard && !card.querySelector('input, select, textarea')) card.classList.add('hidden');
+    });
+    refreshPreprocessSettingLines();
+    form.addEventListener('change', refreshPreprocessSettingLines);
+    form.addEventListener('input', refreshPreprocessSettingLines);
+}
+
+/** Rewrite each setting sentence from its controls. */
+function refreshPreprocessSettingLines() {
+    SETTING_GROUPS.forEach((group) => {
+        const el = document.querySelector(`.preprocess-setting-line[data-group="${group.key}"] .preprocess-setting-text`);
+        if (el) el.textContent = group.text();
+    });
+}
+
+/** The finding panel a block belongs to, if any. */
+function findingPanelFor(id) {
+    const el = document.getElementById(id);
+    return el ? el.closest('.preprocess-panel') : null;
+}
+
+/* exported revealPreprocessBlocks */
+/** Open the panel a sentence stands for (a setting panel too, from the rail). Called from narrative.js. */
+function revealPreprocessBlocks(ids) {
+    ids.forEach((id) => {
+        const panel = findingPanelFor(id);
+        if (panel) panel.classList.remove('hidden');
+    });
+    syncPreprocessLinks();
+}
+
+/** Every change/done link reads the state of its panel. */
+function syncPreprocessLinks() {
+    document.querySelectorAll('#preprocessform .preprocess-change[data-panel]').forEach((link) => {
+        const panel = document.getElementById(link.dataset.panel);
+        if (panel) link.textContent = panel.classList.contains('hidden') ? 'change' : 'done';
+    });
+    document.querySelectorAll('#preprocessSettingLines .preprocess-setting-line').forEach((wrap) => {
+        const panel = wrap.querySelector('.preprocess-panel');
+        const link = wrap.querySelector('.preprocess-change');
+        if (panel && link) link.textContent = panel.classList.contains('hidden') ? 'change' : 'done';
+    });
+}
+
+/** A finding sentence; `panelKey` names the panel its change link toggles. */
+function preprocessSentence(text, panelKey) {
+    const line = document.createElement('p');
+    line.className = 'preprocess-finding';
+    line.appendChild(document.createTextNode(text + ' '));
+    const panel = panelKey ? document.getElementById(`preprocessPanel_${panelKey}`) : null;
+    if (panel) {
+        const link = document.createElement('button');
+        link.type = 'button';
+        link.className = 'preprocess-change';
+        link.dataset.panel = panel.id;
+        link.textContent = panel.classList.contains('hidden') ? 'change' : 'done';
+        link.addEventListener('click', () => {
+            panel.classList.toggle('hidden');
+            syncPreprocessLinks();
+        });
+        line.appendChild(link);
+    }
+    return line;
+}
+
+/** Place a finding panel directly under the last sentence that opens it. */
+function seatFindingPanel(host, key) {
+    const panel = document.getElementById(`preprocessPanel_${key}`);
+    if (!panel) return;
+    const links = host.querySelectorAll(`.preprocess-change[data-panel="${panel.id}"]`);
+    if (links.length) {
+        links[links.length - 1].closest('.preprocess-finding').insertAdjacentElement('afterend', panel);
+    } else {
+        const parked = document.getElementById('preprocessControls');
+        if (parked) parked.appendChild(panel);
+        panel.classList.add('hidden');
+    }
+}
+
+/** Move the finding panels out of the findings block before it is rewritten. */
+function parkFindingPanels() {
+    const parked = document.getElementById('preprocessControls');
+    if (!parked) return;
+    Object.keys(FINDING_PANELS).forEach((key) => {
+        const panel = document.getElementById(`preprocessPanel_${key}`);
+        if (panel) { panel.classList.add('hidden'); parked.appendChild(panel); }
+    });
+}
+
+/** Run both detections and say what they found. */
+async function runPreprocessDetection() {
+    const host = document.getElementById('preprocessFindings');
+    if (!host) return;
+    if (!preprocessColumnsChosen()) {
+        parkFindingPanels();
+        host.innerHTML = '<p class="narrative-empty">Enter the indicator and target columns.</p>';
+        return;
+    }
+    const isCluster = (document.getElementById('outputType1') || {}).value === 'Cluster';
+    const indicators = getColumnIndices(document.getElementById('indicators').value.toUpperCase().replace(/\s/g, ''));
+    const target = isCluster ? [] : getColumnIndices(document.getElementById('predictors').value.toUpperCase().replace(/\s/g, ''));
+    if (!indicators.length) {
+        parkFindingPanels();
+        host.innerHTML = '<p class="narrative-empty">DiGiTerra cannot read the indicator columns. Use the form "A-D" or "A,B,C".</p>';
+        return;
+    }
+    const body = JSON.stringify({ indicators: indicators, predictors: target });
+    const post = (path) => fetch(`${API_ROOT}${path}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body,
+    }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+
+    const [clean, text] = await Promise.all([post('/auto-detect-nan-zeros'), post('/auto-detect-transformers')]);
+    lastNumericColumns = clean && Array.isArray(clean.numeric_columns) ? clean.numeric_columns : [];
+    // A panel opened while the detection ran (the rail's change button) stays open.
+    const wasOpen = Object.keys(FINDING_PANELS).filter((key) => {
+        const panel = document.getElementById(`preprocessPanel_${key}`);
+        return panel && !panel.classList.contains('hidden');
+    });
+    parkFindingPanels();
+    host.innerHTML = '';
+
+    let found = false;
+    if (clean && clean.blank_rows) {
+        found = true;
+        const rows = clean.blank_rows === 1 ? '1 row has a blank.' : `${clean.blank_rows} rows have a blank.`;
+        host.appendChild(preprocessSentence(`${rows} DiGiTerra will remove them.`, 'cleaning'));
+        setPreprocessDefault('missScopeAll', true);
+        setPreprocessDefault('imputeStrategy', 'none');
+    }
+    if (clean && clean.zero_columns && clean.zero_columns.length) {
+        found = true;
+        const names = clean.zero_columns.join(' and ');
+        host.appendChild(preprocessSentence(`${names} contain a zero. DiGiTerra will keep the zeros.`, 'cleaning'));
+    }
+    if (text && Array.isArray(text.transformer_indices) && text.transformer_indices.length) {
+        found = true;
+        const names = window.uploadedColumnNames || [];
+        const labels = text.transformer_indices.map((i) => names[i] || indexToColumn(i)).join(' and ');
+        const verb = text.transformer_indices.length === 1 ? 'is text' : 'are text';
+        host.appendChild(preprocessSentence(`${labels} ${verb}. DiGiTerra will one-hot encode them.`, 'text'));
+        setPreprocessDefault('useTransformer', 'Yes');
+        setPreprocessDefault('transformerColumn', text.transformer_indices.map(indexToColumn).join(', '));
+    }
+    if (!found) {
+        host.appendChild(preprocessSentence('No blanks or zeros in the selected columns.', 'cleaning'));
+    }
+    // Each panel sits under the last sentence that opens it and starts closed; a
+    // panel no sentence needs goes back to the parking block.
+    Object.keys(FINDING_PANELS).forEach((key) => {
+        const panel = document.getElementById(`preprocessPanel_${key}`);
+        if (panel) panel.classList.toggle('hidden', !wasOpen.includes(key));
+        seatFindingPanel(host, key);
+    });
+    syncPreprocessLinks();
+    applyStratifyDefault();
+}
+
+function setPreprocessDefault(id, value) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.type === 'checkbox') el.checked = Boolean(value);
+    else el.value = value;
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+function indexToColumn(index) {
+    let n = Number(index) + 1;
+    let out = '';
+    while (n > 0) {
+        const rem = (n - 1) % 26;
+        out = String.fromCharCode(65 + rem) + out;
+        n = Math.floor((n - 1) / 26);
+    }
+    return out;
+}
+
+/* Stratify defaults to Yes on the target for classification and No for regression.
+   Quantiles and bins cut a continuous column into groups, so that control belongs to
+   a numeric stratify column and is not drawn for a categorical one. */
+function applyStratifyDefault() {
+    const task = (document.getElementById('outputType1') || {}).value;
+    const toggle = document.getElementById('scalingYesNo');
+    const column = document.getElementById('specificVariableSelect');
+    if (!toggle) return;
+    if (task === 'Classifier') {
+        setPreprocessDefault('scalingYesNo', 'Yes');
+        if (column && !column.value.trim()) {
+            setPreprocessDefault('specificVariableSelect', (document.getElementById('predictors') || {}).value || '');
+        }
+    } else if (task === 'Numeric') {
+        setPreprocessDefault('scalingYesNo', 'No');
+    }
+    updateQuantileBinVisibility();
+}
+
+/* The numeric columns of the loaded file, as the last detection reported them. The
+   transformer list will not do: it names the text columns among the indicators and
+   leaves the target out, so a text target would read as numeric. */
+let lastNumericColumns = [];
+
+function stratifyColumnIsNumeric() {
+    const column = document.getElementById('specificVariableSelect');
+    if (!column || !column.value.trim() || typeof columnToIndex !== 'function') return false;
+    const first = column.value.trim().toUpperCase().match(/^[A-Z]+/);
+    if (!first) return false;
+    return lastNumericColumns.includes(columnToIndex(first[0]));
+}
+
+function updateQuantileBinVisibility() {
+    const wrapper = document.getElementById('quantileBins');
+    if (!wrapper) return;
+    const row = wrapper.closest('.scaling-container') || wrapper.parentElement;
+    const numeric = stratifyColumnIsNumeric();
+    if (row) row.classList.toggle('hidden', !numeric);
+    if (!numeric) setPreprocessDefault('quantileBins', 'None');
+}
+
+function initPreprocessPage() {
+    const host = document.getElementById('userInputSection');
+    if (!host) return;
+    buildPreprocessLayout();
+    let ran = false;
+    const refresh = () => {
+        if (host.classList.contains('hidden')) return;
+        if (!ran) {
+            ran = true;
+            buildPreprocessLayout();
+        }
+        runPreprocessDetection();
+    };
+    refresh();
+    new MutationObserver(refresh).observe(host, { attributes: true, attributeFilter: ['class'] });
+    ['indicators', 'predictors', 'outputType1'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', runPreprocessDetection);
+    });
+    ['specificVariableSelect', 'scalingYesNo'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', updateQuantileBinVisibility);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', initPreprocessPage);
+
 
 // === modeling.js ===
 /**
  * Modeling tab: run model, process results, hyperparameters. Depends on core.js, formatDateTimeForFilename, downloadFile, etc.
  */
+// Shared across the split files (they run in one script scope).
+let model1 = null;
+let stratifyBool = false;
+let quantileBinDict = {};
 processForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -3723,7 +4478,7 @@ processForm.addEventListener('submit', async (e) => {
     //ensure predictors and indicators - validate BEFORE clearing results
     let selectedOutputType = outputType.value
     if (!indicators.length || (!predictors.length && selectedOutputType !== 'Cluster')) {
-        showError(NumericResultDiv, 'Please select at least one predictor and one indicator column.');
+        showError(NumericResultDiv, 'At least one predictor column and one indicator column are required.');
         if (runButton) runButton.disabled = false;
         if (stopButton) stopButton.style.display = 'none';
         return;
@@ -3741,8 +4496,8 @@ processForm.addEventListener('submit', async (e) => {
         }
         if (!String(modelPick).trim()) {
             const errDiv = getCachedElement('errorDiv');
-            if (errDiv) showError(errDiv, 'Please select a model from the dropdown before running.');
-            else showError(NumericResultDiv, 'Please select a model from the dropdown before running.');
+            if (errDiv) showError(errDiv, 'A model must be selected from the dropdown before the run.');
+            else showError(NumericResultDiv, 'A model must be selected from the dropdown before the run.');
             if (runButton) runButton.disabled = false;
             if (stopButton) stopButton.style.display = 'none';
             return;
@@ -3806,8 +4561,17 @@ processForm.addEventListener('submit', async (e) => {
         stratifyBool = false
     }
 
-    if (stratifyBool && selectedOutputType !== 'Cluster' && predictorCols.indexOf(stratifyColumnNumber) !== -1) {
-        showError(NumericResultDiv, 'Do not stratify by your target column. That would leak target information into the train/test split. Choose a different column to stratify by.', false);
+    // Classification stratifies on the class labels, which is what train_test_split's
+    // own stratify argument takes, so naming the target there is correct. The guard is
+    // for regression, where the target is cut into bins that would carry it into the
+    // split. The route and the training path make the same exception.
+    if (
+        stratifyBool &&
+        selectedOutputType !== 'Cluster' &&
+        selectedOutputType !== 'Classifier' &&
+        predictorCols.indexOf(stratifyColumnNumber) !== -1
+    ) {
+        showError(NumericResultDiv, 'Stratifying by the target column leaks target information into the train/test split, so a different stratify column is required.', false);
         const processButton = getCachedElement('processButton');
         if (processButton) processButton.disabled = false;
         if (loadingDiv) loadingDiv.classList.add('hidden');
@@ -3845,21 +4609,16 @@ processForm.addEventListener('submit', async (e) => {
         }
     } else if (currentMode === 'automl') {
         // Use AutoML model selectors (optional - can be empty to let AutoML choose)
+        // A blank model is a request for AutoML to compare its candidates by
+        // cross-validation and train the one that scores best; the server does
+        // that when models is blank and taskType names the task.
         if (selectedOutputType === 'Numeric'){
             model1 = document.getElementById('automlNModels');
             selectedModel1 = model1 ? model1.value : ''
-            // If no model selected in AutoML, use a sensible default (Random Forest is robust and works well with AutoML features)
-            if (!selectedModel1 || selectedModel1 === '') {
-                selectedModel1 = 'RF';
-            }
         }
         else if (selectedOutputType === 'Classifier'){
             model1 = document.getElementById('automlClassModels');
             selectedModel1 = model1 ? model1.value : ''
-            // If no model selected in AutoML, use a sensible default (Random Forest Classifier)
-            if (!selectedModel1 || selectedModel1 === '') {
-                selectedModel1 = 'RF_classifier';
-            }
         }
         else if (selectedOutputType === 'Cluster'){
             model1 = document.getElementById('automlClModels');
@@ -3913,13 +4672,13 @@ processForm.addEventListener('submit', async (e) => {
             : document.getElementById('nonreqRidgeSlider');
         if (nonreqRidgeSlider && nonreqRidgeSlider.checked){
             nonreq=true
-            let RidgeFitIntersept = document.getElementById('RidgeFitIntersept').value
-            let RidgeNormalize = document.getElementById('RidgeNormalize').value
-            let RidgeCopyX = document.getElementById('RidgeCopyX').value
-            let RidgePositive = document.getElementById('RidgePositive').value
-            let RidgeMaxIter = document.getElementById('RidgeMaxIter').value
-            let RidgeTol = document.getElementById('RidgeTol').value
-            const solver = document.getElementById('RidgeSolver');
+            let RidgeFitIntersept = getModeScopedElement('RidgeFitIntersept').value
+            let RidgeNormalize = getModeScopedElement('RidgeNormalize').value
+            let RidgeCopyX = getModeScopedElement('RidgeCopyX').value
+            let RidgePositive = getModeScopedElement('RidgePositive').value
+            let RidgeMaxIter = getModeScopedElement('RidgeMaxIter').value
+            let RidgeTol = getModeScopedElement('RidgeTol').value
+            const solver = getModeScopedElement('RidgeSolver');
             hyperparameters['solver'] = solver.value
             //let RidgeRandomState = document.getElementById('RidgeRandomState').value
             hyperparameters['RidgeFitIntersept'] = RidgeFitIntersept
@@ -3945,15 +4704,15 @@ processForm.addEventListener('submit', async (e) => {
             : document.getElementById('nonreqLassoSlider');
         if (nonreqLassoSlider && nonreqLassoSlider.checked){
             nonreq=true
-            let LassoFitIntersept = document.getElementById('LassoFitIntersept').value
-            let LassoPrecompute = document.getElementById('LassoPrecompute').value
-            let LassoCopyX = document.getElementById('LassoCopyX').value
-            let LassoWarmStart = document.getElementById('LassoWarmStart').value
-            let LassoPositive = document.getElementById('LassoPositive').value
-            let LassoTol = document.getElementById('LassoTol').value
+            let LassoFitIntersept = getModeScopedElement('LassoFitIntersept').value
+            let LassoPrecompute = getModeScopedElement('LassoPrecompute').value
+            let LassoCopyX = getModeScopedElement('LassoCopyX').value
+            let LassoWarmStart = getModeScopedElement('LassoWarmStart').value
+            let LassoPositive = getModeScopedElement('LassoPositive').value
+            let LassoTol = getModeScopedElement('LassoTol').value
             //let LassoRandomState = document.getElementById('LassoRandomState').value
-            let LassoSelection = document.getElementById('LassoSelection').value
-            const max_iter = document.getElementById('LassoMax_iter');
+            let LassoSelection = getModeScopedElement('LassoSelection').value
+            const max_iter = getModeScopedElement('LassoMax_iter');
             hyperparameters['LassoFitIntersept'] = LassoFitIntersept
             hyperparameters['LassoPrecompute'] = LassoPrecompute
             hyperparameters['LassoCopyX'] = LassoCopyX
@@ -3974,22 +4733,22 @@ processForm.addEventListener('submit', async (e) => {
             : document.getElementById('nonreqLogisticSlider');
         if (nonreqLogisticSlider && nonreqLogisticSlider.checked){
             nonreq=true
-            let LogisticDual = document.getElementById('LogisticDual').value
-            let LogisticFitIntercept = document.getElementById('LogisticFitIntercept').value
-            let LogisticSolver = document.getElementById('LogisticSolver').value
-            let LogisticMultiClass = document.getElementById('LogisticMultiClass').value
-            let LogisticWarmStart = document.getElementById('LogisticWarmStart').value
-            let LogisticTol = document.getElementById('LogisticTol').value
-            let Logisticintercept_scaling = document.getElementById('Logisticintercept_scaling').value
-            let LogisticClassWeight = document.getElementById('LogisticClassWeight').value
+            let LogisticDual = getModeScopedElement('LogisticDual').value
+            let LogisticFitIntercept = getModeScopedElement('LogisticFitIntercept').value
+            let LogisticSolver = getModeScopedElement('LogisticSolver').value
+            let LogisticMultiClass = getModeScopedElement('LogisticMultiClass').value
+            let LogisticWarmStart = getModeScopedElement('LogisticWarmStart').value
+            let LogisticTol = getModeScopedElement('LogisticTol').value
+            let Logisticintercept_scaling = getModeScopedElement('Logisticintercept_scaling').value
+            let LogisticClassWeight = getModeScopedElement('LogisticClassWeight').value
             //let LogisticRandomState = document.getElementById('LogisticRandomState').value
-            let LogisticMaxIterations = document.getElementById('LogisticMaxIterations').value
-            let LogisticVerbose = document.getElementById('LogisticVerbose').value
-            let LogisticNJobs = document.getElementById('LogisticNJobs').value
-            let Logisticl1Ratio = document.getElementById('Logisticl1Ratio').value
+            let LogisticMaxIterations = getModeScopedElement('LogisticMaxIterations').value
+            let LogisticVerbose = getModeScopedElement('LogisticVerbose').value
+            let LogisticNJobs = getModeScopedElement('LogisticNJobs').value
+            let Logisticl1Ratio = getModeScopedElement('Logisticl1Ratio').value
 
-            const CLogistic = document.getElementById('CLogistic');
-            const penatly = document.getElementById('penalty');
+            const CLogistic = getModeScopedElement('CLogistic');
+            const penatly = getModeScopedElement('penalty');
             hyperparameters['C'] = parseFloat(CLogistic.value);
             hyperparameters['penalty'] = penatly.value;
             
@@ -4071,16 +4830,16 @@ processForm.addEventListener('submit', async (e) => {
             : document.getElementById('nonreqSVMSlider');
         if (nonreqSVMSlider && nonreqSVMSlider.checked){
             nonreq=true
-            let SVMshrinking = document.getElementById('SVMshrinking').value
-            let SVMprobability = document.getElementById('SVMprobability').value
-            let SVMBreakTies = document.getElementById('SVMBreakTies').value
-            let SVMverbose = document.getElementById('SVMverbose').value
-            let SVMcoef0 = document.getElementById('SVMcoef0').value
-            let SVMtol = document.getElementById('SVMtol').value
-            let SVMCacheSize = document.getElementById('SVMCacheSize').value
-            let SVMClassWeight = document.getElementById('SVMClassWeight').value
-            let SVMmaxIter = document.getElementById('SVMmaxIter').value
-            let SVMdecisionFunctionShape = document.getElementById('SVMdecisionFunctionShape').value
+            let SVMshrinking = getModeScopedElement('SVMshrinking').value
+            let SVMprobability = getModeScopedElement('SVMprobability').value
+            let SVMBreakTies = getModeScopedElement('SVMBreakTies').value
+            let SVMverbose = getModeScopedElement('SVMverbose').value
+            let SVMcoef0 = getModeScopedElement('SVMcoef0').value
+            let SVMtol = getModeScopedElement('SVMtol').value
+            let SVMCacheSize = getModeScopedElement('SVMCacheSize').value
+            let SVMClassWeight = getModeScopedElement('SVMClassWeight').value
+            let SVMmaxIter = getModeScopedElement('SVMmaxIter').value
+            let SVMdecisionFunctionShape = getModeScopedElement('SVMdecisionFunctionShape').value
             //let SVMrandomState = document.getElementById('SVMrandomState').value
             
             hyperparameters['SVMshrinking'] = SVMshrinking
@@ -4114,19 +4873,19 @@ processForm.addEventListener('submit', async (e) => {
             : document.getElementById('nonreqRFSlider');
         if (nonreqRFSlider && nonreqRFSlider.checked){
             nonreq=true
-            let RFBoostrap = document.getElementById('RFBoostrap').value
-            let RFoobScore = document.getElementById('RFoobScore').value
-            let RFWarmStart = document.getElementById('RFWarmStart').value
-            let RFmin_weight_fraction_leaf = document.getElementById('RFmin_weight_fraction_leaf').value
-            let RFMaxLeafNodes = document.getElementById('RFMaxLeafNodes').value
-            let RFMinImpurityDecrease = document.getElementById('RFMinImpurityDecrease').value
-            let RFNJobs = document.getElementById('RFNJobs').value
+            let RFBoostrap = getModeScopedElement('RFBoostrap').value
+            let RFoobScore = getModeScopedElement('RFoobScore').value
+            let RFWarmStart = getModeScopedElement('RFWarmStart').value
+            let RFmin_weight_fraction_leaf = getModeScopedElement('RFmin_weight_fraction_leaf').value
+            let RFMaxLeafNodes = getModeScopedElement('RFMaxLeafNodes').value
+            let RFMinImpurityDecrease = getModeScopedElement('RFMinImpurityDecrease').value
+            let RFNJobs = getModeScopedElement('RFNJobs').value
             //let RFRandomState = document.getElementById('RFRandomState').value
-            let RFVerbose  = document.getElementById('RFVerbose').value
+            let RFVerbose  = getModeScopedElement('RFVerbose').value
 
-            const min_samples_split = document.getElementById('min_samples_split');
-            const min_samples_leaf = document.getElementById('min_samples_leaf');
-            const max_depth = document.getElementById('RFMax_depth');
+            const min_samples_split = getModeScopedElement('min_samples_split');
+            const min_samples_leaf = getModeScopedElement('min_samples_leaf');
+            const max_depth = getModeScopedElement('RFMax_depth');
             if (max_depth !== null) {
                 hyperparameters['max_depth'] = parseFloat(max_depth.value)
             }
@@ -4152,22 +4911,22 @@ processForm.addEventListener('submit', async (e) => {
         hyperparameters['max_iter'] = parseFloat(max_iter.value)
         hyperparameters['eta0'] = parseFloat(eta0.value)
 
-        let nonreqPerceptronSlider = document.getElementById('nonreqPerceptronSlider')
+        let nonreqPerceptronSlider = getModeScopedElement('nonreqPerceptronSlider')
         if (nonreqPerceptronSlider.checked){
             nonreq=true
-            let PerceptronFitIntercept = document.getElementById('').value
-            let PerceptronShuffle = document.getElementById('').value
-            let PerceptronEarlyStopping = document.getElementById('').value
-            let PerceptronWarmStart = document.getElementById('').value
-            let PerceptronPenalty = document.getElementById('').value
-            let PerceptronAlpha = document.getElementById('').value
-            let PerceptronTol = document.getElementById('').value
-            let PerceptronVerbose = document.getElementById('').value
-            let PerceptronNJobs = document.getElementById('').value
-            //let PerceptronRandomState = document.getElementById('').value
-            let PerceptronValidationFraction = document.getElementById('').value
-            let PerceptronNIterNoChange = document.getElementById('').value
-            let PerceptronClassWeight = document.getElementById('').value
+            let PerceptronFitIntercept = getModeScopedElement('PerceptronFitIntercept')?.value
+            let PerceptronShuffle = getModeScopedElement('PerceptronShuffle')?.value
+            let PerceptronEarlyStopping = getModeScopedElement('PerceptronEarlyStopping')?.value
+            let PerceptronWarmStart = getModeScopedElement('PerceptronWarmStart')?.value
+            let PerceptronPenalty = getModeScopedElement('PerceptronPenalty')?.value
+            let PerceptronAlpha = getModeScopedElement('PerceptronAlpha')?.value
+            let PerceptronTol = getModeScopedElement('PerceptronTol')?.value
+            let PerceptronVerbose = getModeScopedElement('PerceptronVerbose')?.value
+            let PerceptronNJobs = getModeScopedElement('PerceptronNJobs')?.value
+            //let PerceptronRandomState = getModeScopedElement('PerceptronRandomState')?.value
+            let PerceptronValidationFraction = getModeScopedElement('PerceptronValidationFraction')?.value
+            let PerceptronNIterNoChange = getModeScopedElement('PerceptronNIterNoChange')?.value
+            let PerceptronClassWeight = getModeScopedElement('PerceptronClassWeight')?.value
             
             hyperparameters['PerceptronFitIntercept'] = PerceptronFitIntercept
             hyperparameters['PerceptronShuffle'] = PerceptronShuffle
@@ -4200,27 +4959,27 @@ processForm.addEventListener('submit', async (e) => {
         hyperparameters['activation'] = activation.value
         hyperparameters['solver'] = solver.value
 
-        let nonreqMLPSlider = document.getElementById('nonreqMLPSlider')
+        let nonreqMLPSlider = getModeScopedElement('nonreqMLPSlider')
         if (nonreqMLPSlider.checked){
             nonreq=true
-            let MLPNesterovsMomentum = document.getElementById('MLPNesterovsMomentum').value
-            let MLPEarlyStopping = document.getElementById('MLPEarlyStopping').value
-            let MLPShuffle = document.getElementById('MLPShuffle').value
-            let MLPVerbose = document.getElementById('MLPVerbose').value
-            let MLPWarmStart = document.getElementById('MLPWarmStart').value
-            let MLPBatchSize = document.getElementById('MLPBatchSize').value
-            let MLPLearningRateInit = document.getElementById('MLPLearningRateInit').value
-            let MLPPowerT = document.getElementById('MLPPowerT').value
-            let MLPMaxIter = document.getElementById('MLPMaxIter').value
+            let MLPNesterovsMomentum = getModeScopedElement('MLPNesterovsMomentum').value
+            let MLPEarlyStopping = getModeScopedElement('MLPEarlyStopping').value
+            let MLPShuffle = getModeScopedElement('MLPShuffle').value
+            let MLPVerbose = getModeScopedElement('MLPVerbose').value
+            let MLPWarmStart = getModeScopedElement('MLPWarmStart').value
+            let MLPBatchSize = getModeScopedElement('MLPBatchSize').value
+            let MLPLearningRateInit = getModeScopedElement('MLPLearningRateInit').value
+            let MLPPowerT = getModeScopedElement('MLPPowerT').value
+            let MLPMaxIter = getModeScopedElement('MLPMaxIter').value
             //let MLPRandomState = document.getElementById('MLPRandomState').value
-            let MLPTol = document.getElementById('MLPTol').value
-            let MLPMomentum = document.getElementById('MLPMomentum').value
-            let MLPValidationFraction = document.getElementById('MLPValidationFraction').value
-            let MLPBeta1 = document.getElementById('MLPBeta1').value
-            let MLPBeta2 = document.getElementById('MLPBeta2').value
-            let MLPEpsilon = document.getElementById('MLPEpsilon').value
-            const alpha = document.getElementById('MLPAlpha');
-            const learning_rate = document.getElementById('MLPLearning_rate');
+            let MLPTol = getModeScopedElement('MLPTol').value
+            let MLPMomentum = getModeScopedElement('MLPMomentum').value
+            let MLPValidationFraction = getModeScopedElement('MLPValidationFraction').value
+            let MLPBeta1 = getModeScopedElement('MLPBeta1').value
+            let MLPBeta2 = getModeScopedElement('MLPBeta2').value
+            let MLPEpsilon = getModeScopedElement('MLPEpsilon').value
+            const alpha = getModeScopedElement('MLPAlpha');
+            const learning_rate = getModeScopedElement('MLPLearning_rate');
             
             hyperparameters['learning_rate'] = learning_rate.value
             hyperparameters['alpha'] = parseFloat(alpha.value)
@@ -4258,16 +5017,16 @@ processForm.addEventListener('submit', async (e) => {
             hyperparameters['n_neighbors'] = parseFloat(n_neighbors.value);
         }
 
-        let nonreqKNearestSlider = document.getElementById('nonreqKNearestSlider')
+        let nonreqKNearestSlider = getModeScopedElement('nonreqKNearestSlider')
         if (nonreqKNearestSlider.checked){
             nonreq=true
-            let KNearestWeights = document.getElementById('KNearestWeights').value
-            let KNearestAlgorithm = document.getElementById('KNearestAlgorithm').value
-            let KNearestLeafSize = document.getElementById('KNearestLeafSize').value
-            let KNearestP = document.getElementById('KNearestP').value
-            let KNearestMetricParams = document.getElementById('KNearestMetricParams').value
-            let KNearestNJobs = document.getElementById('KNearestNJobs').value
-            const metric = document.getElementById('metric');
+            let KNearestWeights = getModeScopedElement('KNearestWeights').value
+            let KNearestAlgorithm = getModeScopedElement('KNearestAlgorithm').value
+            let KNearestLeafSize = getModeScopedElement('KNearestLeafSize').value
+            let KNearestP = getModeScopedElement('KNearestP').value
+            let KNearestMetricParams = getModeScopedElement('KNearestMetricParams').value
+            let KNearestNJobs = getModeScopedElement('KNearestNJobs').value
+            const metric = getModeScopedElement('metric');
             
             hyperparameters['metric'] = metric.value
             hyperparameters['KNearestWeights'] = KNearestWeights
@@ -4292,24 +5051,24 @@ processForm.addEventListener('submit', async (e) => {
         if (learning_rate) hyperparameters['learning_rate'] = parseFloat(learning_rate.value);
     
 
-        let nonreqGBSlider = document.getElementById('nonreqGBSlider')
+        let nonreqGBSlider = getModeScopedElement('nonreqGBSlider')
         if (nonreqGBSlider.checked){
             nonreq=true
-            let GBLoss = document.getElementById('GBLoss').value
-            let GBWarmStart = document.getElementById('GBWarmStart').value
-            let GBCriterion = document.getElementById('GBCriterion').value
-            let GBSubsample = document.getElementById('GBSubsample').value
-            let GBMinSamplesSplit = document.getElementById('GBMinSamplesSplit').value
-            let GBMinSamplesLeaf = document.getElementById('GBMinSamplesLeaf').value
-            let GBMinWeightFractionLeaf = document.getElementById('GBMinWeightFractionLeaf').value
-            let GBMinImpurityDecrease = document.getElementById('GBMinImpurityDecrease').value
-            let GBInit = document.getElementById('GBInit').value
+            let GBLoss = getModeScopedElement('GBLoss').value
+            let GBWarmStart = getModeScopedElement('GBWarmStart').value
+            let GBCriterion = getModeScopedElement('GBCriterion').value
+            let GBSubsample = getModeScopedElement('GBSubsample').value
+            let GBMinSamplesSplit = getModeScopedElement('GBMinSamplesSplit').value
+            let GBMinSamplesLeaf = getModeScopedElement('GBMinSamplesLeaf').value
+            let GBMinWeightFractionLeaf = getModeScopedElement('GBMinWeightFractionLeaf').value
+            let GBMinImpurityDecrease = getModeScopedElement('GBMinImpurityDecrease').value
+            let GBInit = getModeScopedElement('GBInit').value
             //let GBRandomState = document.getElementById('GBRandomState').value
-            let GBMaxFeatrues = document.getElementById('GBMaxFeatrues').value
-            let GBAlpha = document.getElementById('GBAlpha').value
-            let GBVerbose = document.getElementById('GBVerbose').value
-            let GBMaxLeafNodes = document.getElementById('GBMaxLeafNodes').value
-            const max_depth = document.getElementById('GBMax_depth');
+            let GBMaxFeatrues = getModeScopedElement('GBMaxFeatrues').value
+            let GBAlpha = getModeScopedElement('GBAlpha').value
+            let GBVerbose = getModeScopedElement('GBVerbose').value
+            let GBMaxLeafNodes = getModeScopedElement('GBMaxLeafNodes').value
+            const max_depth = getModeScopedElement('GBMax_depth');
             
             hyperparameters['max_depth'] = parseFloat(max_depth.value)
             hyperparameters['GBLoss'] = GBLoss
@@ -4331,23 +5090,23 @@ processForm.addEventListener('submit', async (e) => {
     }
 
     else if (selectedModel === "Logistic_classifier"){
-        let nonreqLogisticClassifierSlider = document.getElementById('nonreqLogisticClassifierSlider')
+        let nonreqLogisticClassifierSlider = getModeScopedElement('nonreqLogisticClassifierSlider')
         if (nonreqLogisticClassifierSlider.checked){
             nonreq=true
-            let Class_LogisticDual = document.getElementById('Class_LogisticDual').value
-            let Class_LogisticFitIntercept = document.getElementById('Class_LogisticFitIntercept').value
-            let Class_LogisticSolver = document.getElementById('Class_LogisticSolver').value
-            let Class_LogisticMultiClass = document.getElementById('Class_LogisticMultiClass').value
-            let Class_LogisticWarmStart = document.getElementById('Class_LogisticWarmStart').value
-            let Class_CLogistic = document.getElementById('Class_CLogistic').value
-            let Class_Logistic_penalty = document.getElementById('Class_Logistic_penalty').value
-            let Class_LogisticTol = document.getElementById('Class_LogisticTol').value
-            let Class_Logisticintercept_scaling = document.getElementById('Class_Logisticintercept_scaling').value
-            let Class_LogisticClassWeight = document.getElementById('Class_LogisticClassWeight').value
-            let Class_LogisticMaxIterations = document.getElementById('Class_LogisticMaxIterations').value
-            let Class_LogisticVerbose = document.getElementById('Class_LogisticVerbose').value
-            let Class_LogisticNJobs = document.getElementById('Class_LogisticNJobs').value
-            let Class_Logisticl1Ratio = document.getElementById('Class_Logisticl1Ratio').value
+            let Class_LogisticDual = getModeScopedElement('Class_LogisticDual').value
+            let Class_LogisticFitIntercept = getModeScopedElement('Class_LogisticFitIntercept').value
+            let Class_LogisticSolver = getModeScopedElement('Class_LogisticSolver').value
+            let Class_LogisticMultiClass = getModeScopedElement('Class_LogisticMultiClass').value
+            let Class_LogisticWarmStart = getModeScopedElement('Class_LogisticWarmStart').value
+            let Class_CLogistic = getModeScopedElement('Class_CLogistic').value
+            let Class_Logistic_penalty = getModeScopedElement('Class_Logistic_penalty').value
+            let Class_LogisticTol = getModeScopedElement('Class_LogisticTol').value
+            let Class_Logisticintercept_scaling = getModeScopedElement('Class_Logisticintercept_scaling').value
+            let Class_LogisticClassWeight = getModeScopedElement('Class_LogisticClassWeight').value
+            let Class_LogisticMaxIterations = getModeScopedElement('Class_LogisticMaxIterations').value
+            let Class_LogisticVerbose = getModeScopedElement('Class_LogisticVerbose').value
+            let Class_LogisticNJobs = getModeScopedElement('Class_LogisticNJobs').value
+            let Class_Logisticl1Ratio = getModeScopedElement('Class_Logisticl1Ratio').value
 
             hyperparameters['Class_LogisticDual'] = Class_LogisticDual
             hyperparameters['Class_LogisticFitIntercept'] = Class_LogisticFitIntercept
@@ -4379,27 +5138,27 @@ processForm.addEventListener('submit', async (e) => {
         hyperparameters['activation'] = activation.value
         hyperparameters['solver'] = solver.value
 
-        let nonreqMLPSlider = document.getElementById('nonreqMLPClassifierSlider')
+        let nonreqMLPSlider = getModeScopedElement('nonreqMLPClassifierSlider')
         if (nonreqMLPSlider.checked){
             nonreq=true
-            let MLPNesterovsMomentum = document.getElementById('Class_MLPNesterovsMomentum').value
-            let MLPEarlyStopping = document.getElementById('Class_MLPEarlyStopping').value
-            let MLPShuffle = document.getElementById('Class_MLPShuffle').value
-            let MLPVerbose = document.getElementById('Class_MLPVerbose').value
-            let MLPWarmStart = document.getElementById('Class_MLPWarmStart').value
-            let MLPBatchSize = document.getElementById('Class_MLPBatchSize').value
-            let MLPLearningRateInit = document.getElementById('Class_MLPLearningRateInit').value
-            let MLPPowerT = document.getElementById('Class_MLPPowerT').value
-            let MLPMaxIter = document.getElementById('Class_MLPMaxIter').value
+            let MLPNesterovsMomentum = getModeScopedElement('Class_MLPNesterovsMomentum').value
+            let MLPEarlyStopping = getModeScopedElement('Class_MLPEarlyStopping').value
+            let MLPShuffle = getModeScopedElement('Class_MLPShuffle').value
+            let MLPVerbose = getModeScopedElement('Class_MLPVerbose').value
+            let MLPWarmStart = getModeScopedElement('Class_MLPWarmStart').value
+            let MLPBatchSize = getModeScopedElement('Class_MLPBatchSize').value
+            let MLPLearningRateInit = getModeScopedElement('Class_MLPLearningRateInit').value
+            let MLPPowerT = getModeScopedElement('Class_MLPPowerT').value
+            let MLPMaxIter = getModeScopedElement('Class_MLPMaxIter').value
             //let MLPRandomState = document.getElementById('MLPRandomState').value
-            let MLPTol = document.getElementById('Class_MLPTol').value
-            let MLPMomentum = document.getElementById('Class_MLPMomentum').value
-            let MLPValidationFraction = document.getElementById('Class_MLPValidationFraction').value
-            let MLPBeta1 = document.getElementById('Class_MLPBeta1').value
-            let MLPBeta2 = document.getElementById('Class_MLPBeta2').value
-            let MLPEpsilon = document.getElementById('Class_MLPEpsilon').value
-            const alpha = document.getElementById('Class_MLPAlpha');
-            const learning_rate = document.getElementById('Class_MLPLearning_rate');
+            let MLPTol = getModeScopedElement('Class_MLPTol').value
+            let MLPMomentum = getModeScopedElement('Class_MLPMomentum').value
+            let MLPValidationFraction = getModeScopedElement('Class_MLPValidationFraction').value
+            let MLPBeta1 = getModeScopedElement('Class_MLPBeta1').value
+            let MLPBeta2 = getModeScopedElement('Class_MLPBeta2').value
+            let MLPEpsilon = getModeScopedElement('Class_MLPEpsilon').value
+            const alpha = getModeScopedElement('Class_MLPAlpha');
+            const learning_rate = getModeScopedElement('Class_MLPLearning_rate');
             
             hyperparameters['learning_rate'] = learning_rate.value
             hyperparameters['alpha'] = parseFloat(alpha.value)
@@ -4438,22 +5197,22 @@ processForm.addEventListener('submit', async (e) => {
         }
         
 
-        let nonreqRFSlider = document.getElementById('nonreqRFClassifierSlider')
+        let nonreqRFSlider = getModeScopedElement('nonreqRFClassifierSlider')
         if (nonreqRFSlider.checked){
             nonreq=true
-            let RFBoostrap = document.getElementById('Class_RFBoostrap').value
-            let RFoobScore = document.getElementById('Class_RFoobScore').value
-            let RFWarmStart = document.getElementById('Class_RFWarmStart').value
-            let RFmin_weight_fraction_leaf = document.getElementById('Class_RFmin_weight_fraction_leaf').value
-            let RFMaxLeafNodes = document.getElementById('Class_RFMaxLeafNodes').value
-            let RFMinImpurityDecrease = document.getElementById('Class_RFMinImpurityDecrease').value
-            let RFNJobs = document.getElementById('Class_RFNJobs').value
+            let RFBoostrap = getModeScopedElement('Class_RFBoostrap').value
+            let RFoobScore = getModeScopedElement('Class_RFoobScore').value
+            let RFWarmStart = getModeScopedElement('Class_RFWarmStart').value
+            let RFmin_weight_fraction_leaf = getModeScopedElement('Class_RFmin_weight_fraction_leaf').value
+            let RFMaxLeafNodes = getModeScopedElement('Class_RFMaxLeafNodes').value
+            let RFMinImpurityDecrease = getModeScopedElement('Class_RFMinImpurityDecrease').value
+            let RFNJobs = getModeScopedElement('Class_RFNJobs').value
             //let RFRandomState = document.getElementById('RFRandomState').value
-            let RFVerbose  = document.getElementById('Class_RFVerbose').value
+            let RFVerbose  = getModeScopedElement('Class_RFVerbose').value
 
-            const min_samples_split = document.getElementById('Class_min_samples_split');
-            const min_samples_leaf = document.getElementById('Class_min_samples_leaf');
-            const max_depth = document.getElementById('Class_RFMax_depth');
+            const min_samples_split = getModeScopedElement('Class_min_samples_split');
+            const min_samples_leaf = getModeScopedElement('Class_min_samples_leaf');
+            const max_depth = getModeScopedElement('Class_RFMax_depth');
             if (max_depth !== null) {
                 hyperparameters['max_depth'] = parseFloat(max_depth.value)
             }
@@ -4498,19 +5257,19 @@ processForm.addEventListener('submit', async (e) => {
             }
         }
 
-        let nonreqSVMSlider = document.getElementById('nonreqSVCClassifierSlider')
+        let nonreqSVMSlider = getModeScopedElement('nonreqSVCClassifierSlider')
         if (nonreqSVMSlider.checked){
             nonreq=true
-            let SVCshrinking = document.getElementById('SVCshrinking').value
-            let SVCprobability = document.getElementById('SVCprobability').value
-            let SVCBreakTies = document.getElementById('SVCBreakTies').value
-            let SVCverbose = document.getElementById('SVCverbose').value
-            let SVCcoef0 = document.getElementById('SVCcoef0').value
-            let SVCtol = document.getElementById('SVCtol').value
-            let SVCCacheSize = document.getElementById('SVCCacheSize').value
-            let SVCClassWeight = document.getElementById('SVCClassWeight').value
-            let SVCmaxIter = document.getElementById('SVCmaxIter').value
-            let SVCdecisionFunctionShape = document.getElementById('SVCdecisionFunctionShape').value
+            let SVCshrinking = getModeScopedElement('SVCshrinking').value
+            let SVCprobability = getModeScopedElement('SVCprobability').value
+            let SVCBreakTies = getModeScopedElement('SVCBreakTies').value
+            let SVCverbose = getModeScopedElement('SVCverbose').value
+            let SVCcoef0 = getModeScopedElement('SVCcoef0').value
+            let SVCtol = getModeScopedElement('SVCtol').value
+            let SVCCacheSize = getModeScopedElement('SVCCacheSize').value
+            let SVCClassWeight = getModeScopedElement('SVCClassWeight').value
+            let SVCmaxIter = getModeScopedElement('SVCmaxIter').value
+            let SVCdecisionFunctionShape = getModeScopedElement('SVCdecisionFunctionShape').value
             //let SVMrandomState = document.getElementById('SVMrandomState').value
             
             hyperparameters['SVCshrinking'] = SVCshrinking
@@ -4532,16 +5291,16 @@ processForm.addEventListener('submit', async (e) => {
         const n_clusters = document.getElementById('Agg_n_clusters').value
         hyperparameters['n_clusters'] = parseInt(n_clusters)
         
-        let nonreqAgglomerativeSlider = document.getElementById('nonreqAgglomerativeSlider')
+        let nonreqAgglomerativeSlider = getModeScopedElement('nonreqAgglomerativeSlider')
         if (nonreqAgglomerativeSlider.checked){
             nonreq=true
-            let metric = document.getElementById('Aggmetric').value
-            let memory = document.getElementById('Aggmemory').value
-            let connectivity = document.getElementById('Aggconnectivity').value
-            let compute_full_tree = document.getElementById('aggcompute_full_tree').value
-            let linkage = document.getElementById('Agglinkage').value
-            let distance_threshold = document.getElementById('Aggdistance_threshold').value
-            let compute_distances = document.getElementById('aggcompute_distances').value
+            let metric = getModeScopedElement('Aggmetric').value
+            let memory = getModeScopedElement('Aggmemory').value
+            let connectivity = getModeScopedElement('Aggconnectivity').value
+            let compute_full_tree = getModeScopedElement('aggcompute_full_tree').value
+            let linkage = getModeScopedElement('Agglinkage').value
+            let distance_threshold = getModeScopedElement('Aggdistance_threshold').value
+            let compute_distances = getModeScopedElement('aggcompute_distances').value
 
             hyperparameters['metric']=metric
             hyperparameters['memory']=memory
@@ -4559,21 +5318,21 @@ processForm.addEventListener('submit', async (e) => {
         const n_components = document.getElementById('Gaun_components').value
         hyperparameters['n_components'] = parseInt(n_components)
         
-        let nonreqGaussianSlider = document.getElementById('nonreqGaussianSlider')
+        let nonreqGaussianSlider = getModeScopedElement('nonreqGaussianSlider')
         if (nonreqGaussianSlider.checked){
             nonreq=true
-            let covariance_type = document.getElementById('Gaucovariance_type').value
-            let tol = document.getElementById('GauTol').value
-            let reg_covar = document.getElementById('Gaureg_covar').value
-            let max_iter = document.getElementById('GauMax_iter').value
-            let n_init = document.getElementById('Gaun_init').value
-            let init_params = document.getElementById('Gauinit_params').value
-            let weights_init = document.getElementById('Gauweights_init').value
-            let means_init = document.getElementById('Gaumeans_init').value
-            let precisions_init = document.getElementById('Gauprecisions_init').value
-            let warm_start = document.getElementById('GauWarmStart').value
-            let verbose = document.getElementById('GauVerbose').value
-            let verbose_interval = document.getElementById('GauVerbose_interval').value
+            let covariance_type = getModeScopedElement('Gaucovariance_type').value
+            let tol = getModeScopedElement('GauTol').value
+            let reg_covar = getModeScopedElement('Gaureg_covar').value
+            let max_iter = getModeScopedElement('GauMax_iter').value
+            let n_init = getModeScopedElement('Gaun_init').value
+            let init_params = getModeScopedElement('Gauinit_params').value
+            let weights_init = getModeScopedElement('Gauweights_init').value
+            let means_init = getModeScopedElement('Gaumeans_init').value
+            let precisions_init = getModeScopedElement('Gauprecisions_init').value
+            let warm_start = getModeScopedElement('GauWarmStart').value
+            let verbose = getModeScopedElement('GauVerbose').value
+            let verbose_interval = getModeScopedElement('GauVerbose_interval').value
 
             hyperparameters['covariance_type']=covariance_type
             hyperparameters['tol']=parseFloat(tol)
@@ -4595,16 +5354,16 @@ processForm.addEventListener('submit', async (e) => {
         const n_clusters = document.getElementById('Kmeansn_clusters').value
         hyperparameters['n_clusters'] = parseInt(n_clusters)
         
-        let nonreqKmeansSlider = document.getElementById('nonreqKmeansSlider')
+        let nonreqKmeansSlider = getModeScopedElement('nonreqKmeansSlider')
         if (nonreqKmeansSlider.checked){
             nonreq=true
-            let init = document.getElementById('kmeansInit').value
-            let n_init = document.getElementById('kmeansn_init').value
-            let max_iter = document.getElementById('kmeansmax_iter').value
-            let tol = document.getElementById('kmeanstol').value
-            let verbose = document.getElementById('kmeansverbose').value
-            let copy_x = document.getElementById('kmeansCopyX').value
-            let algorithm = document.getElementById('Kmeansalgorithm').value
+            let init = getModeScopedElement('kmeansInit').value
+            let n_init = getModeScopedElement('kmeansn_init').value
+            let max_iter = getModeScopedElement('kmeansmax_iter').value
+            let tol = getModeScopedElement('kmeanstol').value
+            let verbose = getModeScopedElement('kmeansverbose').value
+            let copy_x = getModeScopedElement('kmeansCopyX').value
+            let algorithm = getModeScopedElement('Kmeansalgorithm').value
 
             hyperparameters['init'] = init
             hyperparameters['n_init'] = n_init
@@ -4737,7 +5496,6 @@ processForm.addEventListener('submit', async (e) => {
             if (nIterNoChange) hyperparameters['n_iter_no_change'] = parseInt(nIterNoChange.value);
             if (warmStart) hyperparameters['warm_start'] = warmStart.value === 'true';
             if (average) hyperparameters['average'] = average.value === 'true';
-            if (nJobs && nJobs.value) hyperparameters['n_jobs'] = parseInt(nJobs.value);
         }
     }
     else if (selectedModel === "HistGradientBoosting") {
@@ -4839,7 +5597,7 @@ processForm.addEventListener('submit', async (e) => {
             if (tol) hyperparameters['tol'] = parseFloat(tol.value);
             if (fitIntercept) hyperparameters['fit_intercept'] = fitIntercept.value === 'true';
             if (interceptScaling) hyperparameters['intercept_scaling'] = parseFloat(interceptScaling.value);
-            if (dual) hyperparameters['dual'] = dual.value === 'true';
+            if (dual) hyperparameters['dual'] = dual.value === 'auto' ? 'auto' : dual.value === 'true';
             if (verbose) hyperparameters['verbose'] = parseInt(verbose.value);
             if (maxIter) hyperparameters['max_iter'] = parseInt(maxIter.value);
         }
@@ -5351,7 +6109,7 @@ processForm.addEventListener('submit', async (e) => {
             const verbose = document.getElementById('LinearSVCVerbose');
             if (loss) hyperparameters['loss'] = loss.value;
             if (penalty) hyperparameters['penalty'] = penalty.value;
-            if (dual) hyperparameters['dual'] = dual.value === 'true';
+            if (dual) hyperparameters['dual'] = dual.value === 'auto' ? 'auto' : dual.value === 'true';
             if (tol) hyperparameters['tol'] = parseFloat(tol.value);
             if (multiClass) hyperparameters['multi_class'] = multiClass.value;
             if (fitIntercept) hyperparameters['fit_intercept'] = fitIntercept.value === 'true';
@@ -5657,7 +6415,7 @@ processForm.addEventListener('submit', async (e) => {
             if (computeLabels) hyperparameters['compute_labels'] = computeLabels.value === 'true';
             if (tol) hyperparameters['tol'] = parseFloat(tol.value);
             if (maxNoImprovement) hyperparameters['max_no_improvement'] = parseInt(maxNoImprovement.value);
-            if (nInit) hyperparameters['n_init'] = parseInt(nInit.value);
+            if (nInit) hyperparameters['n_init'] = nInit.value.trim() === 'auto' ? 'auto' : parseInt(nInit.value);
             if (reassignmentRatio) hyperparameters['reassignment_ratio'] = parseFloat(reassignmentRatio.value);
         }
     }
@@ -5762,18 +6520,42 @@ processForm.addEventListener('submit', async (e) => {
     }
     // Simple mode: all remain 'none' (defaults above)
     
+    // Split method and column are Advanced-mode controls. The column is a
+    // column letter, converted to a 0-based index like stratifyColumn; the server
+    // resolves the name.
+    let splitMethod = 'random';
+    let splitColumn = '';
+    let allowUnsafe = false;
+    let allowUnsafeReason = '';
+    if (currentMode === 'advanced') {
+        const splitMethodEl = document.getElementById('advancedSplitMethod');
+        const splitColumnEl = document.getElementById('advancedSplitColumn');
+        splitMethod = splitMethodEl ? splitMethodEl.value : 'random';
+        const splitLetter = splitColumnEl ? splitColumnEl.value.trim() : '';
+        splitColumn = splitLetter !== '' ? columnToIndex(splitLetter.toUpperCase()) : '';
+        const allowUnsafeEl = document.getElementById('advancedAllowUnsafe');
+        allowUnsafe = allowUnsafeEl ? allowUnsafeEl.value === 'yes' : false;
+        const reasonEl = document.getElementById('advancedAllowUnsafeReason');
+        allowUnsafeReason = reasonEl ? reasonEl.value.trim() : '';
+    }
+
     //sending all the data to the backend
     const requestData = {
         filename: uploadedFileName,
         indicators: indicatorCols,
         predictors: predictorCols,
         models: selectedModel,
+        taskType: selectedOutputType,
         scaler: scaler.value,
         hyperparameters: hyperparameters,
         nonreq: nonreq,
         units: unitStr,
         sigfig: parseInt(sigfig),
         stratifyColumn: stratifyColumnNumber,
+        splitMethod: splitMethod,
+        splitColumn: splitColumn,
+        allowUnsafe: allowUnsafe,
+        allowUnsafeReason: allowUnsafeReason,
         stratifyBool: stratifyBool,
         seedValue: parseInt(seedValue),
         testSize: parseFloat(testSize),
@@ -5843,7 +6625,7 @@ processForm.addEventListener('submit', async (e) => {
                         processResultData(progress.data);
                         return; // Exit early - callback handles cleanup
                     } else {
-                        console.error('processResultData function not set!');
+                        console.error('processResultData function not set');
                         // Fallback: process directly (with empty defaults for variables)
                         // Try to get unitStr from DOM if available
                         const unitNameElement = getCachedElement('unitName');
@@ -6012,7 +6794,7 @@ processForm.addEventListener('submit', async (e) => {
             if (currentLoadingDiv) {
                 currentLoadingDiv.innerHTML = `
                     <p style="color: #d32f2f; font-weight: 600;">Connection Error</p>
-                    <p style="color: #666;">Unable to establish connection with the server. Please try again.</p>
+                    <p style="color: #666;">The connection to the server failed.</p>
                 `;
             }
             
@@ -6023,6 +6805,7 @@ processForm.addEventListener('submit', async (e) => {
     
     // Function to update progress display
     function updateProgressDisplay(progress, container) {
+        if (typeof narrativeSetStages === 'function') narrativeSetStages(progress);
         if (!container || !progress) return;
         
         const stages = progress.stages || {};
@@ -6104,6 +6887,7 @@ processForm.addEventListener('submit', async (e) => {
     }
     
     let isAsyncProcessing = false;
+    if (typeof narrativeSetStep === 'function') narrativeSetStep('run');
     try {
         const response = await fetch('/process', {
             method: 'POST',
@@ -6184,7 +6968,7 @@ processForm.addEventListener('submit', async (e) => {
         if (response.ok) {
             processModelResult(data, unitStr, predictorCols, hyperparameters);
         } else {
-            showError(errorDiv, data.error ? `Error: ${data.error}` : 'Request failed. See console for details.');
+            showError(errorDiv, data.error ? `Error: ${data.error}` : 'The request failed. Open the browser console for the details.');
         }
     } catch (error) {
         console.error('Error:', error);
@@ -6194,7 +6978,7 @@ processForm.addEventListener('submit', async (e) => {
             progressEventSource.close();
             progressEventSource = null;
         }
-        showError(errorDiv, 'Something went wrong. See console for details.');
+        showError(errorDiv, 'The run failed. Open the browser console for the details.');
         
         // Determine which loading div and button to use based on current mode
         const simpleMode = document.getElementById('simpleMode');
@@ -6302,7 +7086,55 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Extract result processing into a separate function
+// Run notes shown above every result: data checks from the server, the split
+// method, and the comparison against a baseline that predicts the training mean
+// or the most common class on the same split.
+function renderRunNotes(data) {
+    const parts = [];
+    const checks = data && data.data_checks;
+    if (checks) {
+        const blocking = Array.isArray(checks.blocking) ? checks.blocking : [];
+        const warnings = Array.isArray(checks.warnings) ? checks.warnings : [];
+        if (blocking.length > 0) {
+            const reason = checks.override_reason ? ` Reason given: ${escapeHtml(checks.override_reason)}` : '';
+            parts.push(`<p class="run-note run-note-block"><strong>Not valid for decision use. Data checks blocked this run and the override trained it anyway.</strong> ${escapeHtml(blocking.map(f => f.message).join(' '))}${reason}</p>`);
+        }
+        if (warnings.length > 0) {
+            parts.push(`<p class="run-note run-note-warn"><strong>Data checks.</strong> ${escapeHtml(warnings.map(f => f.message).join(' '))}</p>`);
+        }
+        if (blocking.length === 0 && warnings.length === 0) {
+            parts.push(`<p class="run-note field-note">Data checks passed on ${escapeHtml(String(checks.n_rows))} rows and ${escapeHtml(String(checks.n_features))} features.</p>`);
+        }
+    }
+    const cmp = data && data.model_comparison;
+    if (cmp && cmp.chosen) {
+        const rows = Array.isArray(cmp.summary) ? cmp.summary.map(r => `${escapeHtml(String(r.model).replace('_classifier', ''))} ${Number(r.mean).toFixed(3)} ± ${Number(r.std).toFixed(3)}`).join('; ') : '';
+        parts.push(`<p class="run-note field-note"><strong>AutoML chose ${escapeHtml(String(cmp.chosen).replace('_classifier', ''))}.</strong> ${escapeHtml(String(cmp.note || ''))} Mean ± SD over ${escapeHtml(String(cmp.folds))} folds and ${escapeHtml(String(cmp.seeds))} seed${cmp.seeds === 1 ? '' : 's'}: ${rows}. The comparison is drawn under Graphics.</p>`);
+    }
+    if (data && data.capacity_note) {
+        parts.push(`<p class="run-note run-note-warn"><strong>Model not kept.</strong> ${escapeHtml(String(data.capacity_note))}</p>`);
+    }
+    if (data && data.split_note) {
+        parts.push(`<p class="run-note field-note">${escapeHtml(String(data.split_note))}</p>`);
+    }
+    const base = data && data.baseline;
+    if (base && base.metric) {
+        const better = base.model_beats_baseline;
+        const verdict = better === true ? 'The model beats the baseline.' : (better === false ? 'The model does not beat the baseline. The score adds nothing beyond the target distribution.' : '');
+        parts.push(`<p class="run-note ${better === false ? 'run-note-warn' : 'field-note'}"><strong>Baseline.</strong> ${escapeHtml(base.description)} scores ${escapeHtml(String(base.baseline_value))} ${escapeHtml(base.metric)} on the validation split against ${escapeHtml(String(base.model_value))} for the model. ${verdict}</p>`);
+    }
+    if (data && data.model_card_url) {
+        parts.push(`<p class="run-note field-note"><a href="${escapeHtml(data.model_card_url)}" target="_blank" rel="noopener">Model card</a> and <a href="${escapeHtml(data.bundle_url)}">model bundle (.zip)</a> for this run.</p>`);
+    }
+    return parts.length ? `<div class="run-notes">${parts.join('')}</div>` : '';
+}
+
 function processModelResult(data, unitStr = '', predictorCols = [], hyperparameters = {}) {
+    if (typeof narrativeSetStep === 'function') narrativeSetStep('results');
+    // The way on shows once there is a model to apply, inside the results panel.
+    // Queued rather than called: the panel this appends to is revealed by the render
+    // that is still running, so a direct call finds every panel hidden.
+    if (typeof showInferenceForward === 'function') window.setTimeout(showInferenceForward, 0);
     console.log('processModelResult called with data:', data);
     try {
         const errorDiv = getCachedElement('errorDiv');
@@ -6427,7 +7259,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
 
                 //if multiple targets then need to let users select which graphic they want to see for each target
                 // Check if we're on Simple Modeling page (not Advanced Modeling)
-                // True when not on the standalone legacy advanced page (#advancedOptimization); unified advanced tab is still "simple" for this flag (CV button placement).
+                // True when not on the standalone legacy advanced page (#advancedOptimization); unified advanced tab is still "simple" for this value (CV button placement).
                 const isLegacyAdvancedPageVisible = document.getElementById('advancedOptimization') && !document.getElementById('advancedOptimization').classList.contains('hidden');
                 const isSimpleModelingPage = !isLegacyAdvancedPageVisible;
                 const crossValidationButton = isSimpleModelingPage ? '' : (data.cross_validation_file ? `
@@ -6489,9 +7321,9 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                                 <tr><td>Original Features</td><td>${data.feature_selection_info.original_count || 'N/A'}</td></tr>
                                 <tr><td>Selected Features</td><td>${data.feature_selection_info.selected_count || 'N/A'}</td></tr>
                                 ${data.feature_selection_info.selected_features && data.feature_selection_info.selected_features.length > 0 ? 
-                                    `<tr><td colspan="2"><strong>Selected Feature Names:</strong><br>${data.feature_selection_info.selected_features.join(', ')}</td></tr>` : ''}
+                                    `<tr><td colspan="2"><strong>Selected Feature Names:</strong><br>${escapeHtml(data.feature_selection_info.selected_features.join(', '))}</td></tr>` : ''}
                             </table>
-                        </div>` : '<p>No feature selection data available</p>';
+                        </div>` : (Array.isArray(data.skipped_options) && data.skipped_options.length > 0 ? `<p class="field-note">${escapeHtml(data.skipped_options.map(o => `${o.option}: ${o.reason}`).join('. '))}.</p>` : '<p>No feature selection data available</p>');
                     
                     // Build outlier handling table HTML
                     const outlierHandlingTableHtml = data.outlier_info ? `
@@ -6507,6 +7339,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                         </div>` : '<p>No outlier handling data available</p>';
                     
                     NumericResultDiv.innerHTML = `
+                    ${renderRunNotes(data)}
                     <div class="resultValues">
                         <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start;">
                             <div style="flex: 1; min-width: 300px;">
@@ -6524,10 +7357,10 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                                 </div>
                                 <div class="download-buttons" style="margin-top: 12px; display: flex; gap: 12px; align-items: center;">
                                     <a href="/download/model_performance.xlsx?download_name=${encodeURIComponent(performanceDownloadName)}" onclick="return downloadFile('model_performance.xlsx', '${performanceDownloadName}')">
-                                        <button type="button" class='downloadperformanceButton export-button'>Model Performance XLSX</button>
+                                        <button type="button" class='downloadperformanceButton export-button'>Performance XLSX</button>
                                     </a>
                                     <a href="/download/visualizations.pdf?download_name=${encodeURIComponent(visualizationsDownloadName)}" onclick="return downloadFile('visualizations.pdf', '${visualizationsDownloadName}')">
-                                        <button class="export-button" style="font-size: 0.95rem;">Visualizations PDF</button>
+                                        <button class="export-button" style="font-size: 0.95rem;">Graphics PDF</button>
                                     </a>
                                     ${crossValidationButton}
                                 </div>
@@ -6561,10 +7394,6 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                             <br>
                         </div>
 
-                    <div class="results-header" style="margin-top: 24px; margin-bottom: 16px;">
-                        <h2>Modeling Results</h2>
-                        <p>Charts, tables, and downloads will appear here.</p>
-                    </div>
                     <div class="result-graphic-row-train-test" style="display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;">
                         <div class="result-graphic-box" style="flex: 1; min-width: 320px;">
                             <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">Visualization 1</h4>
@@ -6750,9 +7579,9 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                                 <tr><td>Original Features</td><td>${data.feature_selection_info.original_count || 'N/A'}</td></tr>
                                 <tr><td>Selected Features</td><td>${data.feature_selection_info.selected_count || 'N/A'}</td></tr>
                                 ${data.feature_selection_info.selected_features && data.feature_selection_info.selected_features.length > 0 ? 
-                                    `<tr><td colspan="2"><strong>Selected Feature Names:</strong><br>${data.feature_selection_info.selected_features.join(', ')}</td></tr>` : ''}
+                                    `<tr><td colspan="2"><strong>Selected Feature Names:</strong><br>${escapeHtml(data.feature_selection_info.selected_features.join(', '))}</td></tr>` : ''}
                             </table>
-                        </div>` : '<p>No feature selection data available</p>';
+                        </div>` : (Array.isArray(data.skipped_options) && data.skipped_options.length > 0 ? `<p class="field-note">${escapeHtml(data.skipped_options.map(o => `${o.option}: ${o.reason}`).join('. '))}.</p>` : '<p>No feature selection data available</p>');
                     
                     // Build outlier handling table HTML for single target
                     const outlierHandlingTableHtmlSingle = data.outlier_info ? `
@@ -6768,7 +7597,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                         </div>` : '<p>No outlier handling data available</p>';
                     
                     NumericResultDiv.innerHTML = `
-                
+                ${renderRunNotes(data)}
                 <div class="resultValues">
                     <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start;">
                         <div style="flex: 1; min-width: 300px;">
@@ -6786,10 +7615,10 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                             </div>
                             <div class="download-buttons" style="margin-top: 12px; display: flex; gap: 12px; align-items: center;">
                                 <a href="/download/model_performance.xlsx?download_name=${encodeURIComponent(performanceDownloadName)}" onclick="return downloadFile('model_performance.xlsx', '${performanceDownloadName}')">
-                                    <button type="button" class='downloadperformanceButton export-button'>Model Performance XLSX</button>
+                                    <button type="button" class='downloadperformanceButton export-button'>Performance XLSX</button>
                                 </a>
                                 <a href="/download/visualizations.pdf?download_name=${encodeURIComponent(visualizationsDownloadName)}" onclick="return downloadFile('visualizations.pdf', '${visualizationsDownloadName}')">
-                                    <button class="export-button" style="font-size: 0.95rem;">Visualizations PDF</button>
+                                    <button class="export-button" style="font-size: 0.95rem;">Graphics PDF</button>
                                 </a>
                                 ${crossValidationButton}
                             </div>
@@ -6823,10 +7652,6 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                         <br>
                     </div>
 
-                    <div class="results-header" style="margin-top: 24px; margin-bottom: 16px;">
-                        <h2>Modeling Results</h2>
-                        <p>Charts, tables, and downloads will appear here.</p>
-                    </div>
                     <div class="result-graphic-row-train-test" style="display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;">
                         <div class="result-graphic-box" style="flex: 1; min-width: 320px;">
                             <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">Visualization 1</h4>
@@ -6960,9 +7785,9 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                             <tr><td>Original Features</td><td>${data.feature_selection_info.original_count || 'N/A'}</td></tr>
                             <tr><td>Selected Features</td><td>${data.feature_selection_info.selected_count || 'N/A'}</td></tr>
                             ${data.feature_selection_info.selected_features && data.feature_selection_info.selected_features.length > 0 ? 
-                                `<tr><td colspan="2"><strong>Selected Feature Names:</strong><br>${data.feature_selection_info.selected_features.join(', ')}</td></tr>` : ''}
+                                `<tr><td colspan="2"><strong>Selected Feature Names:</strong><br>${escapeHtml(data.feature_selection_info.selected_features.join(', '))}</td></tr>` : ''}
                         </table>
-                    </div>` : '<p>No feature selection data available</p>';
+                    </div>` : (Array.isArray(data.skipped_options) && data.skipped_options.length > 0 ? `<p class="field-note">${escapeHtml(data.skipped_options.map(o => `${o.option}: ${o.reason}`).join('. '))}.</p>` : '<p>No feature selection data available</p>');
                 
                 // Build outlier handling table HTML
                 const outlierHandlingTableHtml = data.outlier_info ? `
@@ -6981,6 +7806,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                 const _hasAdvancedOptions = data.feature_selection_info || data.outlier_info;
                 
                 ClassifierResultDiv.innerHTML = ` 
+                ${renderRunNotes(data)}
                 <div class="resultValues">
                     <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start;">
                         <div style="flex: 1; min-width: 300px;">
@@ -7002,10 +7828,10 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                             </div>
                             <div class="download-buttons" style="margin-top: 12px; display: flex; gap: 12px; align-items: center;">
                                 <a href="/download/model_performance.xlsx?download_name=${encodeURIComponent(performanceDownloadName)}" onclick="return downloadFile('model_performance.xlsx', '${performanceDownloadName}')">
-                                    <button type="button" class='downloadperformanceButton export-button'>Model Performance XLSX</button>
+                                    <button type="button" class='downloadperformanceButton export-button'>Performance XLSX</button>
                                 </a>
                                 <a href="/download/visualizations.pdf?download_name=${encodeURIComponent(visualizationsDownloadName)}" onclick="return downloadFile('visualizations.pdf', '${visualizationsDownloadName}')">
-                                    <button class="export-button" style="font-size: 0.95rem;">Visualizations PDF</button>
+                                    <button class="export-button" style="font-size: 0.95rem;">Graphics PDF</button>
                                 </a>
                             </div>
                         </div>
@@ -7040,12 +7866,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                     <br>
                 </div>
 
-                <div class="results-header" style="margin-top: 24px; margin-bottom: 16px;">
-                    <h2>Modeling Results</h2>
-                    <p>Charts, tables, and downloads will appear here.</p>
-                </div>
                 <h3>Graphics</h3>
-                <p style="margin-top: 4px; margin-bottom: 12px; color: #666; font-size: 0.95rem;">Modeling graphics will be displayed here</p>
                 <div class="result-graphic-row-train-test" style="display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;">
                     <div class="result-graphic-box" style="flex: 1; min-width: 320px;">
                         <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">Visualization 1</h4>
@@ -7106,6 +7927,16 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                 
                 const classifierImageSelector = document.getElementById('classifierImageSelector');
                 const classifierImageSelector2 = document.getElementById('classifierImageSelector2');
+                // The candidate comparison exists only for an AutoML run with no model named.
+                if (data.model_comparison && data.model_comparison.figure) {
+                    [classifierImageSelector, classifierImageSelector2].forEach((sel, i) => {
+                        if (!sel) return;
+                        const o = document.createElement('option');
+                        o.value = 'model_comparison'; o.textContent = 'Candidate model comparison';
+                        sel.insertBefore(o, sel.firstChild);
+                        if (i === 1) sel.value = 'model_comparison';
+                    });
+                }
                 const classifierGraphic = document.getElementById('classifierGraphic');
                 const classifierGraphic2 = document.getElementById('classifierGraphic2');
                 const classifierGraphicUrl = (value) => withApiRoot(`/user-visualizations/${value}.png?t=${Date.now()}`);
@@ -7140,6 +7971,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                     </table>` : '<p>No hyperparameters to display</p>';
                 
                 if (ClusterResultDiv) ClusterResultDiv.innerHTML = ` 
+                    ${renderRunNotes(data)}
                     <div class="resultValues">
                         <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start;">
                             <div style="flex: 1; min-width: 300px;">
@@ -7155,10 +7987,10 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                                 <p style="margin-top: 12px;"><strong>Best K:</strong> ${data.best_k}</p>
                                 <div class="download-buttons" style="margin-top: 12px; display: flex; gap: 12px; align-items: center;">
                                     <a href="${withApiRoot('/download/model_performance.xlsx')}?download_name=${encodeURIComponent(performanceDownloadName)}" onclick="return downloadFile('model_performance.xlsx', '${performanceDownloadName}')">
-                                        <button class='downloadperformanceButton export-button'>Model Performance XLSX</button>
+                                        <button class='downloadperformanceButton export-button'>Performance XLSX</button>
                                     </a>
                                     <a href="${withApiRoot('/download/visualizations.pdf')}?download_name=${encodeURIComponent(visualizationsDownloadName)}" onclick="return downloadFile('visualizations.pdf', '${visualizationsDownloadName}')">
-                                        <button class="export-button" style="font-size: 0.95rem;">Visualizations PDF</button>
+                                        <button class="export-button" style="font-size: 0.95rem;">Graphics PDF</button>
                                     </a>
                                 </div>
                             </div>
@@ -7173,12 +8005,7 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
                         <br>
                     </div>
 
-                    <div class="results-header" style="margin-top: 24px; margin-bottom: 16px;">
-                        <h2>Modeling Results</h2>
-                        <p>Charts, tables, and downloads will appear here.</p>
-                    </div>
                     <h3>Graphics</h3>
-                    <p style="margin-top: 4px; margin-bottom: 12px; color: #666; font-size: 0.95rem;">Modeling graphics will be displayed here</p>
                     <div class="result-graphic-row-train-test" style="display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;">
                         <div class="result-graphic-box" style="flex: 1; min-width: 320px;">
                             <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">Visualization 1</h4>
@@ -7233,10 +8060,660 @@ function processModelResult(data, unitStr = '', predictorCols = [], hyperparamet
     } catch (error) {
         console.error('Error processing result:', error);
         const errDiv = getCachedElement('errorDiv');
-        if (errDiv) showError(errDiv, 'Result processing failed. See console for details.');
+        if (errDiv) showError(errDiv, 'DiGiTerra cannot process the result. Open the browser console for the details.');
     }
 }
 
+
+
+/* Put "Continue to Inference on New Data" in the results panel of the visible mode.
+   It appears only after a run has finished, because before that there is no model to
+   apply and the button would lead to a page that refuses. */
+function showInferenceForward() {
+    const panels = ['NumericResultDiv', 'ClusterResultDiv', 'ClassifierResultDiv']
+    for (const id of panels) {
+        const panel = document.getElementById(id)
+        if (!panel || panel.classList.contains('hidden')) continue
+        if (panel.querySelector('.results-forward')) return
+        const wrap = document.createElement('div')
+        wrap.className = 'results-forward'
+        const button = document.createElement('button')
+        button.type = 'button'
+        button.className = 'success-button'
+        button.id = 'continueToInferenceButton'
+        button.textContent = 'Continue to Inference on New Data'
+        button.addEventListener('click', () => {
+            if (typeof showTab === 'function') showTab('historic')
+        })
+        wrap.appendChild(button)
+        panel.appendChild(wrap)
+        return
+    }
+}
+
+
+// === narrative.js ===
+/**
+ * The application as a narrative: one rail down the left carrying navigation, the
+ * loaded data and the choices for the run, with the views to its right.
+ *
+ * The rail is a sibling of the views, built once on DOMContentLoaded, so it is
+ * there from a cold load rather than appearing after an upload. Its navigation is
+ * the old top tab bar: the same button nodes are moved into it, so every id, every
+ * listener and setActiveTab's NodeList keep working. Entries after Upload are
+ * disabled until a file is loaded, and say why in their title.
+ *
+ * The five-step strip is not navigation. It stays inside the Modeling view and
+ * reports where a run has got to.
+ *
+ * Everything is built from the page that is already there. The mode sections keep
+ * their markup, their element ids and their listeners; nodes are moved, never
+ * rebuilt, so nothing that reads a control by id is affected. The chosen model is read
+ * from the model <select> elements rather than from a second list, so it cannot
+ * drift from the registry. Depends on core.js.
+ */
+
+/* eslint-disable no-unused-vars */
+
+// The five steps of a run, in order. The names match what the rest of the page
+// calls them, so a person reading the strip and a person reading the tabs see
+// the same words.
+const RUN_STEPS = [
+    { key: 'upload', label: 'Data' },
+    { key: 'preprocess', label: 'Preprocessing' },
+    { key: 'setup', label: 'Model setup' },
+    { key: 'run', label: 'Run' },
+    { key: 'results', label: 'Results' },
+];
+
+// The views the rail navigates, in the order a run visits them. These are the
+// buttons the header used to carry; the nodes are moved, not recreated, so the
+// data-tab values and the handlers core.js bound to them are untouched.
+const RAIL_VIEWS = ['upload', 'processing', 'model-preprocessing', 'modeling', 'historic'];
+
+// Everything after Upload needs a file. The reason is what the entry says when a
+// person hovers a disabled one, so the rail explains itself rather than going dead.
+const RAIL_NEEDS_DATA = 'Upload a file first.';
+
+// The model select of each mode, by task. switchModelingMode shows one mode at a
+// time; the choices list reads whichever select belongs to the visible mode.
+const MODEL_SELECTS = {
+    simple: { regression: 'simpleNModels', classification: 'simpleClassModels', cluster: 'simpleClModels' },
+    advanced: { regression: 'advancedNModels', classification: 'advancedClassModels', cluster: 'advancedClModels' },
+    automl: { regression: 'automlNModels', classification: 'automlClassModels', cluster: 'automlClModels' },
+};
+
+function narrativeCurrentMode() {
+    for (const mode of ['automl', 'simple', 'advanced']) {
+        const radio = document.getElementById(mode + 'Mode');
+        if (radio && radio.checked) return mode;
+    }
+    return 'simple';
+}
+
+/** The visible model select for the current mode, whatever the task type. */
+/** The task the run is for, from the choice the app recorded. */
+function narrativeTaskKey() {
+    const el = document.getElementById('outputType1');
+    const value = el && el.value ? el.value : '';
+    if (value === 'Classifier') return 'classification';
+    if (value === 'Cluster') return 'cluster';
+    if (value === 'Numeric') return 'regression';
+    return '';
+}
+
+/**
+ * The model select the choices list reads.
+ *
+ * The task comes from the recorded choice rather than from which select happens to
+ * be on screen. Picking by visibility made the count follow the page: on Modeling a
+ * classification select was visible and the chip read 23, and on Documentation
+ * nothing was visible so the first entry won and the same session read 31.
+ */
+function narrativeActiveSelect() {
+    const byTask = MODEL_SELECTS[narrativeCurrentMode()] || {};
+    const task = narrativeTaskKey();
+    if (task && byTask[task]) {
+        const el = document.getElementById(byTask[task]);
+        if (el) return el;
+    }
+    // No task chosen yet. The regression select is the empty state the rail shows.
+    for (const id of Object.values(byTask)) {
+        const el = document.getElementById(id);
+        if (el && el.offsetParent !== null) return el;
+    }
+    for (const id of Object.values(byTask)) {
+        const el = document.getElementById(id);
+        if (el) return el;
+    }
+    return null;
+}
+
+/** Two initials for the tile of an app, as KBase draws them. */
+function narrativeInitials(label) {
+    const words = String(label).replace(/[()]/g, '').split(/[\s_-]+/).filter(Boolean);
+    if (!words.length) return '??';
+    if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+    return (words[0][0] + words[1][0]).toUpperCase();
+}
+
+/** Whether the app has a loaded file, by the same test the views use. */
+function narrativeHasData() {
+    try {
+        if (typeof checkHasDataForExploration === 'function') return Boolean(checkHasDataForExploration());
+    } catch (err) {
+        console.error('Data check failed:', err);
+    }
+    return Boolean(typeof uploadedFileName === 'string' && uploadedFileName);
+}
+
+/** Whether a task type has been chosen, which is what gives the model line a value. */
+function narrativeTaskChosen() {
+    const el = document.getElementById('outputType1');
+    return Boolean(el && el.value);
+}
+
+/**
+ * Put the page into a rail and a view column, once, on load.
+ *
+ * main's children are moved into the view column rather than re-created, so the
+ * views keep their ids and their listeners. The rail becomes their sibling, which
+ * is what lets it exist before any of them has anything in it.
+ */
+function narrativeBuildShell() {
+    const main = document.getElementById('main-content');
+    if (!main || document.getElementById('narrativePage')) return false;
+
+    const page = document.createElement('div');
+    page.id = 'narrativePage';
+    page.className = 'narrative-page is-single';
+
+    const rail = document.createElement('aside');
+    rail.id = 'narrativeRail';
+    rail.className = 'narrative-rail';
+    rail.setAttribute('aria-label', 'Navigation and data');
+    rail.innerHTML = `
+        <nav class="narrative-nav" id="narrativeNav" aria-label="Main navigation"></nav>
+        <section class="narrative-panel" id="narrativeDataPanel">
+            <div class="narrative-panel-head">
+                <h3>Data</h3>
+                <span class="narrative-count" id="narrativeDataCount">0</span>
+            </div>
+            <div class="narrative-panel-body" id="narrativeDataBody">
+                <p class="narrative-empty">No data loaded.</p>
+            </div>
+        </section>
+    `;
+
+    const views = document.createElement('div');
+    views.id = 'narrativeViews';
+    views.className = 'narrative-views';
+    while (main.firstChild) views.appendChild(main.firstChild);
+
+    page.appendChild(rail);
+    page.appendChild(views);
+    main.appendChild(page);
+    return true;
+}
+
+/**
+ * Move the tab bar into the rail and retire the bar itself.
+ *
+ * The buttons are moved, not rebuilt: core.js captured them in a NodeList at load
+ * and bound a click handler to each, and setActiveTab still writes to those same
+ * nodes. Documentation goes last, in its own group.
+ */
+function narrativeMoveNav() {
+    const nav = document.getElementById('narrativeNav');
+    if (!nav || nav.childElementCount) return;
+    const bar = document.getElementById('appTabs');
+    if (!bar) return;
+
+    RAIL_VIEWS.forEach((tab) => {
+        const btn = bar.querySelector(`.tab-button[data-tab="${tab}"]`);
+        if (btn) nav.appendChild(btn);
+    });
+    const rest = Array.from(bar.querySelectorAll('.tab-button[data-tab]')).filter(
+        (b) => b.dataset.tab !== 'documentation'
+    );
+    rest.forEach((b) => nav.appendChild(b));
+
+    // Documentation sits in the header's right-hand group rather than in the bar,
+    // so it is found on the page rather than inside it.
+    // Documentation and Tutorial stay in the banner. They have to work with no data
+    // loaded, and with no data there is no rail to put them in.
+    // The bar keeps its node so core.js can still address it; empty, it draws nothing.
+    bar.classList.add('is-retired');
+
+    // The forward step lives at the foot of the rail, under the entry it leaves.
+    const next = document.createElement('button');
+    next.type = 'button';
+    next.id = 'narrativeNext';
+    next.className = 'success-button narrative-next hidden';
+    next.addEventListener('click', () => {
+        const source = narrativeNextSource();
+        if (source && !source.disabled) source.click();
+    });
+    nav.appendChild(next);
+}
+
+// The in-page button that carries each view forward. The rail's forward button is
+// a proxy for it: same label, same enabled state, same click. The page keeps its
+// own button as the thing that holds the behaviour; the rail only repeats it.
+const NEXT_SOURCE = {
+    processing: 'continueToPreprocessButton',
+    'model-preprocessing': 'continueToModelingButton',
+    modeling: 'continueToInferenceButton',
+};
+
+function narrativeNextSource() {
+    const active = document.querySelector('#narrativeNav .tab-button.active');
+    const id = active ? NEXT_SOURCE[active.dataset.tab] : null;
+    const source = id ? document.getElementById(id) : null;
+    // A source inside a hidden panel is not on offer, so neither is the proxy.
+    return source && !source.closest('.hidden') ? source : null;
+}
+
+/** Repeat the current view's forward button in the rail, or hide the proxy. */
+function narrativeRefreshNext() {
+    const next = document.getElementById('narrativeNext');
+    if (!next) return;
+    const source = narrativeNextSource();
+    const show = Boolean(source);
+    if (next.classList.contains('hidden') === show) next.classList.toggle('hidden', !show);
+    if (!source) return;
+    const label = source.textContent.trim();
+    if (next.textContent !== label) next.textContent = label;
+    if (next.disabled !== source.disabled) next.disabled = source.disabled;
+    const title = source.getAttribute('title') || '';
+    if ((next.getAttribute('title') || '') !== title) {
+        if (title) next.setAttribute('title', title);
+        else next.removeAttribute('title');
+    }
+}
+
+/**
+ * Disable what the app would refuse.
+ *
+ * Everything past Upload needs a file. A disabled button does not fire its click,
+ * so the rail cannot reach a view the app would turn away, and the title says why.
+ */
+function narrativeGateNav() {
+    const nav = document.getElementById('narrativeNav');
+    if (!nav) return;
+    const ready = narrativeHasData();
+    nav.querySelectorAll('.tab-button[data-tab]').forEach((btn) => {
+        const tab = btn.dataset.tab;
+        const gated = tab !== 'upload' && tab !== 'documentation' && !ready;
+        btn.disabled = gated;
+        btn.classList.toggle('is-gated', gated);
+        if (gated) {
+            btn.setAttribute('title', RAIL_NEEDS_DATA);
+            btn.setAttribute('aria-disabled', 'true');
+        } else {
+            btn.removeAttribute('title');
+            btn.removeAttribute('aria-disabled');
+        }
+    });
+}
+
+/**
+ * The run strip, inside the Modeling view.
+ *
+ * This is progress, not navigation: it says where a run has got to. It also takes
+ * the page header, so Modeling carries one band rather than three.
+ */
+function narrativeBuildFlow() {
+    const host = document.getElementById('columnSelection');
+    if (!host || document.getElementById('narrativeFlow')) return false;
+
+    const flow = document.createElement('nav');
+    flow.id = 'narrativeFlow';
+    flow.className = 'narrative-flow';
+    flow.setAttribute('aria-label', 'Modeling and run progress');
+    flow.innerHTML = `<ol>${RUN_STEPS.map(
+        (s, i) =>
+            `<li class="narrative-step" data-step="${s.key}"><span class="narrative-step-num">${i + 1}</span><span class="narrative-step-label">${s.label}</span></li>`
+    ).join('')}</ol>`;
+
+    host.insertBefore(flow, host.firstChild);
+    // The page header is gone: the rail is the navigation and its active entry is the
+    // title. The strip stays as one slim line of run progress at the top of the view.
+    return true;
+}
+
+/** Mark the step the run has reached. Steps before it read as done. */
+function narrativeSetStep(key) {
+    const flow = document.getElementById('narrativeFlow');
+    if (!flow) return;
+    const order = RUN_STEPS.map((s) => s.key);
+    const at = order.indexOf(key);
+    flow.querySelectorAll('.narrative-step').forEach((li) => {
+        const i = order.indexOf(li.dataset.step);
+        li.classList.toggle('is-done', at > -1 && i < at);
+        li.classList.toggle('is-current', i === at);
+    });
+    // Before a run the strip repeats the rail, so it is drawn only from the moment
+    // a run starts: then it is progress the rail does not show.
+    if (key === 'run' || key === 'results') flow.classList.add('is-live');
+    if (key === 'upload' || key === 'preprocess' || key === 'setup') flow.classList.remove('is-live');
+}
+
+/** Draw the stages the server reports underneath the run strip.
+ *
+ * The five steps say where the run is; these say what it is doing inside the Run
+ * step. The stage names and their state come from the same progress message the
+ * loading area reads, so the two cannot disagree.
+ */
+function narrativeSetStages(progress) {
+    const flow = document.getElementById('narrativeFlow');
+    if (!flow) return;
+    let host = document.getElementById('narrativeStages');
+    if (!host) {
+        host = document.createElement('div');
+        host.id = 'narrativeStages';
+        host.className = 'narrative-stages';
+        flow.appendChild(host);
+    }
+    const stages = (progress && progress.stages) || {};
+    const chips = Object.entries(stages)
+        .filter(([, stage]) => stage.status !== 'skipped')
+        .map(([name, stage]) => {
+            const state = stage.status === 'running' ? 'running' : stage.status === 'completed' ? 'done' : 'waiting';
+            const label = name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+            const pct = state === 'running' ? ` ${Math.round(stage.progress || 0)}%` : '';
+            return `<span class="narrative-stage is-${state}">${escapeHtml(label)}${pct}</span>`;
+        });
+    // The chips report a run in progress. Once every stage is done the strip's
+    // Results step says the same thing, so the row goes away.
+    const allDone = chips.length > 0 && Object.values(stages)
+        .filter((stage) => stage.status !== 'skipped')
+        .every((stage) => stage.status === 'completed');
+    host.innerHTML = chips.length && !allDone ? chips.join('') : '';
+    host.hidden = !chips.length || allDone;
+}
+
+/** Fill the data panel from what the page already knows about the upload. */
+/** The letters a person typed, as a column range, and the name behind the first. */
+function narrativeColumnLine() {
+    const target = (document.getElementById('predictors') || {}).value || '';
+    const indicators = (document.getElementById('indicators') || {}).value || '';
+    if (!target && !indicators) return '';
+    const named = (letters) => {
+        const first = String(letters).trim().toUpperCase().match(/^[A-Z]+/);
+        if (!first || typeof columnToIndex !== 'function') return '';
+        const list = window.uploadedColumnNames;
+        if (!Array.isArray(list)) return '';
+        const name = list[columnToIndex(first[0])];
+        return name ? ` (${name})` : '';
+    };
+    const parts = [];
+    if (target) parts.push(`Target ${target.trim().toUpperCase()}${named(target)}`);
+    if (indicators) parts.push(`indicators ${indicators.trim().toUpperCase()}`);
+    return parts.join(', ');
+}
+
+function narrativeRefreshData() {
+    const body = document.getElementById('narrativeDataBody');
+    const count = document.getElementById('narrativeDataCount');
+    if (!body) return;
+    const name = typeof uploadedFileName === 'string' && uploadedFileName ? uploadedFileName : '';
+    if (!name) {
+        body.innerHTML = '<p class="narrative-empty">No data loaded.</p>';
+        if (count) count.textContent = '0';
+        return;
+    }
+    let shape = '';
+    if (typeof uploadedShape === 'object' && uploadedShape && uploadedShape.rows) {
+        shape = `${Number(uploadedShape.rows).toLocaleString()} \u00d7 ${uploadedShape.columns}`;
+    }
+    // The sentence the modeling page writes says the same thing at length. The panel
+    // states the file, its shape, and which columns the run uses, once they are set.
+    const columns = narrativeColumnLine();
+    body.innerHTML = `
+        <div class="narrative-item narrative-item-data">
+            <span class="narrative-tile">CSV</span>
+            <div>
+                <strong>${escapeHtml(name)}</strong>
+                <button type="button" class="narrative-replace" id="narrativeReplaceFile">Replace</button>
+                ${shape ? `<p>${escapeHtml(shape)}</p>` : ''}
+                ${columns ? `<p class="narrative-selection">${escapeHtml(columns)}</p>` : ''}
+            </div>
+        </div>
+        ${narrativeChoicesHtml()}
+    `;
+    if (count) count.textContent = '1';
+}
+
+/* The choices the run will use, read from the controls on each page and listed
+   under the file. The list is the same whichever page is open, so a person can
+   see what Preprocessing decided while on Modeling. "change" opens the page and
+   the setting. */
+const CHOICE_PAGES = [
+    { tab: 'model-preprocessing', label: 'Preprocessing', items: [
+        { name: 'Blanks', read: () => {
+            const drop = document.getElementById('dropMissing');
+            const impute = document.getElementById('imputeStrategy');
+            if (!drop) return '';
+            const scope = { indicatorAndTarget: 'indicators and target', indicator: 'indicators', target: 'target', all: 'all columns' }[drop.value];
+            if (!scope) return 'kept';
+            const fill = impute && impute.value && impute.value !== 'none' ? (/^[0-9.]+$/.test(impute.value) ? `filled with ${impute.value}` : `filled with the ${impute.value}`) : 'rows removed';
+            return `${fill} (${scope})`;
+        }, ids: ['dataCleaningMissingWrapper', 'imputeDiv'] },
+        { name: 'Text columns', read: () => {
+            const use = document.getElementById('useTransformer');
+            const cols = document.getElementById('transformerColumn');
+            if (!use) return '';
+            if (use.value !== 'Yes' && use.value !== 'yes') return 'none';
+            return cols && cols.value ? `one-hot: ${cols.value}` : 'one-hot encoded';
+        }, ids: ['transformerOptionWrapper', 'transformerYes'] },
+        { name: 'Stratify', read: () => {
+            const yn = document.getElementById('scalingYesNo');
+            const col = document.getElementById('specificVariableSelect');
+            if (!yn) return '';
+            return (yn.value === 'Yes' || yn.value === 'yes') ? (col && col.value ? `by ${(col.options && col.options[col.selectedIndex]) ? col.options[col.selectedIndex].text : col.value}` : 'yes') : 'no';
+        }, ids: ['scalingQuestion', 'scalingYes'] },
+        { name: 'Scaler', read: () => { const e = document.getElementById('scaler'); return e ? (e.options[e.selectedIndex] || {}).text || e.value : ''; }, ids: ['preprocessScaler'] },
+        { name: 'Split', read: () => { const e = document.getElementById('trainSize'); return e && e.value ? `${Math.round(Number(e.value) * 100)} / ${Math.round((1 - Number(e.value)) * 100)}` : ''; }, ids: ['preprocessSplit'] },
+        { name: 'Seed', read: () => { const e = document.getElementById('seedValue'); return e && e.value ? String(e.value) : ''; }, ids: ['preprocessSeed'] },
+    ] },
+    // The model is chosen on Modeling, so its lines appear from Modeling onward.
+    { tab: 'modeling', label: 'Modeling', views: ['modeling', 'historic'], items: [
+        { name: 'Mode', read: () => ({ automl: 'AutoML', simple: 'Simple', advanced: 'Advanced' }[narrativeCurrentMode()] || ''), ids: ['modelingModeCard'] },
+        { name: 'Model', read: () => {
+            if (!narrativeTaskChosen()) return '';
+            const sel = narrativeActiveSelect();
+            if (!sel) return '';
+            const opt = sel.value ? sel.options[sel.selectedIndex] : null;
+            if (opt) return opt.textContent.trim();
+            return narrativeCurrentMode() === 'automl' ? 'best of the compared candidates' : 'not chosen';
+        }, ids: () => { const sel = narrativeActiveSelect(); return sel ? [sel.id] : []; } },
+        { name: 'Search', read: () => {
+            if (narrativeCurrentMode() !== 'advanced') return '';
+            const e = document.getElementById('hyperparameterSearch');
+            return e && e.value && e.value !== 'none' ? (e.options[e.selectedIndex] || {}).text || e.value : '';
+        }, ids: ['hyperparameterSearch'] },
+    ] },
+];
+
+const CHOICE_VIEWS = new Set(['model-preprocessing', 'modeling', 'historic']);
+
+function narrativeChoicesHtml() {
+    if (typeof preprocessColumnsChosen === 'function' && !preprocessColumnsChosen()) return '';
+    // Upload and Data Exploration come before the choices are made; listing
+    // them there confuses a first run, so the list starts at Model Preprocessing.
+    const active = document.querySelector('#narrativeNav .tab-button.active');
+    if (!active || !CHOICE_VIEWS.has(active.dataset.tab)) return '';
+    let html = '';
+    CHOICE_PAGES.forEach((page) => {
+        if (page.views && !page.views.includes(active.dataset.tab)) return;
+        const rows = page.items.map((it) => ({ it, value: it.read() })).filter((r) => r.value);
+        if (!rows.length) return;
+        html += `<li class="narrative-choice-page">${escapeHtml(page.label)}</li>`;
+        rows.forEach(({ it, value }) => {
+            html += `<li><strong>${escapeHtml(it.name)}</strong> ${escapeHtml(value)}<button type="button" class="narrative-choice-change" data-tab="${page.tab}" data-ids="${(typeof it.ids === 'function' ? it.ids() : it.ids).join(',')}">change</button></li>`;
+        });
+    });
+    return html ? `<ul class="narrative-choices" aria-label="Choices for this run">${html}</ul>` : '';
+}
+
+document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.narrative-choice-change');
+    if (!btn) return;
+    const entry = document.querySelector(`#narrativeNav .tab-button[data-tab="${btn.dataset.tab}"]`);
+    if (entry && !entry.disabled) entry.click();
+    const ids = (btn.dataset.ids || '').split(',').filter(Boolean);
+    if (typeof revealPreprocessBlocks === 'function') revealPreprocessBlocks(ids);
+    const first = ids.map((id) => document.getElementById(id)).find((el) => el);
+    if (first) {
+        first.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        const ctl = first.matches('select, input, textarea') ? first : first.querySelector('select, input:not([type=hidden]), textarea');
+        if (ctl) ctl.focus({ preventScroll: true });
+    }
+});
+
+// The list follows the controls: any change on the preprocessing form redraws it.
+document.addEventListener('change', (e) => {
+    if (e.target.closest && e.target.closest('#preprocessform')) narrativeRefreshData();
+});
+document.addEventListener('input', (e) => {
+    if (e.target.closest && e.target.closest('#preprocessform') && (e.target.id === 'trainSize' || e.target.id === 'seedValue')) narrativeRefreshData();
+});
+document.addEventListener('click', (e) => {
+    if (e.target.closest && e.target.closest('#narrativeNav .tab-button, .narrative-next, #continueToPreprocessButton, #continueToModelingButton, #continueToInferenceButton')) {
+        window.setTimeout(narrativeRefreshData, 80);
+    }
+});
+
+/**
+ * Show the rail once a file is loaded, and keep it from then on.
+ *
+ * With no data the rail would carry an empty data panel and five
+ * entries that all refuse, so the welcome and upload screens take the whole page
+ * instead. The shell is the same one either way: a class collapses the grid to one
+ * column rather than a second layout being built.
+ */
+function narrativeApplyLayout() {
+    const page = document.getElementById('narrativePage');
+    if (!page) return;
+    // narrativeGateNav reads the same answer, so the rail appears exactly when its
+    // entries stop refusing.
+    if (narrativeHasData()) page.classList.remove('is-single');
+    else if (!page.dataset.railShown) page.classList.add('is-single');
+    if (narrativeHasData()) page.dataset.railShown = 'true';
+}
+
+/** Bring the rail's parts up to date with whatever the app now knows. */
+function narrativeSync() {
+    narrativeApplyLayout();
+    narrativeGateNav();
+    narrativeRefreshNext();
+    narrativeRefreshData();
+}
+
+function narrativeWire() {
+    // The Data panel is redrawn, so the click is caught on the panel rather than
+    // bound to a button that will not be the same node next time.
+    const dataBody = document.getElementById('narrativeDataBody');
+    if (dataBody) {
+        dataBody.addEventListener('click', (e) => {
+            if (!e.target.closest('#narrativeReplaceFile')) return;
+            if (typeof openResetPopup === 'function') openResetPopup();
+        });
+    }
+
+    ['indicators', 'predictors'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', narrativeRefreshData);
+    });
+
+    ['automlMode', 'simpleMode', 'advancedMode'].forEach((id) => {
+        const radio = document.getElementById(id);
+        if (radio) {
+            radio.addEventListener('change', () => {
+                narrativeRefreshData();
+            });
+        }
+    });
+    Object.values(MODEL_SELECTS).forEach((byTask) => {
+        Object.values(byTask).forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('change', narrativeRefreshData);
+        });
+    });
+}
+
+/** Build the shell once, then keep it in step with the app. */
+function narrativeInit() {
+    try {
+        if (!narrativeBuildShell()) return;
+        narrativeMoveNav();
+        narrativeWire();
+        narrativeSync();
+    } catch (err) {
+        // A rail that fails to build must not take the application with it.
+        console.error('Narrative shell not built:', err);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    narrativeInit();
+
+    // setActiveTab writes the active class on these same nodes, on every
+    // navigation and once when an upload succeeds, so watching them is how the
+    // rail learns that a file has arrived without anything having to call it.
+    const nav = document.getElementById('narrativeNav');
+    if (nav) {
+        const watch = new MutationObserver(narrativeSync);
+        nav.querySelectorAll('.tab-button[data-tab]').forEach((btn) =>
+            watch.observe(btn, { attributes: true, attributeFilter: ['class'] })
+        );
+    }
+
+    // The forward buttons change without navigation: Continue to Modeling is
+    // enabled once a task type is chosen, and Continue to Inference is created when
+    // a run finishes. Watching the views for those changes keeps the proxy honest.
+    const views = document.getElementById('narrativeViews');
+    if (views) {
+        new MutationObserver(narrativeRefreshNext).observe(views, {
+            subtree: true,
+            childList: true,
+            attributes: true,
+            attributeFilter: ['disabled', 'class'],
+        });
+    }
+
+    // The Modeling view is revealed by a class change rather than by navigation.
+    // The run strip is built the first time it is shown and stays with it.
+    const host = document.getElementById('columnSelection');
+    if (!host) return;
+    const build = () => {
+        if (host.classList.contains('hidden')) return;
+        narrativeBuildFlow();
+        narrativeSetStep('setup');
+        narrativeSync();
+    };
+    build();
+    new MutationObserver(build).observe(host, { attributes: true, attributeFilter: ['class'] });
+});
+
+
+/* Documentation is reading, not the run, so it takes the whole page whether or
+   not data is loaded. The section's own hidden class is the signal: the layout
+   follows it, so every route into the documentation behaves the same. */
+(function narrativeDocumentationLayout() {
+    const start = () => {
+        const doc = document.getElementById('documentation');
+        const page = document.getElementById('narrativePage');
+        if (!doc || !page) return false;
+        const apply = () => page.classList.toggle('is-doc', !doc.classList.contains('hidden'));
+        new MutationObserver(apply).observe(doc, { attributes: true, attributeFilter: ['class'] });
+        apply();
+        return true;
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { if (!start()) setTimeout(start, 0); });
+    else if (!start()) setTimeout(start, 0);
+})();
 
 
 // === inference.js ===
@@ -7410,7 +8887,7 @@ predictionForm.addEventListener('submit', async (e) => {
                 })() : '';
                 const inferenceDistLabel = 'Inference distribution';
                 previewChartHtml = `
-                    <h4 style="margin: 0 0 8px 0;">Inference visuals (${firstCol})</h4>
+                    <h4 style="margin: 0 0 8px 0;">Inference visuals (${escapeHtml(firstCol)})</h4>
                     <p style="margin: 0 0 10px 0; font-size: 0.9rem; color: #666;">Training Predicted vs Actual with inference points overlaid (left); inference distribution (right).</p>
                     <div class="inference-visuals-row" style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;">
                         ${(trainingViz || inferenceVizUrl) ? `<div class="inference-training-plot-wrap" style="flex: 0 1 320px; min-width: 200px;"><p style="margin: 0 0 6px 0; font-size: 0.85rem; font-weight: 600;">${inferenceVizUrl ? 'Predicted vs Actual (training + inference)' : 'Training plot + inference overlay'}</p>${leftPlotHtml}</div>` : ''}
@@ -7467,15 +8944,30 @@ predictionForm.addEventListener('submit', async (e) => {
                 <p style="margin: 0 0 12px 0; font-size: 0.95rem; color: #666;">Spread the model was built on.</p>
                 <div class="model-stats-table-wrapper" style="margin-bottom: 20px;">${renderSummaryTable(trainingSummaryForPanel, numericKeysForPanels)}</div>
             ` : '';
-            const modelGraphicSectionHtml = trainingViz ? `
-                <h3 style="margin: 0 0 8px 0;">Model used (training performance)</h3>
-                <p style="margin: 0 0 12px 0; font-size: 0.95rem; color: #666;">Performance graphic from the model you trained.</p>
-                <img src="${trainingPerfUrl || trainingVizUrl}" alt="Training performance" class="inference-model-graphic-img" style="display: block; max-height: 400px; width: auto; object-fit: contain;">
+            // Two graphics share one frame: the trained model's performance, and the
+            // spread of every predictor in the training rows against the rows just
+            // predicted (the check that the new data lies where the model was fitted).
+            const spreadUrl = data.spread_visualization
+                ? withApiRoot('/user-visualizations/' + data.spread_visualization) + '?v=' + encodeURIComponent(data.spread_visualization_version || Date.now())
+                : '';
+            const perfUrl = trainingViz ? (trainingPerfUrl || trainingVizUrl) : '';
+            const graphicChoices = [
+                spreadUrl ? { key: 'spread', label: 'Predictor spread: training rows against new rows', url: spreadUrl, alt: 'Predictor spread of training rows and new rows' } : null,
+                perfUrl ? { key: 'performance', label: 'Model used (training performance)', url: perfUrl, alt: 'Training performance' } : null,
+            ].filter(Boolean);
+            const imgStyle = 'display: block; width: 100%; max-width: 860px; height: auto; object-fit: contain;';
+            const modelGraphicSectionHtml = graphicChoices.length ? `
+                <h3 style="margin: 0 0 8px 0;">Graphic</h3>
+                <label for="inferenceGraphicSelect" class="sr-only">Select graphic</label>
+                <select id="inferenceGraphicSelect" style="margin: 0 0 8px 0; max-width: 100%;">
+                    ${graphicChoices.map(g => `<option value="${g.key}">${escapeHtml(g.label)}</option>`).join('')}
+                </select>
+                <img id="inferenceGraphic" src="${graphicChoices[0].url}" alt="${escapeHtml(graphicChoices[0].alt)}" class="inference-model-graphic-img" style="${imgStyle}">
             ` : '';
             const rightPanelHtml = (trainingSummaryTableHtml || modelGraphicSectionHtml) ? `
-                <div class="inference-model-graphic" style="flex: 0 0 calc(50% - 12px); min-width: 200px; overflow: auto; align-self: flex-start;">
-                    ${trainingSummaryTableHtml}
+                <div class="inference-model-graphic" style="flex: 1.6 1 480px; min-width: 0; align-self: flex-start;">
                     ${modelGraphicSectionHtml}
+                    ${trainingSummaryTableHtml}
                 </div>
             ` : '';
 
@@ -7487,11 +8979,11 @@ predictionForm.addEventListener('submit', async (e) => {
                     <a href="${withApiRoot('/download/predictions.csv')}?download_name=${encodeURIComponent(predictionDownloadName)}" onclick="return downloadFile('predictions.csv', '${predictionDownloadName}')">
                         <button class="predictionresultButton export-button">Download Results CSV</button>
                     </a>
-                    <button class="secondary-button" onclick="backToModel()">Back To Model</button>
+                    <button class="secondary-button" onclick="backToModel()">Back to Modeling</button>
                     <button class="secondary-button" onclick="newPredict()">Run inference on another dataset</button>
                 </div>
-                <div class="inference-results-content" style="display: flex; flex-wrap: nowrap; gap: 24px; align-items: flex-start;">
-                    <div class="inference-summary-section" style="flex: 0 0 calc(50% - 12px); min-width: 200px; overflow: auto; align-self: flex-start;">
+                <div class="inference-results-content" style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+                    <div class="inference-summary-section" style="flex: 1 1 360px; min-width: 0; align-self: flex-start;">
                         <h3 style="margin: 0 0 8px 0;">Inference summary</h3>
                         <p style="margin: 0 0 12px 0; font-size: 0.95rem; color: #666;">Descriptive statistics for inferred (predicted) values (same style as Data Exploration).</p>
                         ${classificationNote}
@@ -7501,6 +8993,24 @@ predictionForm.addEventListener('submit', async (e) => {
                     ${rightPanelHtml}
                 </div>
             `
+            showApplicabilityLine(data.applicability_summary)
+            showUncertaintyLine(data.uncertainty_summary)
+            showCheckBlock(data.check)
+            // The example rows were drawn from a known species each, so the page can
+            // say how many came back the way they were drawn. Only for those rows:
+            // a person's own file has no key to compare against.
+            if (window.digiterraExampleRows) {
+                window.digiterraExampleRows = false
+                showExampleRowAgreement(preview)
+            }
+            const graphicSelect = document.getElementById('inferenceGraphicSelect')
+            if (graphicSelect) {
+                graphicSelect.addEventListener('change', () => {
+                    const g = graphicChoices.find(x => x.key === graphicSelect.value)
+                    const img = document.getElementById('inferenceGraphic')
+                    if (g && img) { img.src = g.url; img.alt = g.alt }
+                })
+            }
             uploadPredictDf.classList.add('hidden')
         }
         else {
@@ -7540,7 +9050,7 @@ if (automlForm) {
         if (!processForm) {
             const errorDiv = getCachedElement('errorDiv');
             if (errorDiv) {
-                showError(errorDiv, 'Error: Unable to find model configuration. Please configure your data first.');
+                showError(errorDiv, 'DiGiTerra has no model configuration. Configure the data first.');
                 errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
             return;
@@ -7606,7 +9116,7 @@ function wireAdvancedOptimizationFormSubmit(form) {
         if (!selectedModel) {
             const errorDiv = getCachedElement('errorDiv');
             if (errorDiv) {
-                showError(errorDiv, 'Please select a model before running with advanced options.');
+                showError(errorDiv, 'Select a model before you run with advanced options.');
                 errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
             return;
@@ -7615,7 +9125,7 @@ function wireAdvancedOptimizationFormSubmit(form) {
         if (!processForm) {
             const errorDiv = getCachedElement('errorDiv');
             if (errorDiv) {
-                showError(errorDiv, 'Error: Unable to find model configuration. Please configure your data first.');
+                showError(errorDiv, 'DiGiTerra has no model configuration. Configure the data first.');
                 errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
             return;
@@ -7643,6 +9153,154 @@ function wireAdvancedOptimizationFormSubmit(form) {
 }
 wireAdvancedOptimizationFormSubmit(document.getElementById('advancedOptimizationForm'));
 wireAdvancedOptimizationFormSubmit(document.getElementById('advancedOptimizationLegacyForm'));
+
+
+// Bundle import is available where the server allows it (desktop builds). The
+// form stays hidden until a probe of /import-bundle says the route accepts uploads.
+(function wireBundleImport() {
+    const form = document.getElementById('importBundleForm');
+    if (!form) return;
+    fetch('/import-bundle', { method: 'POST', body: new FormData() })
+        .then(r => { if (r.status !== 403) form.classList.remove('hidden'); })
+        .catch(() => {});
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const status = document.getElementById('importBundleStatus');
+        status.textContent = 'Loading bundle...';
+        try {
+            const response = await fetch('/import-bundle', { method: 'POST', body: new FormData(form) });
+            const data = await response.json();
+            if (!response.ok) {
+                status.textContent = data.error || 'DiGiTerra cannot load the bundle.';
+                return;
+            }
+            const model = data.model || {};
+            const features = Array.isArray(model.features) ? model.features.join(', ') : '';
+            status.textContent = `Loaded ${model.name || 'model'} (${model.problem_type || ''}) trained ${data.created_at || ''}. Features: ${features}. ${data.note || ''}`;
+        } catch (err) {
+            status.textContent = 'DiGiTerra cannot load the bundle.';
+        }
+    });
+})();
+
+
+/* How many of the example rows came back as the species they were drawn from.
+
+   penguins_new_key.csv holds one species per row_id, and predictions.csv keeps the
+   order of the file it scored, so the two line up row for row. The count is a
+   sanity check on the run rather than a score: the rows are synthetic. */
+async function showExampleRowAgreement(preview) {
+    try {
+        const predictedKey = Object.keys(preview).find((k) => k.startsWith('Predicted_'))
+        if (!predictedKey) return
+        const predicted = preview[predictedKey]
+        const response = await fetch(`${API_ROOT}/example-data/penguins_new_key.csv`)
+        if (!response.ok) return
+        const rows = (await response.text()).trim().split('\n').slice(1)
+        const expected = rows.map((line) => line.split(',')[1].trim())
+        if (!expected.length || expected.length !== predicted.length) return
+        let agree = 0
+        for (let i = 0; i < expected.length; i += 1) {
+            if (String(predicted[i]).trim() === expected[i]) agree += 1
+        }
+        const host = document.querySelector('.inference-summary-section')
+        if (!host) return
+        const line = document.createElement('p')
+        line.id = 'exampleRowAgreement'
+        line.className = 'field-note'
+        line.textContent = `${agree} of ${expected.length} rows match the species each row was drawn from.`
+        host.appendChild(line)
+    } catch (err) {
+        console.error('Could not compare the example rows with the key:', err)
+    }
+}
+
+
+/* One line saying how many of these predictions rest on data the model has seen.
+   A model answers for any row whose columns parse, and nothing else on the page
+   separates a prediction on familiar data from one on a row nothing like it. */
+function showApplicabilityLine(summary) {
+    if (!summary || !summary.rows) return
+    const host = document.querySelector('.inference-summary-section')
+    if (!host) return
+    const line = document.createElement('p')
+    line.id = 'applicabilitySummary'
+    line.className = 'field-note'
+    const outOfRange = summary.out_of_range === 1
+        ? '1 row has a value outside the training range.'
+        : `${summary.out_of_range} rows have a value outside the training range.`
+    line.textContent = summary.novel === 0
+        ? `No row scores as unlike the training data. ${outOfRange}`
+        : `${summary.novel} of ${summary.rows} rows score as unlike the training data. ${outOfRange}`
+    host.appendChild(line)
+}
+
+
+/* One line on how much to trust a single prediction: the interval's half-width for a
+   regression run, or the least confident prediction for a classifier. */
+function showUncertaintyLine(summary) {
+    if (!summary) return
+    const host = document.querySelector('.inference-summary-section')
+    if (!host) return
+    let text = ''
+    if (summary.kind === 'interval' && summary.half_width !== null && summary.half_width !== undefined) {
+        const units = summary.units ? ` ${summary.units}` : ''
+        text = `${summary.coverage}% intervals are half-width ${summary.half_width.toPrecision(4)}${units}.`
+    } else if (summary.kind === 'probability' && summary.lowest !== null && summary.lowest !== undefined) {
+        text = `Lowest class probability among predictions is ${summary.lowest.toFixed(3)}.`
+    }
+    if (!text) return
+    const line = document.createElement('p')
+    line.id = 'uncertaintySummary'
+    line.className = 'field-note'
+    line.textContent = text
+    host.appendChild(line)
+}
+
+
+/* The check against measured values. A file that carries the target column (or the
+   target name with _measured, _true or _actual) is scored against it here; a file
+   without one is scored blind, and one line says which column would make the check.
+   Both are ordinary uses: the person decides whether the answers travel with the
+   rows. */
+function showCheckBlock(check) {
+    const host = document.querySelector('.inference-summary-section')
+    if (!host || !check) return
+    const block = document.createElement('div')
+    block.id = 'inferenceCheck'
+    block.className = 'inference-check'
+    const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+    if (!check.found) {
+        const names = (check.accepted || []).slice(0, 2).map((n) => `<code>${esc(n)}</code>`).join(' or ')
+        block.innerHTML = `<p class="field-note">Scored blind. To check the predictions against measured values, include a column named ${names} in the file.</p>`
+        host.appendChild(block)
+        return
+    }
+    // The note that says there are no true labels no longer applies.
+    const note = document.querySelector('.inference-classification-note')
+    if (note) note.remove()
+    const dropped = check.dropped ? ` ${check.dropped} row${check.dropped === 1 ? '' : 's'} without both values left out.` : ''
+    let body = ''
+    if (check.error) {
+        body = `<p class="field-note">${esc(check.error)}</p>`
+    } else if (check.kind === 'regression') {
+        const f = (v, d = 3) => (v === null || v === undefined ? 'n/a' : Number(v).toFixed(d))
+        body = `<table class="inference-check-table"><tbody>
+            <tr><th>n</th><td>${check.n}</td></tr>
+            <tr><th>R&sup2;</th><td>${f(check.r2)}</td></tr>
+            <tr><th>RMSE</th><td>${f(check.rmse)}</td></tr>
+            <tr><th>MAE</th><td>${f(check.mae)}</td></tr>
+            <tr><th>Mean bias (predicted minus measured)</th><td>${f(check.bias)}</td></tr>
+        </tbody></table>`
+    } else {
+        const labels = check.labels || []
+        const rows = (check.confusion || []).map((row, i) => `<tr><th>${esc(labels[i])}</th>${row.map((v, j) => `<td class="num${i === j ? ' diag' : ''}">${v}</td>`).join('')}</tr>`).join('')
+        body = `<p>Accuracy ${(check.accuracy * 100).toFixed(1)}%, macro F1 ${Number(check.macro_f1).toFixed(3)} on ${check.n} rows.</p>
+            <table class="inference-check-table confusion"><thead><tr><th>measured \\ predicted</th>${labels.map((l) => `<th>${esc(l)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`
+    }
+    block.innerHTML = `<h4>Check against measured values</h4><p class="field-note">Column <code>${esc(check.column)}</code> in the scored file.${dropped}</p>${body}`
+    host.appendChild(block)
+}
 
 
 // === app.js ===
@@ -7716,7 +9374,7 @@ function resetToWelcomeScreen() {
     
     // Restore upload section to initial state so "Start Modeling" shows the upload page again
     const uploadHeader = document.getElementById('uploadHeader');
-    if (uploadHeader) uploadHeader.textContent = 'Upload Data from CSV';
+    if (uploadHeader) uploadHeader.textContent = 'Upload Data';
     const uploadCard = document.querySelector('.upload-card');
     if (uploadCard) uploadCard.classList.remove('section-header');
     const uploadFormEl = document.getElementById('uploadForm');
@@ -7744,7 +9402,7 @@ function setupHeaderLogoClick() {
     const headerLogo = document.getElementById('headerLogo');
     if (headerLogo) {
         headerLogo.addEventListener('click', function() {
-            if (confirm('Are you sure you want to return to the welcome screen? This will reset your current session.')) {
+            if (confirm('Returning to the welcome screen resets the current session. Continue?')) {
                 resetToWelcomeScreen();
             }
         });
@@ -7753,7 +9411,7 @@ function setupHeaderLogoClick() {
         headerLogo.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                if (confirm('Are you sure you want to return to the welcome screen? This will reset your current session.')) {
+                if (confirm('Returning to the welcome screen resets the current session. Continue?')) {
                     resetToWelcomeScreen();
                 }
             }
@@ -8091,7 +9749,7 @@ function navigateToAdvancedWithModel(){
     if (!outputType || !outputType.value) {
         const errorDiv = getCachedElement('errorDiv');
         if (errorDiv) {
-            showError(errorDiv, 'Please select a model first before navigating to Advanced Modeling.');
+            showError(errorDiv, 'Select a model before you open Advanced Modeling.');
             errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
         return;
@@ -8124,7 +9782,7 @@ function navigateToAdvancedWithModel(){
     if (!selectedModel) {
         const errorDiv = getCachedElement('errorDiv');
         if (errorDiv) {
-            showError(errorDiv, 'Please select a model first before navigating to Advanced Modeling.');
+            showError(errorDiv, 'Select a model before you open Advanced Modeling.');
             errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
         return;
@@ -8243,4 +9901,181 @@ function stopModelRun() {
 (function() {
     document.documentElement.classList.remove('dark-mode');
     document.body.classList.remove('dark-mode');
+})();
+
+/* ==========================================================================
+   Hover explanations on the classic page (review of 2026-09-27).
+
+   The guided page explains every control on hover of its label and on keyboard
+   focus of the control. The classic page had none. The same mechanism is used
+   here: the words of a label take a dotted underline, the explanation opens on
+   hover or focus, stays open while the pointer is over it, and closes on Escape
+   (WCAG 1.4.13). Page controls are explained by id; hyperparameter fields by the
+   scikit-learn name their label carries ("Max Depth (int or None):" reads as
+   max_depth), so one sentence serves every model that has the parameter.
+   ========================================================================== */
+(function classicHelp() {
+    const HELP = {
+        file: 'A table with one header row. CSV, Excel (.xlsx, .xlsm) and Parquet are read. Nothing is sent anywhere except this server.',
+        corrCols: 'The columns the statistics, correlation matrix and pairplot read, as letters: "C-F" or "B,D,F". Text columns are skipped by the correlation.',
+        exploreDropMissing: 'Whether rows with a blank in the explored columns are left out of the statistics.',
+        exploreZeroHandle: 'What to do with zeros in the explored columns, for data where zero means not measured.',
+        outputType1: 'Classification predicts a class label. Regression predicts a number. Clustering groups rows without a target. The example sets this; change it if the proposal is wrong for your data.',
+        indicators: 'The columns the model reads, as spreadsheet letters: "B-G" or "B,C,E". Identifier columns and anything that leaks the target should be left out.',
+        predictors: 'The column the model predicts, as a letter. A text column or a number with few distinct values is treated as a class; other numbers as a quantity.',
+        useTransformer: 'Text columns cannot enter an estimator as they are. One-hot encoding turns each text value into its own 0/1 column. The page detects text columns itself; this only overrides it.',
+        transformerColumn: 'The text columns to one-hot encode, as letters.',
+        imputeStrategy: 'What to do with a blank in a modeling column: remove the row, or fill the blank with the column mean, median or mode computed on the training rows only.',
+        zeroHandle: 'What to do with zeros in the modeling columns, for data where zero means not measured: keep them, remove the rows, or fill them.',
+        scalingYesNo: 'Keeps the mix of one column the same in both halves of the split, so a rare class or a site is not left out of the test rows by chance.',
+        specificVariableSelect: 'The column whose mix the split preserves.',
+        quantileBins: 'A numeric column is stratified by binning it first: equal-count quantiles, or thresholds you type.',
+        scaler: 'Rescales the predictors before fitting. Trees do not need it; distance and linear models often do. Standard centres to mean zero and unit variance; min-max maps to 0 to 1; robust uses the median and quartiles.',
+        seedValue: 'The random seed. The same seed and settings give the same split and the same fit. It is written to the run record.',
+        trainSize: 'The fraction of rows the model is fitted on; the rest is held out as the test set. 0.80 keeps one row in five for testing.',
+        testSize: 'The fraction held out for the test score. It follows the train size.',
+        simpleClassModels: 'The estimator to fit, from scikit-learn. Every model in the list is trained through the same route.',
+        simpleRegModels: 'The estimator to fit, from scikit-learn. Every model in the list is trained through the same route.',
+        simpleClusterModels: 'The clustering method. The number of groups is a setting of the model.',
+        units: 'Written beside the metrics in the result and the model card; it changes no number. "u*" is read as the micro sign.',
+        sigfig: 'Decimal places shown for the metrics. The predictions file is always written at full precision.',
+        predictFile: 'A table with the same predictor columns as the training file. Predictions are written with a novelty score and a note for rows outside the training range.',
+    };
+    const PARAM_HELP = {
+        n_estimators: 'Number of trees or rounds. More is slower and usually a little better, with diminishing returns.',
+        max_depth: 'Deepest a tree may grow. Smaller values fit less closely to the training rows.',
+        n_neighbors: 'How many nearest rows vote for a prediction. Small values follow the training rows closely.',
+        weights: 'uniform gives every neighbour one vote; distance gives nearer neighbours more.',
+        learning_rate: 'How much each round or step changes the model. Smaller needs more rounds.',
+        learning_rate_init: 'The starting step size of the optimizer.',
+        c: 'Inverse regularization strength. Smaller values regularize more.',
+        alpha: 'Regularization strength. Larger values regularize more.',
+        l1_ratio: 'Mix of L1 and L2 penalty: 0 is ridge, 1 is lasso.',
+        max_iter: 'Cap on solver iterations.',
+        max_iterations: 'Cap on solver iterations.',
+        tol: 'Stopping tolerance for the solver.',
+        random_state: 'Seed for this estimator. The run seed is used when blank.',
+        class_weight: 'Reweights classes; balanced counters an uneven class mix.',
+        criterion: 'The split quality measure the trees use.',
+        splitter: 'How each split is chosen: the best split, or a random one among the best.',
+        min_samples_leaf: 'Fewest rows a leaf may contain; larger values smooth the tree.',
+        min_samples_split: 'Fewest rows a node needs before it can split.',
+        max_features: 'How many predictors each split considers; fewer decorrelates the trees.',
+        max_leaf_nodes: 'Cap on leaves per tree; blank means no cap.',
+        min_impurity_decrease: 'A split must reduce impurity by at least this much.',
+        ccp_alpha: 'Cost-complexity pruning strength; larger prunes more.',
+        bootstrap: 'Whether each tree is fitted on a resample of the rows.',
+        oob_score: 'Scores each tree on the rows its resample left out; a free validation estimate.',
+        kernel: 'The kernel function of the support vector machine.',
+        gamma: 'Kernel width for rbf, poly and sigmoid kernels.',
+        degree: 'Degree of the polynomial kernel or features.',
+        solver: 'The optimization routine; the default suits most data.',
+        penalty: 'The regularization type.',
+        n_jobs: 'CPU cores to use; blank means one.',
+        p: 'Power of the Minkowski distance: 1 is Manhattan, 2 is Euclidean.',
+        metric: 'The distance measure between rows.',
+        hidden_layer_sizes: 'Neurons in each hidden layer, one box per layer; blank boxes are unused layers.',
+        activation: 'The nonlinearity between layers; relu suits most data.',
+        batch_size: 'Rows per optimizer step; auto picks min(200, rows).',
+        momentum: 'Momentum of the sgd solver.',
+        nesterovs_momentum: 'Uses the Nesterov form of momentum with the sgd solver.',
+        early_stopping: 'Holds out a fraction of the training rows and stops when its score stops improving.',
+        validation_fraction: 'The fraction of training rows early stopping holds out.',
+        beta_1: 'Decay rate of the first-moment estimate in adam.',
+        beta_2: 'Decay rate of the second-moment estimate in adam.',
+        epsilon: 'Numerical stability term of adam, or the tube width of epsilon-insensitive loss.',
+        shuffle: 'Whether rows are shuffled each iteration.',
+        warm_start: 'Continues from the previous fit instead of starting over.',
+        verbose: 'Prints solver progress to the server log; the result is unchanged.',
+        power_t: 'Exponent of the inverse-scaling learning rate schedule.',
+        n_clusters: 'Number of groups to form.',
+        n_init: 'How many times the clustering is started from new centres; the best is kept.',
+        init: 'How the starting centres are chosen.',
+        eps: 'Neighbourhood radius of DBSCAN.',
+        min_samples: 'Rows a neighbourhood needs to form a core point.',
+        loss: 'The loss the model minimizes.',
+        n_components: 'Number of components kept.',
+        fit_intercept: 'Whether an intercept is fitted.',
+        positive: 'Constrains the coefficients to be non-negative.',
+        subsample: 'Fraction of rows each round is fitted on; below 1 adds randomness.',
+        damping: 'Damping factor of affinity propagation, between 0.5 and 1.',
+        linkage: 'How the distance between clusters is measured when they merge.',
+        threshold: 'Radius of a subcluster in Birch.',
+        branching_factor: 'Maximum subclusters per node in Birch.',
+        quantile: 'Quantile the estimator targets or uses for its bandwidth.',
+        nu: 'Upper bound on the fraction of margin errors and support vectors.',
+        cv: 'Number of cross-validation folds the estimator uses internally.',
+    };
+    let tipCounter = 0;
+    // Chrome marks a text field :focus-visible after a mouse click too, so the
+    // focus tip opens only when the focus came from the keyboard. Otherwise the
+    // tip covers the buttons under the field while a person types.
+    let focusFromKeyboard = false;
+    document.addEventListener('keydown', (ev) => { if (ev.key === 'Tab') focusFromKeyboard = true; }, true);
+    document.addEventListener('pointerdown', () => { focusFromKeyboard = false; }, true);
+    function attachHelp(target, text, control) {
+        if (!target || !text || target.classList.contains('tipword')) return null;
+        const id = 'tip' + (++tipCounter);
+        const tip = document.createElement('span');
+        tip.className = 'tip'; tip.id = id; tip.setAttribute('role', 'tooltip'); tip.textContent = text;
+        const wrap = document.createElement('span'); wrap.className = 'helpwrap';
+        wrap.appendChild(tip);
+        target.classList.add('tipword');
+        target.insertAdjacentElement('afterend', wrap);
+        const open = () => { wrap.classList.remove('dismissed'); wrap.classList.add('open'); };
+        const close = () => wrap.classList.remove('open');
+        target.addEventListener('mouseenter', open);
+        target.addEventListener('mouseleave', (ev) => { if (!wrap.contains(ev.relatedTarget)) close(); });
+        wrap.addEventListener('mouseleave', (ev) => { if (ev.relatedTarget !== target && !target.contains(ev.relatedTarget)) close(); });
+        if (control) {
+            control.addEventListener('focusin', () => { if (focusFromKeyboard) open(); });
+            control.addEventListener('focusout', (ev) => { if (!control.contains(ev.relatedTarget)) close(); });
+            control.setAttribute('aria-describedby', id);
+        }
+        return id;
+    }
+    document.addEventListener('keydown', (ev) => {
+        if (ev.key !== 'Escape') return;
+        document.querySelectorAll('.helpwrap.open').forEach((w) => { w.classList.remove('open'); w.classList.add('dismissed'); });
+    });
+    function paramName(labelText) {
+        let t = String(labelText).trim().replace(/:\s*$/, '');
+        t = t.split(' - ')[0].split(' (')[0].trim();
+        return t.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+    }
+    function init() {
+        Object.keys(HELP).forEach((id) => {
+            const ctl = document.getElementById(id);
+            if (!ctl) return;
+            // Buttons get no hover tip: an open tip would sit over the button.
+            const label = document.querySelector('label[for="' + id + '"]');
+            if (label) attachHelp(label, HELP[id], ctl);
+        });
+        // A label or heading that carries its explanation in the markup as
+        // data-help shows it on hover in place of a note under the control.
+        document.querySelectorAll('[data-help]').forEach((el) => {
+            const ctl = el.htmlFor ? document.getElementById(el.htmlFor) : null;
+            attachHelp(el, el.dataset.help, ctl);
+        });
+        // Hyperparameter labels read as one line: the name alone. The descriptor
+        // the markup carried ("# of trees (integer >=1)") moves into the hover
+        // explanation, after the sentence for the parameter when there is one.
+        document.querySelectorAll('[id$="Fields"] > label, [id^="nonreq"][id$="Params"] > label, [id^="advancedNonreq"][id$="Params"] > label, [id^="advanced"][id$="Fields"] label').forEach((label) => {
+            if (label.querySelector('input, select')) return;
+            const full = label.textContent.trim().replace(/:\s*$/, '');
+            const name = paramName(full);
+            const m = full.match(/^(.*?)(?:\s+-\s+|\s+\()(.*)$/);
+            const short = m ? m[1].trim() : full;
+            let descriptor = m ? full.slice(short.length).trim().replace(/^-\s*/, '') : '';
+            descriptor = descriptor.replace(/^\((.*)\)$/, '$1');
+            if (short && short !== full) label.textContent = short;
+            const sentence = PARAM_HELP[name] || PARAM_HELP[name.replace(/^class_/, '')] || '';
+            const text = [sentence, descriptor ? 'Accepts: ' + descriptor + '.' : ''].filter(Boolean).join(' ');
+            if (!text) return;
+            const ctl = label.htmlFor ? document.getElementById(label.htmlFor) : null;
+            attachHelp(label, text, ctl);
+        });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+    else init();
 })();

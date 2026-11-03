@@ -1,44 +1,40 @@
 """Plot bundles for regression, classification, and clustering (export_plots and helpers)."""
+
 from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Optional
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
-
-from python_scripts.plotting.plot_style import apply_plot_style
-from python_scripts.config import VIS_DIR
-
+from sklearn.calibration import CalibrationDisplay
+from sklearn.decomposition import PCA
+from sklearn.inspection import permutation_importance
 from sklearn.metrics import (
-    confusion_matrix,
     ConfusionMatrixDisplay,
-    precision_recall_curve,
-    average_precision_score,
-    roc_curve,
+    confusion_matrix,
     roc_auc_score,
+    roc_curve,
     silhouette_samples,
 )
 from sklearn.preprocessing import label_binarize
-from sklearn.calibration import CalibrationDisplay
-from sklearn.inspection import permutation_importance
-from sklearn.decomposition import PCA
 
-from python_scripts.plotting.plot_roc_curve import plot_roc_curve_from_estimator
-from python_scripts.plotting.plot_precision_recall_curve import plot_precision_recall_curve_from_estimator
+from python_scripts.config import VIS_DIR
 from python_scripts.plotting.plot_partial_dependence import plot_partial_dependence
+from python_scripts.plotting.plot_precision_recall_curve import plot_precision_recall_curve_from_estimator
+from python_scripts.plotting.plot_roc_curve import plot_roc_curve_from_estimator
 from python_scripts.plotting.plot_shap_summary_graphic import plot_shap_summary
+from python_scripts.plotting.plot_style import apply_plot_style
 
 logger = logging.getLogger(__name__)
 
 
-def _y_test_aligned_with_classifier(y_test, int_to_label: Optional[dict]) -> pd.Series:
+def _y_test_aligned_with_classifier(y_test, int_to_label: dict | None) -> pd.Series:
     """
-    Ordinal classification fits on integer codes; splits may still carry raw labels (strings).
+    Ordinal classification fits on integer codes. The splits can still contain the raw string labels.
     sklearn RocCurveDisplay / PrecisionRecallDisplay.from_estimator require y to match model.classes_.
     """
     if int_to_label is None:
@@ -71,10 +67,7 @@ def _scatter_pca_by_cluster(ax, pc1, pc2, labels, sns_module, centers_2d=None) -
     rank = {v: i for i, v in enumerate(uniq)}
     colors = [palette[rank[lv] % len(palette)] for lv in labs]
     ax.scatter(x, y, c=colors, s=35, alpha=0.85, edgecolors="none")
-    handles = [
-        Patch(facecolor=palette[rank[u] % len(palette)], edgecolor="none", label=str(int(u)))
-        for u in uniq
-    ]
+    handles = [Patch(facecolor=palette[rank[u] % len(palette)], edgecolor="none", label=str(int(u))) for u in uniq]
     if centers_2d is not None:
         ax.scatter(
             np.asarray(centers_2d[:, 0], dtype=float),
@@ -101,7 +94,7 @@ def _scatter_pca_by_cluster(ax, pc1, pc2, labels, sns_module, centers_2d=None) -
 
 def _fig_save_all_to_pdf(pdf_pages):
     """Save all open matplotlib figures to a PdfPages object.
-    
+
     Args:
         pdf_pages: PdfPages object from matplotlib.backends.backend_pdf
     """
@@ -109,6 +102,7 @@ def _fig_save_all_to_pdf(pdf_pages):
         fig = plt.figure(num)
         pdf_pages.savefig(fig)
         plt.close(fig)
+
 
 def _plot_feature_importance(model, feature_names, title="Feature importance (model-based)"):
     # Works for linear (coef_) and tree-based (feature_importances_); otherwise skip
@@ -119,13 +113,15 @@ def _plot_feature_importance(model, feature_names, title="Feature importance (mo
         elif hasattr(model, "coef_"):
             co = model.coef_
             import numpy as np
+
             vals = np.mean(np.abs(co), axis=0) if getattr(co, "ndim", 1) > 1 else np.abs(co)
     except Exception:
         vals = None
     if vals is None:
         return False
-    import numpy as np
     import matplotlib.pyplot as plt
+    import numpy as np
+
     try:
         import seaborn as sns
     except ImportError:
@@ -143,13 +139,16 @@ def _plot_feature_importance(model, feature_names, title="Feature importance (mo
     plt.tight_layout()
     return True
 
-def _plot_permutation_importance(model, X, y, feature_names, title="Permutation importance", n_repeats=10, random_state=42):
+
+def _plot_permutation_importance(
+    model, X, y, feature_names, title="Permutation importance", n_repeats=10, random_state=42
+):
     try:
         res = permutation_importance(model, X, y, n_repeats=n_repeats, random_state=random_state, n_jobs=None)
     except Exception:
         return False
-    import numpy as np
     import matplotlib.pyplot as plt
+
     try:
         import seaborn as sns
     except ImportError:
@@ -167,12 +166,14 @@ def _plot_permutation_importance(model, X, y, feature_names, title="Permutation 
     plt.tight_layout()
     return True
 
+
 def plot_regression_bundle(art: dict, units: str = ""):
     apply_plot_style()
     # Pred vs Actual, Residuals hist, Residuals vs Fitted, 2D density
+    import matplotlib.pyplot as plt
     import numpy as np
     import pandas as pd
-    import matplotlib.pyplot as plt
+
     try:
         import seaborn as sns
     except ImportError:
@@ -182,6 +183,7 @@ def plot_regression_bundle(art: dict, units: str = ""):
     tname = y_test.columns[0] if isinstance(y_test, pd.DataFrame) else "y"
     yt = y_test[tname] if isinstance(y_test, pd.DataFrame) else pd.Series(np.ravel(y_test), name="y")
     yp = y_pred[tname] if isinstance(y_pred, pd.DataFrame) else pd.Series(np.ravel(y_pred), name="ŷ")
+
     def save_plot(filename: str) -> None:
         plt.savefig(VIS_DIR / filename, dpi=150, bbox_inches="tight", facecolor="white")
 
@@ -255,41 +257,54 @@ def plot_regression_bundle(art: dict, units: str = ""):
     if ok:
         save_plot("regression_feature_importance.png")
     else:
+        # The model predicts in scaled target space when a y scaler was fit, so the
+        # scores have to be compared against the scaled targets, not the raw ones.
+        y_for_perm = yt.values if hasattr(yt, "values") else np.asarray(yt)
+        y_scaler = art.get("y_scaler")
+        if y_scaler is not None:
+            try:
+                y_for_perm = y_scaler.transform(np.asarray(y_for_perm).reshape(-1, 1)).ravel()
+            except Exception:
+                logger.debug("Could not scale targets for permutation importance", exc_info=True)
         ok_perm = _plot_permutation_importance(
             model,
             X_test.values,
-            yt.values if hasattr(yt, "values") else yt,
+            y_for_perm,
             feat_names,
             title="Permutation importance",
         )
         if ok_perm:
             save_plot("regression_permutation_importance.png")
-    
+
     # 6) Partial Dependence Plots (for tree-based models)
     try:
         # Only generate PDP for tree-based models that support it
-        if hasattr(model, 'feature_importances_') and len(feat_names) > 0:
+        if hasattr(model, "feature_importances_") and len(feat_names) > 0:
             # Plot top 6 most important features
             importances = model.feature_importances_
             top_features_idx = np.argsort(importances)[::-1][:6]
             top_features = [feat_names[i] if i < len(feat_names) else i for i in top_features_idx]
-            
+
             if top_features:
                 plot_partial_dependence(
-                    model, X_test, features=top_features,
+                    model,
+                    X_test,
+                    features=top_features,
                     model_name=art.get("model_name", "Model"),
                     pdf_pages=None,
                     feature_names=feat_names,
                     n_cols=3,
-                    grid_resolution=50
+                    grid_resolution=50,
                 )
                 save_plot("regression_partial_dependence.png")
     except Exception as e:
         logger.debug(f"Could not generate partial dependence plots: {e}")
 
+
 def _plot_single_confusion_matrix(y_true, y_pred, classes, plot_path: Path, title_suffix: str = ""):
     """Draw and save one confusion matrix to plot_path. Uses consistent string labels and clear grid."""
     import numpy as np
+
     apply_plot_style()
     classes = list(classes)
     class_list = [str(c).strip() for c in classes]
@@ -298,10 +313,7 @@ def _plot_single_confusion_matrix(y_true, y_pred, classes, plot_path: Path, titl
     y_true_str = np.array([str(x).strip() for x in y_true])
     y_pred_str = np.array([str(x).strip() for x in y_pred])
     cm = confusion_matrix(y_true_str, y_pred_str, labels=class_list)
-    short_classes = [
-        label if len(label) <= 12 else label[:10] + "…"
-        for label in class_list
-    ]
+    short_classes = [label if len(label) <= 12 else label[:10] + "…" for label in class_list]
     fig, ax = plt.subplots(figsize=(8, 6))
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=short_classes)
     disp.plot(ax=ax, cmap="Blues", values_format="d", colorbar=True)
@@ -321,10 +333,12 @@ def _plot_single_confusion_matrix(y_true, y_pred, classes, plot_path: Path, titl
 
 def plot_classification_bundle(art: dict, svctrue: bool):
     # Confusion matrix (train + test), ROC, PR, Calibration
-    import numpy as np, matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt
+    import numpy as np
+
     y_test = art["splits"]["y_test"]
-    y_train = art["splits"]["y_train"]
-    X_train = art["splits"]["X_train"]
+    art["splits"]["y_train"]
+    art["splits"]["X_train"]
     X_test = art["splits"]["X_test"]
     classes = art["metrics"]["classes"]
     y_pred = art["predictions"]["y_test_pred"]
@@ -332,6 +346,7 @@ def plot_classification_bundle(art: dict, svctrue: bool):
 
     # Ordinal: model may predict integers; map back to labels for display
     int_to_label = getattr(model, "_digiterra_int_to_label", None)
+
     def _to_labels(arr):
         if int_to_label is None:
             return np.asarray(arr).ravel()
@@ -357,24 +372,58 @@ def plot_classification_bundle(art: dict, svctrue: bool):
         dfc = model.decision_function(X_test)
         if getattr(dfc, "ndim", 1) == 1:
             import numpy as np
+
             y_score = np.c_[-dfc, dfc]
         else:
             y_score = dfc
     else:
         y_score = None
 
-    # 2) ROC curves using scikit-learn's RocCurveDisplay (micro-averaged -> roc_curve.png)
+    # 2) ROC curve -> roc_curve.png, which the result page offers as "ROC Curve (micro)".
+    #
+    # RocCurveDisplay.from_estimator takes a binary classifier only. On a three-class
+    # target it raised, the warning was logged, and roc_curve.png was never written,
+    # so the page asked for a file that did not exist and drew its alt text instead.
+    # The micro-average is what the option names: every one-against-rest decision
+    # pooled into a single curve, which is defined for any number of classes.
     if y_score is not None:
-        try:
-            plot_roc_curve_from_estimator(
-                model, X_test, y_for_sklearn,
-                model_name=art.get("model_name", "Model"),
-                pdf_pages=None,
-                plot_chance_level=True,
-                despine=True
-            )
-        except Exception as e:
-            logger.warning(f"Could not generate ROC curve using Display class: {e}")
+        if len(classes) == 2:
+            try:
+                plot_roc_curve_from_estimator(
+                    model,
+                    X_test,
+                    y_for_sklearn,
+                    model_name=art.get("model_name", "Model"),
+                    pdf_pages=None,
+                    plot_chance_level=True,
+                    despine=True,
+                )
+            except Exception as e:
+                logger.warning(f"Could not generate ROC curve using Display class: {e}")
+        else:
+            try:
+                fpr_micro, tpr_micro, _ = roc_curve(y_bin.ravel(), np.asarray(y_score).ravel())
+                auc_micro = roc_auc_score(y_bin, y_score, average="micro", multi_class="ovr")
+                fig_micro, ax_micro = plt.subplots(figsize=(6, 5))
+                ax_micro.plot(
+                    fpr_micro,
+                    tpr_micro,
+                    linewidth=2,
+                    label=f"Micro-average over {len(classes)} classes (AUC={auc_micro:.3f})",
+                )
+                ax_micro.plot([0, 1], [0, 1], "k--", linewidth=1, label="Chance")
+                ax_micro.set_xlabel("False Positive Rate")
+                ax_micro.set_ylabel("True Positive Rate")
+                ax_micro.set_title(f"{art.get('model_name', 'Model')} | ROC (micro-average)")
+                ax_micro.legend(loc="lower right", fontsize=9)
+                ax_micro.set_xlim([0, 1])
+                ax_micro.set_ylim([0, 1.05])
+                ax_micro.grid(True, alpha=0.7)
+                plt.tight_layout()
+                plt.savefig(VIS_DIR / "roc_curve.png", dpi=150, bbox_inches="tight", facecolor="white")
+                plt.close(fig_micro)
+            except Exception as e:
+                logger.warning(f"Could not generate the micro-average ROC: {e}")
         # Per-class ROC (one curve per class) -> roc_curve_per_class.png
         try:
             fig_roc, ax_roc = plt.subplots(figsize=(6, 5))
@@ -398,24 +447,32 @@ def plot_classification_bundle(art: dict, svctrue: bool):
 
         # 3) PR curves using scikit-learn's PrecisionRecallDisplay
         try:
+            # The positive class is the estimator's second class, whatever the labels
+            # are called; without it string labels raised "pos_label=1 is not a valid
+            # label" and the curve was never drawn (review of 2026-09-24).
             plot_precision_recall_curve_from_estimator(
-                model, X_test, y_for_sklearn,
+                model,
+                X_test,
+                y_for_sklearn,
                 model_name=art.get("model_name", "Model"),
                 pdf_pages=None,
                 plot_chance_level=True,
-                despine=True
+                despine=True,
+                pos_label=(list(getattr(model, "classes_", [None, None]))[1] if len(classes) == 2 else None),
             )
         except Exception as e:
             logger.warning(f"Could not generate PR curve using Display class: {e}")
             # Fallback: save micro-averaged PR curve to the expected filename
-            from sklearn.metrics import precision_recall_curve, average_precision_score
+            from sklearn.metrics import average_precision_score, precision_recall_curve
+
             try:
-                y_bin_flat = y_bin.ravel()
+                y_bin.ravel()
                 y_score_flat = y_score.reshape(y_bin.shape[0], -1)
                 n_classes = y_score_flat.shape[1]
                 prec_list, rec_list = [], []
                 for i in range(n_classes):
-                    rec, prec, _ = precision_recall_curve(y_bin[:, i], y_score[:, i])
+                    # sklearn returns precision first, then recall.
+                    prec, rec, _ = precision_recall_curve(y_bin[:, i], y_score[:, i])
                     prec_list.append(prec)
                     rec_list.append(rec)
                 fig, ax = plt.subplots(figsize=(6, 5))
@@ -456,8 +513,13 @@ def plot_classification_bundle(art: dict, svctrue: bool):
             shap_feat_names = X_train_art.columns.tolist()
         if shap_feat_names and len(X_train_art) > 0:
             plot_shap_summary(
-                effective_model, X_train_art, shap_feat_names,
-                art.get("model_name", "Model"), pdf_pages=None, file_suffix=""
+                effective_model,
+                X_train_art,
+                shap_feat_names,
+                art.get("model_name", "Model"),
+                pdf_pages=None,
+                file_suffix="",
+                seed=int(art.get("seed", 42)),
             )
     except Exception as e:
         logger.warning("Could not generate SHAP for classifier: %s", e)
@@ -469,40 +531,42 @@ def plot_classification_bundle(art: dict, svctrue: bool):
         _ = _plot_permutation_importance(
             model, X_test.values, np.asarray(y_for_sklearn).ravel(), feat_names, title="Permutation importance"
         )
-    
+
     # 6) Partial Dependence Plots (for tree-based models)
     try:
         # Only generate PDP for tree-based models that support it
-        if hasattr(model, 'feature_importances_') and len(feat_names) > 0:
+        if hasattr(model, "feature_importances_") and len(feat_names) > 0:
             # Plot top 6 most important features
-            if ok and hasattr(model, 'feature_importances_'):
+            if ok and hasattr(model, "feature_importances_"):
                 importances = model.feature_importances_
                 top_features_idx = np.argsort(importances)[::-1][:6]
                 top_features = [feat_names[i] if i < len(feat_names) else i for i in top_features_idx]
             else:
                 # Use first few features if no importance available
                 top_features = feat_names[:6] if len(feat_names) >= 6 else feat_names
-            
+
             if top_features:
                 plot_partial_dependence(
-                    model, X_test, features=top_features,
+                    model,
+                    X_test,
+                    features=top_features,
                     model_name=art.get("model_name", "Model"),
                     pdf_pages=None,
                     feature_names=feat_names,
                     n_cols=3,
-                    grid_resolution=50
+                    grid_resolution=50,
                 )
     except Exception as e:
         logger.debug(f"Could not generate partial dependence plots: {e}")
 
 
-
 def plot_clustering_bundle(art: dict):
     # Silhouette plot, PCA scatter (train/test), cluster size bar
     apply_plot_style()
+    import matplotlib.pyplot as plt
     import numpy as np
     import pandas as pd
-    import matplotlib.pyplot as plt
+
     try:
         import seaborn as sns
     except ImportError:
@@ -516,11 +580,7 @@ def plot_clustering_bundle(art: dict):
     labels_test = art["clusters"]["labels_test"] if len(X_test_df) else None
     n_test = len(X_test_df) if X_test is not None else 0
     lt = np.asarray(labels_test).ravel() if labels_test is not None else np.array([])
-    labels_test_ok = (
-        n_test > 0
-        and labels_test is not None
-        and lt.size == n_test
-    )
+    labels_test_ok = n_test > 0 and labels_test is not None and lt.size == n_test
 
     # 1) Silhouette plot (iterate actual cluster labels — not range(best_k), which breaks for DBSCAN etc.)
     if len(np.unique(labels_train)) > 1:
@@ -598,7 +658,8 @@ def plot_clustering_bundle(art: dict):
     plt.savefig(VIS_DIR / "cluster_sizes.png", dpi=150, bbox_inches="tight", facecolor="white")
     plt.close(fig)
 
-def export_plots(art: dict, pdf_pages, units: str = "", svctrue=False) -> Optional[str]:
+
+def export_plots(art: dict, pdf_pages, units: str = "", svctrue=False) -> str | None:
     """
     Auto-detects problem type from art['config'].problem_type and generates a bundle of plots.
     If out_pdf_path is provided, saves all current figures to that PDF and returns the path.

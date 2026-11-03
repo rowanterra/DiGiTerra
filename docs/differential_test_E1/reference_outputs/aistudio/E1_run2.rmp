@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?><process version="10.3.000">
+  <context>
+    <input/>
+    <output/>
+    <macros/>
+  </context>
+  <operator activated="true" class="process" compatibility="10.3.000" expanded="true" name="Process">
+    <parameter key="logverbosity" value="init"/>
+    <parameter key="random_seed" value="2001"/>
+    <process expanded="true">
+      <!-- E1 run 2. Cases R1 (linear regression on diabetes) and C1 (k-NN on iris).
+           Paths are filled in by run_all.sh. "order" is set to role id so no learner reads it. -->
+      <operator activated="true" class="read_csv" compatibility="10.3.000" expanded="true" height="68" name="Read diabetes train" width="90" x="45" y="34">
+        <parameter key="csv_file" value="/Users/rowanterra/Terra Cognita LLC/DiGiTerra_diff_test_2026-09-24/E1/data/diabetes_E1_train.csv"/>
+        <parameter key="column_separators" value=","/>
+        <parameter key="first_row_as_names" value="true"/>
+        <parameter key="encoding" value="UTF-8"/>
+        <parameter key="parse_numbers" value="true"/>
+        <parameter key="decimal_character" value="."/>
+        <parameter key="read_not_matching_values_as_missings" value="false"/>
+        <list key="annotations"/>
+        <list key="data_set_meta_data_information"/>
+      </operator>
+      <operator activated="true" class="set_role" compatibility="10.3.000" expanded="true" height="82" name="Roles diabetes train" width="90" x="179" y="34">
+        <parameter key="attribute_name" value="target"/>
+        <parameter key="target_role" value="label"/>
+        <list key="set_additional_roles">
+          <parameter key="order" value="id"/>
+        </list>
+      </operator>
+      <operator activated="true" class="read_csv" compatibility="10.3.000" expanded="true" height="68" name="Read diabetes test" width="90" x="45" y="136">
+        <parameter key="csv_file" value="/Users/rowanterra/Terra Cognita LLC/DiGiTerra_diff_test_2026-09-24/E1/data/diabetes_E1_test.csv"/>
+        <parameter key="column_separators" value=","/>
+        <parameter key="first_row_as_names" value="true"/>
+        <parameter key="encoding" value="UTF-8"/>
+        <parameter key="parse_numbers" value="true"/>
+        <parameter key="decimal_character" value="."/>
+        <list key="annotations"/>
+        <list key="data_set_meta_data_information"/>
+      </operator>
+      <operator activated="true" class="set_role" compatibility="10.3.000" expanded="true" height="82" name="Roles diabetes test" width="90" x="179" y="136">
+        <parameter key="attribute_name" value="target"/>
+        <parameter key="target_role" value="label"/>
+        <list key="set_additional_roles">
+          <parameter key="order" value="id"/>
+        </list>
+      </operator>
+      <operator activated="true" class="linear_regression" compatibility="10.3.000" expanded="true" height="103" name="Linear Regression" width="90" x="313" y="34">
+        <parameter key="feature_selection" value="none"/>
+        <parameter key="eliminate_colinear_features" value="false"/>
+        <parameter key="use_bias" value="true"/>
+        <parameter key="ridge" value="0.0"/>
+      </operator>
+      <operator activated="true" class="apply_model" compatibility="10.3.000" expanded="true" height="82" name="Apply LR" width="90" x="447" y="136">
+        <list key="application_parameters"/>
+      </operator>
+      <operator activated="true" class="performance_regression" compatibility="10.3.000" expanded="true" height="82" name="Performance R1" width="90" x="581" y="136">
+        <parameter key="main_criterion" value="root_mean_squared_error"/>
+        <parameter key="root_mean_squared_error" value="true"/>
+        <parameter key="absolute_error" value="true"/>
+        <parameter key="squared_correlation" value="true"/>
+        <parameter key="squared_error" value="false"/>
+      </operator>
+      <operator activated="true" class="performance_to_data" compatibility="10.3.000" expanded="true" height="82" name="R1 performance to data" width="90" x="715" y="136"/>
+      <operator activated="true" class="write_csv" compatibility="10.3.000" expanded="true" height="82" name="Write R1 metrics" width="90" x="849" y="136">
+        <parameter key="csv_file" value="/Users/rowanterra/Terra Cognita LLC/DiGiTerra_diff_test_2026-09-24/E1/reference_outputs/aistudio/R1_aistudio_run2_metrics.csv"/>
+        <parameter key="column_separator" value=","/>
+        <parameter key="write_attribute_names" value="true"/>
+        <parameter key="quote_nominal_values" value="false"/>
+        <parameter key="format_date_attributes" value="false"/>
+        <parameter key="append_to_file" value="false"/>
+        <parameter key="encoding" value="UTF-8"/>
+      </operator>
+      <operator activated="true" class="write_csv" compatibility="10.3.000" expanded="true" height="82" name="Write R1 predictions" width="90" x="715" y="238">
+        <parameter key="csv_file" value="/Users/rowanterra/Terra Cognita LLC/DiGiTerra_diff_test_2026-09-24/E1/reference_outputs/aistudio/R1_aistudio_run2_predictions.csv"/>
+        <parameter key="column_separator" value=","/>
+        <parameter key="write_attribute_names" value="true"/>
+        <parameter key="quote_nominal_values" value="false"/>
+        <parameter key="format_date_attributes" value="false"/>
+        <parameter key="append_to_file" value="false"/>
+        <parameter key="encoding" value="UTF-8"/>
+      </operator>
+      <operator activated="true" class="weights_to_data" compatibility="10.3.000" expanded="true" height="68" name="LR weights to data" width="90" x="447" y="34"/>
+      <operator activated="true" class="write_csv" compatibility="10.3.000" expanded="true" height="82" name="Write R1 coefficients" width="90" x="581" y="34">
+        <parameter key="csv_file" value="/Users/rowanterra/Terra Cognita LLC/DiGiTerra_diff_test_2026-09-24/E1/reference_outputs/aistudio/R1_aistudio_run2_coefficients.csv"/>
+        <parameter key="column_separator" value=","/>
+        <parameter key="write_attribute_names" value="true"/>
+        <parameter key="quote_nominal_values" value="false"/>
+        <parameter key="append_to_file" value="false"/>
+        <parameter key="encoding" value="UTF-8"/>
+      </operator>
+
+      <operator activated="true" class="read_csv" compatibility="10.3.000" expanded="true" height="68" name="Read iris train" width="90" x="45" y="391">
+        <parameter key="csv_file" value="/Users/rowanterra/Terra Cognita LLC/DiGiTerra_diff_test_2026-09-24/E1/data/iris_E1_train.csv"/>
+        <parameter key="column_separators" value=","/>
+        <parameter key="first_row_as_names" value="true"/>
+        <parameter key="encoding" value="UTF-8"/>
+        <parameter key="parse_numbers" value="true"/>
+        <parameter key="decimal_character" value="."/>
+        <list key="annotations"/>
+        <list key="data_set_meta_data_information"/>
+      </operator>
+      <operator activated="true" class="set_role" compatibility="10.3.000" expanded="true" height="82" name="Roles iris train" width="90" x="179" y="391">
+        <parameter key="attribute_name" value="species"/>
+        <parameter key="target_role" value="label"/>
+        <list key="set_additional_roles">
+          <parameter key="order" value="id"/>
+        </list>
+      </operator>
+      <operator activated="true" class="read_csv" compatibility="10.3.000" expanded="true" height="68" name="Read iris test" width="90" x="45" y="493">
+        <parameter key="csv_file" value="/Users/rowanterra/Terra Cognita LLC/DiGiTerra_diff_test_2026-09-24/E1/data/iris_E1_test.csv"/>
+        <parameter key="column_separators" value=","/>
+        <parameter key="first_row_as_names" value="true"/>
+        <parameter key="encoding" value="UTF-8"/>
+        <parameter key="parse_numbers" value="true"/>
+        <parameter key="decimal_character" value="."/>
+        <list key="annotations"/>
+        <list key="data_set_meta_data_information"/>
+      </operator>
+      <operator activated="true" class="set_role" compatibility="10.3.000" expanded="true" height="82" name="Roles iris test" width="90" x="179" y="493">
+        <parameter key="attribute_name" value="species"/>
+        <parameter key="target_role" value="label"/>
+        <list key="set_additional_roles">
+          <parameter key="order" value="id"/>
+        </list>
+      </operator>
+      <operator activated="true" class="k_nn" compatibility="10.3.000" expanded="true" height="82" name="k-NN" width="90" x="313" y="391">
+        <parameter key="k" value="5"/>
+        <parameter key="weighted_vote" value="false"/>
+        <parameter key="measure_types" value="NumericalMeasures"/>
+        <parameter key="numerical_measure" value="EuclideanDistance"/>
+      </operator>
+      <operator activated="true" class="apply_model" compatibility="10.3.000" expanded="true" height="82" name="Apply kNN" width="90" x="447" y="493">
+        <list key="application_parameters"/>
+      </operator>
+      <operator activated="true" class="performance_classification" compatibility="10.3.000" expanded="true" height="82" name="Performance C1" width="90" x="581" y="493">
+        <parameter key="main_criterion" value="accuracy"/>
+        <parameter key="accuracy" value="true"/>
+        <list key="class_weights"/>
+      </operator>
+      <operator activated="true" class="performance_to_data" compatibility="10.3.000" expanded="true" height="82" name="C1 performance to data" width="90" x="715" y="493"/>
+      <operator activated="true" class="write_csv" compatibility="10.3.000" expanded="true" height="82" name="Write C1 metrics" width="90" x="849" y="493">
+        <parameter key="csv_file" value="/Users/rowanterra/Terra Cognita LLC/DiGiTerra_diff_test_2026-09-24/E1/reference_outputs/aistudio/C1_aistudio_run2_metrics.csv"/>
+        <parameter key="column_separator" value=","/>
+        <parameter key="write_attribute_names" value="true"/>
+        <parameter key="quote_nominal_values" value="false"/>
+        <parameter key="append_to_file" value="false"/>
+        <parameter key="encoding" value="UTF-8"/>
+      </operator>
+      <operator activated="true" class="write_csv" compatibility="10.3.000" expanded="true" height="82" name="Write C1 predictions" width="90" x="715" y="595">
+        <parameter key="csv_file" value="/Users/rowanterra/Terra Cognita LLC/DiGiTerra_diff_test_2026-09-24/E1/reference_outputs/aistudio/C1_aistudio_run2_predictions.csv"/>
+        <parameter key="column_separator" value=","/>
+        <parameter key="write_attribute_names" value="true"/>
+        <parameter key="quote_nominal_values" value="false"/>
+        <parameter key="append_to_file" value="false"/>
+        <parameter key="encoding" value="UTF-8"/>
+      </operator>
+
+      <connect from_op="Read diabetes train" from_port="output" to_op="Roles diabetes train" to_port="example set input"/>
+      <connect from_op="Roles diabetes train" from_port="example set output" to_op="Linear Regression" to_port="training set"/>
+      <connect from_op="Read diabetes test" from_port="output" to_op="Roles diabetes test" to_port="example set input"/>
+      <connect from_op="Linear Regression" from_port="model" to_op="Apply LR" to_port="model"/>
+      <connect from_op="Linear Regression" from_port="weights" to_op="LR weights to data" to_port="attribute weights"/>
+      <connect from_op="LR weights to data" from_port="example set" to_op="Write R1 coefficients" to_port="input"/>
+      <connect from_op="Roles diabetes test" from_port="example set output" to_op="Apply LR" to_port="unlabelled data"/>
+      <connect from_op="Apply LR" from_port="labelled data" to_op="Performance R1" to_port="labelled data"/>
+      <connect from_op="Performance R1" from_port="performance" to_op="R1 performance to data" to_port="performance vector"/>
+      <connect from_op="R1 performance to data" from_port="example set" to_op="Write R1 metrics" to_port="input"/>
+      <connect from_op="Performance R1" from_port="example set" to_op="Write R1 predictions" to_port="input"/>
+
+      <connect from_op="Read iris train" from_port="output" to_op="Roles iris train" to_port="example set input"/>
+      <connect from_op="Roles iris train" from_port="example set output" to_op="k-NN" to_port="training set"/>
+      <connect from_op="Read iris test" from_port="output" to_op="Roles iris test" to_port="example set input"/>
+      <connect from_op="k-NN" from_port="model" to_op="Apply kNN" to_port="model"/>
+      <connect from_op="Roles iris test" from_port="example set output" to_op="Apply kNN" to_port="unlabelled data"/>
+      <connect from_op="Apply kNN" from_port="labelled data" to_op="Performance C1" to_port="labelled data"/>
+      <connect from_op="Performance C1" from_port="performance" to_op="C1 performance to data" to_port="performance vector"/>
+      <connect from_op="C1 performance to data" from_port="example set" to_op="Write C1 metrics" to_port="input"/>
+      <connect from_op="Performance C1" from_port="example set" to_op="Write C1 predictions" to_port="input"/>
+      <portSpacing port="source_input 1" spacing="0"/>
+      <portSpacing port="sink_result 1" spacing="0"/>
+    </process>
+  </operator>
+</process>

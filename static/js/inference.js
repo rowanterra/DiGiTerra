@@ -168,7 +168,7 @@ predictionForm.addEventListener('submit', async (e) => {
                 })() : '';
                 const inferenceDistLabel = 'Inference distribution';
                 previewChartHtml = `
-                    <h4 style="margin: 0 0 8px 0;">Inference visuals (${firstCol})</h4>
+                    <h4 style="margin: 0 0 8px 0;">Inference visuals (${escapeHtml(firstCol)})</h4>
                     <p style="margin: 0 0 10px 0; font-size: 0.9rem; color: #666;">Training Predicted vs Actual with inference points overlaid (left); inference distribution (right).</p>
                     <div class="inference-visuals-row" style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;">
                         ${(trainingViz || inferenceVizUrl) ? `<div class="inference-training-plot-wrap" style="flex: 0 1 320px; min-width: 200px;"><p style="margin: 0 0 6px 0; font-size: 0.85rem; font-weight: 600;">${inferenceVizUrl ? 'Predicted vs Actual (training + inference)' : 'Training plot + inference overlay'}</p>${leftPlotHtml}</div>` : ''}
@@ -225,15 +225,30 @@ predictionForm.addEventListener('submit', async (e) => {
                 <p style="margin: 0 0 12px 0; font-size: 0.95rem; color: #666;">Spread the model was built on.</p>
                 <div class="model-stats-table-wrapper" style="margin-bottom: 20px;">${renderSummaryTable(trainingSummaryForPanel, numericKeysForPanels)}</div>
             ` : '';
-            const modelGraphicSectionHtml = trainingViz ? `
-                <h3 style="margin: 0 0 8px 0;">Model used (training performance)</h3>
-                <p style="margin: 0 0 12px 0; font-size: 0.95rem; color: #666;">Performance graphic from the model you trained.</p>
-                <img src="${trainingPerfUrl || trainingVizUrl}" alt="Training performance" class="inference-model-graphic-img" style="display: block; max-height: 400px; width: auto; object-fit: contain;">
+            // Two graphics share one frame: the trained model's performance, and the
+            // spread of every predictor in the training rows against the rows just
+            // predicted (the check that the new data lies where the model was fitted).
+            const spreadUrl = data.spread_visualization
+                ? withApiRoot('/user-visualizations/' + data.spread_visualization) + '?v=' + encodeURIComponent(data.spread_visualization_version || Date.now())
+                : '';
+            const perfUrl = trainingViz ? (trainingPerfUrl || trainingVizUrl) : '';
+            const graphicChoices = [
+                spreadUrl ? { key: 'spread', label: 'Predictor spread: training rows against new rows', url: spreadUrl, alt: 'Predictor spread of training rows and new rows' } : null,
+                perfUrl ? { key: 'performance', label: 'Model used (training performance)', url: perfUrl, alt: 'Training performance' } : null,
+            ].filter(Boolean);
+            const imgStyle = 'display: block; width: 100%; max-width: 860px; height: auto; object-fit: contain;';
+            const modelGraphicSectionHtml = graphicChoices.length ? `
+                <h3 style="margin: 0 0 8px 0;">Graphic</h3>
+                <label for="inferenceGraphicSelect" class="sr-only">Select graphic</label>
+                <select id="inferenceGraphicSelect" style="margin: 0 0 8px 0; max-width: 100%;">
+                    ${graphicChoices.map(g => `<option value="${g.key}">${escapeHtml(g.label)}</option>`).join('')}
+                </select>
+                <img id="inferenceGraphic" src="${graphicChoices[0].url}" alt="${escapeHtml(graphicChoices[0].alt)}" class="inference-model-graphic-img" style="${imgStyle}">
             ` : '';
             const rightPanelHtml = (trainingSummaryTableHtml || modelGraphicSectionHtml) ? `
-                <div class="inference-model-graphic" style="flex: 0 0 calc(50% - 12px); min-width: 200px; overflow: auto; align-self: flex-start;">
-                    ${trainingSummaryTableHtml}
+                <div class="inference-model-graphic" style="flex: 1.6 1 480px; min-width: 0; align-self: flex-start;">
                     ${modelGraphicSectionHtml}
+                    ${trainingSummaryTableHtml}
                 </div>
             ` : '';
 
@@ -245,11 +260,11 @@ predictionForm.addEventListener('submit', async (e) => {
                     <a href="${withApiRoot('/download/predictions.csv')}?download_name=${encodeURIComponent(predictionDownloadName)}" onclick="return downloadFile('predictions.csv', '${predictionDownloadName}')">
                         <button class="predictionresultButton export-button">Download Results CSV</button>
                     </a>
-                    <button class="secondary-button" onclick="backToModel()">Back To Model</button>
+                    <button class="secondary-button" onclick="backToModel()">Back to Modeling</button>
                     <button class="secondary-button" onclick="newPredict()">Run inference on another dataset</button>
                 </div>
-                <div class="inference-results-content" style="display: flex; flex-wrap: nowrap; gap: 24px; align-items: flex-start;">
-                    <div class="inference-summary-section" style="flex: 0 0 calc(50% - 12px); min-width: 200px; overflow: auto; align-self: flex-start;">
+                <div class="inference-results-content" style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+                    <div class="inference-summary-section" style="flex: 1 1 360px; min-width: 0; align-self: flex-start;">
                         <h3 style="margin: 0 0 8px 0;">Inference summary</h3>
                         <p style="margin: 0 0 12px 0; font-size: 0.95rem; color: #666;">Descriptive statistics for inferred (predicted) values (same style as Data Exploration).</p>
                         ${classificationNote}
@@ -259,6 +274,24 @@ predictionForm.addEventListener('submit', async (e) => {
                     ${rightPanelHtml}
                 </div>
             `
+            showApplicabilityLine(data.applicability_summary)
+            showUncertaintyLine(data.uncertainty_summary)
+            showCheckBlock(data.check)
+            // The example rows were drawn from a known species each, so the page can
+            // say how many came back the way they were drawn. Only for those rows:
+            // a person's own file has no key to compare against.
+            if (window.digiterraExampleRows) {
+                window.digiterraExampleRows = false
+                showExampleRowAgreement(preview)
+            }
+            const graphicSelect = document.getElementById('inferenceGraphicSelect')
+            if (graphicSelect) {
+                graphicSelect.addEventListener('change', () => {
+                    const g = graphicChoices.find(x => x.key === graphicSelect.value)
+                    const img = document.getElementById('inferenceGraphic')
+                    if (g && img) { img.src = g.url; img.alt = g.alt }
+                })
+            }
             uploadPredictDf.classList.add('hidden')
         }
         else {
@@ -298,7 +331,7 @@ if (automlForm) {
         if (!processForm) {
             const errorDiv = getCachedElement('errorDiv');
             if (errorDiv) {
-                showError(errorDiv, 'Error: Unable to find model configuration. Please configure your data first.');
+                showError(errorDiv, 'DiGiTerra has no model configuration. Configure the data first.');
                 errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
             return;
@@ -364,7 +397,7 @@ function wireAdvancedOptimizationFormSubmit(form) {
         if (!selectedModel) {
             const errorDiv = getCachedElement('errorDiv');
             if (errorDiv) {
-                showError(errorDiv, 'Please select a model before running with advanced options.');
+                showError(errorDiv, 'Select a model before you run with advanced options.');
                 errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
             return;
@@ -373,7 +406,7 @@ function wireAdvancedOptimizationFormSubmit(form) {
         if (!processForm) {
             const errorDiv = getCachedElement('errorDiv');
             if (errorDiv) {
-                showError(errorDiv, 'Error: Unable to find model configuration. Please configure your data first.');
+                showError(errorDiv, 'DiGiTerra has no model configuration. Configure the data first.');
                 errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
             return;
@@ -401,3 +434,151 @@ function wireAdvancedOptimizationFormSubmit(form) {
 }
 wireAdvancedOptimizationFormSubmit(document.getElementById('advancedOptimizationForm'));
 wireAdvancedOptimizationFormSubmit(document.getElementById('advancedOptimizationLegacyForm'));
+
+
+// Bundle import is available where the server allows it (desktop builds). The
+// form stays hidden until a probe of /import-bundle says the route accepts uploads.
+(function wireBundleImport() {
+    const form = document.getElementById('importBundleForm');
+    if (!form) return;
+    fetch('/import-bundle', { method: 'POST', body: new FormData() })
+        .then(r => { if (r.status !== 403) form.classList.remove('hidden'); })
+        .catch(() => {});
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const status = document.getElementById('importBundleStatus');
+        status.textContent = 'Loading bundle...';
+        try {
+            const response = await fetch('/import-bundle', { method: 'POST', body: new FormData(form) });
+            const data = await response.json();
+            if (!response.ok) {
+                status.textContent = data.error || 'DiGiTerra cannot load the bundle.';
+                return;
+            }
+            const model = data.model || {};
+            const features = Array.isArray(model.features) ? model.features.join(', ') : '';
+            status.textContent = `Loaded ${model.name || 'model'} (${model.problem_type || ''}) trained ${data.created_at || ''}. Features: ${features}. ${data.note || ''}`;
+        } catch (err) {
+            status.textContent = 'DiGiTerra cannot load the bundle.';
+        }
+    });
+})();
+
+
+/* How many of the example rows came back as the species they were drawn from.
+
+   penguins_new_key.csv holds one species per row_id, and predictions.csv keeps the
+   order of the file it scored, so the two line up row for row. The count is a
+   sanity check on the run rather than a score: the rows are synthetic. */
+async function showExampleRowAgreement(preview) {
+    try {
+        const predictedKey = Object.keys(preview).find((k) => k.startsWith('Predicted_'))
+        if (!predictedKey) return
+        const predicted = preview[predictedKey]
+        const response = await fetch(`${API_ROOT}/example-data/penguins_new_key.csv`)
+        if (!response.ok) return
+        const rows = (await response.text()).trim().split('\n').slice(1)
+        const expected = rows.map((line) => line.split(',')[1].trim())
+        if (!expected.length || expected.length !== predicted.length) return
+        let agree = 0
+        for (let i = 0; i < expected.length; i += 1) {
+            if (String(predicted[i]).trim() === expected[i]) agree += 1
+        }
+        const host = document.querySelector('.inference-summary-section')
+        if (!host) return
+        const line = document.createElement('p')
+        line.id = 'exampleRowAgreement'
+        line.className = 'field-note'
+        line.textContent = `${agree} of ${expected.length} rows match the species each row was drawn from.`
+        host.appendChild(line)
+    } catch (err) {
+        console.error('Could not compare the example rows with the key:', err)
+    }
+}
+
+
+/* One line saying how many of these predictions rest on data the model has seen.
+   A model answers for any row whose columns parse, and nothing else on the page
+   separates a prediction on familiar data from one on a row nothing like it. */
+function showApplicabilityLine(summary) {
+    if (!summary || !summary.rows) return
+    const host = document.querySelector('.inference-summary-section')
+    if (!host) return
+    const line = document.createElement('p')
+    line.id = 'applicabilitySummary'
+    line.className = 'field-note'
+    const outOfRange = summary.out_of_range === 1
+        ? '1 row has a value outside the training range.'
+        : `${summary.out_of_range} rows have a value outside the training range.`
+    line.textContent = summary.novel === 0
+        ? `No row scores as unlike the training data. ${outOfRange}`
+        : `${summary.novel} of ${summary.rows} rows score as unlike the training data. ${outOfRange}`
+    host.appendChild(line)
+}
+
+
+/* One line on how much to trust a single prediction: the interval's half-width for a
+   regression run, or the least confident prediction for a classifier. */
+function showUncertaintyLine(summary) {
+    if (!summary) return
+    const host = document.querySelector('.inference-summary-section')
+    if (!host) return
+    let text = ''
+    if (summary.kind === 'interval' && summary.half_width !== null && summary.half_width !== undefined) {
+        const units = summary.units ? ` ${summary.units}` : ''
+        text = `${summary.coverage}% intervals are half-width ${summary.half_width.toPrecision(4)}${units}.`
+    } else if (summary.kind === 'probability' && summary.lowest !== null && summary.lowest !== undefined) {
+        text = `Lowest class probability among predictions is ${summary.lowest.toFixed(3)}.`
+    }
+    if (!text) return
+    const line = document.createElement('p')
+    line.id = 'uncertaintySummary'
+    line.className = 'field-note'
+    line.textContent = text
+    host.appendChild(line)
+}
+
+
+/* The check against measured values. A file that carries the target column (or the
+   target name with _measured, _true or _actual) is scored against it here; a file
+   without one is scored blind, and one line says which column would make the check.
+   Both are ordinary uses: the person decides whether the answers travel with the
+   rows. */
+function showCheckBlock(check) {
+    const host = document.querySelector('.inference-summary-section')
+    if (!host || !check) return
+    const block = document.createElement('div')
+    block.id = 'inferenceCheck'
+    block.className = 'inference-check'
+    const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+    if (!check.found) {
+        const names = (check.accepted || []).slice(0, 2).map((n) => `<code>${esc(n)}</code>`).join(' or ')
+        block.innerHTML = `<p class="field-note">Scored blind. To check the predictions against measured values, include a column named ${names} in the file.</p>`
+        host.appendChild(block)
+        return
+    }
+    // The note that says there are no true labels no longer applies.
+    const note = document.querySelector('.inference-classification-note')
+    if (note) note.remove()
+    const dropped = check.dropped ? ` ${check.dropped} row${check.dropped === 1 ? '' : 's'} without both values left out.` : ''
+    let body = ''
+    if (check.error) {
+        body = `<p class="field-note">${esc(check.error)}</p>`
+    } else if (check.kind === 'regression') {
+        const f = (v, d = 3) => (v === null || v === undefined ? 'n/a' : Number(v).toFixed(d))
+        body = `<table class="inference-check-table"><tbody>
+            <tr><th>n</th><td>${check.n}</td></tr>
+            <tr><th>R&sup2;</th><td>${f(check.r2)}</td></tr>
+            <tr><th>RMSE</th><td>${f(check.rmse)}</td></tr>
+            <tr><th>MAE</th><td>${f(check.mae)}</td></tr>
+            <tr><th>Mean bias (predicted minus measured)</th><td>${f(check.bias)}</td></tr>
+        </tbody></table>`
+    } else {
+        const labels = check.labels || []
+        const rows = (check.confusion || []).map((row, i) => `<tr><th>${esc(labels[i])}</th>${row.map((v, j) => `<td class="num${i === j ? ' diag' : ''}">${v}</td>`).join('')}</tr>`).join('')
+        body = `<p>Accuracy ${(check.accuracy * 100).toFixed(1)}%, macro F1 ${Number(check.macro_f1).toFixed(3)} on ${check.n} rows.</p>
+            <table class="inference-check-table confusion"><thead><tr><th>measured \\ predicted</th>${labels.map((l) => `<th>${esc(l)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`
+    }
+    block.innerHTML = `<h4>Check against measured values</h4><p class="field-note">Column <code>${esc(check.column)}</code> in the scored file.${dropped}</p>${body}`
+    host.appendChild(block)
+}

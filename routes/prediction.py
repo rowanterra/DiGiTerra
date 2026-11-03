@@ -1,7 +1,8 @@
 """Prediction (inference) route."""
+
 from flask import Blueprint, current_app, jsonify, request
 
-from core.helpers import ensure_user_vis_dir, normalize_predict_preprocess_mode, with_prefix, allowed_file
+from core.helpers import allowed_file, ensure_user_vis_dir, normalize_predict_preprocess_mode, with_prefix
 from core.state import get_session_storage
 from python_scripts.app_prediction import run_predict
 

@@ -7,15 +7,17 @@ Invoked by app.py route handlers. Receives store and request data to avoid circu
 import logging
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import matplotlib.pyplot as plt
-import python_scripts.plotting.plot_style  # noqa: F401 - apply soft seaborn-like style
 from matplotlib.backends.backend_pdf import PdfPages
 from werkzeug.utils import secure_filename
 
+import python_scripts.plotting.plot_style  # noqa: F401 - apply soft seaborn-like style
 from python_scripts.helpers import preprocess_data
+
+DESCRIPTIVE_DECIMALS = 6
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +29,7 @@ CORRELATION_CBAR_SHRINK = 0.8
 def handle_auto_detect_transformers(store: dict, data: dict):
     """Return (response_dict, status_code). On error, response_dict has 'error' key."""
     if "data" not in store:
-        return ({"error": "No data uploaded. Please upload a file first."}, 400)
+        return ({"error": "No data uploaded. Upload a file first."}, 400)
     if not data or "indicators" not in data:
         return ({"error": "No indicators provided"}, 400)
     try:
@@ -69,7 +71,7 @@ def handle_auto_detect_transformers(store: dict, data: dict):
 def handle_auto_detect_nan_zeros(store: dict, data: dict):
     """Return (response_dict, status_code). On error, response_dict has 'error' key."""
     if "data" not in store:
-        return ({"error": "No data uploaded. Please upload a file first."}, 400)
+        return ({"error": "No data uploaded. Upload a file first."}, 400)
     if not data or "indicators" not in data:
         return ({"error": "Indicators are required"}, 400)
     try:
@@ -92,18 +94,32 @@ def handle_auto_detect_nan_zeros(store: dict, data: dict):
         numeric_cols = cols_df.select_dtypes(include=[np.number])
         needs_zero_handling = (numeric_cols == 0).any().any() if not numeric_cols.empty else False
         if not needs_missing_handling and not needs_zero_handling:
-            message = "No blanks or zeros found in your selected columns. You can leave both options as \"Don't apply\"."
+            message = 'No blanks or zeros in the selected columns. Both options can stay at "Don\'t apply".'
         else:
             parts = []
             if needs_missing_handling:
                 parts.append("blanks (missing values)")
             if needs_zero_handling:
                 parts.append("zeros")
-            message = f"Found {' and '.join(parts)} in your selected columns. Choose where to handle them and how."
+            message = (
+                f"Found {' and '.join(parts)} in the selected columns. Select the columns to clean and the action."
+            )
+        # The page states what was found as a sentence, so it needs the numbers as
+        # well as the flags: how many rows carry a blank, and which columns hold a zero.
+        blank_rows = int(cols_df.isna().any(axis=1).sum())
+        # Which columns of the whole file hold numbers. The stratify column can sit
+        # outside the selection, and only a numeric column can be cut into bins.
+        numeric_indices = [i for i, c in enumerate(df.columns) if pd.api.types.is_numeric_dtype(df[c])]
+        zero_columns = (
+            [str(c) for c in numeric_cols.columns[(numeric_cols == 0).any()]] if not numeric_cols.empty else []
+        )
         return (
             {
                 "needs_missing_handling": bool(needs_missing_handling),
                 "needs_zero_handling": bool(needs_zero_handling),
+                "blank_rows": blank_rows,
+                "zero_columns": zero_columns,
+                "numeric_columns": numeric_indices,
                 "message": message,
                 "ok": not (needs_missing_handling or needs_zero_handling),
             },
@@ -124,7 +140,7 @@ def handle_corr(
     if not data:
         return ({"error": "No data provided"}, 400)
     if "data" not in store:
-        return ({"error": "No data uploaded. Please upload a file first."}, 400)
+        return ({"error": "No data uploaded. Upload a file first."}, 400)
     df = store["data"]
     drop_missing = data.get("dropMissing", "none")
     impute_strategy = data.get("imputeStrategy", "none")
@@ -226,12 +242,30 @@ def handle_corr(
     descriptive_stats = []
     if selected_columns:
         stats_df = df_corr[selected_columns].describe(percentiles=[0.25, 0.5, 0.75, 1.0]).T
-        stats_df = stats_df.rename(columns={
-            "count": "n", "min": "min", "max": "max", "mean": "mean", "std": "std",
-            "25%": "25", "50%": "50", "75%": "75", "100%": "100",
-        }).reset_index().rename(columns={"index": "column"})
-        stats_df["column"] = stats_df["column"].astype(str).str.slice(0, 10)
-        stats_df = stats_df[["column", "n", "min", "max", "mean", "std", "25", "50", "75", "100"]].round(4)
+        stats_df = (
+            stats_df.rename(
+                columns={
+                    "count": "n",
+                    "min": "min",
+                    "max": "max",
+                    "mean": "mean",
+                    "std": "std",
+                    "25%": "25",
+                    "50%": "50",
+                    "75%": "75",
+                    "100%": "100",
+                }
+            )
+            .reset_index()
+            .rename(columns={"index": "column"})
+        )
+        stats_df["column"] = stats_df["column"].astype(str)
+        stats_df = stats_df[["column", "n", "min", "max", "mean", "std", "25", "50", "75", "100"]]
+        # Six decimals rather than four: four hid every centered column of the
+        # diabetes example (means printed as -0.0). Adding 0.0 turns a rounded
+        # negative zero into 0.0.
+        value_cols = [c for c in stats_df.columns if c != "column"]
+        stats_df[value_cols] = stats_df[value_cols].astype(float).round(DESCRIPTIVE_DECIMALS) + 0.0
         descriptive_stats = stats_df.to_dict(orient="records")
     numeric_columns = df_corr.columns.tolist()
     return (
@@ -256,7 +290,7 @@ def handle_pairplot(
     if not data:
         return ({"error": "No data provided"}, 400)
     if "data" not in store:
-        return ({"error": "No data uploaded. Please upload a file first."}, 400)
+        return ({"error": "No data uploaded. Upload a file first."}, 400)
     if "colsIgnore" not in data:
         return ({"error": "Missing required field: colsIgnore"}, 400)
     df = store["data"]
@@ -291,7 +325,10 @@ def handle_pairplot(
     safe_x = secure_filename(str(x_col))
     safe_y = secure_filename(str(y_col))
     pairplot_path = user_vis_dir / f"pairplot_{safe_x}_{safe_y}.png"
-    grid = sns.pairplot(df_numeric[[x_col, y_col]], diag_kind="hist")
+    # The same column in X and Y is one variable: a histogram. Selecting it twice
+    # built a frame with a duplicated column name, which seaborn rejects.
+    columns = [x_col] if x_col == y_col else [x_col, y_col]
+    grid = sns.pairplot(df_numeric[columns], diag_kind="hist")
     grid.savefig(pairplot_path, dpi=150)
     plt.close("all")
     return (

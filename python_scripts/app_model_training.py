@@ -7,39 +7,154 @@ to avoid circular imports (app.py passes _get_session_storage).
 import logging
 import random
 import time
-from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
+from core import constants as _constants
+from core.constants import MAX_CV_FOLDS, MAX_SEARCH_CV_FOLDS, MAX_SEARCH_ITERATIONS, MAX_TEST_SIZE, MIN_TEST_SIZE
+from core.state import MemoryBudgetExceeded, admit_model, discard_model
 from python_scripts import config as _config
-from python_scripts.preprocessing.progress_tracker import get_tracker, remove_tracker, set_result
+from python_scripts.estimator_params import built_estimator, reset_estimator_params, set_estimator_params
 from python_scripts.helpers import (
     preprocess_data,
     run_cross_validation,
     unpack_classification_result,
-    write_to_excel,
     write_to_excelClassifier,
     write_to_excelCluster,
     write_to_excelRegression,
 )
-from python_scripts.model_registry import MODEL_REGISTRY, get_model_kwargs, CLUSTER_MODELS
+from python_scripts.model_registry import CLUSTER_MODELS, MODEL_REGISTRY, get_model_kwargs
+from python_scripts.preprocessing.applicability import get_applicability, set_applicability
+from python_scripts.preprocessing.guardrails import run_guardrails
+from python_scripts.preprocessing.progress_tracker import get_tracker, set_result
+from python_scripts.preprocessing.split_fill import FillPlan, reset_fill_plan, set_fill_plan
+from python_scripts.preprocessing.splitting import SplitPlan, reset_split_plan, set_split_plan
+from python_scripts.preprocessing.uncertainty import get_conformal, set_conformal
+from python_scripts.reporting.bundle import build_manifest, serialized_size, write_run_record
 
 DEFAULT_CV_FOLDS = 5
 DEFAULT_SEARCH_ITERATIONS = 50
 RANDOM_SEED_MAX = 1000
 
+
+def _int_in_range(raw_value, name: str, minimum: int, maximum: int, default: int) -> int:
+    """Parse a request integer and reject one outside [minimum, maximum]."""
+    if raw_value in (None, ""):
+        return default
+    try:
+        value = int(raw_value)
+    except (TypeError, ValueError):
+        raise ValueError(f"{name} must be a whole number between {minimum} and {maximum}.") from None
+    if value < minimum or value > maximum:
+        raise ValueError(f"{name} must be between {minimum} and {maximum}.")
+    return value
+
+
+REQUIRED_TRAINING_FIELDS = [
+    "indicators",
+    "predictors",
+    "hyperparameters",
+    "models",
+    "nonreq",
+    "scaler",
+    "units",
+    "sigfig",
+    "seedValue",
+    "testSize",
+    "stratifyBool",
+    "dropMissing",
+    "imputeStrategy",
+    "dropZero",
+    "quantileBinDict",
+    "useTransformer",
+    "transformerCols",
+]
+
+
+def _truthy(value) -> bool:
+    return str(value if value is not None else "").strip().lower() in ("1", "true", "yes", "on")
+
+
+def _blank(value) -> bool:
+    return value is None or (isinstance(value, str) and not value.strip())
+
+
+def validate_training_request(data: dict) -> None:
+    """Check the cheap request fields. Raises ValueError with a message for the client.
+
+    The route calls this before it creates a thread, so a request with an
+    out-of-range value costs nothing but the parse.
+    """
+    missing = [f for f in REQUIRED_TRAINING_FIELDS if f not in data]
+    if missing:
+        raise ValueError(f"Missing required fields: {', '.join(missing)}")
+    if _truthy(data.get("allowUnsafe")):
+        if not _constants.ALLOW_UNSAFE_OVERRIDE:
+            raise ValueError("The data-check override is not available on this deployment.")
+        reason = str(data.get("allowUnsafeReason") or "").strip()
+        if len(reason) < _constants.MIN_OVERRIDE_REASON_CHARS:
+            raise ValueError(
+                "allowUnsafeReason must state why the run should proceed past the blocking findings "
+                f"(at least {_constants.MIN_OVERRIDE_REASON_CHARS} characters)."
+            )
+    model_name = data.get("models")
+    compare = str(data.get("modelingMode", "simple")) == "automl" and _blank(model_name)
+    if _blank(model_name) and not compare:
+        raise ValueError("No model selected. Choose a model from the list before running.")
+    if compare:
+        if str(data.get("taskType", "")) not in ("Numeric", "Classifier"):
+            raise ValueError("Choose a model, or a regression or classification task for AutoML to compare candidates.")
+        return
+    if model_name == "TerraFORMER" or model_name not in MODEL_REGISTRY or MODEL_REGISTRY[model_name][0] is None:
+        raise ValueError(f"Invalid or unsupported model: {model_name!r}.")
+    _float_in_range(data.get("testSize", "0.20"), "testSize", MIN_TEST_SIZE, MAX_TEST_SIZE, 0.2)
+    # Folds matter only when cross-validation runs; a cleared field with it off
+    # must not block the run (browser review of 2026-09-24).
+    if str(data.get("crossValidationType", "None")) != "None":
+        _int_in_range(
+            data.get("crossValidationFolds", DEFAULT_CV_FOLDS),
+            "crossValidationFolds",
+            2,
+            MAX_CV_FOLDS,
+            DEFAULT_CV_FOLDS,
+        )
+    _int_in_range(data.get("searchCVFolds", 5), "searchCVFolds", 2, MAX_SEARCH_CV_FOLDS, 5)
+    _int_in_range(
+        data.get("searchNIter", DEFAULT_SEARCH_ITERATIONS),
+        "searchNIter",
+        1,
+        MAX_SEARCH_ITERATIONS,
+        DEFAULT_SEARCH_ITERATIONS,
+    )
+
+
+def _float_in_range(raw_value, name: str, minimum: float, maximum: float, default: float) -> float:
+    """Parse a request number and reject one outside [minimum, maximum]."""
+    if raw_value in (None, ""):
+        return default
+    try:
+        value = float(raw_value)
+    except (TypeError, ValueError):
+        raise ValueError(f"{name} must be a number between {minimum:.2f} and {maximum:.2f}.") from None
+    if value < minimum or value > maximum:
+        raise ValueError(f"{name} must be between {minimum:.2f} and {maximum:.2f}.")
+    return value
+
+
 logger = logging.getLogger(__name__)
+
 
 def _safe_select_columns(df, column_names_or_indices):
     """Safely select columns from a dataframe, handling duplicate column names.
-    
+
     If column_names_or_indices contains duplicate names and the dataframe has
     duplicate columns, selects by position using the original indices.
-    
+
     Args:
         df: DataFrame to select from
         column_names_or_indices: List of column names or indices
-    
+
     Returns:
         DataFrame with selected columns
     """
@@ -64,12 +179,13 @@ def _safe_select_columns(df, column_names_or_indices):
             # If selection fails due to duplicates, try position-based
             if "not unique" in str(e).lower():
                 # Convert to indices and use iloc
-                indices = [df.columns.get_loc(name) if isinstance(name, str) else name 
-                          for name in column_names_or_indices]
+                indices = [
+                    df.columns.get_loc(name) if isinstance(name, str) else name for name in column_names_or_indices
+                ]
                 # Handle duplicate names by taking first occurrence
                 seen = {}
                 unique_indices = []
-                for i, name in enumerate(column_names_or_indices):
+                for _i, name in enumerate(column_names_or_indices):
                     if name not in seen:
                         seen[name] = True
                         if isinstance(name, str):
@@ -80,7 +196,6 @@ def _safe_select_columns(df, column_names_or_indices):
                             unique_indices.append(name)
                 return df.iloc[:, unique_indices]
             raise
-
 
 
 def _maybe_fix_swapped_scalers(y_scaler, X_scaler, y_train_array):
@@ -104,8 +219,8 @@ def _maybe_fix_swapped_scalers(y_scaler, X_scaler, y_train_array):
         return y_scaler, X_scaler
 
     # Only scalers like StandardScaler/RobustScaler/MinMaxScaler expose mean_/scale_
-    y_mean_attr = getattr(y_scaler, 'mean_', None)
-    x_mean_attr = getattr(X_scaler, 'mean_', None)
+    y_mean_attr = getattr(y_scaler, "mean_", None)
+    x_mean_attr = getattr(X_scaler, "mean_", None)
     if y_mean_attr is None or x_mean_attr is None:
         return y_scaler, X_scaler
 
@@ -115,14 +230,13 @@ def _maybe_fix_swapped_scalers(y_scaler, X_scaler, y_train_array):
         ys_mean = float(np.mean(y_mean_attr))
         # If y_scaler's mean is wildly far from the target mean, it's likely swapped.
         if np.isfinite(ys_mean) and abs(ys_mean - y_train_mean) > 10 * max(1.0, y_train_std):
-            logger.warning('y_scaler looks incorrect (likely swapped with X_scaler). Swapping them.')
+            logger.warning("y_scaler looks incorrect (likely swapped with X_scaler). Swapping them.")
             return X_scaler, y_scaler
     except Exception:
         # If anything goes wrong, do nothing rather than break the app.
         return y_scaler, X_scaler
 
     return y_scaler, X_scaler
-
 
 
 def _json_safe_params(obj):
@@ -146,7 +260,6 @@ def _json_safe_params(obj):
     return f"<{type(obj).__module__}.{type(obj).__name__}>"
 
 
-
 def run_model_training(session_id: str, data: dict, storage_session_id: str, get_storage):
     """Run model training (session storage is obtained via get_storage(storage_session_id)).
     See app.py _run_model_training for full doc.
@@ -154,131 +267,196 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
     tracker = get_tracker(session_id)
     tracker.start()
     store = get_storage(storage_session_id)
-    
+
     try:
         # Input validation
-        required_fields = ['indicators', 'predictors', 'hyperparameters', 'models', 'nonreq', 
-                          'scaler', 'units', 'sigfig', 'seedValue', 'testSize', 'stratifyBool',
-                          'dropMissing', 'imputeStrategy', 'dropZero', 'quantileBinDict',
-                          'useTransformer', 'transformerCols']
-        missing_fields = [field for field in required_fields if field not in data]
+        missing_fields = [field for field in REQUIRED_TRAINING_FIELDS if field not in data]
         if missing_fields:
             raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
-        
-        if 'data' not in store:
+
+        if "data" not in store:
             raise ValueError("No data uploaded. Please upload a file first.")
-        
+
         # getting all the parameters from the front end
-        selected_indicators = data['indicators']
-        selected_predictors = data['predictors']
-        hyperparameters = data['hyperparameters']
-        modelName = data['models']
-        if modelName is None or (isinstance(modelName, str) and not str(modelName).strip()):
+        selected_indicators = data["indicators"]
+        selected_predictors = data["predictors"]
+        hyperparameters = data["hyperparameters"]
+        modelName = data["models"]
+        modeling_mode_early = str(data.get("modelingMode", "simple"))
+        # AutoML with no model named compares a candidate set by cross-validation
+        # and trains the one that scores best; the comparison is drawn and recorded.
+        compare_models = modeling_mode_early == "automl" and _blank(modelName)
+        if _blank(modelName) and not compare_models:
             raise ValueError("No model selected. Choose a model from the dropdown before running.")
-        nonreq = data['nonreq']
-        scaler = data['scaler']
-        units = data['units']
-        sigfig = data['sigfig']
-        seed = data['seedValue']
-        raw_test = data.get('testSize', '0.20')
-        try:
-            testSize = float(raw_test) if raw_test not in (None, '') else 0.2
-        except (TypeError, ValueError):
-            testSize = 0.2
-        stratifyBool = data['stratifyBool']
-        drop_missing = data['dropMissing']
-        impute_strategy = data['imputeStrategy']
-        drop_zero = data['dropZero']
-        zero_handle = data.get('zeroHandle')
+        if compare_models:
+            # The page sends the task with a blank model; the placeholder names the
+            # registry entry whose task is compared, and the winner replaces it.
+            task_type = str(data.get("taskType", ""))
+            if task_type == "Cluster":
+                raise ValueError(
+                    "Choose a clustering model. Candidate models are compared for regression and classification only."
+                )
+            modelName = "RF" if task_type == "Numeric" else "RF_classifier"
+        nonreq = data["nonreq"]
+        raw_params = data.get("estimatorParams") or {}
+        if not isinstance(raw_params, dict):
+            raise ValueError("estimatorParams must be an object of parameter names and values.")
+        # A copy, so the request recorded in the manifest stays as the page sent it.
+        estimator_params = dict(raw_params)
+        scaler = data["scaler"]
+        units = data["units"]
+        # A cleared field arrives as "", null or 0 depending on the form; 0 decimal
+        # places is a choice only when typed, so the blank forms fall to the default.
+        sigfig = _int_in_range(data["sigfig"], "sigfig", 0, 15, 3)
+        seed = data["seedValue"]
+        # Seed 0 is a seed. Only a blank or null means "draw one" (review of 2026-09-24).
+        seed = None if seed in (None, "") else int(seed)
+        testSize = _float_in_range(data.get("testSize", "0.20"), "testSize", MIN_TEST_SIZE, MAX_TEST_SIZE, 0.2)
+        stratifyBool = data["stratifyBool"]
+        drop_missing = data["dropMissing"]
+        impute_strategy = data["imputeStrategy"]
+        drop_zero = data["dropZero"]
+        zero_handle = data.get("zeroHandle")
         if zero_handle is None:
             # Backward compatibility: older clients only sent dropZero + implicit row-drop behavior
-            zero_handle = 'drop' if drop_zero != 'none' else 'none'
-        elif isinstance(zero_handle, str) and zero_handle in {'0', '0.01'}:
+            zero_handle = "drop" if drop_zero != "none" else "none"
+        elif isinstance(zero_handle, str) and zero_handle in {"0", "0.01"}:
             zero_handle = float(zero_handle)
-        if drop_zero == 'none':
-            zero_handle = 'none'
-        quantileBinDict = data['quantileBinDict']
-        useTransformer = data['useTransformer']
-        transformerCols = data['transformerCols']
-        cross_validation_type = data.get('crossValidationType', 'None')
-        cross_validation_folds = int(data.get('crossValidationFolds', DEFAULT_CV_FOLDS) or DEFAULT_CV_FOLDS)
-        
+        if drop_zero == "none":
+            zero_handle = "none"
+        quantileBinDict = data["quantileBinDict"]
+        useTransformer = data["useTransformer"]
+        transformerCols = data["transformerCols"]
+        cross_validation_type = data.get("crossValidationType", "None")
+        cross_validation_folds = _int_in_range(
+            data.get("crossValidationFolds", DEFAULT_CV_FOLDS) if cross_validation_type != "None" else None,
+            "crossValidationFolds",
+            2,
+            MAX_CV_FOLDS,
+            DEFAULT_CV_FOLDS,
+        )
+
         # Advanced features parameters
-        hyperparameter_search = data.get('hyperparameterSearch', 'none')
-        search_cv_folds = int(data.get('searchCVFolds', 5) or 5)
-        search_n_iter = int(data.get('searchNIter', DEFAULT_SEARCH_ITERATIONS) or DEFAULT_SEARCH_ITERATIONS)
-        feature_selection_method = data.get('featureSelectionMethod', 'none')
-        feature_selection_k = data.get('featureSelectionK')
-        outlier_method = data.get('outlierMethod', 'none')
-        outlier_action = data.get('outlierAction', 'remove')
-        modeling_mode = data.get('modelingMode', 'simple')  # 'simple', 'advanced', or 'automl'
-        
+        hyperparameter_search = data.get("hyperparameterSearch", "none")
+        search_cv_folds = _int_in_range(data.get("searchCVFolds", 5), "searchCVFolds", 2, MAX_SEARCH_CV_FOLDS, 5)
+        search_n_iter = _int_in_range(
+            data.get("searchNIter", DEFAULT_SEARCH_ITERATIONS),
+            "searchNIter",
+            1,
+            MAX_SEARCH_ITERATIONS,
+            DEFAULT_SEARCH_ITERATIONS,
+        )
+        feature_selection_method = data.get("featureSelectionMethod", "none")
+        feature_selection_k = data.get("featureSelectionK")
+        outlier_method = data.get("outlierMethod", "none")
+        outlier_action = data.get("outlierAction", "remove")
+        modeling_mode = data.get("modelingMode", "simple")  # 'simple', 'advanced', or 'automl'
+
         # Normalize cross_validation_type for comparison (handle both 'None' and 'none')
-        cv_type_normalized = str(cross_validation_type).strip() if cross_validation_type else 'None'
-        cv_enabled = cv_type_normalized.lower() not in ['none', '']
-        
+        cv_type_normalized = str(cross_validation_type).strip() if cross_validation_type else "None"
+        cv_enabled = cv_type_normalized.lower() not in ["none", ""]
+
+        # Clustering has no target, so the stages that score against one cannot run.
+        # Outlier handling works on X alone and is passed through.
+        is_cluster_run = modelName in CLUSTER_MODELS
+        skipped_options = []
+        if is_cluster_run:
+            not_applicable = [
+                ("feature_selection", "feature_selection_method", feature_selection_method != "none"),
+                ("hyperparameter_search", "hyperparameter_search", hyperparameter_search != "none"),
+                ("cross_validation", "cross_validation", cv_enabled),
+            ]
+            for _stage, option, requested in not_applicable:
+                if requested:
+                    skipped_options.append({"option": option, "reason": "Not applicable to clustering"})
+                    logger.info(
+                        "%s requested for cluster model %s; skipped (no target to score against).", option, modelName
+                    )
+            feature_selection_method = "none"
+            feature_selection_k = None
+            hyperparameter_search = "none"
+            cv_enabled = False
+
         # Set up progress tracking based on selected features
-        tracker.set_stage_enabled('outlier_handling', outlier_method != 'none')
-        tracker.set_stage_enabled('feature_selection', feature_selection_method != 'none')
-        tracker.set_stage_enabled('hyperparameter_search', hyperparameter_search != 'none')
-        tracker.set_stage_enabled('cross_validation', cv_enabled)
-        
+        tracker.set_stage_enabled("outlier_handling", outlier_method != "none")
+        tracker.set_stage_enabled("feature_selection", feature_selection_method != "none")
+        tracker.set_stage_enabled("hyperparameter_search", hyperparameter_search != "none")
+        tracker.set_stage_enabled("cross_validation", cv_enabled)
+        if is_cluster_run:
+            for stage in ("feature_selection", "hyperparameter_search", "cross_validation"):
+                tracker.update_stage(stage, "skipped", 100, "Not applicable to clustering")
+
         # Advanced features are now implemented - log when used
-        if hyperparameter_search != 'none':
+        if hyperparameter_search != "none":
             logger.info(f"Using hyperparameter search ({hyperparameter_search}) with {search_cv_folds} CV folds.")
-            tracker.update_stage('hyperparameter_search', 'pending', 0, 
-                               f'Will search {search_n_iter} iterations with {search_cv_folds} CV folds')
-        if feature_selection_method != 'none':
+            tracker.update_stage(
+                "hyperparameter_search",
+                "pending",
+                0,
+                f"Will search {search_n_iter} iterations with {search_cv_folds} CV folds",
+            )
+        if feature_selection_method != "none":
             logger.info(f"Using feature selection ({feature_selection_method}) with k={feature_selection_k}.")
-            tracker.update_stage('feature_selection', 'pending', 0, 
-                               f'Selecting {feature_selection_k} features using {feature_selection_method}')
-        if outlier_method != 'none':
+            tracker.update_stage(
+                "feature_selection",
+                "pending",
+                0,
+                f"Selecting {feature_selection_k} features using {feature_selection_method}",
+            )
+        if outlier_method != "none":
             logger.info(f"Using outlier handling ({outlier_method}) with action: {outlier_action}.")
-            tracker.update_stage('outlier_handling', 'pending', 0, 
-                               f'Detecting outliers using {outlier_method} ({outlier_action})')
+            tracker.update_stage(
+                "outlier_handling", "pending", 0, f"Detecting outliers using {outlier_method} ({outlier_action})"
+            )
         if cv_enabled:
             logger.info(f"Using cross-validation ({cross_validation_type}) with {cross_validation_folds} folds.")
-            tracker.update_stage('cross_validation', 'pending', 0, 
-                               f'Will run {cross_validation_type} with {cross_validation_folds} folds')
-        
+            tracker.update_stage(
+                "cross_validation",
+                "pending",
+                0,
+                f"Will run {cross_validation_type} with {cross_validation_folds} folds",
+            )
+
         # Data preprocessing
-        tracker.update_stage('data_preprocessing', 'running', 10, 'Loading data...')
-        df = store['data']
-        
+        tracker.update_stage("data_preprocessing", "running", 10, "Loading data...")
+        df = store["data"]
+
         # Select columns by position to avoid issues with duplicate column names
         # Convert indices to list if single value, ensure they're integers
         if isinstance(selected_predictors, (int, np.integer)):
             selected_predictors = [selected_predictors]
         if isinstance(selected_indicators, (int, np.integer)):
             selected_indicators = [selected_indicators]
-        
+
         try:
             # Use take() to select by position, then convert to list to avoid duplicate name issues
             predictor_names = df.columns.take(selected_predictors).tolist()
             indicator_names = df.columns.take(selected_indicators).tolist()
-        except (KeyError, IndexError) as e:
+        except (KeyError, IndexError):
             # Fallback to direct indexing if take() fails
             try:
                 predictor_names = df.columns[selected_predictors].tolist()
                 indicator_names = df.columns[selected_indicators].tolist()
             except Exception as e2:
-                raise ValueError(f"Error selecting columns: {str(e2)}. This may be due to duplicate column names in your CSV file. Please ensure all column names are unique.")
+                raise ValueError(
+                    f"Column selection failed: {e2}. Duplicate column names in the CSV are the usual cause."
+                ) from e2
 
         # Persist inference settings so /predict can apply the same preprocessing choices.
-        store['inference_config'] = {
-            'indicator_names': list(indicator_names),
-            'predictor_names': list(predictor_names),
-            'drop_missing': drop_missing,
-            'impute_strategy': impute_strategy,
-            'drop_zero': drop_zero,
-            'zero_handle': zero_handle,
-            'useTransformer': useTransformer,
+        store["inference_config"] = {
+            "indicator_names": list(indicator_names),
+            "predictor_names": list(predictor_names),
+            "drop_missing": drop_missing,
+            "impute_strategy": impute_strategy,
+            "drop_zero": drop_zero,
+            "zero_handle": zero_handle,
+            "useTransformer": useTransformer,
         }
-        
-        tracker.update_stage('data_preprocessing', 'running', 30, 'Preparing features and targets...')
+
+        tracker.update_stage("data_preprocessing", "running", 30, "Preparing features and targets...")
 
         transformer_names = []
-        if useTransformer == 'Yes':
+        if useTransformer == "Yes":
             if isinstance(transformerCols, (int, np.integer)):
                 transformerCols = [transformerCols]
             try:
@@ -286,12 +464,12 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
             except (KeyError, IndexError):
                 transformer_names = df.columns[transformerCols].tolist()
 
-        stratifyColumn = ''
-        stratify_name = ''
+        stratifyColumn = ""
+        stratify_name = ""
         if stratifyBool:
-            if 'stratifyColumn' not in data:
+            if "stratifyColumn" not in data:
                 raise ValueError("Missing required field: stratifyColumn (required when stratifyBool is True)")
-            stratifyColumn = data['stratifyColumn']
+            stratifyColumn = data["stratifyColumn"]
             try:
                 if isinstance(stratifyColumn, (int, np.integer)):
                     stratify_name = df.columns.take([stratifyColumn]).tolist()[0]
@@ -303,25 +481,78 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
                 stratify_name = df.columns[stratifyColumn]
                 if isinstance(stratify_name, pd.Index):
                     stratify_name = stratify_name.tolist()[0] if len(stratify_name) > 0 else stratify_name
-            # Only forbid stratify-by-target for regression/classification (not clustering; clustering has no supervised target)
-            cluster_models = {'kmeans', 'gmm', 'agglo', 'dbscan', 'birch', 'spectral', 'affinity_propagation', 'bisecting_kmeans', 'hdbscan', 'meanshift', 'minibatch_kmeans', 'optics'}
-            if modelName not in cluster_models and stratify_name and predictor_names and stratify_name in predictor_names:
+            # Only forbid stratify-by-target for regression/classification (not clustering; clustering has no supervised
+            # target)
+            cluster_models = {
+                "kmeans",
+                "gmm",
+                "agglo",
+                "dbscan",
+                "birch",
+                "spectral",
+                "affinity_propagation",
+                "bisecting_kmeans",
+                "hdbscan",
+                "meanshift",
+                "minibatch_kmeans",
+                "optics",
+            }
+            # Classification stratifies on the class labels, which is what
+            # train_test_split's own stratify argument takes, so naming the target
+            # there is correct. The guard is for regression, where the target is cut
+            # into bins and those bins would carry it into the split.
+            #
+            # The task comes from the registry entry for the chosen model. The page's
+            # /process payload carries no outputType, so reading that key made this
+            # exemption fire in a test that passed one and never in the application.
+            registry_entry = MODEL_REGISTRY.get(modelName)
+            is_classification = bool(registry_entry) and registry_entry[1] == "classification"
+            if (
+                modelName not in cluster_models
+                and not is_classification
+                and stratify_name
+                and predictor_names
+                and stratify_name in predictor_names
+            ):
                 raise ValueError(
-                    "Do not stratify by your target column. That would leak target information into the train/test split. Choose a different column to stratify by."
+                    "Do not stratify by your target column. That would leak target information into the train/test "
+                    "split. Choose a different column to stratify by."
                 )
 
-        if seed:  # if user gives seed add to storage
-            store['seed'] = seed
+        # Train/test split method. A time-ordered or grouped holdout keeps rows that
+        # share a period or a site out of both halves; the pipeline reads the plan.
+        split_method = str(data.get("splitMethod") or "random").strip().lower()
+        split_column_raw = data.get("splitColumn", "")
+        split_column = None
+        if split_method != "random":
+            if split_column_raw in ("", None):
+                raise ValueError(f"Missing required field: splitColumn (required when splitMethod is {split_method!r})")
+            if isinstance(split_column_raw, (int, np.integer)) or (
+                isinstance(split_column_raw, str) and split_column_raw.isdigit()
+            ):
+                split_column = df.columns[int(split_column_raw)]
+            elif split_column_raw in df.columns:
+                split_column = str(split_column_raw)
+            else:
+                raise ValueError(f"splitColumn {split_column_raw!r} is not a column of the uploaded file")
+        split_plan = SplitPlan(method=split_method, column=split_column)
+
+        if seed is not None:  # if user gives seed add to storage
+            store["seed"] = seed
         else:  # no seed given
             # if 'seed' not in memStorage.keys(): #if seed not already saved then add random seed
             seed = random.randint(0, RANDOM_SEED_MAX)
-            store['seed'] = seed
-            #else: 
-            #    seed = memStorage['seed']   #else use prior randomly generated seed or keep generating random seed? - ask rowan need way to generate new random seed
-            #if given seed then given no seed, want new random
+            store["seed"] = seed
+            # else:
+            # if given seed then given no seed, want new random
 
-        tracker.update_stage('data_preprocessing', 'running', 50, 'Cleaning and preprocessing data...')
-    ## Preprocessing
+        tracker.update_stage("data_preprocessing", "running", 50, "Cleaning and preprocessing data...")
+        ## Preprocessing
+        impute_fills = {}
+        # Mean and median fills are recorded in fill_plan and fitted by the pipeline on
+        # its training split, so test rows never inform a training value. Constant fills
+        # and row drops still happen here.
+        fill_plan = FillPlan()
         df = preprocess_data(
             df=df,
             target_cols=predictor_names,
@@ -330,60 +561,223 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
             impute_strategy=impute_strategy,
             drop_zero=drop_zero,
             zero_handle=zero_handle,
+            fill_values_out=impute_fills,
+            fill_plan_out=fill_plan,
         )
-        tracker.update_stage('data_preprocessing', 'completed', 100, 'Data preprocessing complete')
-        
+        fill_plan_token = set_fill_plan(fill_plan)
+        split_plan_token = set_split_plan(split_plan)
+        store["impute_fill_values"] = impute_fills
+        store["zero_fill_values"] = {}
+        tracker.update_stage("data_preprocessing", "completed", 100, "Data preprocessing complete")
+
         # Update model training stage to indicate we're starting
-        tracker.update_stage('model_training', 'running', 0, f'Initializing {modelName} model training...')
-        quantileBin_results = ''
+        tracker.update_stage("model_training", "running", 0, f"Initializing {modelName} model training...")
+        quantileBin_results = ""
 
         # Registry-based dispatch
-        if modelName == 'TerraFORMER' or modelName not in MODEL_REGISTRY or MODEL_REGISTRY[modelName][0] is None:
+        if modelName == "TerraFORMER" or modelName not in MODEL_REGISTRY or MODEL_REGISTRY[modelName][0] is None:
             raise ValueError(
-                f"Invalid or unsupported model: {modelName!r}. "
-                "If you did not pick a model, select one from the list; reserved names are not valid."
+                f"DiGiTerra cannot train the model {modelName!r}. "
+                "The name is reserved or it is not in the registry. "
+                "Select a model from the list, then train again."
             )
         else:
             train_fn, problem_type = MODEL_REGISTRY[modelName]
+            # Data checks run on the cleaned frame with the columns the model will see.
+            # A blocking finding stops the run unless the request set allowUnsafe.
+            guardrail_report = run_guardrails(
+                df,
+                indicator_names,
+                predictor_names,
+                problem_type,
+                test_size=testSize,
+                cv_folds=cross_validation_folds if cv_enabled else None,
+            )
+            for finding in guardrail_report.findings:
+                logger.warning("data check %s (%s): %s", finding.code, finding.severity, finding.message)
+            allow_unsafe = _truthy(data.get("allowUnsafe"))
+            override_reason = str(data.get("allowUnsafeReason") or "").strip()
+            if allow_unsafe and not _constants.ALLOW_UNSAFE_OVERRIDE:
+                raise ValueError("The data-check override is not available on this deployment.")
+            if allow_unsafe and len(override_reason) < _constants.MIN_OVERRIDE_REASON_CHARS:
+                raise ValueError("allowUnsafeReason must state why the run should proceed past the blocking findings.")
+            if guardrail_report.blocking and not allow_unsafe:
+                raise ValueError(guardrail_report.block_message())
             X_data = _safe_select_columns(df, indicator_names)
             y_data = _safe_select_columns(df, predictor_names)
-            base = dict(target_variables=predictor_names, train_data=df, use_stratified_split=stratifyBool, X=X_data, y=y_data, stratifyColumn=stratify_name, units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, testSize=testSize, feature_selection_method=feature_selection_method, feature_selection_k=feature_selection_k, outlier_method=outlier_method, outlier_action=outlier_action, hyperparameter_search=hyperparameter_search, search_cv_folds=search_cv_folds, search_n_iter=search_n_iter, progress_tracker=tracker, modeling_mode=modeling_mode)
-            if problem_type == 'regression':
-                base['y_scaler_type'] = scaler
+            model_comparison = None
+            if compare_models and problem_type in ("regression", "classification"):
+                from python_scripts.config import VIS_DIR
+                from python_scripts.preprocessing.model_comparison import compare_candidates
+                from python_scripts.preprocessing.utilities import _get_scaler
+
+                tracker.update_stage("model_training", "running", 0, "Comparing candidate models...")
+                model_comparison = compare_candidates(
+                    X_data,
+                    y_data,
+                    problem_type,
+                    _get_scaler(scaler),
+                    seed=seed,
+                    nan_strategy=fill_plan.nan_strategy if fill_plan.nan_columns else None,
+                    out_dir=VIS_DIR,
+                    progress=lambda pct, msg: tracker.update_stage("model_training", "running", pct // 4, msg),
+                )
+                if model_comparison.get("chosen"):
+                    modelName = model_comparison["chosen"]
+                    train_fn, problem_type = MODEL_REGISTRY[modelName]
+                    hyperparameters = {}
+                    nonreq = False
+                    estimator_params = {}
+                model_comparison = {
+                    k: v for k, v in model_comparison.items() if k in ("chosen", "summary", "note", "seeds", "folds")
+                }
+                if (VIS_DIR / "model_comparison.png").exists():
+                    model_comparison["figure"] = "model_comparison.png"
+            base = dict(
+                target_variables=predictor_names,
+                train_data=df,
+                use_stratified_split=stratifyBool,
+                X=X_data,
+                y=y_data,
+                stratifyColumn=stratify_name,
+                units=units,
+                X_scaler_type=scaler,
+                seed=seed,
+                quantileBinDict=quantileBinDict,
+                sigfig=sigfig,
+                useTransformer=useTransformer,
+                categorical_cols=transformer_names,
+                testSize=testSize,
+                feature_selection_method=feature_selection_method,
+                feature_selection_k=feature_selection_k,
+                outlier_method=outlier_method,
+                outlier_action=outlier_action,
+                hyperparameter_search=hyperparameter_search,
+                search_cv_folds=search_cv_folds,
+                search_n_iter=search_n_iter,
+                progress_tracker=tracker,
+                modeling_mode=modeling_mode,
+            )
+            if problem_type == "regression":
+                base["y_scaler_type"] = scaler
             kwargs = get_model_kwargs(modelName, hyperparameters, nonreq, seed)
-            if problem_type == 'cluster':
-                base_c = dict(train_data=df, X=df[indicator_names], units=units, X_scaler_type=scaler, seed=seed, quantileBinDict=quantileBinDict, sigfig=sigfig, useTransformer=useTransformer, categorical_cols=transformer_names, test_size=testSize, k_min=2, k_max=8)
-                result = train_fn(**base_c, **kwargs)
-            elif problem_type == 'regression':
-                result = train_fn(modelName, **base, **kwargs)
+            # Advanced-form values whose names are the estimator's own parameters reach
+            # the estimator even where the trainer does not read them (LinearSVR dual,
+            # MiniBatchKMeans n_init). Values the guided page typed take precedence.
+            if nonreq and hyperparameters:
+                valid = set(built_estimator(modelName).get_params(deep=False))
+                for key, value in hyperparameters.items():
+                    if key in valid and key not in estimator_params:
+                        estimator_params[key] = value
+            # The guided page sends parameters by their scikit-learn names; the
+            # pipelines set them on the estimator the trainer built.
+            params_token = set_estimator_params(estimator_params)
+            try:
+                if problem_type == "cluster":
+                    base_c = dict(
+                        train_data=df,
+                        X=df[indicator_names],
+                        units=units,
+                        X_scaler_type=scaler,
+                        seed=seed,
+                        quantileBinDict=quantileBinDict,
+                        sigfig=sigfig,
+                        useTransformer=useTransformer,
+                        categorical_cols=transformer_names,
+                        test_size=testSize,
+                        k_min=2,
+                        k_max=8,
+                        outlier_method=outlier_method,
+                        outlier_action=outlier_action,
+                        progress_tracker=tracker,
+                        modeling_mode=modeling_mode,
+                    )
+                    result = train_fn(**base_c, **kwargs)
+                elif problem_type == "regression":
+                    result = train_fn(modelName, **base, **kwargs)
+                else:
+                    result = train_fn(**base, **kwargs)
+            finally:
+                reset_estimator_params(params_token)
+            # Pipelines append a baseline comparison as their last element.
+            baseline_info = result[11] if problem_type != "cluster" and len(result) > 11 else None
+            if problem_type == "classification":
+                (
+                    report,
+                    cm,
+                    params,
+                    shapes,
+                    storedModel,
+                    X_scaler,
+                    quantileBin_results,
+                    feature_order,
+                    additional_metrics,
+                    feature_selection_info,
+                    outlier_info,
+                ) = unpack_classification_result(result)
+            elif problem_type == "cluster":
+                # run_clustering appends outlier_info; older trainers may still return 11 items.
+                (
+                    train_results,
+                    test_results,
+                    params,
+                    shapes,
+                    storedModel,
+                    X_scaler,
+                    quantileBin_results,
+                    feature_order,
+                    best_k,
+                    centers,
+                    silhouette_grid,
+                ) = result[:11]
+                outlier_info = result[11] if len(result) > 11 else None
             else:
-                result = train_fn(**base, **kwargs)
-            if problem_type == 'classification':
-                report, cm, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, additional_metrics, feature_selection_info, outlier_info = unpack_classification_result(result)
-            elif problem_type == 'cluster':
-                train_results, test_results, params, shapes, storedModel, X_scaler, quantileBin_results, feature_order, best_k, centers, silhouette_grid = result
-            else:
-                train_results, test_results, params, shapes, storedModel, y_scaler, X_scaler, quantileBin_results, feature_order, feature_selection_info, outlier_info = result
+                (
+                    train_results,
+                    test_results,
+                    params,
+                    shapes,
+                    storedModel,
+                    y_scaler,
+                    X_scaler,
+                    quantileBin_results,
+                    feature_order,
+                    feature_selection_info,
+                    outlier_info,
+                ) = result[:11]
 
-        fmt = f".{sigfig}f" 
+        # The pipeline fitted the plan on its training rows; inference reuses these values.
+        if fill_plan.fitted:
+            store["impute_fill_values"] = {**impute_fills, **fill_plan.nan_fills}
+            store["zero_fill_values"] = dict(fill_plan.zero_fills)
+        reset_fill_plan(fill_plan_token)
+        fill_plan_token = None
+        reset_split_plan(split_plan_token)
+        split_plan_token = None
 
-    #results go in result dictionary and get written to excel file
-    
+        fmt = f".{sigfig}f"
+
+        # results go in result dictionary and get written to excel file
+
         # Initialize feature selection and outlier info only if not already set by regression pipeline
         # (Regression models set these values, classification/clustering models don't)
-        if 'feature_selection_info' not in locals():
+        if "feature_selection_info" not in locals():
             feature_selection_info = None
-        if 'outlier_info' not in locals():
+        if "outlier_info" not in locals():
             outlier_info = None
-        
+
         cv_file = None
         # Use normalized check for cross validation
         cv_summary_data = None
         if cv_enabled:
             # Update cross-validation status to running
-            tracker.update_stage('cross_validation', 'running', 10, 
-                               f'Running {cross_validation_type} with {cross_validation_folds} folds...')
-            if problem_type == 'classification':
+            tracker.update_stage(
+                "cross_validation",
+                "running",
+                10,
+                f"Running {cross_validation_type} with {cross_validation_folds} folds...",
+            )
+            if problem_type == "classification":
                 cv_result = run_cross_validation(
                     df=df,
                     indicator_names=indicator_names,
@@ -396,19 +790,29 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
                     transformer_cols=transformer_names,
                     seed=seed,
                     problem_type="classification",
+                    fill_plan=fill_plan,
+                    split_plan=split_plan,
                 )
                 if cv_result and isinstance(cv_result, tuple) and cv_result[0] is not None:
                     cv_file_path, cv_summary_df = cv_result
                     cv_file = cv_file_path.name
                     # Convert summary to dict for JSON serialization
-                    cv_summary_data = cv_summary_df.to_dict('records')
-                    tracker.update_stage('cross_validation', 'completed', 100, 
-                                       f'Cross-validation complete ({cross_validation_type}, {cross_validation_folds} folds)')
+                    cv_summary_data = cv_summary_df.to_dict("records")
+                    tracker.update_stage(
+                        "cross_validation",
+                        "completed",
+                        100,
+                        f"Cross-validation complete ({cross_validation_type}, {cross_validation_folds} folds)",
+                    )
                 elif cv_result and not isinstance(cv_result, tuple):
                     # Backward compatibility - old return format
                     cv_file = cv_result.name
-                    tracker.update_stage('cross_validation', 'completed', 100, 
-                                       f'Cross-validation complete ({cross_validation_type}, {cross_validation_folds} folds)')
+                    tracker.update_stage(
+                        "cross_validation",
+                        "completed",
+                        100,
+                        f"Cross-validation complete ({cross_validation_type}, {cross_validation_folds} folds)",
+                    )
             elif modelName not in CLUSTER_MODELS:
                 cv_result = run_cross_validation(
                     df=df,
@@ -423,88 +827,136 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
                     seed=seed,
                     problem_type="regression",
                     y_scaler_type=scaler,
+                    fill_plan=fill_plan,
+                    split_plan=split_plan,
                 )
                 if cv_result and isinstance(cv_result, tuple) and cv_result[0] is not None:
                     cv_file_path, cv_summary_df = cv_result
                     cv_file = cv_file_path.name
                     # Convert summary to dict for JSON serialization
-                    cv_summary_data = cv_summary_df.to_dict('records')
-                    tracker.update_stage('cross_validation', 'completed', 100, 
-                                       f'Cross-validation complete ({cross_validation_type}, {cross_validation_folds} folds)')
+                    cv_summary_data = cv_summary_df.to_dict("records")
+                    tracker.update_stage(
+                        "cross_validation",
+                        "completed",
+                        100,
+                        f"Cross-validation complete ({cross_validation_type}, {cross_validation_folds} folds)",
+                    )
                 elif cv_result and not isinstance(cv_result, tuple):
                     # Backward compatibility - old return format
                     cv_file = cv_result.name
-                    tracker.update_stage('cross_validation', 'completed', 100, 
-                                       f'Cross-validation complete ({cross_validation_type}, {cross_validation_folds} folds)')
+                    tracker.update_stage(
+                        "cross_validation",
+                        "completed",
+                        100,
+                        f"Cross-validation complete ({cross_validation_type}, {cross_validation_folds} folds)",
+                    )
 
-    ## Classification results
-        if problem_type == 'classification': 
-            
+        ## Classification results
+        if problem_type == "classification":
             # Initialize additional_metrics - will be set by models that return it via unpack_classification_result
-            if 'additional_metrics' not in locals():
+            if "additional_metrics" not in locals():
                 additional_metrics = None
-            
+
             # Convert to list if needed (handle both lists and numpy arrays)
-            indicator_list = indicator_names.tolist() if hasattr(indicator_names, 'tolist') else list(indicator_names)
-            predictor_list = predictor_names.tolist() if hasattr(predictor_names, 'tolist') else list(predictor_names)
-            
-            # {'Adelie Penguin (Pygoscelis adeliae)': {'precision': 1.0, 'recall': 1.0, 'f1-score': 1.0, 'support': 34.0}, 
-            #  'Chinstrap penguin (Pygoscelis antarctica)': {'precision': 1.0, 'recall': 1.0, 'f1-score': 1.0, 'support': 11.0}, 
-            #  'Gentoo penguin (Pygoscelis papua)': {'precision': 1.0, 'recall': 1.0, 'f1-score': 1.0, 'support': 22.0}, 
-            #  'accuracy': 1.0, 'macro avg': {'precision': 1.0, 'recall': 1.0, 'f1-score': 1.0, 'support': 67.0}, 
+            indicator_list = indicator_names.tolist() if hasattr(indicator_names, "tolist") else list(indicator_names)
+            predictor_list = predictor_names.tolist() if hasattr(predictor_names, "tolist") else list(predictor_names)
+
+            # {'Adelie Penguin (Pygoscelis adeliae)': {'precision': 1.0, 'recall': 1.0, 'f1-score': 1.0, 'support':
+            # 34.0},
+            # 'Chinstrap penguin (Pygoscelis antarctica)': {'precision': 1.0, 'recall': 1.0, 'f1-score': 1.0, 'support':
+            # 11.0},
+            #  'Gentoo penguin (Pygoscelis papua)': {'precision': 1.0, 'recall': 1.0, 'f1-score': 1.0, 'support': 22.0},
+            #  'accuracy': 1.0, 'macro avg': {'precision': 1.0, 'recall': 1.0, 'f1-score': 1.0, 'support': 67.0},
             #  'weighted avg': {'precision': 1.0, 'recall': 1.0, 'f1-score': 1.0, 'support': 67.0}}
 
             result = {
-                'accuracy': format(round(report['accuracy'], sigfig), fmt),
-                'precision': format(round(report['weighted avg']['precision'], sigfig), fmt),
-                'recall': format(round(report['weighted avg']['recall'], sigfig), fmt),
-                'f1score': format(round(report['weighted avg']['f1-score'], sigfig), fmt),
-                'support': format(round(report['weighted avg']['support'], sigfig), fmt),
-                'macro_precision': format(round(report['macro avg']['precision'], sigfig), fmt),
-                'macro_recall': format(round(report['macro avg']['recall'], sigfig), fmt),
-                'macro_f1score': format(round(report['macro avg']['f1-score'], sigfig), fmt),
-                'macro_support': format(round(report['macro avg']['support'], sigfig), fmt),
-                'indicators': [str(i) for i in indicator_list],
-                'predictors': [str(p) for p in predictor_list],
-                'cross_validation_file': cv_file,
-                'model_params': _json_safe_params(params),  # Sanitize: get_params() can include estimators
-                'feature_selection_info': feature_selection_info,
-                'outlier_info': outlier_info,
+                "accuracy": format(round(report["accuracy"], sigfig), fmt),
+                "precision": format(round(report["weighted avg"]["precision"], sigfig), fmt),
+                "recall": format(round(report["weighted avg"]["recall"], sigfig), fmt),
+                "f1score": format(round(report["weighted avg"]["f1-score"], sigfig), fmt),
+                "support": format(round(report["weighted avg"]["support"], sigfig), fmt),
+                "macro_precision": format(round(report["macro avg"]["precision"], sigfig), fmt),
+                "macro_recall": format(round(report["macro avg"]["recall"], sigfig), fmt),
+                "macro_f1score": format(round(report["macro avg"]["f1-score"], sigfig), fmt),
+                "macro_support": format(round(report["macro avg"]["support"], sigfig), fmt),
+                "indicators": [str(i) for i in indicator_list],
+                "predictors": [str(p) for p in predictor_list],
+                "cross_validation_file": cv_file,
+                "model_params": _json_safe_params(params),  # Sanitize: get_params() can include estimators
+                "feature_selection_info": feature_selection_info,
+                "outlier_info": outlier_info,
             }
 
-            #write to excel for classifier with all comprehensive metrics
-            write_to_excelClassifier(data, indicator_names, predictor_names, stratify_name, scaler, seed, modelName, params, units, report, cm,
-                                       additional_metrics=additional_metrics, outlier_info=outlier_info)
+            # An export failure must not lose a completed run, as it does not for the other two.
+            try:
+                write_to_excelClassifier(
+                    data,
+                    indicator_names,
+                    predictor_names,
+                    stratify_name,
+                    scaler,
+                    seed,
+                    modelName,
+                    params,
+                    units,
+                    report,
+                    cm,
+                    additional_metrics=additional_metrics,
+                    outlier_info=outlier_info,
+                )
+            except Exception as excel_err:
+                logger.warning("Excel export failed (model results unchanged): %s", excel_err)
 
-    ## Cluster results
+        ## Cluster results
         elif modelName in CLUSTER_MODELS:
             best_k_int = int(best_k) if best_k is not None else 0
             result = {
-                'train_silhouette' : format(round(train_results['silhouette'],sigfig), fmt),
-                'train_calinski_harabasz': format(round(train_results['calinski_harabasz'],sigfig), fmt),
-                'train_davies_bouldin' : format(round(train_results['davies_bouldin'],sigfig), fmt),
-                'test_silhouette' : format(round(test_results['silhouette'],sigfig), fmt),
-                'test_calinski_harabasz': format(round(test_results['calinski_harabasz'],sigfig), fmt),
-                'test_davies_bouldin' : format(round(test_results['davies_bouldin'],sigfig), fmt),
-                'best_k': best_k_int,
-                'model_params': _json_safe_params(params),  # Sanitize: get_params() can include estimators
+                "train_silhouette": format(round(train_results["silhouette"], sigfig), fmt),
+                "train_calinski_harabasz": format(round(train_results["calinski_harabasz"], sigfig), fmt),
+                "train_davies_bouldin": format(round(train_results["davies_bouldin"], sigfig), fmt),
+                "test_silhouette": format(round(test_results["silhouette"], sigfig), fmt),
+                "test_calinski_harabasz": format(round(test_results["calinski_harabasz"], sigfig), fmt),
+                "test_davies_bouldin": format(round(test_results["davies_bouldin"], sigfig), fmt),
+                "best_k": best_k_int,
+                "model_params": _json_safe_params(params),  # Sanitize: get_params() can include estimators
+                "outlier_info": outlier_info,
+                "feature_selection_info": None,
+                "skipped_options": skipped_options,
             }
             # write to excel for cluster (NaN metrics can make xlsxwriter raise with nan_inf_to_errors)
             try:
-                write_to_excelCluster(data, indicator_names, stratify_name, scaler, seed, modelName, params, units, train_results['silhouette'], train_results['calinski_harabasz'], train_results['davies_bouldin'], test_results['silhouette'], test_results['calinski_harabasz'], test_results['davies_bouldin'], best_k, centers, silhouette_grid)
+                write_to_excelCluster(
+                    data,
+                    indicator_names,
+                    stratify_name,
+                    scaler,
+                    seed,
+                    modelName,
+                    params,
+                    units,
+                    train_results["silhouette"],
+                    train_results["calinski_harabasz"],
+                    train_results["davies_bouldin"],
+                    test_results["silhouette"],
+                    test_results["calinski_harabasz"],
+                    test_results["davies_bouldin"],
+                    best_k,
+                    centers,
+                    silhouette_grid,
+                )
             except Exception as excel_err:
                 logger.warning("Excel export failed for cluster (model results unchanged): %s", excel_err)
 
-    ## Regression results
-        else: 
+        ## Regression results
+        else:
             trainOverall = train_results.iloc[-1]
             testOverall = test_results.iloc[-1]
 
-            #std of RMSE = np.std(all the target rmse) and np.std(all the test rmse)
-            train_rmse_values = train_results['RMSE'][:-1]
-            test_rmse_values = test_results['RMSE'][:-1]
-            train_mae_values = train_results['MAE'][:-1]
-            test_mae_values = test_results['MAE'][:-1]
+            # std of RMSE = np.std(all the target rmse) and np.std(all the test rmse)
+            train_rmse_values = train_results["RMSE"][:-1]
+            test_rmse_values = test_results["RMSE"][:-1]
+            train_mae_values = train_results["MAE"][:-1]
+            test_mae_values = test_results["MAE"][:-1]
 
             train_rmse_std = np.std(train_rmse_values) if len(train_rmse_values) > 1 else None
             train_mae_std = np.std(train_mae_values) if len(train_mae_values) > 1 else None
@@ -512,92 +964,166 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
             test_mae_std = np.std(test_mae_values) if len(test_mae_values) > 1 else None
 
             # Extract sample counts from shapes dictionary (shapes contains tuples like (n_samples, n_features))
-            train_n = shapes.get('X_train', (0,))[0] if isinstance(shapes, dict) and 'X_train' in shapes else 0
-            test_n = shapes.get('X_test', (0,))[0] if isinstance(shapes, dict) and 'X_test' in shapes else 0
-            
+            train_n = shapes.get("X_train", (0,))[0] if isinstance(shapes, dict) and "X_train" in shapes else 0
+            test_n = shapes.get("X_test", (0,))[0] if isinstance(shapes, dict) and "X_test" in shapes else 0
+
             result = {
-                'trainscore': format(round(trainOverall['R²'],sigfig), fmt),
-                'valscore': format(round(testOverall['R²'],sigfig), fmt),
-                'trainrmse': format(round(trainOverall['RMSE'],sigfig), fmt),
-                'trainrmsestd': format(round(train_rmse_std, sigfig), fmt) if train_rmse_std is not None else 'N/A',
-                'trainmae': format(round(trainOverall['MAE'],sigfig), fmt),
-                'trainmaestd': format(round(train_mae_std, sigfig), fmt) if train_mae_std is not None else 'N/A',
-                'valrmse': format(round(testOverall['RMSE'],sigfig), fmt),
-                'valrmsestd': format(round(test_rmse_std, sigfig), fmt) if test_rmse_std is not None else 'N/A',
-                'valmae': format(round(testOverall['MAE'],sigfig), fmt),
-                'valmaestd': format(round(test_mae_std, sigfig), fmt) if test_mae_std is not None else 'N/A',
-                'train_n': int(train_n) if train_n else 0,
-                'test_n': int(test_n) if test_n else 0,
-                'indicators': [str(i) for i in (indicator_names.tolist() if hasattr(indicator_names, 'tolist') else list(indicator_names))],
-                'predictors': [str(p) for p in (predictor_names.tolist() if hasattr(predictor_names, 'tolist') else list(predictor_names))],
-                'cross_validation_file': cv_file,
-                'cross_validation_summary': cv_summary_data,  # Add CV summary data
-                'model_params': _json_safe_params(params),  # Sanitize: get_params() can include estimators
-                'feature_selection_info': feature_selection_info,  # Feature selection details (None if not set by regression pipeline)
-                'outlier_info': outlier_info,  # Outlier handling details (None if not set by regression pipeline)
+                "trainscore": format(round(trainOverall["R²"], sigfig), fmt),
+                "valscore": format(round(testOverall["R²"], sigfig), fmt),
+                "trainrmse": format(round(trainOverall["RMSE"], sigfig), fmt),
+                "trainrmsestd": format(round(train_rmse_std, sigfig), fmt) if train_rmse_std is not None else "N/A",
+                "trainmae": format(round(trainOverall["MAE"], sigfig), fmt),
+                "trainmaestd": format(round(train_mae_std, sigfig), fmt) if train_mae_std is not None else "N/A",
+                "valrmse": format(round(testOverall["RMSE"], sigfig), fmt),
+                "valrmsestd": format(round(test_rmse_std, sigfig), fmt) if test_rmse_std is not None else "N/A",
+                "valmae": format(round(testOverall["MAE"], sigfig), fmt),
+                "valmaestd": format(round(test_mae_std, sigfig), fmt) if test_mae_std is not None else "N/A",
+                "train_n": int(train_n) if train_n else 0,
+                "test_n": int(test_n) if test_n else 0,
+                "indicators": [
+                    str(i)
+                    for i in (indicator_names.tolist() if hasattr(indicator_names, "tolist") else list(indicator_names))
+                ],
+                "predictors": [
+                    str(p)
+                    for p in (predictor_names.tolist() if hasattr(predictor_names, "tolist") else list(predictor_names))
+                ],
+                "cross_validation_file": cv_file,
+                "cross_validation_summary": cv_summary_data,  # Add CV summary data
+                "model_params": _json_safe_params(params),  # Sanitize: get_params() can include estimators
+                # None when the pipeline ran without feature selection
+                "feature_selection_info": feature_selection_info,
+                "outlier_info": outlier_info,  # Outlier handling details (None if not set by regression pipeline)
             }
             regression_visuals = []
-            
+
             # Check for baseline graphics (no advanced options)
             vis_dir = _config.VIS_DIR
             baseline_target_plot_exists = (vis_dir / "target_plot_1.png").exists()
             baseline_pred_actual_exists = (vis_dir / "target_plot_pred_actual_1.png").exists()
             baseline_residuals_exists = (vis_dir / "target_plot_residuals_1.png").exists()
             baseline_shap_exists = (vis_dir / "shap_summary.png").exists()
-            
+
             # Check for advanced graphics (with advanced options)
             advanced_target_plot_exists = (vis_dir / "target_plot_1_advanced.png").exists()
             advanced_pred_actual_exists = (vis_dir / "target_plot_pred_actual_1_advanced.png").exists()
             advanced_residuals_exists = (vis_dir / "target_plot_residuals_1_advanced.png").exists()
             advanced_shap_exists = (vis_dir / "shap_summary_advanced.png").exists()
-            
+
             # Determine mode label
-            mode_label = 'DiGiTerra Simple Modeling' if modeling_mode == 'simple' else (
-                'DiGiTerra Advanced Modeling' if modeling_mode == 'advanced' else 'DiGiTerra AutoML'
+            mode_label = (
+                "DiGiTerra Simple Modeling"
+                if modeling_mode == "simple"
+                else ("DiGiTerra Advanced Modeling" if modeling_mode == "advanced" else "DiGiTerra AutoML")
             )
-            
+
             # Add separate Predicted vs Actual and Test Residuals first (defaults for the two panels)
             if baseline_pred_actual_exists:
-                regression_visuals.append({'label': f'Predicted vs Actual (per target) - {mode_label}', 'file': 'target_plot_pred_actual', 'type': 'baseline'})
+                regression_visuals.append(
+                    {
+                        "label": f"Predicted vs Actual (per target) - {mode_label}",
+                        "file": "target_plot_pred_actual",
+                        "type": "baseline",
+                    }
+                )
             if advanced_pred_actual_exists:
-                regression_visuals.append({'label': f'Predicted vs Actual (per target) - {mode_label}', 'file': 'target_plot_pred_actual_advanced', 'type': 'advanced'})
+                regression_visuals.append(
+                    {
+                        "label": f"Predicted vs Actual (per target) - {mode_label}",
+                        "file": "target_plot_pred_actual_advanced",
+                        "type": "advanced",
+                    }
+                )
             if baseline_residuals_exists:
-                regression_visuals.append({'label': f'Test Residuals (per target) - {mode_label}', 'file': 'target_plot_residuals', 'type': 'baseline'})
+                regression_visuals.append(
+                    {
+                        "label": f"Test Residuals (per target) - {mode_label}",
+                        "file": "target_plot_residuals",
+                        "type": "baseline",
+                    }
+                )
             if advanced_residuals_exists:
-                regression_visuals.append({'label': f'Test Residuals (per target) - {mode_label}', 'file': 'target_plot_residuals_advanced', 'type': 'advanced'})
+                regression_visuals.append(
+                    {
+                        "label": f"Test Residuals (per target) - {mode_label}",
+                        "file": "target_plot_residuals_advanced",
+                        "type": "advanced",
+                    }
+                )
             # Combined view (optional)
             if baseline_target_plot_exists:
-                regression_visuals.append({'label': f'Predicted vs Actual + Residuals (combined, per target) - {mode_label}', 'file': 'target_plot', 'type': 'baseline'})
+                regression_visuals.append(
+                    {
+                        "label": f"Predicted vs Actual + Residuals (combined, per target) - {mode_label}",
+                        "file": "target_plot",
+                        "type": "baseline",
+                    }
+                )
             if advanced_target_plot_exists:
-                regression_visuals.append({'label': f'Predicted vs Actual + Residuals (combined, per target) - {mode_label}', 'file': 'target_plot_advanced', 'type': 'advanced'})
+                regression_visuals.append(
+                    {
+                        "label": f"Predicted vs Actual + Residuals (combined, per target) - {mode_label}",
+                        "file": "target_plot_advanced",
+                        "type": "advanced",
+                    }
+                )
             if not baseline_target_plot_exists and not advanced_target_plot_exists:
-                regression_visuals.append({'label': 'Predicted vs Actual + Residuals (per target)', 'file': 'target_plot', 'type': 'default'})
-            
+                regression_visuals.append(
+                    {"label": "Predicted vs Actual + Residuals (per target)", "file": "target_plot", "type": "default"}
+                )
+
             regression_candidates = [
-                ('regression_predicted_vs_actual.png', 'Predicted vs Actual (summary)'),
-                ('regression_residuals_hist.png', 'Residuals Histogram'),
-                ('regression_residuals_vs_fitted.png', 'Residuals vs Fitted'),
-                ('regression_density.png', 'Actual vs Predicted Density'),
-                ('regression_feature_importance.png', 'Feature Importance'),
-                ('regression_permutation_importance.png', 'Permutation Importance'),
+                ("regression_predicted_vs_actual.png", "Predicted vs Actual (summary)"),
+                ("regression_residuals_hist.png", "Residuals Histogram"),
+                ("regression_residuals_vs_fitted.png", "Residuals vs Fitted"),
+                ("regression_density.png", "Actual vs Predicted Density"),
+                ("regression_feature_importance.png", "Feature Importance"),
+                ("regression_permutation_importance.png", "Permutation Importance"),
             ]
-            
+
             # Add baseline SHAP if exists
             if baseline_shap_exists:
-                regression_visuals.append({'label': f'SHAP Summary - {mode_label}', 'file': 'shap_summary', 'type': 'baseline'})
-            
+                regression_visuals.append(
+                    {"label": f"SHAP Summary - {mode_label}", "file": "shap_summary", "type": "baseline"}
+                )
+
             # Add advanced SHAP if exists
             if advanced_shap_exists:
-                regression_visuals.append({'label': f'SHAP Summary - {mode_label}', 'file': 'shap_summary_advanced', 'type': 'advanced'})
-            
+                regression_visuals.append(
+                    {"label": f"SHAP Summary - {mode_label}", "file": "shap_summary_advanced", "type": "advanced"}
+                )
+
             # Add other regression candidates (these don't have baseline/advanced variants)
             for filename, label in regression_candidates:
                 if (vis_dir / filename).exists():
-                    regression_visuals.append({'label': label, 'file': filename, 'type': 'default'})
-            
-            result['regression_visuals'] = regression_visuals
+                    regression_visuals.append({"label": label, "file": filename, "type": "default"})
+            if compare_models and model_comparison and model_comparison.get("figure"):
+                regression_visuals.insert(
+                    0, {"label": "Candidate model comparison", "file": "model_comparison.png", "type": "default"}
+                )
+
+            result["regression_visuals"] = regression_visuals
             try:
-                write_to_excelRegression(data, indicator_names, predictor_names, stratify_name, modelName, params, units, trainOverall, testOverall, train_results, test_results, scaler, seed, shapes, quantileBin_results, cross_validation_summary=cv_summary_data, feature_selection_info=feature_selection_info, outlier_info=outlier_info)
+                write_to_excelRegression(
+                    data,
+                    indicator_names,
+                    predictor_names,
+                    stratify_name,
+                    modelName,
+                    params,
+                    units,
+                    trainOverall,
+                    testOverall,
+                    train_results,
+                    test_results,
+                    scaler,
+                    seed,
+                    shapes,
+                    quantileBin_results,
+                    cross_validation_summary=cv_summary_data,
+                    feature_selection_info=feature_selection_info,
+                    outlier_info=outlier_info,
+                )
             except Exception as excel_err:
                 logger.warning("Excel export failed (model results unchanged): %s", excel_err)
 
@@ -610,56 +1136,137 @@ def run_model_training(session_id: str, data: dict, storage_session_id: str, get
 
             try:
                 _y_train = df[predictor_names].to_numpy()
-                store['y_train_mean'] = float(np.mean(_y_train))
-                store['y_train_std'] = float(np.std(_y_train))
+                store["y_train_mean"] = float(np.mean(_y_train))
+                store["y_train_std"] = float(np.std(_y_train))
             except Exception:
-                store['y_train_mean'] = None
-                store['y_train_std'] = None
+                store["y_train_mean"] = None
+                store["y_train_std"] = None
 
-            store['y_scaler'] = y_scaler
+            store["y_scaler"] = y_scaler
 
-
-        store['model'] = storedModel #10/1 Rowan this is how the model is stored, it is returned from the train functions
-        store['X_scaler'] = X_scaler
-        store['feature_order'] = feature_order
+        # A y_scaler left over from an earlier regression run would inverse-transform
+        # the next run's cluster labels or class codes.
+        if problem_type != "regression":
+            store["y_scaler"] = None
+        store["model"] = (
+            storedModel  # 10/1 Rowan this is how the model is stored, it is returned from the train functions
+        )
+        store["X_scaler"] = X_scaler
+        store["feature_order"] = feature_order
+        # How far a new row sits from the training rows. Fitted by the pipeline while
+        # the training matrix was in scope; None when it could not be measured.
+        store["applicability"] = get_applicability()
+        # The half-width of a 90 percent interval, for a regression run.
+        store["conformal"] = get_conformal()
+        # Read once, then cleared. The pipelines clear these on entry as well; doing
+        # it on both sides means no record survives the run that made it even when a
+        # run raises between the two points.
+        set_applicability(None)
+        set_conformal(None)
         # Store predictor names for use in prediction (handles multi-target regression)
-        store['predictor_names'] = predictor_names
+        store["predictor_names"] = predictor_names
         # Store model type and training visualization for inference results page
-        if problem_type == 'classification':
-            store['model_type'] = 'classification'
-            store['training_visualization'] = 'confusion_matrix.png'
-            store['training_visualization_version'] = str(int(time.time() * 1000))
+        if problem_type == "classification":
+            store["model_type"] = "classification"
+            store["training_visualization"] = "confusion_matrix.png"
+            store["training_visualization_version"] = str(int(time.time() * 1000))
         elif modelName in CLUSTER_MODELS:
-            store['model_type'] = 'cluster'
-            store['training_visualization'] = 'cluster_pca_train.png'
-            store['training_visualization_version'] = str(int(time.time() * 1000))
+            store["model_type"] = "cluster"
+            store["training_visualization"] = "cluster_pca_train.png"
+            store["training_visualization_version"] = str(int(time.time() * 1000))
         else:
-            store['model_type'] = 'regression'
-            rv = result.get('regression_visuals') or []
-            use_advanced = modeling_mode == 'advanced' and any(v.get('type') == 'advanced' for v in rv)
-            pred_actual_name = 'target_plot_pred_actual_1_advanced.png' if use_advanced else 'target_plot_pred_actual_1.png'
+            store["model_type"] = "regression"
+            rv = result.get("regression_visuals") or []
+            use_advanced = modeling_mode == "advanced" and any(v.get("type") == "advanced" for v in rv)
+            pred_actual_name = (
+                "target_plot_pred_actual_1_advanced.png" if use_advanced else "target_plot_pred_actual_1.png"
+            )
             if (vis_dir / pred_actual_name).exists():
-                store['training_visualization'] = pred_actual_name
+                store["training_visualization"] = pred_actual_name
             else:
-                inference_filename = shapes.get('training_visualization_filename') if isinstance(shapes, dict) else None
+                inference_filename = shapes.get("training_visualization_filename") if isinstance(shapes, dict) else None
                 if inference_filename:
-                    store['training_visualization'] = inference_filename
+                    store["training_visualization"] = inference_filename
                 else:
-                    store['training_visualization'] = 'target_plot_1_advanced.png' if use_advanced else 'target_plot_1.png'
-            store['training_visualization_version'] = str(int(time.time() * 1000))
+                    store["training_visualization"] = (
+                        "target_plot_1_advanced.png" if use_advanced else "target_plot_1.png"
+                    )
+            store["training_visualization_version"] = str(int(time.time() * 1000))
 
-        # Mark all stages complete
+        result["split_note"] = split_plan.note
+        result["data_checks"] = guardrail_report.to_dict()
+        forced = bool(allow_unsafe and guardrail_report.blocking)
+        result["data_checks"]["allow_unsafe"] = bool(allow_unsafe)
+        result["data_checks"]["forced"] = forced
+        result["data_checks"]["override_reason"] = override_reason if allow_unsafe else None
+        # A run trained past a blocking finding is labeled here and in the model card.
+        result["data_checks"]["decision_use"] = "not valid for decision use" if forced else "no blocking findings"
+        result["baseline"] = baseline_info
+        result["model_comparison"] = model_comparison if compare_models else None
+        result["model_name"] = modelName
+        result["session_id"] = session_id  # Include session ID in response
+
+        # The run record: what ran, on which bytes, with which versions, and what came out.
+        try:
+            store["seed"] = seed
+            store["model_name"] = modelName
+            store["last_training_request"] = dict(data)
+            manifest = build_manifest(store, data, result, store["model_type"], modelName)
+            write_run_record(_config.VIS_DIR.current(), manifest)
+            result["model_card_url"] = "/user-visualizations/model_card.html"
+            result["bundle_url"] = "/export-bundle"
+        except Exception as record_err:
+            logger.warning("Run record not written (model results unchanged): %s", record_err)
+
+        # The fitted objects are charged against the process budget beside the frame.
+        # The scores are already computed and stay valid, so a model that does not fit
+        # is dropped and the result says inference is unavailable rather than the run
+        # being thrown away. This runs after the fit because a model cannot be measured
+        # before it exists; a worker with a memory limit is the stronger control and is
+        # not done.
+        try:
+            admit_model(storage_session_id, serialized_size(store))
+            result["model_retained"] = True
+        except Exception as budget_err:
+            # A model whose size cannot be measured cannot be charged either, so
+            # it is treated as a refusal rather than kept uncharged.
+            discard_model(storage_session_id)
+            result["model_retained"] = False
+            reason = (
+                str(budget_err)
+                if isinstance(budget_err, MemoryBudgetExceeded)
+                else "The fitted model could not be measured against the memory budget."
+            )
+            result["capacity_note"] = (
+                f"{reason} The scores below are from the completed run, but the fitted model was not kept, "
+                "so inference on new data is not available for it."
+            )
+            logger.warning("Fitted model discarded: %s", budget_err)
+
+        # The run wrote the fitted objects into the session; another process can
+        # read them once they are written.
+        try:
+            from core.state import flush as _flush_session
+
+            _flush_session(storage_session_id)
+        except Exception as flush_err:
+            logger.warning("Session not written after the run: %s", flush_err)
+
+        # Mark all stages complete only now, after the record, the memory check and
+        # the session file, so the progress does not read 100 while they run.
         tracker.complete()
-        result['session_id'] = session_id  # Include session ID in response
-        
         # Store result for SSE endpoint
         set_result(session_id, result)
-        
+
     except Exception as e:
+        if locals().get("split_plan_token") is not None:
+            reset_split_plan(locals()["split_plan_token"])
+        if locals().get("fill_plan_token") is not None:
+            reset_fill_plan(locals()["fill_plan_token"])
         # Ensure tracker is cleaned up on error
         logger.error(f"Error in model training: {e}", exc_info=True)
-        error_result = {'error': str(e), 'session_id': session_id}
+        error_result = {"error": str(e), "session_id": session_id}
         set_result(session_id, error_result)
-        tracker.update_stage('model_training', 'completed', 0, f'Error: {str(e)}')
-        remove_tracker(session_id)
-
+        # fail() drives progress to the terminal value so the stream delivers this
+        # result. Removing the tracker here would delete the result with it.
+        tracker.fail(str(e))

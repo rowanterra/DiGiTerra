@@ -2,99 +2,119 @@
 
 Same imports as app_model_training.py (regression, classify, cluster).
 MODEL_REGISTRY maps model name -> (train_fn, problem_type).
-Polynomial has no train_*; it is registered with train_fn=None.
 """
 
 import ast
-from typing import Any, Callable, Dict, Optional, Tuple
+from collections.abc import Callable
+from typing import Any
 
-# Regression
-from python_scripts.models.regression_models.train_linear import train_linear
-from python_scripts.models.regression_models.train_lasso import train_lasso
-from python_scripts.models.regression_models.train_elasticnet import train_elasticnet
-from python_scripts.models.regression_models.train_gb import train_gb
-from python_scripts.models.regression_models.train_knn import train_knn
-from python_scripts.models.regression_models.train_mlp import train_mlp
-from python_scripts.models.regression_models.train_perceptron import train_perceptron
-from python_scripts.models.regression_models.train_rf import train_rf
-from python_scripts.models.regression_models.train_ridge import train_ridge
-from python_scripts.models.regression_models.train_svr import train_svr
-from python_scripts.models.regression_models.train_bayesian_ridge import train_bayesian_ridge
-from python_scripts.models.regression_models.train_ard_regression import train_ard_regression
-from python_scripts.models.regression_models.train_extra_trees import train_extra_trees
-from python_scripts.models.regression_models.train_adaboost_regressor import train_adaboost_regressor
-from python_scripts.models.regression_models.train_bagging_regressor import train_bagging_regressor
-from python_scripts.models.regression_models.train_decision_tree_regressor import train_decision_tree_regressor
-from python_scripts.models.regression_models.train_elasticnet_cv import train_elasticnet_cv
-from python_scripts.models.regression_models.train_hist_gradient_boosting_regressor import train_hist_gradient_boosting_regressor
-from python_scripts.models.regression_models.train_huber_regressor import train_huber_regressor
-from python_scripts.models.regression_models.train_lars import train_lars
-from python_scripts.models.regression_models.train_lars_cv import train_lars_cv
-from python_scripts.models.regression_models.train_lasso_cv import train_lasso_cv
-from python_scripts.models.regression_models.train_lassolars import train_lassolars
-from python_scripts.models.regression_models.train_linearsvr import train_linearsvr
-from python_scripts.models.regression_models.train_nusvr import train_nusvr
-from python_scripts.models.regression_models.train_orthogonal_matching_pursuit import train_orthogonal_matching_pursuit
-from python_scripts.models.regression_models.train_passive_aggressive_regressor import train_passive_aggressive_regressor
-from python_scripts.models.regression_models.train_quantile_regressor import train_quantile_regressor
-from python_scripts.models.regression_models.train_radius_neighbors_regressor import train_radius_neighbors_regressor
-from python_scripts.models.regression_models.train_ransac_regressor import train_ransac_regressor
-from python_scripts.models.regression_models.train_ridge_cv import train_ridge_cv
-from python_scripts.models.regression_models.train_sgd_regressor import train_sgd_regressor
-from python_scripts.models.regression_models.train_theilsen_regressor import train_theilsen_regressor
-# Classify
-from python_scripts.models.classify_models.train_logistic_classifier import train_logistic_classifier
-from python_scripts.models.classify_models.train_mlp_classifier import train_mlp_classifier
-from python_scripts.models.classify_models.train_rf_classifier import train_rf_classifier
-from python_scripts.models.classify_models.train_svc import train_svc
-from python_scripts.models.classify_models.train_extra_trees_classifier import train_extra_trees_classifier
-from python_scripts.models.classify_models.train_gaussian_nb import train_gaussian_nb
-from python_scripts.models.classify_models.train_sgd_classifier import train_sgd_classifier
 from python_scripts.models.classify_models.train_adaboost_classifier import train_adaboost_classifier
 from python_scripts.models.classify_models.train_bagging_classifier import train_bagging_classifier
 from python_scripts.models.classify_models.train_bernoulli_nb import train_bernoulli_nb
 from python_scripts.models.classify_models.train_categorical_nb import train_categorical_nb
 from python_scripts.models.classify_models.train_complement_nb import train_complement_nb
 from python_scripts.models.classify_models.train_decision_tree_classifier import train_decision_tree_classifier
+from python_scripts.models.classify_models.train_extra_trees_classifier import train_extra_trees_classifier
+from python_scripts.models.classify_models.train_gaussian_nb import train_gaussian_nb
 from python_scripts.models.classify_models.train_gradient_boosting_classifier import train_gradient_boosting_classifier
-from python_scripts.models.classify_models.train_hist_gradient_boosting_classifier import train_hist_gradient_boosting_classifier
+from python_scripts.models.classify_models.train_hist_gradient_boosting_classifier import (
+    train_hist_gradient_boosting_classifier,
+)
 from python_scripts.models.classify_models.train_kneighbors_classifier import train_kneighbors_classifier
 from python_scripts.models.classify_models.train_linear_discriminant_analysis import train_linear_discriminant_analysis
 from python_scripts.models.classify_models.train_linearsvc import train_linearsvc
+
+# Classify
+from python_scripts.models.classify_models.train_logistic_classifier import train_logistic_classifier
+from python_scripts.models.classify_models.train_mlp_classifier import train_mlp_classifier
 from python_scripts.models.classify_models.train_multinomial_nb import train_multinomial_nb
 from python_scripts.models.classify_models.train_nusvc import train_nusvc
-from python_scripts.models.classify_models.train_passive_aggressive_classifier import train_passive_aggressive_classifier
-from python_scripts.models.classify_models.train_quadratic_discriminant_analysis import train_quadratic_discriminant_analysis
+from python_scripts.models.classify_models.train_passive_aggressive_classifier import (
+    train_passive_aggressive_classifier,
+)
+from python_scripts.models.classify_models.train_perceptron import train_perceptron
+from python_scripts.models.classify_models.train_quadratic_discriminant_analysis import (
+    train_quadratic_discriminant_analysis,
+)
+from python_scripts.models.classify_models.train_rf_classifier import train_rf_classifier
 from python_scripts.models.classify_models.train_ridge_classifier import train_ridge_classifier
+from python_scripts.models.classify_models.train_sgd_classifier import train_sgd_classifier
+from python_scripts.models.classify_models.train_svc import train_svc
+from python_scripts.models.cluster_models.train_affinity_propagation import train_affinity_propagation
+
 # Cluster
 from python_scripts.models.cluster_models.train_agglomerative import train_agglomerative
-from python_scripts.models.cluster_models.train_gmm import train_gmm
-from python_scripts.models.cluster_models.train_kmeans import train_kmeans
-from python_scripts.models.cluster_models.train_dbscan import train_dbscan
 from python_scripts.models.cluster_models.train_birch import train_birch
-from python_scripts.models.cluster_models.train_spectral import train_spectral
-from python_scripts.models.cluster_models.train_affinity_propagation import train_affinity_propagation
 from python_scripts.models.cluster_models.train_bisecting_kmeans import train_bisecting_kmeans
+from python_scripts.models.cluster_models.train_dbscan import train_dbscan
+from python_scripts.models.cluster_models.train_gmm import train_gmm
 from python_scripts.models.cluster_models.train_hdbscan import train_hdbscan
+from python_scripts.models.cluster_models.train_kmeans import train_kmeans
 from python_scripts.models.cluster_models.train_meanshift import train_meanshift
 from python_scripts.models.cluster_models.train_minibatch_kmeans import train_minibatch_kmeans
 from python_scripts.models.cluster_models.train_optics import train_optics
+from python_scripts.models.cluster_models.train_spectral import train_spectral
+from python_scripts.models.regression_models.train_adaboost_regressor import train_adaboost_regressor
+from python_scripts.models.regression_models.train_ard_regression import train_ard_regression
+from python_scripts.models.regression_models.train_bagging_regressor import train_bagging_regressor
+from python_scripts.models.regression_models.train_bayesian_ridge import train_bayesian_ridge
+from python_scripts.models.regression_models.train_decision_tree_regressor import train_decision_tree_regressor
+from python_scripts.models.regression_models.train_elasticnet import train_elasticnet
+from python_scripts.models.regression_models.train_elasticnet_cv import train_elasticnet_cv
+from python_scripts.models.regression_models.train_extra_trees import train_extra_trees
+from python_scripts.models.regression_models.train_gb import train_gb
+from python_scripts.models.regression_models.train_hist_gradient_boosting_regressor import (
+    train_hist_gradient_boosting_regressor,
+)
+from python_scripts.models.regression_models.train_huber_regressor import train_huber_regressor
+from python_scripts.models.regression_models.train_knn import train_knn
+from python_scripts.models.regression_models.train_lars import train_lars
+from python_scripts.models.regression_models.train_lars_cv import train_lars_cv
+from python_scripts.models.regression_models.train_lasso import train_lasso
+from python_scripts.models.regression_models.train_lasso_cv import train_lasso_cv
+from python_scripts.models.regression_models.train_lassolars import train_lassolars
+
+# Regression
+from python_scripts.models.regression_models.train_linear import train_linear
+from python_scripts.models.regression_models.train_linearsvr import train_linearsvr
+from python_scripts.models.regression_models.train_mlp import train_mlp
+from python_scripts.models.regression_models.train_nusvr import train_nusvr
+from python_scripts.models.regression_models.train_orthogonal_matching_pursuit import train_orthogonal_matching_pursuit
+from python_scripts.models.regression_models.train_passive_aggressive_regressor import (
+    train_passive_aggressive_regressor,
+)
+from python_scripts.models.regression_models.train_polynomial import train_polynomial
+from python_scripts.models.regression_models.train_quantile_regressor import train_quantile_regressor
+from python_scripts.models.regression_models.train_radius_neighbors_regressor import train_radius_neighbors_regressor
+from python_scripts.models.regression_models.train_ransac_regressor import train_ransac_regressor
+from python_scripts.models.regression_models.train_rf import train_rf
+from python_scripts.models.regression_models.train_ridge import train_ridge
+from python_scripts.models.regression_models.train_ridge_cv import train_ridge_cv
+from python_scripts.models.regression_models.train_sgd_regressor import train_sgd_regressor
+from python_scripts.models.regression_models.train_svr import train_svr
+from python_scripts.models.regression_models.train_theilsen_regressor import train_theilsen_regressor
 
 
-def _b(h: dict, k: str, default: bool = True) -> bool:
-    """Bool from h: true unless value is 'false'."""
+def _b(h: dict, k: str, default: bool | None = None) -> bool | None:
+    """Bool from h: true unless value is 'false'; None when the form did not send it.
+
+    The default was True, which made a missing boolean (dual, warm_start,
+    positive) come out True whatever the estimator's own default, and lbfgs
+    then refused dual=True. None is dropped by get_model_kwargs with nonreq
+    on, so the trainer's default applies (E1 follow-up F6, 2026-09-24).
+    """
     v = h.get(k)
-    if v is None or v == '':
+    if v is None or v == "":
         return default
-    return str(v).lower() != 'false'
+    return str(v).lower() != "false"
 
 
 def _n(h: dict, k: str, default: Any = None) -> Any:
     """Int or 'auto'/'warn' for n_init-style params."""
     v = h.get(k)
-    if v is None or v == '':
+    if v is None or v == "":
         return default
-    if v in ('auto', 'warn'):
+    if v in ("auto", "warn"):
         return v
     try:
         return int(v)
@@ -102,15 +122,15 @@ def _n(h: dict, k: str, default: Any = None) -> Any:
         return default
 
 
-def _o(h: dict, k: str) -> Optional[Any]:
+def _o(h: dict, k: str) -> Any | None:
     """h[k] or None if missing/empty."""
     v = h.get(k)
-    if v is None or v == '':
+    if v is None or v == "":
         return None
     return v
 
 
-MODEL_REGISTRY: Dict[str, Tuple[Optional[Callable], str]] = {
+MODEL_REGISTRY: dict[str, tuple[Callable | None, str]] = {
     # Regression
     "Linear": (train_linear, "regression"),
     "BayesianRidge": (train_bayesian_ridge, "regression"),
@@ -144,8 +164,8 @@ MODEL_REGISTRY: Dict[str, Tuple[Optional[Callable], str]] = {
     "RidgeCV": (train_ridge_cv, "regression"),
     "SGD": (train_sgd_regressor, "regression"),
     "TheilSen": (train_theilsen_regressor, "regression"),
-    "Polynomial": (None, "regression"),  # no train_* in codebase
-    "Perceptron": (train_perceptron, "regression"),
+    "Polynomial": (train_polynomial, "regression"),
+    "Perceptron": (train_perceptron, "classification"),
     # Classification
     "Logistic_classifier": (train_logistic_classifier, "classification"),
     "ExtraTrees_classifier": (train_extra_trees_classifier, "classification"),
@@ -185,380 +205,508 @@ MODEL_REGISTRY: Dict[str, Tuple[Optional[Callable], str]] = {
     "optics": (train_optics, "cluster"),
 }
 
-CLUSTER_MODELS: frozenset = frozenset(
-    name for name, (_, pt) in MODEL_REGISTRY.items() if pt == "cluster"
+CLUSTER_MODELS: frozenset = frozenset(name for name, (_, pt) in MODEL_REGISTRY.items() if pt == "cluster")
+
+
+def _hidden_layer_sizes_tuple(h: dict[str, Any]) -> str:
+    """Build the tuple literal for MLP hidden_layer_sizes from the three form fields.
+
+    Empty fields are dropped; with no sizes at all the sklearn default (100,) is used,
+    so an empty form does not produce the unparsable literal "(,)".
+    """
+    sizes = []
+    for key in ("hidden_layer_sizes1", "hidden_layer_sizes2", "hidden_layer_sizes3"):
+        v = h.get(key)
+        if v is None or str(v).strip() == "":
+            continue
+        sizes.append(str(int(float(v))))
+    if not sizes:
+        sizes = ["100"]
+    return "(" + ",".join(sizes) + ",)"
+
+
+# Classifiers whose trainer reads the form's own key names through kwargs.get.
+# Before 2026-09-24 every one of these returned {} here, so a value typed on
+# the Advanced form never reached the estimator while the manifest still
+# recorded the request (E1 finding F3). The form and trainer key names were
+# checked against each other model by model; the form sends nothing for
+# ExtraTrees, GaussianNB and SGD, and sends a few keys no trainer reads
+# (MultinomialNB affinity-propagation fields, CategoricalNB min_category_count,
+# NuSVC C), which pass through unread as before.
+_PASSTHROUGH_CLASSIFIERS = frozenset(
+    [
+        "AdaBoost_classifier",
+        "Bagging_classifier",
+        "BernoulliNB_classifier",
+        "CategoricalNB_classifier",
+        "ComplementNB_classifier",
+        "DecisionTree_classifier",
+        "ExtraTrees_classifier",
+        "GaussianNB_classifier",
+        "GradientBoosting_classifier",
+        "HistGradientBoosting_classifier",
+        "KNeighbors_classifier",
+        "LDA_classifier",
+        "LinearSVC_classifier",
+        "MultinomialNB_classifier",
+        "NuSVC_classifier",
+        "PassiveAggressive_classifier",
+        "QDA_classifier",
+        "Ridge_classifier",
+        "SGD_classifier",
+    ]
 )
 
 
-def _hidden_layer_sizes_tuple(h: Dict[str, Any]) -> str:
-    s = '(' + str(h.get('hidden_layer_sizes1', '')) + ',' + str(h.get('hidden_layer_sizes2', ''))
-    if h.get('hidden_layer_sizes3'):
-        s += ',' + str(h.get('hidden_layer_sizes3', '')) + ')'
-    else:
-        s += ')'
-    return s
+def _passthrough(h: dict) -> dict[str, Any]:
+    """Every form value that is present, with blank and 'None' strings dropped."""
+    out = {}
+    for k, v in h.items():
+        if v is None or v == "" or (isinstance(v, str) and v.strip().lower() == "none"):
+            continue
+        out[k] = v
+    return out
 
 
 def get_model_kwargs(
     modelName: str,
-    hyperparameters: Dict[str, Any],
+    hyperparameters: dict[str, Any],
     nonreq: bool,
-    seed: Optional[int],
-) -> Dict[str, Any]:
+    seed: int | None,
+) -> dict[str, Any]:
+    """Model-specific kwargs for the trainer, with every None dropped.
+
+    A field the user cleared arrives as null (parseFloat of an empty string),
+    and a form that never had the field (the guided page for a model it cannot
+    edit) sends nothing at all. A None that reaches a trainer as a present key
+    defeats its kwargs.get default and scikit-learn then rejects it
+    (intercept_scaling=None on LogisticRegression, E1 finding F5; n_estimators=None
+    on RandomForestClassifier from the guided page, review of 2026-09-24). None
+    keys are dropped in both modes so the trainer's default applies. The sweep
+    harness reads _model_kwargs, which keeps them, to know which required
+    parameters an empty form leaves blank.
+    """
+    out = _model_kwargs(modelName, hyperparameters, nonreq, seed)
+    return {k: v for k, v in out.items() if v is not None}
+
+
+def _model_kwargs(
+    modelName: str,
+    hyperparameters: dict[str, Any],
+    nonreq: bool,
+    seed: int | None,
+) -> dict[str, Any]:
     """Return model-specific kwargs (no feature_selection_method/outlier_method/progress_tracker/modeling_mode)."""
     h, n = hyperparameters, nonreq
 
-    if modelName == 'Linear':
+    if modelName in _PASSTHROUGH_CLASSIFIERS:
+        return _passthrough(h or {})
+    if modelName == "Linear":
         return {}
-    if modelName == 'BayesianRidge':
+    if modelName == "BayesianRidge":
         return {}
-    if modelName == 'ARDRegression':
+    if modelName == "ARDRegression":
         return {}
-    if modelName == 'Ridge':
+    if modelName == "Ridge":
         if n:
             return {
-                'alpha': h.get('alpha'), 'solver': h.get('solver'),
-                'RidgeFitIntersept': _b(h, 'RidgeFitIntersept'),
-                'RidgeNormalize': _b(h, 'RidgeNormalize'), 'RidgeCopyX': _b(h, 'RidgeCopyX'),
-                'RidgePositive': _b(h, 'RidgePositive'), 'RidgeMaxIter': h.get('RidgeMaxIter'),
-                'RidgeTol': h.get('RidgeTol'), 'RidgeRandomState': seed,
+                "alpha": h.get("alpha"),
+                "solver": h.get("solver"),
+                "RidgeFitIntersept": _b(h, "RidgeFitIntersept"),
+                "RidgeNormalize": _b(h, "RidgeNormalize"),
+                "RidgeCopyX": _b(h, "RidgeCopyX"),
+                "RidgePositive": _b(h, "RidgePositive"),
+                "RidgeMaxIter": h.get("RidgeMaxIter"),
+                "RidgeTol": h.get("RidgeTol"),
+                "RidgeRandomState": seed,
             }
-        return {'alpha': h.get('alpha'), 'RidgeRandomState': seed}
-    if modelName == 'Lasso':
+        return {"alpha": h.get("alpha"), "RidgeRandomState": seed}
+    if modelName == "Lasso":
         if n:
             return {
-                'alpha': h.get('alpha'), 'max_iter': h.get('max_iter'),
-                'fit_intercept': _b(h, 'LassoFitIntersept'), 'precompute': _b(h, 'LassoPrecompute'),
-                'copy_X': _b(h, 'LassoCopyX'), 'tol': h.get('LassoTol'),
-                'warm_start': _b(h, 'LassoWarmStart'), 'positive': _b(h, 'LassoPositive'),
-                'random_state': seed, 'selection': h.get('LassoSelection'),
+                "alpha": h.get("alpha"),
+                "max_iter": h.get("max_iter"),
+                "fit_intercept": _b(h, "LassoFitIntersept"),
+                "precompute": _b(h, "LassoPrecompute"),
+                "copy_X": _b(h, "LassoCopyX"),
+                "tol": h.get("LassoTol"),
+                "warm_start": _b(h, "LassoWarmStart"),
+                "positive": _b(h, "LassoPositive"),
+                "random_state": seed,
+                "selection": h.get("LassoSelection"),
             }
-        return {'alpha': h.get('alpha'), 'random_state': seed}
-    if modelName == 'ElasticNet':
-        return {'alpha': h.get('alpha'), 'l1_ratio': h.get('l1_ratio')}
-    if modelName == 'SVM':
-        kernel = h.get('kernel', 'rbf')
-        base = {'C': h.get('C'), 'kernel': kernel, 'random_state': seed}
-        if kernel == 'rbf':
-            base['gamma'] = h.get('gamma')
+        return {"alpha": h.get("alpha"), "random_state": seed}
+    if modelName == "ElasticNet":
+        return {"alpha": h.get("alpha"), "l1_ratio": h.get("l1_ratio"), "random_state": seed}
+    if modelName == "SVM":
+        kernel = h.get("kernel", "rbf")
+        base = {"C": h.get("C"), "kernel": kernel, "random_state": seed}
+        if kernel == "rbf":
+            base["gamma"] = h.get("gamma")
             if n:
-                base.update({
-                    'coef0': h.get('SVMcoef0'), 'shrinking': _b(h, 'SVMshrinking'),
-                    'probability': _b(h, 'SVMprobability'), 'tol': h.get('SVMtol'),
-                    'cache_size': h.get('SVMCacheSize'), 'class_weight': h.get('SVMClassWeight'),
-                    'verbose': _b(h, 'SVMverbose'), 'max_iter': h.get('SVMmaxIter'),
-                    'decision_function_shape': h.get('SVMdecisionFunctionShape'),
-                    'break_ties': _b(h, 'SVMBreakTies'),
-                })
-        elif kernel == 'poly':
-            base['degree'] = h.get('degree')
-            base['gamma'] = h.get('gamma')
+                base.update(
+                    {
+                        "coef0": h.get("SVMcoef0"),
+                        "shrinking": _b(h, "SVMshrinking"),
+                        "probability": _b(h, "SVMprobability"),
+                        "tol": h.get("SVMtol"),
+                        "cache_size": h.get("SVMCacheSize"),
+                        "class_weight": h.get("SVMClassWeight"),
+                        "verbose": _b(h, "SVMverbose"),
+                        "max_iter": h.get("SVMmaxIter"),
+                        "decision_function_shape": h.get("SVMdecisionFunctionShape"),
+                        "break_ties": _b(h, "SVMBreakTies"),
+                    }
+                )
+        elif kernel == "poly":
+            base["degree"] = h.get("degree")
+            base["gamma"] = h.get("gamma")
             if n:
-                base.update({
-                    'coef0': h.get('SVMcoef0'), 'shrinking': _b(h, 'SVMshrinking'),
-                    'probability': _b(h, 'SVMprobability'), 'tol': h.get('SVMtol'),
-                    'cache_size': h.get('SVMCacheSize'), 'class_weight': h.get('SVMClassWeight'),
-                    'verbose': _b(h, 'SVMverbose'), 'max_iter': h.get('SVMmaxIter'),
-                    'decision_function_shape': h.get('SVMdecisionFunctionShape'),
-                    'break_ties': _b(h, 'SVMBreakTies'),
-                })
+                base.update(
+                    {
+                        "coef0": h.get("SVMcoef0"),
+                        "shrinking": _b(h, "SVMshrinking"),
+                        "probability": _b(h, "SVMprobability"),
+                        "tol": h.get("SVMtol"),
+                        "cache_size": h.get("SVMCacheSize"),
+                        "class_weight": h.get("SVMClassWeight"),
+                        "verbose": _b(h, "SVMverbose"),
+                        "max_iter": h.get("SVMmaxIter"),
+                        "decision_function_shape": h.get("SVMdecisionFunctionShape"),
+                        "break_ties": _b(h, "SVMBreakTies"),
+                    }
+                )
         elif n:
-            base.update({
-                'coef0': h.get('SVMcoef0'), 'shrinking': _b(h, 'SVMshrinking'),
-                'probability': _b(h, 'SVMprobability'), 'tol': h.get('SVMtol'),
-                'cache_size': h.get('SVMCacheSize'), 'class_weight': h.get('SVMClassWeight'),
-                'verbose': _b(h, 'SVMverbose'), 'max_iter': h.get('SVMmaxIter'),
-                'decision_function_shape': h.get('SVMdecisionFunctionShape'),
-                'break_ties': _b(h, 'SVMBreakTies'),
-            })
+            base.update(
+                {
+                    "coef0": h.get("SVMcoef0"),
+                    "shrinking": _b(h, "SVMshrinking"),
+                    "probability": _b(h, "SVMprobability"),
+                    "tol": h.get("SVMtol"),
+                    "cache_size": h.get("SVMCacheSize"),
+                    "class_weight": h.get("SVMClassWeight"),
+                    "verbose": _b(h, "SVMverbose"),
+                    "max_iter": h.get("SVMmaxIter"),
+                    "decision_function_shape": h.get("SVMdecisionFunctionShape"),
+                    "break_ties": _b(h, "SVMBreakTies"),
+                }
+            )
         return base
-    if modelName == 'RF':
-        val = h.get('max_depth') if 'max_depth' in h else None
+    if modelName == "RF":
+        val = h.get("max_depth") if "max_depth" in h else None
         if n:
             return {
-                'n_estimators': h.get('n_estimators'), 'max_depth': val,
-                'min_samples_split': h.get('min_samples_split'),
-                'min_samples_leaf': h.get('min_samples_leaf'), 'random_state': seed,
-                'min_weight_fraction_leaf': h.get('RFmin_weight_fraction_leaf'),
-                'max_leaf_nodes': h.get('RFMaxLeafNodes'),
-                'min_impurity_decrease': h.get('RFMinImpurityDecrease'),
-                'bootstrap': _b(h, 'RFBoostrap'), 'oob_score': _b(h, 'RFoobScore'),
-                'n_jobs': h.get('RFNJobs'), 'verbose': h.get('RFVerbose'),
-                'warm_start': _b(h, 'RFWarmStart'),
+                "n_estimators": h.get("n_estimators"),
+                "max_depth": val,
+                "min_samples_split": h.get("min_samples_split"),
+                "min_samples_leaf": h.get("min_samples_leaf"),
+                "random_state": seed,
+                "min_weight_fraction_leaf": h.get("RFmin_weight_fraction_leaf"),
+                "max_leaf_nodes": h.get("RFMaxLeafNodes"),
+                "min_impurity_decrease": h.get("RFMinImpurityDecrease"),
+                "bootstrap": _b(h, "RFBoostrap"),
+                "oob_score": _b(h, "RFoobScore"),
+                "n_jobs": h.get("RFNJobs"),
+                "verbose": h.get("RFVerbose"),
+                "warm_start": _b(h, "RFWarmStart"),
             }
-        return {'n_estimators': h.get('n_estimators'), 'random_state': seed}
-    if modelName == 'ExtraTrees':
+        return {"n_estimators": h.get("n_estimators"), "random_state": seed}
+    if modelName == "ExtraTrees":
         return {}
-    if modelName == 'MLP':
+    if modelName == "MLP":
         hl = _hidden_layer_sizes_tuple(h)
         if n:
             return {
-                'hidden_layer_sizes': ast.literal_eval(hl), 'activation': h.get('activation'),
-                'solver': h.get('solver'), 'alpha': h.get('alpha'),
-                'learning_rate': h.get('learning_rate'), 'max_iter': h.get('MLPMaxIter'),
-                'batch_size': h.get('MLPBatchSize'), 'beta_1': h.get('MLPBeta1'),
-                'beta_2': h.get('MLPBeta2'), 'early_stopping': _b(h, 'MLPEarlyStopping'),
-                'epsilon': h.get('MLPEpsilon'), 'learning_rate_init': h.get('MLPLearningRateInit'),
-                'momentum': h.get('MLPMomentum'), 'nesterovs_momentum': _b(h, 'MLPNesterovsMomentum'),
-                'power_t': h.get('MLPPowerT'), 'random_state': seed,
-                'shuffle': _b(h, 'MLPShuffle'), 'tol': h.get('MLPTol'),
-                'validation_fraction': h.get('MLPValidationFraction'),
-                'verbose': _b(h, 'MLPVerbose'), 'warm_start': _b(h, 'MLPWarmStart'),
+                "hidden_layer_sizes": ast.literal_eval(hl),
+                "activation": h.get("activation"),
+                "solver": h.get("solver"),
+                "alpha": h.get("alpha"),
+                "learning_rate": h.get("learning_rate"),
+                "max_iter": h.get("MLPMaxIter"),
+                "batch_size": h.get("MLPBatchSize"),
+                "beta_1": h.get("MLPBeta1"),
+                "beta_2": h.get("MLPBeta2"),
+                "early_stopping": _b(h, "MLPEarlyStopping"),
+                "epsilon": h.get("MLPEpsilon"),
+                "learning_rate_init": h.get("MLPLearningRateInit"),
+                "momentum": h.get("MLPMomentum"),
+                "nesterovs_momentum": _b(h, "MLPNesterovsMomentum"),
+                "power_t": h.get("MLPPowerT"),
+                "random_state": seed,
+                "shuffle": _b(h, "MLPShuffle"),
+                "tol": h.get("MLPTol"),
+                "validation_fraction": h.get("MLPValidationFraction"),
+                "verbose": _b(h, "MLPVerbose"),
+                "warm_start": _b(h, "MLPWarmStart"),
             }
         return {
-            'hidden_layer_sizes': ast.literal_eval(hl), 'activation': h.get('activation'),
-            'solver': h.get('solver'), 'random_state': seed,
+            "hidden_layer_sizes": ast.literal_eval(hl),
+            "activation": h.get("activation"),
+            "solver": h.get("solver"),
+            "random_state": seed,
         }
-    if modelName == 'K-Nearest':
+    if modelName == "K-Nearest":
         if n:
             return {
-                'n_neighbors': h.get('n_neighbors'), 'metric': h.get('metric'),
-                'algorithm': h.get('KNearestAlgorithm'), 'leaf_size': h.get('KNearestLeafSize'),
-                'metric_params': _o(h, 'KNearestMetricParams'),
-                'n_jobs': h.get('KNearestNJobs'), 'p': h.get('KNearestP'),
-                'weights': h.get('KNearestWeights'),
+                "n_neighbors": h.get("n_neighbors"),
+                "metric": h.get("metric"),
+                "algorithm": h.get("KNearestAlgorithm"),
+                "leaf_size": h.get("KNearestLeafSize"),
+                "metric_params": _o(h, "KNearestMetricParams"),
+                "n_jobs": h.get("KNearestNJobs"),
+                "p": h.get("KNearestP"),
+                "weights": h.get("KNearestWeights"),
             }
-        return {'n_neighbors': h.get('n_neighbors')}
-    if modelName == 'gradient_boosting':
+        return {"n_neighbors": h.get("n_neighbors")}
+    if modelName == "gradient_boosting":
         if n:
-            init = _o(h, 'GBInit')
-            max_features = _o(h, 'GBMaxFeatrues')
+            init = _o(h, "GBInit")
+            max_features = _o(h, "GBMaxFeatrues")
             return {
-                'n_estimators': h.get('n_estimators'), 'learning_rate': h.get('learning_rate'),
-                'max_depth': h.get('max_depth'), 'loss': h.get('GBLoss'),
-                'subsample': h.get('GBSubsample'), 'criterion': h.get('GBCriterion'),
-                'min_samples_split': h.get('GBMinSamplesSplit'),
-                'min_samples_leaf': h.get('GBMinSamplesLeaf'),
-                'min_weight_fraction_leaf': h.get('GBMinWeightFractionLeaf'),
-                'min_impurity_decrease': h.get('GBMinImpurityDecrease'),
-                'init': init, 'random_state': seed, 'max_features': max_features,
-                'alpha': h.get('GBAlpha'), 'verbose': h.get('GBVerbose'),
-                'max_leaf_nodes': h.get('GBMaxLeafNodes'),
-                'warm_start': False if h.get('GBWarmStart') else True,
+                "n_estimators": h.get("n_estimators"),
+                "learning_rate": h.get("learning_rate"),
+                "max_depth": h.get("max_depth"),
+                "loss": h.get("GBLoss"),
+                "subsample": h.get("GBSubsample"),
+                "criterion": h.get("GBCriterion"),
+                "min_samples_split": h.get("GBMinSamplesSplit"),
+                "min_samples_leaf": h.get("GBMinSamplesLeaf"),
+                "min_weight_fraction_leaf": h.get("GBMinWeightFractionLeaf"),
+                "min_impurity_decrease": h.get("GBMinImpurityDecrease"),
+                "init": init,
+                "random_state": seed,
+                "max_features": max_features,
+                "alpha": h.get("GBAlpha"),
+                "verbose": h.get("GBVerbose"),
+                "max_leaf_nodes": h.get("GBMaxLeafNodes"),
+                "warm_start": _b(h, "GBWarmStart"),
             }
-        return {'n_estimators': h.get('n_estimators'), 'learning_rate': h.get('learning_rate'), 'random_state': seed}
-    if modelName == 'AdaBoost':
+        return {"n_estimators": h.get("n_estimators"), "learning_rate": h.get("learning_rate"), "random_state": seed}
+    if modelName == "AdaBoost":
         return {}
-    if modelName == 'Bagging':
+    if modelName == "Bagging":
         return {}
-    if modelName == 'DecisionTree':
+    if modelName == "DecisionTree":
         return {}
-    if modelName == 'ElasticNetCV':
+    if modelName == "ElasticNetCV":
         return {}
-    if modelName == 'HistGradientBoosting':
+    if modelName == "HistGradientBoosting":
         return {}
-    if modelName == 'Huber':
+    if modelName == "Huber":
         return {}
-    if modelName == 'LARS':
+    if modelName == "LARS":
         return {}
-    if modelName == 'LARSCV':
+    if modelName == "LARSCV":
         return {}
-    if modelName == 'LassoCV':
+    if modelName == "LassoCV":
         return {}
-    if modelName == 'LassoLars':
+    if modelName == "LassoLars":
         return {}
-    if modelName == 'LinearSVR':
+    if modelName == "LinearSVR":
         return {}
-    if modelName == 'NuSVR':
+    if modelName == "NuSVR":
         return {}
-    if modelName == 'OMP':
+    if modelName == "OMP":
         return {}
-    if modelName == 'PassiveAggressive':
+    if modelName == "PassiveAggressive":
         return {}
-    if modelName == 'Quantile':
+    if modelName == "Quantile":
         return {}
-    if modelName == 'RadiusNeighbors':
+    if modelName == "RadiusNeighbors":
         return {}
-    if modelName == 'RANSAC':
+    if modelName == "RANSAC":
         return {}
-    if modelName == 'RidgeCV':
+    if modelName == "RidgeCV":
         return {}
-    if modelName == 'SGD':
+    if modelName == "SGD":
         return {}
-    if modelName == 'TheilSen':
+    if modelName == "TheilSen":
         return {}
-    if modelName == 'Polynomial':
-        return {'degree': h.get('degree_specificity')}
-    if modelName == 'Perceptron':
+    if modelName == "Polynomial":
+        return {"degree": h.get("degree_specificity") or h.get("degree")}
+    if modelName == "Perceptron":
         if n:
             return {
-                'max_iter': h.get('max_iter'), 'eta0': h.get('eta0'),
-                'penalty': h.get('PerceptronPenalty'), 'alpha': h.get('PerceptronAlpha'),
-                'fit_intercept': _b(h, 'PerceptronFitIntercept'), 'tol': h.get('PerceptronTol'),
-                'shuffle': _b(h, 'PerceptronShuffle'), 'verbose': h.get('PerceptronVerbose'),
-                'n_jobs': h.get('PerceptronNJobs'), 'random_state': seed,
-                'early_stopping': _b(h, 'PerceptronEarlyStopping'),
-                'validation_fraction': h.get('PerceptronValidationFraction'),
-                'n_iter_no_change': h.get('PerceptronNIterNoChange'),
-                'class_weight': h.get('PerceptronClassWeight'), 'warm_start': _b(h, 'PerceptronWarmStart'),
+                "max_iter": h.get("max_iter"),
+                "eta0": h.get("eta0"),
+                "penalty": h.get("PerceptronPenalty"),
+                "alpha": h.get("PerceptronAlpha"),
+                "fit_intercept": _b(h, "PerceptronFitIntercept"),
+                "tol": h.get("PerceptronTol"),
+                "shuffle": _b(h, "PerceptronShuffle"),
+                "verbose": h.get("PerceptronVerbose"),
+                "n_jobs": h.get("PerceptronNJobs"),
+                "random_state": seed,
+                "early_stopping": _b(h, "PerceptronEarlyStopping"),
+                "validation_fraction": h.get("PerceptronValidationFraction"),
+                "n_iter_no_change": h.get("PerceptronNIterNoChange"),
+                "class_weight": h.get("PerceptronClassWeight"),
+                "warm_start": _b(h, "PerceptronWarmStart"),
             }
-        return {'max_iter': h.get('max_iter'), 'eta0': h.get('eta0')}
+        return {"max_iter": h.get("max_iter"), "eta0": h.get("eta0")}
     # Classification
-    if modelName == 'Logistic_classifier':
+    if modelName == "Logistic_classifier":
         if n:
             return {
-                'Class_LogisticDual': _b(h, 'Class_LogisticDual'),
-                'Class_LogisticFitIntercept': _b(h, 'Class_LogisticFitIntercept'),
-                'Class_LogisticWarmStart': _b(h, 'Class_LogisticWarmStart'),
-                'Class_LogisticSolver': h.get('Class_LogisticSolver'),
-                'Class_LogisticMultiClass': h.get('Class_LogisticMultiClass'),
-                'Class_CLogistic': h.get('Class_CLogistic'),
-                'Class_Logistic_penalty': h.get('Class_Logistic_penalty'),
-                'Class_LogisticTol': h.get('Class_LogisticTol'),
-                'Class_Logisticintercept_scaling': h.get('Class_Logisticintercept_scaling'),
-                'Class_LogisticClassWeight': _o(h, 'Class_LogisticClassWeight'),
-                'Class_LogisticMaxIterations': h.get('Class_LogisticMaxIterations'),
-                'Class_LogisticVerbose': h.get('Class_LogisticVerbose'),
-                'Class_LogisticNJobs': _o(h, 'Class_LogisticNJobs'),
-                'Class_Logisticl1Ratio': _o(h, 'Class_Logisticl1Ratio'),
+                "Class_LogisticDual": _b(h, "Class_LogisticDual"),
+                "Class_LogisticFitIntercept": _b(h, "Class_LogisticFitIntercept"),
+                "Class_LogisticWarmStart": _b(h, "Class_LogisticWarmStart"),
+                "Class_LogisticSolver": h.get("Class_LogisticSolver"),
+                "Class_LogisticMultiClass": h.get("Class_LogisticMultiClass"),
+                "Class_CLogistic": h.get("Class_CLogistic"),
+                "Class_Logistic_penalty": h.get("Class_Logistic_penalty"),
+                "Class_LogisticTol": h.get("Class_LogisticTol"),
+                "Class_Logisticintercept_scaling": h.get("Class_Logisticintercept_scaling"),
+                "Class_LogisticClassWeight": _o(h, "Class_LogisticClassWeight"),
+                "Class_LogisticMaxIterations": h.get("Class_LogisticMaxIterations"),
+                "Class_LogisticVerbose": h.get("Class_LogisticVerbose"),
+                "Class_LogisticNJobs": _o(h, "Class_LogisticNJobs"),
+                "Class_Logisticl1Ratio": _o(h, "Class_Logisticl1Ratio"),
             }
         return {}
-    if modelName == 'ExtraTrees_classifier':
-        return {}
-    if modelName == 'GaussianNB_classifier':
-        return {}
-    if modelName == 'SGD_classifier':
-        return {}
-    if modelName == 'MLP_classifier':
+    if modelName == "MLP_classifier":
         hl = _hidden_layer_sizes_tuple(h)
         if n:
             return {
-                'hidden_layer_sizes': ast.literal_eval(hl), 'activation': h.get('activation'),
-                'solver': h.get('solver'), 'alpha': h.get('alpha'),
-                'learning_rate': h.get('learning_rate'), 'max_iter': h.get('MLPMaxIter'),
-                'batch_size': h.get('MLPBatchSize'), 'beta_1': h.get('MLPBeta1'),
-                'beta_2': h.get('MLPBeta2'), 'early_stopping': _b(h, 'MLPEarlyStopping'),
-                'epsilon': h.get('MLPEpsilon'), 'learning_rate_init': h.get('MLPLearningRateInit'),
-                'momentum': h.get('MLPMomentum'), 'nesterovs_momentum': _b(h, 'MLPNesterovsMomentum'),
-                'power_t': h.get('MLPPowerT'), 'random_state': seed,
-                'shuffle': _b(h, 'MLPShuffle'), 'tol': h.get('MLPTol'),
-                'validation_fraction': h.get('MLPValidationFraction'),
-                'verbose': _b(h, 'MLPVerbose'), 'warm_start': _b(h, 'MLPWarmStart'),
+                "hidden_layer_sizes": ast.literal_eval(hl),
+                "activation": h.get("activation"),
+                "solver": h.get("solver"),
+                "alpha": h.get("alpha"),
+                "learning_rate": h.get("learning_rate"),
+                "max_iter": h.get("MLPMaxIter"),
+                "batch_size": h.get("MLPBatchSize"),
+                "beta_1": h.get("MLPBeta1"),
+                "beta_2": h.get("MLPBeta2"),
+                "early_stopping": _b(h, "MLPEarlyStopping"),
+                "epsilon": h.get("MLPEpsilon"),
+                "learning_rate_init": h.get("MLPLearningRateInit"),
+                "momentum": h.get("MLPMomentum"),
+                "nesterovs_momentum": _b(h, "MLPNesterovsMomentum"),
+                "power_t": h.get("MLPPowerT"),
+                "random_state": seed,
+                "shuffle": _b(h, "MLPShuffle"),
+                "tol": h.get("MLPTol"),
+                "validation_fraction": h.get("MLPValidationFraction"),
+                "verbose": _b(h, "MLPVerbose"),
+                "warm_start": _b(h, "MLPWarmStart"),
             }
         return {
-            'hidden_layer_sizes': ast.literal_eval(hl), 'activation': h.get('activation'),
-            'solver': h.get('solver'), 'random_state': seed,
+            "hidden_layer_sizes": ast.literal_eval(hl),
+            "activation": h.get("activation"),
+            "solver": h.get("solver"),
+            "random_state": seed,
         }
-    if modelName == 'RF_classifier':
-        val = h.get('max_depth') if 'max_depth' in h else None
+    if modelName == "RF_classifier":
+        val = h.get("max_depth") if "max_depth" in h else None
         if n:
             return {
-                'n_estimators': h.get('n_estimators'), 'max_depth': val,
-                'min_samples_split': h.get('min_samples_split'),
-                'min_samples_leaf': h.get('min_samples_leaf'), 'random_state': seed,
-                'min_weight_fraction_leaf': h.get('RFmin_weight_fraction_leaf'),
-                'max_leaf_nodes': h.get('RFMaxLeafNodes'),
-                'min_impurity_decrease': h.get('RFMinImpurityDecrease'),
-                'bootstrap': _b(h, 'RFBoostrap'), 'oob_score': _b(h, 'RFoobScore'),
-                'n_jobs': h.get('RFNJobs'), 'verbose': h.get('RFVerbose'),
-                'warm_start': _b(h, 'RFWarmStart'),
+                "n_estimators": h.get("n_estimators"),
+                "max_depth": val,
+                "min_samples_split": h.get("min_samples_split"),
+                "min_samples_leaf": h.get("min_samples_leaf"),
+                "random_state": seed,
+                "min_weight_fraction_leaf": h.get("RFmin_weight_fraction_leaf"),
+                "max_leaf_nodes": h.get("RFMaxLeafNodes"),
+                "min_impurity_decrease": h.get("RFMinImpurityDecrease"),
+                "bootstrap": _b(h, "RFBoostrap"),
+                "oob_score": _b(h, "RFoobScore"),
+                "n_jobs": h.get("RFNJobs"),
+                "verbose": h.get("RFVerbose"),
+                "warm_start": _b(h, "RFWarmStart"),
             }
-        return {'n_estimators': h.get('n_estimators')}
-    if modelName == 'SVC_classifier':
-        kernel = h.get('kernel', 'rbf')
-        base = {'C': h.get('C'), 'kernel': kernel, 'random_state': seed}
-        if kernel == 'rbf':
-            base['gamma'] = h.get('gamma')
-        elif kernel == 'poly':
-            base['degree'] = h.get('degree')
-            base['gamma'] = h.get('gamma')
+        return {"n_estimators": h.get("n_estimators"), "random_state": seed}
+    if modelName == "SVC_classifier":
+        kernel = h.get("kernel", "rbf")
+        base = {"C": h.get("C"), "kernel": kernel, "random_state": seed}
+        if kernel == "rbf":
+            base["gamma"] = h.get("gamma")
+        elif kernel == "poly":
+            base["degree"] = h.get("degree")
+            base["gamma"] = h.get("gamma")
         if n:
-            base.update({
-                'coef0': h.get('SVCcoef0'), 'shrinking': _b(h, 'SVCshrinking'),
-                'probability': _b(h, 'SVCprobability'), 'tol': h.get('SVCtol'),
-                'cache_size': h.get('SVCCacheSize'), 'class_weight': _o(h, 'SVCClassWeight'),
-                'verbose': _b(h, 'SVCverbose'), 'max_iter': h.get('SVCmaxIter'),
-                'decision_function_shape': h.get('SVCdecisionFunctionShape'),
-                'break_ties': _b(h, 'SVCBreakTies'),
-            })
+            base.update(
+                {
+                    "coef0": h.get("SVCcoef0"),
+                    "shrinking": _b(h, "SVCshrinking"),
+                    "probability": _b(h, "SVCprobability"),
+                    "tol": h.get("SVCtol"),
+                    "cache_size": h.get("SVCCacheSize"),
+                    "class_weight": _o(h, "SVCClassWeight"),
+                    "verbose": _b(h, "SVCverbose"),
+                    "max_iter": h.get("SVCmaxIter"),
+                    "decision_function_shape": h.get("SVCdecisionFunctionShape"),
+                    "break_ties": _b(h, "SVCBreakTies"),
+                }
+            )
         return base
-    if modelName == 'AdaBoost_classifier':
-        return {}
-    if modelName == 'Bagging_classifier':
-        return {}
-    if modelName == 'BernoulliNB_classifier':
-        return {}
-    if modelName == 'CategoricalNB_classifier':
-        return {}
-    if modelName == 'ComplementNB_classifier':
-        return {}
-    if modelName == 'DecisionTree_classifier':
-        return {}
-    if modelName == 'GradientBoosting_classifier':
-        return {}
-    if modelName == 'HistGradientBoosting_classifier':
-        return {}
-    if modelName == 'KNeighbors_classifier':
-        return {}
-    if modelName == 'LDA_classifier':
-        return {}
-    if modelName == 'LinearSVC_classifier':
-        return {}
-    if modelName == 'MultinomialNB_classifier':
-        return {}
-    if modelName == 'NuSVC_classifier':
-        return {}
-    if modelName == 'PassiveAggressive_classifier':
-        return {}
-    if modelName == 'QDA_classifier':
-        return {}
-    if modelName == 'Ridge_classifier':
-        return {}
     # Cluster
-    if modelName == 'kmeans':
+    if modelName == "kmeans":
         if n:
             return {
-                'n_clusters': h.get('n_clusters'), 'init': h.get('init'),
-                'n_init': _n(h, 'n_init'), 'max_iter': h.get('max_iter'),
-                'tol': h.get('tol'), 'verbose': h.get('verbose'),
-                'copy_x': _b(h, 'copy_x'), 'algorithm': h.get('algorithm'),
+                "n_clusters": h.get("n_clusters"),
+                "init": h.get("init"),
+                "n_init": _n(h, "n_init"),
+                "max_iter": h.get("max_iter"),
+                "tol": h.get("tol"),
+                "verbose": h.get("verbose"),
+                "copy_x": _b(h, "copy_x"),
+                "algorithm": h.get("algorithm"),
             }
-        return {'n_clusters': h.get('n_clusters')}
-    if modelName == 'gmm':
+        return {"n_clusters": h.get("n_clusters")}
+    if modelName == "gmm":
         if n:
             return {
-                'n_components': h.get('n_components'),
-                'covariance_type': h.get('covariance_type'),
-                'tol': h.get('tol'), 'reg_covar': h.get('reg_covar'),
-                'max_iter': h.get('max_iter'), 'n_init': h.get('n_init'),
-                'init_params': h.get('init_params'),
-                'weights_init': _o(h, 'weights_init'), 'means_init': _o(h, 'means_init'),
-                'precisions_init': _o(h, 'precisions_init'),
-                'warm_start': _b(h, 'warm_start'),
-                'verbose': h.get('verbose'), 'verbose_interval': h.get('verbose_interval'),
+                "n_components": h.get("n_components"),
+                "covariance_type": h.get("covariance_type"),
+                "tol": h.get("tol"),
+                "reg_covar": h.get("reg_covar"),
+                "max_iter": h.get("max_iter"),
+                "n_init": h.get("n_init"),
+                "init_params": h.get("init_params"),
+                "weights_init": _o(h, "weights_init"),
+                "means_init": _o(h, "means_init"),
+                "precisions_init": _o(h, "precisions_init"),
+                "warm_start": _b(h, "warm_start"),
+                "verbose": h.get("verbose"),
+                "verbose_interval": h.get("verbose_interval"),
+                "random_state": seed,
             }
-        return {'n_components': h.get('n_components')}
-    if modelName == 'agglo':
-        n_clusters = _o(h, 'n_clusters')
+        return {"n_components": h.get("n_components"), "random_state": seed}
+    if modelName == "agglo":
+        n_clusters = _o(h, "n_clusters")
         if n:
             return {
-                'n_clusters': n_clusters, 'metric': h.get('metric'),
-                'memory': _o(h, 'memory'), 'connectivity': _o(h, 'connectivity'),
-                'compute_full_tree': (
-                    True if h.get('compute_full_tree') == 'true'
-                    else (False if h.get('compute_full_tree') == 'false' else 'auto')
+                "n_clusters": n_clusters,
+                "metric": h.get("metric"),
+                "memory": _o(h, "memory"),
+                "connectivity": _o(h, "connectivity"),
+                "compute_full_tree": (
+                    True
+                    if h.get("compute_full_tree") == "true"
+                    else (False if h.get("compute_full_tree") == "false" else "auto")
                 ),
-                'linkage': h.get('linkage'), 'distance_threshold': _o(h, 'distance_threshold'),
-                'compute_distances': h.get('distance_threshold') == 'true',
+                "linkage": h.get("linkage"),
+                "distance_threshold": _o(h, "distance_threshold"),
+                "compute_distances": h.get("distance_threshold") == "true",
             }
-        return {'n_clusters': n_clusters}
-    if modelName == 'dbscan':
+        return {"n_clusters": n_clusters}
+    if modelName == "dbscan":
         return {}
-    if modelName == 'birch':
+    if modelName == "birch":
         return {}
-    if modelName == 'spectral':
+    if modelName == "spectral":
         return {}
-    if modelName == 'affinity_propagation':
+    if modelName == "affinity_propagation":
         return {}
-    if modelName == 'bisecting_kmeans':
+    if modelName == "bisecting_kmeans":
         return {}
-    if modelName == 'hdbscan':
+    if modelName == "hdbscan":
         return {}
-    if modelName == 'meanshift':
+    if modelName == "meanshift":
         return {}
-    if modelName == 'minibatch_kmeans':
+    if modelName == "minibatch_kmeans":
         return {}
-    if modelName == 'optics':
+    if modelName == "optics":
         return {}
 
     raise KeyError(f"Unknown model: {modelName}")

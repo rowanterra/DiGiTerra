@@ -36,7 +36,40 @@ let pywebviewReady = false;
 let headerResizeObserver = null;
 
 let uploadedFileName = '';
+// Rows and columns of the uploaded file, as the server counted them. Read by the
+// Data panel of the modeling page; written by upload.js.
+/* eslint-disable-next-line no-unused-vars */
+let uploadedShape = { rows: null, columns: null };
 const API_ROOT = (window.API_ROOT || '').replace(/\/+$/, '');
+
+// The server sets a CSRF cookie that script can read; every request the page makes
+// echoes it in a header. A cross-site form can cause the cookie to be sent but
+// cannot read it, so it cannot set the header. On a desktop build the server does
+// not check the header, and sending it costs nothing.
+function csrfToken() {
+    const match = document.cookie.match(/(?:^|;\s*)digiterra_csrf=([^;]*)/);
+    return match ? decodeURIComponent(match[1]) : '';
+}
+
+// fetch is wrapped once, so no call site has to remember the header.
+(function addCsrfHeaderToFetch() {
+    const original = window.fetch;
+    window.fetch = function (input, init) {
+        const options = init ? { ...init } : {};
+        const method = (options.method || (typeof input === 'object' && input && input.method) || 'GET').toUpperCase();
+        const url = typeof input === 'string' ? input : (input && input.url) || '';
+        const sameOrigin = !/^https?:\/\//i.test(url) || url.startsWith(window.location.origin);
+        if (sameOrigin && method !== 'GET' && method !== 'HEAD') {
+            const token = csrfToken();
+            if (token) {
+                const headers = new Headers(options.headers || (typeof input === 'object' && input ? input.headers : undefined));
+                headers.set('X-DiGiTerra-CSRF', token);
+                options.headers = headers;
+            }
+        }
+        return original.call(this, input, options);
+    };
+})();
 
 function withApiRoot(path) {
     if (!path) return API_ROOT || '';
@@ -175,11 +208,15 @@ function initModelingModeSelectionSync() {
     });
 }
 
-// HTML escape utility to prevent XSS
+// HTML escape utility. Escapes the five characters that matter in both text and
+// attribute position, so the result is safe inside value="..." as well.
 function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    return String(text ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 // Error display utility
@@ -379,61 +416,30 @@ function switchModelingMode(mode) {
     // No need to sync here since each mode has its own note element
 }
 
-// Ensure hyperparameter fields are available in the unified Advanced section
-function ensureAdvancedHyperparametersAvailable() {
-    // Find the hyperparameter card in unified Advanced section
-    const unifiedSection = document.getElementById('advancedModelingSection');
-    if (!unifiedSection) return;
-    
-    const hyperparamsCard = unifiedSection.querySelector('.preprocess-card h2');
-    if (!hyperparamsCard || hyperparamsCard.textContent !== 'Model Hyperparameters') return;
-    
-    const hyperparamsContainer = hyperparamsCard.closest('.preprocess-card');
-    if (!hyperparamsContainer) return;
-    
-    // Check if hyperparameter fields already exist (they should be copied)
-    const hasRidgeFields = document.getElementById('advancedRidgeFields');
-    if (hasRidgeFields && hasRidgeFields.closest('#advancedModelingSection')) {
-        // Fields already exist in unified section
-        return;
+
+/**
+ * Resolve a hyperparameter control for the modeling mode in use.
+ *
+ * The Simple and Advanced sections offer the same optional parameters. The
+ * Advanced copies have an "advanced" prefix so the document has unique ids;
+ * this returns the Advanced node while Advanced or AutoML mode is selected and
+ * the plain node otherwise.
+ */
+function getModeScopedElement(id) {
+    const advanced = document.getElementById('advancedMode');
+    const automl = document.getElementById('automlMode');
+    const useAdvanced = (advanced && advanced.checked) || (automl && automl.checked);
+    if (useAdvanced) {
+        const scoped = document.getElementById('advanced' + id.charAt(0).toUpperCase() + id.slice(1));
+        if (scoped) return scoped;
     }
-    
-    // If fields don't exist, clone them from old container
-    const oldContainer = document.getElementById('advancedOptimization');
-    if (!oldContainer) return;
-    
-    // Temporarily show old container to access its content
-    const wasHidden = oldContainer.classList.contains('hidden');
-    if (wasHidden) oldContainer.classList.remove('hidden');
-    
-    // Find all hyperparameter field divs in old container
-    const oldHyperparamsCard = oldContainer.querySelector('.preprocess-card h2');
-    if (!oldHyperparamsCard || oldHyperparamsCard.textContent !== 'Model Hyperparameters') {
-        if (wasHidden) oldContainer.classList.add('hidden');
-        return;
-    }
-    
-    const oldHyperparamsContainer = oldHyperparamsCard.closest('.preprocess-card');
-    if (!oldHyperparamsContainer) {
-        if (wasHidden) oldContainer.classList.add('hidden');
-        return;
-    }
-    
-    // Clone all hyperparameter field divs (all divs with IDs containing "Fields")
-    const hyperparamFields = oldHyperparamsContainer.querySelectorAll('div[id*="Fields"]');
-    hyperparamFields.forEach(field => {
-        // Check if it already exists in unified section
-        const existing = document.getElementById(field.id);
-        if (!existing || !existing.closest('#advancedModelingSection')) {
-            // Clone and append to unified section's hyperparameter card
-            const cloned = field.cloneNode(true);
-            hyperparamsContainer.appendChild(cloned);
-        }
-    });
-    
-    // Re-hide old container if it was hidden
-    if (wasHidden) oldContainer.classList.add('hidden');
+    return document.getElementById(id);
 }
+window.getModeScopedElement = getModeScopedElement;
+
+// The Advanced section has its own hyperparameter fields, so nothing is cloned
+// at runtime any more. Kept as a no-op because switchModelingMode still calls it.
+function ensureAdvancedHyperparametersAvailable() {}
 
 // Initialize modeling mode selector
 const modelingModeRadios = document.querySelectorAll('input[name="modelingMode"]');
@@ -797,9 +803,24 @@ function getColumnLetter(index) {
         }
         return column;
     }
+// Column letters: single letters or ranges joined by a hyphen, separated by commas.
+// Any other character (a colon, a digit, a space inside a letter) is refused here
+// so the server never receives an index computed from the wrong character.
+const COLUMN_SPEC = /^[A-Z]+(-[A-Z]+)?(,[A-Z]+(-[A-Z]+)?)*$/;
+
+/* eslint-disable-next-line no-unused-vars */
+function isValidColumnSpec(input) {
+    return COLUMN_SPEC.test((input || '').toUpperCase().replace(/\s/g, ''));
+}
+
 /* eslint-disable-next-line no-unused-vars */
 function getColumnIndices(input) {
     const columns = [];
+    // An invalid selection yields no columns rather than an index computed from
+    // the wrong character; the submit handlers check isValidColumnSpec first.
+    if (!COLUMN_SPEC.test(input)) {
+        return columns;
+    }
     input.split(',').forEach(part => {
         if (part.includes('-')) {
             const [start, end] = part.split('-').map(c => columnToIndex(c.trim()));
@@ -1425,21 +1446,20 @@ if (trainSizeInput && testSizeInput) {
     testSizeInput.addEventListener('blur', () => syncTrainTest(testSizeInput));
 }
 
-// Enable/disable "Continue to Modeling" button based on modeling type selection
-const modelingTypeSelect = document.getElementById('modelingType');
+// "Continue to Modeling" waits for a task type. The select is #outputType1 (an
+// earlier #modelingType never existed on the page, so this ran for nothing and the
+// form went to the server empty, to be refused there).
+const modelingTypeSelect = document.getElementById('outputType1');
 const continueToModelingButton = document.getElementById('continueToModelingButton');
 if (modelingTypeSelect && continueToModelingButton) {
-    // Initially disable the button
-    continueToModelingButton.disabled = true;
-    
-    // Enable/disable button when modeling type changes
-    modelingTypeSelect.addEventListener('change', function() {
-        if (this.value) {
-            continueToModelingButton.disabled = false;
-        } else {
-            continueToModelingButton.disabled = true;
-        }
-    });
+    const gate = () => {
+        const ready = Boolean(modelingTypeSelect.value);
+        continueToModelingButton.disabled = !ready;
+        if (ready) continueToModelingButton.removeAttribute('title');
+        else continueToModelingButton.setAttribute('title', 'Choose a modeling task type first.');
+    };
+    gate();
+    modelingTypeSelect.addEventListener('change', gate);
 }
 
 // Initialize tab button event listeners
@@ -1494,7 +1514,7 @@ function downloadFile(filename, downloadName = filename) {
 function showCrossValidationUnavailable() {
     const errDiv = getCachedElement('errorDiv');
     if (errDiv) {
-        showError(errDiv, 'Cross-validation results are unavailable because cross-validation was not run.');
+        showError(errDiv, 'DiGiTerra has no cross-validation results, because the run did not use cross-validation.');
         errDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
     return false;
@@ -1512,7 +1532,7 @@ function downloadAdditionalInfoTable(tableData, sheetName, timestamp) {
         .then(data => {
             if (data.error) {
                 const errDiv = getCachedElement('errorDiv');
-                if (errDiv) { showError(errDiv, 'Error generating download: ' + data.error); }
+                if (errDiv) { showError(errDiv, 'DiGiTerra cannot make the download. ' + data.error); }
                 return;
             }
             const downloadName = `additional_info_${sheetName.toLowerCase().replace(/\s+/g, '_')}_${ts}.xlsx`;
@@ -1525,7 +1545,7 @@ function downloadAdditionalInfoTable(tableData, sheetName, timestamp) {
         .catch(error => {
             console.error('Error downloading additional information:', error);
             const errDiv = getCachedElement('errorDiv');
-            if (errDiv) { showError(errDiv, 'Error downloading file. Please try again.'); }
+            if (errDiv) { showError(errDiv, 'The file download failed.'); }
         });
 }
 
@@ -1547,3 +1567,301 @@ window.predictionResultsDiv = document.getElementById('predictionResults');
 window.processButton = document.getElementById('processButton');
 window.showError = _showError;
 window.manageFocus = _manageFocus;
+
+
+/* An anchor into a closed <details> lands nowhere, because the target has no box.
+   Each Contents entry opens its section first, then scrolls to it. */
+function initDocContents() {
+    const toc = document.querySelector('.doc-toc');
+    if (!toc) return;
+    toc.addEventListener('click', (e) => {
+        const link = e.target.closest('a[href^="#"]');
+        if (!link) return;
+        const card = document.getElementById(link.getAttribute('href').slice(1));
+        if (!card) return;
+        e.preventDefault();
+        const section = card.querySelector('details.doc-section') || card.closest('details.doc-section');
+        if (section) section.open = true;
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Move the reading position as well as the viewport, so a keyboard or screen
+        // reader user arrives where the pointer user does.
+        const summary = section ? section.querySelector('summary') : null;
+        if (summary) summary.focus({ preventScroll: true });
+    });
+}
+
+/* The banner's Tutorial entry opens the documentation and goes to that section. */
+function initTutorialEntry() {
+    const button = document.getElementById('tutorialButton');
+    if (!button) return;
+    button.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (typeof showTab === 'function') showTab('documentation');
+        const card = document.getElementById('doc-tutorial');
+        if (!card) return;
+        const section = card.querySelector('details.doc-section');
+        if (section) section.open = true;
+        window.setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+    });
+}
+
+/* The settings the tutorial tells a reader to enter, applied once for them.
+   A person who uploads their own file gets none of this: the values only make sense
+   for the columns penguins.csv has. Every field stays editable. */
+const EXAMPLE_PREFILL = {
+    outputType1: 'Classifier',
+    indicators: 'B-G',
+    predictors: 'A',
+    imputeStrategy: 'none',
+    useTransformer: 'Yes',
+    transformerColumn: 'B, G',
+    scalingYesNo: 'Yes',
+    specificVariableSelect: 'A',
+    seedValue: '33',
+    corrCols: 'C-F',
+    model: 'RF_classifier',
+};
+
+/* Set a value and tell the page, so a section that opens on change opens now. */
+function setExampleField(id, value) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.type === 'checkbox') el.checked = Boolean(value);
+    else el.value = value;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+/* Fill the preprocessing form with the tutorial's run.
+   The order matters: the select that reveals a section is set before the field
+   inside it, or the field is written into a section that is still closed. */
+function applyExamplePrefill() {
+    setExampleField('outputType1', EXAMPLE_PREFILL.outputType1);
+    setExampleField('indicators', EXAMPLE_PREFILL.indicators);
+    setExampleField('predictors', EXAMPLE_PREFILL.predictors);
+    setExampleField('corrCols', EXAMPLE_PREFILL.corrCols);
+
+    // Remove the rows with a blank: the scope first, then the action.
+    setExampleField('missScopeAll', true);
+    setExampleField('imputeStrategy', EXAMPLE_PREFILL.imputeStrategy);
+
+    // island and sex are text, so the transformer section has to open first.
+    setExampleField('useTransformer', EXAMPLE_PREFILL.useTransformer);
+    setExampleField('transformerColumn', EXAMPLE_PREFILL.transformerColumn);
+
+    // Stratify on the species column, which is what the tutorial's step 5 asks for.
+    setExampleField('scalingYesNo', EXAMPLE_PREFILL.scalingYesNo);
+    setExampleField('specificVariableSelect', EXAMPLE_PREFILL.specificVariableSelect);
+
+    setExampleField('seedValue', EXAMPLE_PREFILL.seedValue);
+    prefillExampleModel();
+}
+
+/* Choose the tutorial's model once the Modeling view opens, so the example run is
+   one click from there. The view is revealed by a class change after preprocessing,
+   so the choice waits for that; it is made once, and only into an empty select, so a
+   person's own choice is never overwritten. */
+function prefillExampleModel() {
+    const host = document.getElementById('columnSelection');
+    const select = document.getElementById('simpleClassModels');
+    if (!host || !select) return;
+    const fill = () => {
+        if (host.classList.contains('hidden')) return false;
+        if (!select.value) setExampleField('simpleClassModels', EXAMPLE_PREFILL.model);
+        return true;
+    };
+    if (fill()) return;
+    const watch = new MutationObserver(() => {
+        if (fill()) watch.disconnect();
+    });
+    watch.observe(host, { attributes: true, attributeFilter: ['class'] });
+}
+
+/* Load an example through the ordinary upload, so it meets the same parse, the same
+   limits and the same data checks a chosen file meets. The file is fetched from the
+   server and handed to the existing form rather than a second code path being built. */
+function initTryExample() {
+    const button = document.getElementById('tryExampleButton');
+    if (!button) return;
+    button.addEventListener('click', async () => {
+        const name = 'penguins.csv';
+        const input = document.getElementById('file');
+        const form = document.getElementById('uploadForm');
+        if (!input || !form) return;
+        const original = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Loading the example...';
+        try {
+            const response = await fetch(`${API_ROOT}/example-data/${name}`);
+            if (!response.ok) throw new Error('status ' + response.status);
+            const blob = await response.blob();
+            const transfer = new DataTransfer();
+            transfer.items.add(new File([blob], name, { type: 'text/csv' }));
+            input.files = transfer.files;
+            if (typeof showTab === 'function') showTab('upload');
+            // The prefill runs on the upload's own response rather than on a timer,
+            // so the fields are set once the columns the app read are on the page.
+            const fill = (event) => {
+                if (!event || !event.detail || event.detail.ok !== false) applyExamplePrefill();
+            };
+            document.addEventListener('digiterra:upload-complete', fill, { once: true });
+            form.requestSubmit();
+        } catch (err) {
+            console.error('Example not loaded:', err);
+            button.disabled = false;
+            button.textContent = original;
+            const box = document.getElementById('uploadErrorDiv') || document.getElementById('errorDiv');
+            if (box && typeof showError === 'function') {
+                showError(box, 'DiGiTerra cannot load the example file. Choose a file instead.');
+            }
+        }
+    });
+}
+
+
+/* ==========================================================================
+   Presets recognized from a file's header (2026-09-27).
+
+   A second worked example is a mine-drainage table that is not distributed with
+   the application: the person uploads it, and the header row says which preset
+   applies. The presets set the task, the columns, the seed and the model the
+   same way the penguins example does. A header that matches nothing changes
+   nothing. The regression table predicts log10 of the rare earth sum from pH
+   and the log10 concentrations of Fe, Mn, SO4 and Al (micrograms per liter);
+   the class table predicts a five-class bin of the same quantity.
+   ========================================================================== */
+const HEADER_PRESETS = [
+    {
+        name: 'rare earth regression',
+        columns: ['Study', 'Site', 'pH', 'log10_Fe_ugL', 'log10_Mn_ugL', 'log10_SO4_ugL', 'log10_Al_ugL', 'log10_REE_ugL'],
+        fields: { outputType1: 'Numeric', indicators: 'C-G', predictors: 'H', corrCols: 'C-H', seedValue: '42', scaler: 'none' },
+        model: { select: 'simpleNModels', value: 'ExtraTrees' },
+        inferenceNote: 'For inference, upload AMD_REE_backvalidation_inflow_2026-09-27.csv: the 36 field inflow samples with the same five columns and the measured value beside them.',
+    },
+    {
+        name: 'rare earth classes',
+        columns: ['Study', 'Site', 'pH', 'log10_Fe_ugL', 'log10_Mn_ugL', 'log10_SO4_ugL', 'log10_Al_ugL', 'REE_class'],
+        fields: { outputType1: 'Classifier', indicators: 'C-G', predictors: 'H', corrCols: 'C-G', seedValue: '42', scaler: 'none', scalingYesNo: 'Yes', specificVariableSelect: 'H' },
+        model: { select: 'simpleClassModels', value: 'RF_classifier' },
+        inferenceNote: 'For inference, upload AMD_REE_backvalidation_inflow_classes_2026-09-27.csv: the 36 field inflow samples with the measured class beside them.',
+    },
+];
+
+function headerPresetFor(columns) {
+    if (!Array.isArray(columns)) return null;
+    const head = columns.map((c) => String(c).trim());
+    return HEADER_PRESETS.find((p) => p.columns.length === head.length && p.columns.every((c, i) => c === head[i])) || null;
+}
+
+function applyHeaderPreset(preset) {
+    Object.entries(preset.fields).forEach(([id, value]) => setExampleField(id, value));
+    const host = document.getElementById('columnSelection');
+    const select = document.getElementById(preset.model.select);
+    if (host && select) {
+        const fill = () => {
+            if (host.classList.contains('hidden')) return false;
+            if (!select.value) setExampleField(preset.model.select, preset.model.value);
+            return true;
+        };
+        if (!fill()) {
+            const watch = new MutationObserver(() => { if (fill()) watch.disconnect(); });
+            watch.observe(host, { attributes: true, attributeFilter: ['class'] });
+        }
+    }
+    window.activeHeaderPreset = preset;
+    updatePresetInferenceNote();
+}
+
+/* The inference page names the matching back-validation file for a preset. */
+function updatePresetInferenceNote() {
+    const form = document.getElementById('uploadPredictDf');
+    if (!form) return;
+    let note = document.getElementById('presetInferenceNote');
+    const preset = window.activeHeaderPreset;
+    if (!preset) { if (note) note.remove(); return; }
+    if (!note) {
+        note = document.createElement('p');
+        note.id = 'presetInferenceNote';
+        note.className = 'field-note';
+        form.appendChild(note);
+    }
+    note.textContent = preset.inferenceNote;
+}
+
+function initHeaderPresets() {
+    document.addEventListener('digiterra:upload-complete', (event) => {
+        if (event && event.detail && event.detail.ok === false) return;
+        window.activeHeaderPreset = null;
+        const preset = headerPresetFor(window.uploadedColumnNames);
+        if (preset) applyHeaderPreset(preset);
+        else updatePresetInferenceNote();
+    });
+    // The welcome button opens the file chooser; the header does the rest.
+    const button = document.getElementById('tryPresetButton');
+    const input = document.getElementById('file');
+    if (button && input) {
+        button.addEventListener('click', () => {
+            if (typeof showTab === 'function') showTab('upload');
+            input.click();
+        });
+    }
+}
+
+/* The example rows for the inference page.
+   Shown only for a session that loaded penguins.csv, because the file holds that
+   file's six indicator columns and nothing else would accept them. */
+function penguinsIsLoaded() {
+    return typeof uploadedFileName === 'string' && uploadedFileName === 'penguins.csv';
+}
+
+function updateExampleRowsVisibility() {
+    const button = document.getElementById('usePenguinRowsButton');
+    const note = document.getElementById('usePenguinRowsNote');
+    const show = penguinsIsLoaded();
+    if (button) button.classList.toggle('hidden', !show);
+    if (note) note.classList.toggle('hidden', !show);
+}
+
+function initUsePenguinRows() {
+    const button = document.getElementById('usePenguinRowsButton');
+    if (!button) return;
+    updateExampleRowsVisibility();
+    // The button appears with the view, and the view is revealed by a class change.
+    const host = document.getElementById('predictionDiv');
+    if (host) {
+        new MutationObserver(updateExampleRowsVisibility).observe(host, {
+            attributes: true,
+            attributeFilter: ['class'],
+        });
+    }
+    button.addEventListener('click', async () => {
+        const input = document.getElementById('predictFile');
+        const form = document.getElementById('uploadPredictDf');
+        if (!input || !form) return;
+        const original = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Loading the rows...';
+        try {
+            const response = await fetch(`${API_ROOT}/example-data/penguins_new.csv`);
+            if (!response.ok) throw new Error('status ' + response.status);
+            const blob = await response.blob();
+            const transfer = new DataTransfer();
+            transfer.items.add(new File([blob], 'penguins_new.csv', { type: 'text/csv' }));
+            input.files = transfer.files;
+            window.digiterraExampleRows = true;
+            form.requestSubmit();
+        } catch (err) {
+            console.error('Example rows not loaded:', err);
+            button.disabled = false;
+            button.textContent = original;
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initDocContents();
+    initTutorialEntry();
+    initTryExample();
+    initHeaderPresets();
+    initUsePenguinRows();
+});

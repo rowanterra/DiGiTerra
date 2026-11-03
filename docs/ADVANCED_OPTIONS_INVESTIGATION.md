@@ -1,107 +1,58 @@
-# Advanced Modeling Options: Investigation & Reporting
+# Advanced modeling options
 
-This document summarizes how advanced options (Feature Selection, Outlier Handling, Hyperparameter Search, Cross-Validation) work, how their results are reported, and any inappropriate or unclear behavior.
+How feature selection, outlier handling, hyperparameter search, and cross-validation run in the regression and classification pipelines, and how each is reported. Clustering is covered at the end.
 
----
+## Pipeline order
 
-## 1. Pipeline order (all task types)
+For regression and classification, `run_regression_pipeline.py` and `run_classification_pipeline.py` under `python_scripts/preprocessing/` run in this order:
 
-For both **regression** and **classification**, the order is:
+1. Preprocess (train/test split, transform, scale).
+2. Outlier handling, fit on the training rows.
+3. Feature selection, fit on the training rows and applied to both sets.
+4. Hyperparameter search, with cross-validation on the processed training rows.
+5. Final fit on the processed training rows.
+6. Evaluation on the test rows.
 
-1. **Preprocess** (train/test split, transform, scale)
-2. **Outlier handling** (fit on train only; apply action to train; test is never row-removed)
-3. **Feature selection** (fit on train; transform train and test)
-4. **Hyperparameter search** (CV on the **processed** training data only)
-5. **Fit** final model on processed training data
-6. **Evaluate** on test set
+Outlier detection, feature selection, and hyperparameter search use the training rows only. Mean and median imputation, when selected, is computed on the whole dataset before the split, so the test rows inform the fill values used in training. This is an open item.
 
-No test-set information is used for outlier detection, feature selection, or hyperparameter search. No data leakage.
+## Outlier handling
 
----
+Detection (IQR, Z-score, Isolation Forest, Local Outlier Factor) is fit on the training rows.
 
-## 2. Outlier handling
+With action Remove, the rows marked as outliers are removed from the training set. The test set keeps every row.
 
-### What it does
+With action Cap, training and test values are clipped to bounds computed from training statistics (IQR or Z-score bounds, or the 1st and 99th percentiles for Isolation Forest and LOF).
 
-- **Detection** is always fit on **training data only** (IQR, Z-Score, Isolation Forest, Local Outlier Factor).
-- **Action "Remove"**: Rows marked as outliers are **removed from the training set only**. The test set is **never** row-removed; all test rows are kept for evaluation.
-- **Action "Cap"**: Training (and test) values are clipped to bounds derived from **training** statistics (IQR/Z-Score bounds, or 1st/99th percentiles for Isolation Forest/LOF). Test is capped with the same bounds so deployment is consistent.
+Both pipelines return `outlier_info` with `method`, `action`, `n_outliers`, `original_samples`, `remaining_samples`, and, for Remove, `removed_row_indices`. The page shows an Outlier Handling table when `outlier_info` is present. The Excel export (`write_to_excelRegression` and `write_to_excelClassifier` in `python_scripts/helpers.py`) writes an Outlier Handling sheet and, when rows were removed, an Outlier Samples Removed sheet with the training row indices.
 
-### How it’s reported
+## Feature selection
 
-- **Regression**: `outlier_info` is built in `run_regression_pipeline.py` (method, action, n_outliers, original_samples, remaining_samples, and when action is "remove", removed_row_indices). The frontend shows an Outlier Handling table when Advanced/AutoML and `data.outlier_info` is present. The Excel export includes an Outlier Handling sheet and an Outlier Samples Removed sheet listing removed training row indices.
-- **Classification**: Same as regression. The pipeline builds and returns `outlier_info`; the same UI table and Excel sheets (Outlier Handling, Outlier Samples Removed) are written when applicable.
+`python_scripts/preprocessing/feature_selection.py` implements three methods. SelectKBest scores with `f_regression` or `f_classif` and keeps K features. RFE wraps a random forest and keeps K features. SelectFromModel wraps a random forest and keeps the features above the estimator's default importance threshold. The K value from the page is not passed to `SelectFromModel`, so the count of kept features is not K for that method.
 
-### Is “Remove” clear?
+Both pipelines return `feature_selection_info` with `method`, `k_requested`, `original_count`, `selected_count`, and `selected_features`, and the page shows a Feature Selection table when feature selection ran. The `feature_names` recorded in the model artifact are the columns the model was fit on, so importance charts label the selected features.
 
-- Rows are removed from the training set only. Metrics and model use outlier-removed train and full test. The UI can add a short note: “Remove: drop outlier rows from **training** data only; test set is unchanged.”
+## Hyperparameter search
 
----
+Grid search or randomized search runs over a fixed parameter grid with cross-validation on the processed training rows. The best parameters are used for one final fit. The search's `random_state` and the CV fold shuffle use the run seed. The best parameters appear in `model_params` and in the hyperparameter table. There is no separate search summary.
 
-## 3. Feature selection
+## Cross-validation
 
-### What it does
+Cross-validation runs when enabled in Advanced or AutoML mode, over the training rows with the same preprocessing and model. RMSE and MAE are reported with a positive sign. The response includes `cross_validation_file` and `cross_validation_summary`, and the page lists Cross Validation in the additional-tables menu when the summary is present.
 
-- **SelectKBest**: Fit on train with `f_regression` / `f_classif`; same K features applied to train and test.
-- **RFE**: Wrapper with RandomForest; fit on train; same selected features applied to train and test.
-- **SelectFromModel**: RandomForest-based; fit on train; uses the estimator’s **default threshold** to decide how many features to keep (no explicit K).
+## NaN fallback in regression
 
-### How it’s reported
+When NaN values remain in `X_train_s` after the transforms, `run_regression_pipeline.py` fills each numeric column with the column mean, or 0 when the whole column is NaN. The fill values are recorded and reused at inference. The fill is not a user-selected option, and the page does not display a message when the fill runs.
 
-- **Regression**: `feature_selection_info` (method, k_requested, original_count, selected_count, selected_features) is returned and shown in the “Feature Selection” table in the UI.
-- **Classification**: The classification pipeline builds and returns `feature_selection_info`; the “Feature Selection” table appears when feature selection was used.
+## Summary
 
-### Inappropriate / unclear behavior
+| Option | Fit on | Applied to test | Reported |
+|--------|--------|-----------------|----------|
+| Outlier remove | training rows | no rows removed | `outlier_info`, page table, Excel sheets |
+| Outlier cap | training bounds | capped with the same bounds | `outlier_info` |
+| Feature selection | training rows | transform only | `feature_selection_info` (SelectFromModel ignores K) |
+| Hyperparameter search | CV on training rows | no | `model_params` |
+| Cross-validation | training rows | no | file and summary |
 
-- **SelectFromModel ignores K**: For “Select From Model”, the code does **not** use the user-entered “Number of Features (K)”. The number of features is determined by the model’s default threshold. So if the user sets K=10, that value is **not** used for SelectFromModel. **Recommendation**: Either (a) document that “K” does not apply to Select From Model, or (b) implement threshold tuning / max_features so K is respected (e.g. `SelectFromModel(..., max_features=k)` if supported, or document as “model-based; K not used”).
+## Clustering
 
----
-
-## 4. Hyperparameter search
-
-### What it does
-
-- **Grid search** or **Randomized search** over a fixed param grid; CV is run on the **processed** training data (after outlier and feature selection). Best params are then used to fit on the full processed training set.
-- No test data is used in the search.
-
-### How it’s reported
-
-- Best parameters are reflected in `model_params` (and in the displayed hyperparameter table). There is no separate “hyperparameter search” summary table (e.g. best score per fold); only the chosen hyperparameters and the final model metrics are shown.
-
----
-
-## 5. Cross-validation
-
-### What it does
-
-- Run only when the user enables it (Advanced/AutoML). Uses the same preprocessing + model; CV is over the **training** data (or full dataset depending on implementation). Results are written to a separate file and the frontend can show a “Cross Validation” table when `cross_validation_summary` is present.
-
-### How it’s reported
-
-- `cross_validation_file` and `cross_validation_summary` in the response; “Cross Validation” option in the additional-tables dropdown when summary data exists.
-
----
-
-## 6. Regression-specific: NaN fallback
-
-- In `run_regression_pipeline.py`, if NaNs appear in `X_train_s` after transforms, the code attempts to fill numeric columns with column **means** (or 0 if all NaN). This is a **silent fallback** and not a user-chosen imputation strategy. **Recommendation**: Log a warning and/or surface a short message so users know imputation was applied (e.g. “Missing values in transformed features were filled with column means for training”).
-
----
-
-## 7. Summary table
-
-| Option              | Train only? | Test used? | Reported (regression) | Reported (classification) | Notes |
-|---------------------|------------|------------|------------------------|----------------------------|-------|
-| Outlier remove      | Yes (rows removed) | No row removal | Yes (UI + Excel with removed indices) | Yes | Training only. |
-| Outlier cap         | Bounds from train | Test capped with same bounds | Yes | Yes | Same bounds for test. |
-| Feature selection   | Fit on train | Transform only | Yes (`feature_selection_info`) | Yes | SelectFromModel ignores K. |
-| Hyperparameter search | CV on train | No | Via `model_params` | Via `model_params` | No separate search summary table. |
-| Cross-validation    | Yes        | No         | Yes (file + summary) | Yes (file + summary) | As implemented. |
-
----
-
-## 8. Outlier and feature selection reporting (regression and classification)
-
-- **Pipelines**: `run_regression_pipeline.py` and `run_classification_pipeline.py` build `outlier_info` (method, action, n_outliers, original_samples, remaining_samples, and when action is "remove", removed_row_indices). Both build `feature_selection_info` when feature selection is used.
-- **Excel**: `write_to_excelRegression` and `write_to_excelClassifier` in `python_scripts/helpers.py` accept `outlier_info`. When present, they write an "Outlier Handling" sheet and, when removed_row_indices exists, an "Outlier Samples Removed" sheet.
-- **App**: Classification and regression result dicts include `feature_selection_info` and `outlier_info`. The frontend shows the Outlier Handling and Feature Selection tables when these keys are present.
+`app_model_training.py` builds a separate keyword set for clustering that does not include feature selection, outlier handling, hyperparameter search, or cross-validation, so those options have no effect on a clustering run. The progress panel still shows the stages, and the AutoML summary still lists them. This is an open item.

@@ -1,0 +1,96 @@
+E1  DiGiTerra black-box differential test against independent applications
+Written 2026-09-24. Not edited after the first run starts; changes go in NOTEBOOK.txt.
+
+QUESTION
+Do the numbers DiGiTerra prints for descriptive statistics, ordinary least
+squares regression, k-nearest-neighbors classification and logistic regression
+agree with the numbers Orange, RapidMiner AI Studio, R and Excel print for the
+same rows, the same predictors, the same train and test halves and the same
+model settings?
+
+DATA
+Program under test: DiGiTerra, branch audit-fixes at 0942e0c, working tree
+  Terra Cognita LLC/DiGiTerra_audit_2026-09-03/DiGiTerra, run through its own
+  browser interface. scikit-learn 1.9.0, numpy 1.26.4, pandas 2.3.3 per
+  requirements.txt. The manifest DiGiTerra writes for each run records the
+  installed versions; that record is the version statement for the run.
+Source files: examples/iris.csv md5 600158651eff3f5bfb01348d5e986a2c (150 rows),
+  examples/diabetes.csv md5 bf3703e9cb8cab6bdb417738fb83c13a (442 rows).
+Base files: data/iris_E1_base.csv and data/diabetes_E1_base.csv. Each is the
+  source file with rows shuffled once (Python random.Random(20260924).shuffle;
+  permutation saved in data/permutation_<name>.txt) and a leading "order"
+  column holding the 1-based row position. md5 in data/md5sums.txt.
+Train and test files: the first 80 % and the last ceil(0.20 n) rows of the base
+  file, in base order. iris 120 + 30; diabetes 353 + 89. ceil matches
+  splitting._test_count in DiGiTerra, so DiGiTerra's time-ordered holdout on
+  "order" at test size 0.20 selects exactly the rows in the _test file.
+Reference applications (installed on the Mac, versions recorded in
+  NOTEBOOK.txt at first launch): Orange (si.biolab.orange), RapidMiner AI
+  Studio 2026.0.1 (com.rapidminer.studio), R (org.R-project.R), Microsoft
+  Excel. KNIME, Weka, JASP and jamovi are not installed and are out of E1.
+Oracle: a plain scikit-learn 1.9.0 script (scripts/oracle.py) run outside
+  DiGiTerra on the same files. It is not a reference application. It says what
+  scikit-learn itself returns, so a DiGiTerra disagreement can be assigned to
+  DiGiTerra's own code or to scikit-learn.
+
+METHOD
+Every application reads the _train and _test files as two separate tables.
+No application performs its own split. The "order" column is excluded from
+the predictors everywhere. No scaling, no imputation, no outlier handling,
+no feature selection, no hyperparameter search.
+
+Cases (one row per application per case in RESULTS.csv):
+  D1  descriptive statistics of diabetes_E1_base.csv, all 10 predictors and
+      target: n, mean, sample standard deviation (n-1), min, Q1, median, Q3,
+      max. Quartiles by the linear method (pandas default, R type 7, Excel
+      QUARTILE.INC). Orange's Feature Statistics is recorded as printed and
+      its quartile method noted.
+  D2  descriptive statistics of iris_E1_base.csv, 4 predictors.
+  R1  OLS on diabetes: predictors age, sex, bmi, bp, s1 to s6; target
+      "target"; fit on _train; intercept and 10 coefficients; test RMSE, MAE,
+      R2; predictions on all 89 test rows.
+  C1  k-NN on iris: k = 5, Euclidean, uniform weights, no scaling; 4 predictors;
+      target species; predicted class for all 30 test rows; test accuracy;
+      confusion matrix.
+  C2  logistic regression on iris: L2 penalty, C = 1.0, lbfgs, max_iter 100,
+      multinomial; predicted class for all 30 test rows; accuracy. Orange runs
+      scikit-learn with these defaults, so C2 is a same-engine check. R and
+      AI Studio fit unregularized or differently regularized models and are
+      recorded for C2 as "different estimator", not compared on equality.
+
+DiGiTerra settings for every case: Advanced mode; split method Time on column
+"order"; test size 0.20; stratify off; scaler none; seed 20260924 (unused by
+these estimators, recorded anyway); significant figures 10 (the form default
+of 3 would round the printed metrics below the comparison tolerance).
+Predictions are taken from the downloadable predictions file, not read off
+the screen.
+
+CONTROLS
+c000_base_a and c001_base_b: R1 run twice in DiGiTerra at the start of the
+session, and c999_base_c once at the end. Pass rule: every metric and every
+prediction equal across the three. The run id, timestamps and the manifest
+hash are expected to differ; nothing else may. A difference voids the run;
+the void set is kept under results_void_runN/ with VOID_README.txt.
+Each reference application also runs R1 twice (open, run, save; close; open,
+run, save). The two saves must agree on every value.
+
+MEASURE
+Metrics are compared as printed text after formatting to %.6e. Classes: same
+value; last digit (mantissa differs by one in the last place); other. Every
+"other" cell is listed with its relative difference and assigned to a cause.
+Predicted classes are compared row by row; any mismatch is listed with the
+row's "order" value. Pass rule for a same-engine case (Orange, C1, C2, R1):
+zero "other" cells and zero class mismatches. Pass rule for an independent
+engine (AI Studio, R, Excel on R1 and D1, D2): relative difference below
+1e-6 on every value, which is well inside the spread that tie-breaking or a
+different linear solver can produce; anything larger is a finding.
+Established means the value was read from a saved file of the application.
+Inferred means the value was reasoned from documentation or from the oracle.
+
+CHECKPOINT
+Each application's saved output goes at once into
+reference_outputs/<app>/<case>_<app>_<runN>.<ext>. DiGiTerra downloads go into
+digiterra_outputs/<case>_runN/. NOTEBOOK.txt gets one line per save with the
+time (UTC), the file, and its size. A restart begins at the first case with
+no saved file. compare.py reads whatever is present and reports the set as
+partial until every cell in RESULTS.csv is filled.

@@ -1,0 +1,52 @@
+\section{Adversarial review of 2026-09-24}
+\label{sec:review}
+
+Three reviewers worked in parallel, one each on the HTTP routes, the modeling pipeline and the browser side, with the instruction to break the application rather than to describe it. Each reviewer had to reproduce a defect before it counted; the reproduction is what became the regression test. The review reported 25 reproduced defects. The changelog records them in fourteen entries, several of which bundle more than one fault; Table~\ref{tab:defects} separates the entries into the faults a reader would want to test one by one, which gives 29 rows. The count in the changelog is the reviewers'; the itemization is this document's.
+
+\small\begin{longtable}{@{}L{0.5cm}L{1.6cm}L{7.6cm}L{1.6cm}L{3.4cm}@{}}
+\caption{Defects reproduced by the review, by area. \emph{Effect} says what a user would have seen: a wrong number (result), code execution from a file (security), a run that failed or silently ignored an input (behavior). Every row is fixed at \code{4e49ba9}; the test column names the file that guards it.}\label{tab:defects}\\
+\toprule
+\# & Area & Defect as reproduced & Effect & Guard \\
+\midrule
+\endfirsthead
+\toprule
+\# & Area & Defect as reproduced & Effect & Guard \\
+\midrule
+\endhead
+1 & routes & The artifact type allowlist was a prefix test, so \code{builtins.eval} matched \code{builtins}. & security & \code{test\_bundle.py}, crafted artifact \\
+2 & routes & The loader handed skops the file's own type list as trusted, so a crafted \code{model.skops} ran code on load. & security & same \\
+3 & routes & The disk session store carried no signature on its objects file. & security & \code{test\_bundle.py} \\
+4 & routes & Two workbook routes returned raw exception text to the client. & behavior & \code{adversarial\_check.py} \\
+5 & routes & A spreadsheet cell starting with \code{=}, \code{+}, \code{-} or \code{@} was written as a formula. & security & \code{adversarial\_check.py} \\
+6 & pipeline & A model with no editable table sent no hyperparameters and \code{get\_model\_kwargs} passed \code{None} values to the trainer; the guided page's default run failed for 14 models. & behavior & \code{test\_review\_2026\_09\_24.py} \\
+7 & pipeline & Mean, median and mode fills included the target column, so a made-up target was trained on and scored as truth. & result & same \\
+8 & pipeline & Binary ROC AUC scored the string labels against the second probability column and inverted the AUC whenever the string order differed from the class order. & result & same \\
+9 & pipeline & Average precision failed on string labels and was silently omitted. & result & same \\
+10 & pipeline & IQR and z-score outlier removal read the one-hot columns and deleted every training row of a category under 25 percent. & result & same \\
+11 & pipeline & With feature selection on, the novelty score was never written at prediction time. & behavior & same \\
+12 & pipeline & Cross-validation did not apply a deferred mean or median fill, so an estimator that refuses NaN failed after the model had trained. & behavior & same \\
+13 & pipeline & Cross-validation scored only the first of several targets. & result & same \\
+14 & pipeline & Cross-validation ignored a grouped or time-ordered split plan in favor of shuffled folds (a grouped holdout of $R^2$ $-2.2$ came with a CV of 0.95). & result & same \\
+15 & pipeline & Seed 0 was replaced by a random seed. & result & same \\
+16 & pipeline & GaussianMixture never received the seed. & result & same \\
+17 & pipeline & GradientBoosting \code{warm\_start} was inverted. & result & same \\
+18 & pipeline & Fill with the mode did nothing and the rows were dropped. & result & same \\
+19 & pipeline & Remove rows with zeros removed only rows that were zero in every scoped column. & result & same \\
+20 & pipeline & A numeric column chosen for one-hot encoding was listed twice and raised a duplicate-column error. & behavior & same \\
+21 & pipeline & The AutoML page said a blank model would be chosen by AutoML and sent a random forest. & result & same \\
+22 & browser & Hyperparameters whose scikit-learn default is \code{None} were sent as strings (\code{max\_depth: "3"}). & result & guided browser suite \\
+23 & browser & Integer fields truncated 2.5 to 2 and 0.5 to 0. & result & same \\
+24 & browser & Stratifying by the target was silently dropped. & result & same \\
+25 & browser & Two quick model changes could leave the first model's hyperparameter table under the second. & result & same \\
+26 & browser & A cleared seed, decimal-places or folds field was sent as 0. & result & same \\
+27 & browser & Escape did not close a tooltip opened by keyboard focus. & behavior & same \\
+28 & browser & A failed model list or a dead progress stream left the page without a message. & behavior & same \\
+29 & browser & A failed column read after a good upload was reported as an upload failure. & behavior & same \\
+\bottomrule
+\end{longtable}\normalsize
+
+Seventeen rows change a number a reader would have trusted. Three of them deserve a sentence each because a manifest would not have revealed them. Row 7 let a fill step write the training mean into blank target cells, so the model learned and was scored on values that were never observed; the manifest recorded the fill as requested and gave no sign that the target was in scope. Row 8 turned a good binary classifier into a bad one on paper whenever the positive class sorted first alphabetically; every other metric on the page was right, so the inverted AUC stood beside a correct accuracy. Row 14 reported a cross-validation score from shuffled folds beside a holdout that honored the grouped or time-ordered plan, so the two numbers described different experiments while sharing one results page.
+
+Rows 1 to 3 are the security findings. A bundle is signed with an installation key and verified on import, but a prefix test on the type allowlist admitted a builtin, and the loader trusted the type list inside the file rather than the application's own. The allowlist is now an exact set written by a census of every registered estimator (\code{python\_scripts/reporting/artifact\_allowlist.txt}, 66 of 67 estimators write and load; \code{birch} is refused rather than loaded unsafely), skops is given that list and never the file's, and the disk session store signs its objects file at save and verifies it at load with the same key.
+
+Every probe the three reviewers ran is preserved as \code{scripts/adversarial\_check.py}. It replays the route attacks, the pipeline tests and the browser attack with a hostile CSV whose headers and labels carry markup, and prints PASS or FAIL per probe with what it saw. On \code{f3e68b3} it printed 10 of 10 in the container with the pinned Chromium (\code{docs/adversarial\_check\_2026-09-25.json}); the record from the day of the review is \code{docs/adversarial\_check\_2026-09-24.json}. It runs in about six minutes and is the check to run before any release.

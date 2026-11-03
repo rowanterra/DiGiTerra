@@ -1,0 +1,65 @@
+{
+  "date": "2026-09-24",
+  "results": [
+    {
+      "group": "routes",
+      "probe": "crafted artifact naming builtins.eval is refused and runs nothing",
+      "ok": true,
+      "detail": "refused=['builtins.eval'] raised=True marker=False"
+    },
+    {
+      "group": "routes",
+      "probe": "path traversal on /download and /user-visualizations",
+      "ok": true,
+      "detail": "every probe answered 404"
+    },
+    {
+      "group": "routes",
+      "probe": "a foreign session cannot read a run's progress or queue entry",
+      "ok": true,
+      "detail": "progress=404 queue=400"
+    },
+    {
+      "group": "routes",
+      "probe": "workbook route neutralises formula cells and hides exception text",
+      "ok": true,
+      "detail": "status=200 first cell=\"'=CMD()\""
+    },
+    {
+      "group": "pipeline",
+      "probe": "review regression tests (pytest)",
+      "ok": true,
+      "detail": "================== 37 passed, 7 warnings in 116.19s (0:01:56) =================="
+    },
+    {
+      "group": "browser",
+      "probe": "hostile CSV through the guided page, typed None-default hyperparameter",
+      "ok": true,
+      "detail": "xss=[None, None, None, None] dialogs=[] max_depth typed as int=True"
+    },
+    {
+      "group": "browser",
+      "probe": "cleared seed, decimals and folds are sent as null and the run completes",
+      "ok": true,
+      "detail": "seed=None sigfig=None folds=None"
+    },
+    {
+      "group": "browser",
+      "probe": "Escape closes a tooltip opened by keyboard focus",
+      "ok": true,
+      "detail": "before=True after=False"
+    },
+    {
+      "group": "browser",
+      "probe": "a slow defaults response for an earlier model does not fill the table of the later one",
+      "ok": true,
+      "detail": "KNeighborsClassifier parameters, from scikit-learn. A blank value keeps the defa"
+    },
+    {
+      "group": "browser",
+      "probe": "hostile CSV through the classic page; exploration figures in a 720 px window",
+      "ok": true,
+      "detail": "xss=[None, None, None, None] dialogs=[] figure bottoms=[476, 490] window=720"
+    }
+  ]
+}

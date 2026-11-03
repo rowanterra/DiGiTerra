@@ -1,226 +1,130 @@
-# Cross-Platform Build Instructions
+# Desktop build instructions
 
-Instructions for building DiGiTerra **desktop apps** on macOS, Windows, and Linux, and how that relates to **web deployment** (Docker, gunicorn).
+How to build the DiGiTerra desktop application on macOS, Windows, and Linux, and how that relates to the web deployment (Docker, gunicorn).
 
-All build commands must be run with the current working directory set to the project root (the directory that contains `app.py`, `requirements.txt`, and the `build/` folder). The PyInstaller spec files resolve paths relative to the project root.
+Every build command runs with the project root as the working directory (the directory with `app.py`, `requirements.txt`, and `build/`). The PyInstaller spec files resolve paths relative to the project root.
 
-## Desktop vs web
+## Desktop and web
 
-| Use case | How to run | Docs |
-|----------|------------|------|
-| **Desktop app** (macOS/Windows/Linux) | Build with PyInstaller, then distribute `.app` or `DiGiTerra/` folder | This file (sections below) |
-| **Web app (development)** | `python app.py` at http://127.0.0.1:5000 | README.md, docs/HANDOFF.md |
-| **Web app (production)** | gunicorn with 1 worker (required; app uses in-memory state) | docs/HANDOFF.md |
-| **Web app (container)** | Docker / Kubernetes (Helm) use gunicorn inside the image | deploy/README.md |
+| Use | Command | Reference |
+|-----|---------|-----------|
+| Desktop app (macOS, Windows, Linux) | PyInstaller build, then distribute the `.app` or the `DiGiTerra/` folder | this file |
+| Web app, development | `python app.py` at http://127.0.0.1:5000 | README.md |
+| Web app, production | gunicorn with one worker (session state is in process memory) | docs/documentation.md |
+| Web app, container | Docker or Helm, with gunicorn inside the image | deploy/README.md |
 
-When running behind a URL prefix (e.g. `URL_PREFIX=digiterra` in Docker), the app serves both at `/` and at `/digiterra/` so health checks and reverse-proxy mounts work. See deploy/README.md and docs/HANDOFF.md for env vars and gunicorn usage.
+Under a URL prefix (`URL_PREFIX=digiterra` in Docker), the app serves both `/` and `/digiterra/`, so health checks and reverse-proxy mounts work at either path.
 
-### Frontend JS bundle (production)
+### Frontend bundle
 
-The UI is split into `static/js/init.js`, `core.js`, `upload.js`, `preprocess.js`, `modeling.js`, `inference.js`, and `app.js`. For production you can serve a single bundle to reduce requests:
-
-1. From the project root: `npm run build` (produces `static/js/app.bundle.js`).
-2. Set env `DIGITERRA_USE_JS_BUNDLE=1` when running the app (e.g. in gunicorn or Docker). The template will then load `app.bundle.js` instead of the seven scripts.
-
-Without the env var, the app loads the seven scripts (for development). Commit `app.bundle.js` after building if you want deployments to use it without running `npm run build` in CI.
+The page loads `static/js/init.js`, `core.js`, `upload.js`, `preprocess.js`, `modeling.js`, `inference.js`, and `app.js`. With `DIGITERRA_USE_JS_BUNDLE=1` the template loads `static/js/app.bundle.js` instead. `npm run build` writes the bundle, and the bundle is committed, so a deployment does not need npm. `npm run check-bundle` in CI fails when the committed bundle differs from a fresh build.
 
 ## Prerequisites
 
-All platforms require:
-- Python 3.11 or higher
-- pip (Python package manager)
-- All dependencies from `requirements.txt` (see `docs/DEPENDENCIES.md` for constraints and verification)
+Every platform needs Python 3.11 or 3.12, pip, and the packages in `requirements.txt` (`docs/DEPENDENCIES.md` lists the pins).
 
-### Platform-Specific Requirements
+macOS: macOS 10.13 or later and the Xcode Command Line Tools.
 
-**macOS:**
-- macOS 10.13 or higher
-- Xcode Command Line Tools (for some dependencies)
+Windows: Windows 10 or later. Some packages need the Visual C++ Redistributable.
 
-**Windows:**
-- Windows 10 or higher
-- Visual C++ Redistributable (may be required for some Python packages)
+Linux: a current distribution (Ubuntu 20.04 or later, Fedora 32 or later), `build-essential` or the equivalent, and the GTK 3 development libraries for pywebview (`sudo apt-get install python3-dev libgtk-3-dev` on Debian and Ubuntu, `sudo dnf install python3-devel gtk3-devel` on Fedora).
 
-**Linux:**
-- A modern Linux distribution (Ubuntu 20.04+, Fedora 32+, etc.)
-- Development tools: `build-essential` (Ubuntu/Debian) or equivalent
-- GTK+ development libraries (for pywebview):
-  - Ubuntu/Debian: `sudo apt-get install python3-dev libgtk-3-dev`
-  - Fedora: `sudo dnf install python3-devel gtk3-devel`
+## macOS
 
-## Building for macOS
+Script:
 
-All commands below assume you are in the project root.
-
-### Quick Build
 ```bash
 chmod +x build/build_macos.sh
 ./build/build_macos.sh
 ```
 
-### Manual Build
-Run from project root:
+Manual:
+
 ```bash
 pip install -r requirements.txt
 pip install pyinstaller
 pyinstaller build/DiGiTerra.spec
 ```
 
-### Icon Setup (Optional)
-macOS requires `.icns` format for app icons. To add an icon:
+Icon (optional): macOS needs an `.icns` file. Create `static/Terra_Axe_Logo.icns` with an online converter, the Image2icon app, or `iconutil -c icns Terra_Axe_Logo.iconset`, then set `icon="static/Terra_Axe_Logo.icns"` in `build/DiGiTerra.spec` in place of `icon=None`.
 
-1. Create `static/Terra_Axe_Logo.icns` using one of these methods:
-   - Online converter: https://cloudconvert.com/png-to-icns
-   - Image2icon app (macOS App Store)
-   - Command line: `iconutil -c icns Terra_Axe_Logo.iconset`
+Output: `dist/DiGiTerra.app`, distributed as is or inside a `.dmg`.
 
-2. Update `DiGiTerra.spec`:
-   ```python
-   icon="static/Terra_Axe_Logo.icns",  # Uncomment this line
-   # icon=None,  # Comment out this line
-   ```
+## Windows
 
-### Output
-The build creates `dist/DiGiTerra.app` - a macOS application bundle that can be distributed directly or packaged in a `.dmg` file.
+Script (double-click or run from a Command Prompt at the project root):
 
-## Building for Windows
-
-Run all commands from the project root (directory containing `app.py` and `build/`).
-
-### Quick Build
-Double-click `build\build_windows.bat` or run from Command Prompt from the project root:
 ```cmd
 build\build_windows.bat
 ```
 
-### Manual Build
+Manual:
+
 ```cmd
 pip install -r requirements.txt
 pip install pyinstaller
 pyinstaller build\DiGiTerra_Windows.spec
 ```
 
-### Icon Setup (Optional)
-Windows uses `.ico` format for icons. To add an icon:
+Icon (optional): Windows uses `.ico`. Create `static/Terra_Axe_Logo.ico` from the PNG logo with an online converter or `magick convert Terra_Axe_Logo.png Terra_Axe_Logo.ico`. The spec uses the file when the file exists.
 
-1. Create `static/Terra_Axe_Logo.ico` from your PNG logo:
-   - Use an online converter: https://cloudconvert.com/png-to-ico
-   - Or use ImageMagick: `magick convert Terra_Axe_Logo.png Terra_Axe_Logo.ico`
+Output: `dist/DiGiTerra/` with `DiGiTerra.exe`, the supporting DLLs and Python libraries, and the `templates/`, `static/`, and `python_scripts/` directories. The whole folder is distributed.
 
-2. The spec file will automatically use it if it exists.
+## Linux
 
-### Output
-The build creates `dist/DiGiTerra/` folder containing:
-- `DiGiTerra.exe` - The main executable
-- Supporting DLLs and Python libraries
-- `templates/`, `static/`, `python_scripts/` directories
+Script:
 
-**Distribution:** Distribute the entire `DiGiTerra` folder to users. They can run `DiGiTerra.exe` from anywhere.
-
-## Building for Linux
-
-All commands below assume you are in the project root.
-
-### Quick Build
 ```bash
 chmod +x build/build_linux.sh
 ./build/build_linux.sh
 ```
 
-### Manual Build
+Manual:
+
 ```bash
 pip3 install -r requirements.txt
 pip3 install pyinstaller
 pyinstaller build/DiGiTerra_Linux.spec
 ```
 
-### Icon Setup (Optional)
-Linux can use PNG format directly. The spec file will use `static/Terra_Axe_Logo.png` if it exists.
+Icon (optional): the spec uses `static/Terra_Axe_Logo.png` when the file exists.
 
-### Output
-The build creates `dist/DiGiTerra/` folder containing:
-- `DiGiTerra` - The main executable (make sure it's executable: `chmod +x DiGiTerra`)
-- Supporting libraries and Python modules
-- `templates/`, `static/`, `python_scripts/` directories
-
-**Distribution:** Distribute the entire `DiGiTerra` folder to users. They should:
-1. Extract the folder
-2. Make the executable: `chmod +x DiGiTerra/DiGiTerra`
-3. Run: `./DiGiTerra/DiGiTerra` or double-click in file manager
+Output: `dist/DiGiTerra/` with the `DiGiTerra` executable, the supporting libraries, and the `templates/`, `static/`, and `python_scripts/` directories. The whole folder is distributed. The end user extracts the folder, runs `chmod +x DiGiTerra/DiGiTerra`, and starts `./DiGiTerra/DiGiTerra`.
 
 ## Troubleshooting
 
-### Common Issues
+"Module not found" at runtime: `python scripts/check_requirements.py` confirms that each package in `requirements.txt` imports. A package that PyInstaller does not detect goes in `hiddenimports` in the spec file.
 
-**"Module not found" errors:**
-- Run `python scripts/check_requirements.py` to verify all dependencies are in `requirements.txt`
-- Some packages may need to be added to `hiddenimports` in the spec file
+Executable size: PyInstaller includes the interpreter and every dependency. Builds of this project have been 400 to 800 MB.
 
-**Large executable size:**
-- This is normal - PyInstaller bundles Python and all dependencies
-- macOS: ~500-800 MB
-- Windows: ~400-700 MB
-- Linux: ~400-700 MB
+Crash at startup: set `DIGITERRA_DEBUG=1` (`set DIGITERRA_DEBUG=1` on Windows) and read the log file listed in README.md. Building with `console=True` in the spec file shows the error in a terminal.
 
-**App crashes on startup:**
-- Enable debug mode: Set `DIGITERRA_DEBUG=1` (or `set DIGITERRA_DEBUG=1` on Windows)
-- Check log files (see README.md for locations)
-- Try building with `console=True` in the spec file to see error messages
+Linux "No module named 'webview'": install the GTK 3 development libraries, then `pip3 install --force-reinstall pywebview`.
 
-**Linux: "No module named 'webview'":**
-- Install GTK+ development libraries (see Prerequisites)
-- Reinstall pywebview: `pip3 install --force-reinstall pywebview`
+Antivirus on Windows: PyInstaller executables are sometimes reported as suspicious. Code signing or an allowlist entry resolves the report.
 
-**Windows: Antivirus false positives:**
-- PyInstaller executables are sometimes flagged by antivirus software
-- This is a known issue - you may need to sign the executable or whitelist it
+macOS first launch: an unsigned app may need a right-click and Open. Signing avoids the prompt: `codesign --deep --force --verify --verbose --sign "Developer ID Application: <name>" dist/DiGiTerra.app`.
 
-### Platform-Specific Notes
+Windows first launch: Windows Defender may show a SmartScreen prompt. More info, then Run anyway, starts the app. Code signing avoids the prompt.
 
-**macOS:**
-- First launch may require right-clicking and selecting "Open" if macOS blocks unsigned apps
-- To avoid this, codesign the app: `codesign --deep --force --verify --verbose --sign "Developer ID Application: Your Name" dist/DiGiTerra.app`
+Linux: library requirements differ between distributions, so the build is tested on each target distribution. A `.deb` or `.rpm` package is an option for installation.
 
-**Windows:**
-- Windows Defender may flag the executable - this is a false positive
-- Users may need to click "More info" then "Run anyway" on first launch
-- Consider code signing for production releases
+## Checking the build
 
-**Linux:**
-- Different distributions may have different library requirements
-- Test on target distributions before distribution
-- Consider creating distribution-specific packages (.deb, .rpm) for easier installation
+1. macOS: double-click `dist/DiGiTerra.app`.
+2. Windows: double-click `dist/DiGiTerra/DiGiTerra.exe`.
+3. Linux: run `dist/DiGiTerra/DiGiTerra`.
 
-## Testing the Build
-
-After building, test the application:
-
-1. **macOS**: Double-click `dist/DiGiTerra.app`
-2. **Windows**: Double-click `dist/DiGiTerra/DiGiTerra.exe`
-3. **Linux**: Run `dist/DiGiTerra/DiGiTerra` from terminal
-
-The application should:
-- Launch without errors
-- Display the DiGiTerra interface
-- Allow file uploads
-- Generate visualizations
-- Save files to the appropriate platform-specific directories
+The application starts without an error, displays the page, accepts a CSV upload, produces a visualization, and writes files to the platform directories listed in README.md.
 
 ## Distribution
 
-### macOS
-- Distribute `DiGiTerra.app` directly, or
-- Create a `.dmg` file:
-  ```bash
-  hdiutil create -volname DiGiTerra -srcfolder dist/DiGiTerra.app -ov -format UDZO dist/DiGiTerra.dmg
-  ```
+macOS: `DiGiTerra.app` as is, or a `.dmg`:
 
-### Windows
-- Zip the entire `dist/DiGiTerra` folder
-- Users extract and run `DiGiTerra.exe`
-- Consider creating an installer using tools like Inno Setup or NSIS
+```bash
+hdiutil create -volname DiGiTerra -srcfolder dist/DiGiTerra.app -ov -format UDZO dist/DiGiTerra.dmg
+```
 
-### Linux
-- Zip the entire `dist/DiGiTerra` folder
-- Users extract, make executable, and run
-- Consider creating `.deb` (Debian/Ubuntu) or `.rpm` (Fedora/RHEL) packages
+Windows: a zip of `dist/DiGiTerra`. An installer built with Inno Setup or NSIS is an option.
+
+Linux: a zip of `dist/DiGiTerra`, or a `.deb` or `.rpm` package.

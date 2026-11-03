@@ -1,6 +1,6 @@
-# Deployment Assets
+# Deployment
 
-Docker and Kubernetes (Helm) assets for running DiGiTerra as a containerized web app.
+Docker and Kubernetes (Helm) assets for running DiGiTerra as a web app in a container.
 
 ## Docker
 
@@ -16,43 +16,43 @@ Run the container:
 docker run --rm -p 5000:5000 digiterra:local
 ```
 
-The app is available at `http://localhost:5000`. The image sets `URL_PREFIX=digiterra`, so the app also responds at `http://localhost:5000/digiterra/` (both root and prefixed routes work for health checks and reverse proxies).
+The app answers at `http://localhost:5000`. The image sets `URL_PREFIX=digiterra`, so the app also answers at `http://localhost:5000/digiterra/`. Both the root and the prefixed routes serve the page, so health checks and reverse proxies can use either.
 
-## Kubernetes (Helm)
+The Dockerfile `CMD` binds gunicorn to port 5000 with one worker process and eight threads.
 
-The Helm chart in `deploy/helm/digiterra` deploys DiGiTerra to a Kubernetes cluster. You need `kubectl` configured and `helm` installed.
+## Kubernetes with Helm
 
-Install the chart:
+The chart in `deploy/helm/digiterra` needs `kubectl` configured for the cluster and `helm` installed.
+
+No public image is published. Build the image with the Dockerfile above, push it to a registry the cluster can pull from, and pass that repository at install time. `image.repository` in `values.yaml` is empty, and with the value empty the pod image name is `:latest`, which no registry serves.
 
 ```bash
 helm install digiterra deploy/helm/digiterra \
-  --set image.repository=ghcr.io/netl/digiterra \
+  --set image.repository=registry.example.com/digiterra \
   --set image.tag=latest
 ```
 
-Use your own image repo/tag if you build and push elsewhere.
-
 ### Persistence
 
-To store uploads and generated visualizations across restarts, enable persistence:
+To keep uploads and generated visualizations across restarts:
 
 ```bash
 helm upgrade --install digiterra deploy/helm/digiterra \
-  --set image.repository=ghcr.io/netl/digiterra \
+  --set image.repository=registry.example.com/digiterra \
   --set image.tag=latest \
   --set persistence.enabled=true \
   --set persistence.size=5Gi
 ```
 
-Data is stored under `/data/DiGiTerra` in the container. Ensure the cluster can provision a `ReadWriteOnce` PVC and that the mounted volume is writable by the app user (e.g. via `storageClassName` or default provisioner).
+Data is stored under `/data/DiGiTerra` in the container. The cluster must provision a `ReadWriteOnce` PVC, and the mounted volume must be writable by the `app` user.
 
 ### Ingress
 
-To expose the app via an Ingress (e.g. behind a load balancer or reverse proxy):
+To expose the app through an Ingress:
 
 ```bash
 helm upgrade --install digiterra deploy/helm/digiterra \
-  --set image.repository=ghcr.io/netl/digiterra \
+  --set image.repository=registry.example.com/digiterra \
   --set image.tag=latest \
   --set ingress.enabled=true \
   --set ingress.className=nginx \
@@ -61,23 +61,24 @@ helm upgrade --install digiterra deploy/helm/digiterra \
   --set "ingress.hosts[0].paths[0].pathType=Prefix"
 ```
 
-Adjust `ingress.className` and `ingress.hosts` to match your cluster (nginx, traefik, etc.). TLS can be configured via `ingress.tls` and `ingress.annotations` (e.g. cert-manager).
+`ingress.className` and `ingress.hosts` match the cluster's controller (nginx, traefik, and so on). TLS is set through `ingress.tls` and `ingress.annotations`, for example for cert-manager.
 
-### Chart options
+### Chart values
 
-See `deploy/helm/digiterra/values.yaml`. Key fields:
+`deploy/helm/digiterra/values.yaml` defines:
 
-- `replicaCount`: number of pods (default 1).
-- `image.repository`, `image.tag`: image to run.
-- `service.port`: container port (5000).
+- `replicaCount`: number of pods (default 1). Session state is in process memory, so more than one replica splits sessions across pods.
+- `image.repository`, `image.tag`: image to run. The repository has no default.
+- `service.port`: Service port and `containerPort` (default 5000). The Dockerfile `CMD` binds gunicorn to 5000, so a different value needs a matching change to the Dockerfile.
 - `persistence.enabled`, `persistence.size`, `persistence.storageClassName`: PVC settings.
-- `ingress.enabled`, `ingress.className`, `ingress.hosts`, `ingress.tls`: Ingress configuration.
-- `resources`: CPU/memory requests and limits for the deployment.
+- `ingress.enabled`, `ingress.className`, `ingress.hosts`, `ingress.tls`: Ingress settings.
+- `resources`: CPU and memory requests and limits.
+- `env`: `DIGITERRA_HOST`, `DIGITERRA_PORT`, and the upload limit variables.
 
-## Production checklist
+## Production settings
 
-- **Workers:** Run gunicorn with **1 worker** when using in-memory session state (no shared store).
-- **HTTPS:** Put the app behind HTTPS and a reverse proxy (e.g. nginx, Ingress with TLS).
-- **Secrets:** No secrets in the repo; use env vars or a secret manager for any credentials.
-- **Logging:** Set `LOG_LEVEL=INFO` (or `DEBUG` for troubleshooting). Logs go to stderr and, when writable, to `LOG_DIR` (see `python_scripts/config.py`).
-- **Env overrides:** Optional: `DIGITERRA_BASE_DIR`, `DIGITERRA_APP_SUPPORT_DIR`, `DIGITERRA_OUTPUT_DIR`, `URL_PREFIX` for paths and URL prefix. When `URL_PREFIX` is set, both `/` and `/<prefix>/` routes are served (no 404 on root).
+- Workers: one gunicorn worker process, because session state is in process memory, with `--worker-class gthread --threads 8` so an open progress stream does not hold up other requests. The thread count is the ceiling on concurrent requests, including open streams.
+- HTTPS: a reverse proxy or an Ingress with TLS in front of the app.
+- Secrets: none in the repository. Credentials, if any, come from environment variables or a secret manager.
+- Logging: `LOG_LEVEL=INFO`, or `DEBUG` for troubleshooting. Logs go to stderr and, when the directory is writable, to `LOG_DIR` from `python_scripts/config.py`.
+- Paths: `DIGITERRA_BASE_DIR`, `DIGITERRA_APP_SUPPORT_DIR`, `DIGITERRA_OUTPUT_DIR`, and `URL_PREFIX`. When `URL_PREFIX` is set, both `/` and `/<prefix>/` are served.

@@ -1,6 +1,8 @@
 /**
  * Preprocess tab: handlePreprocessFormSubmit, preprocess-form and exploration UI. Depends on core.js.
  */
+// Shared across the split files (they run in one script scope).
+let stratifyColumnNumber = '';
 async function handlePreprocessFormSubmit(e) {
     if (!e.target || e.target.id !== 'preprocessform') return;
     const stratErrorDiv = document.getElementById('stratErrorDiv');
@@ -22,7 +24,7 @@ async function handlePreprocessFormSubmit(e) {
     //Error checking for if using stratify or quantiles/bins
     if ((quantileBins =='quantiles' || quantileBins =='Bins') && stratifyColumn.trim()==""){
         e.preventDefault();
-        showError(stratErrorDiv, 'Must fill out stratify variable if using quantiles or Bins', false);
+        showError(stratErrorDiv, 'Enter a stratify variable. Quantiles and bins both need one.', false);
         // Set aria-invalid on the stratify field
         const stratifyInput = document.getElementById('specificVariableSelect');
         if (stratifyInput) {
@@ -33,7 +35,7 @@ async function handlePreprocessFormSubmit(e) {
 
     else if (quantileBins =='quantiles' && quantiles==''){
         e.preventDefault();
-        showError(stratErrorDiv, 'Must fill out quantiles', false);
+        showError(stratErrorDiv, 'Enter the number of quantiles.', false);
         const quantilesInput = document.getElementById('quantiles');
         if (quantilesInput) {
             quantilesInput.setAttribute('aria-invalid', 'true');
@@ -43,7 +45,7 @@ async function handlePreprocessFormSubmit(e) {
 
     else if (quantileBins =='Bins' && (bins=='' || binsLabel=='')){
         e.preventDefault();
-        showError(stratErrorDiv, 'Must fill out bins thresholds and labels', false);
+        showError(stratErrorDiv, 'Enter the bin thresholds and the bin labels.', false);
         const binsInput = document.getElementById('bins');
         const binsLabelInput = document.getElementById('binsLabel');
         if (binsInput && !binsInput.value) {
@@ -55,30 +57,25 @@ async function handlePreprocessFormSubmit(e) {
         }
     }
 
-    else if (stratifyColumn.trim()!=='' && quantileBins=='None'){
-        e.preventDefault();
-        showError(stratErrorDiv, 'Must fill use bins or quantiles if using stratify value', false);
-        const quantileBinsSelect = document.getElementById('quantileBins');
-        if (quantileBinsSelect) {
-            quantileBinsSelect.setAttribute('aria-invalid', 'true');
-            manageFocus(quantileBinsSelect);
-        }
-    }
+    // A stratify column with neither bins nor quantiles is the categorical case: the
+    // split holds the proportions of the column's own values. Only a continuous
+    // column needs to be cut into groups first. The server decides whether the
+    // column can carry a split and says so if it cannot.
     else if (!predictors && outputType!=='Cluster'){
         e.preventDefault();
-        showError(stratErrorDiv, 'Must have targets for Classification and Regression Models', false);
+        showError(stratErrorDiv, 'Enter a target column. Classification and regression both need one.', false);
         const predictorsInput = document.getElementById('predictors');
         if (predictorsInput) {
             predictorsInput.setAttribute('aria-invalid', 'true');
             manageFocus(predictorsInput);
         }
     }
-    else if (stratifyColumn.trim() !== '' && (quantileBins === 'quantiles' || quantileBins === 'Bins') && predictors.trim() !== '' && outputType !== 'Cluster') {
+    else if (stratifyColumn.trim() !== '' && (quantileBins === 'quantiles' || quantileBins === 'Bins') && predictors.trim() !== '' && outputType !== 'Cluster' && outputType !== 'Classifier') {
         const pCols = getColumnIndices(predictors.toUpperCase().replace(/\s/g, ''));
         const stratNum = columnToIndex(stratifyColumn.trim().toUpperCase());
         if (pCols.indexOf(stratNum) !== -1) {
             e.preventDefault();
-            showError(stratErrorDiv, 'Do not stratify by your target column. That would leak target information into the train/test split. Choose a different column to stratify by.', false);
+            showError(stratErrorDiv, 'Stratifying by the target column leaks target information into the train/test split, so a different stratify column is required.', false);
             const stratifyInput = document.getElementById('specificVariableSelect');
             if (stratifyInput) {
                 stratifyInput.setAttribute('aria-invalid', 'true');
@@ -106,6 +103,12 @@ async function handlePreprocessFormSubmit(e) {
         });
 
         stratErrorDiv.innerHTML = '';
+        const badSpec = [indicators, predictors].find(v => v && !isValidColumnSpec(v));
+        if (badSpec !== undefined) {
+            const target = stratErrorDiv || errorDiv;
+            if (target) showError(target, `Column letters are written like A-D or A-D,F,H. "${badSpec}" is not a valid column selection.`, false);
+            return;
+        }
         const predictorCols = getColumnIndices((predictors || '').toUpperCase().replace(/\s/g, ''));
         const indicatorCols = getColumnIndices((indicators || '').toUpperCase().replace(/\s/g, ''));
         stratifyColumnNumber = columnToIndex((stratifyColumn || '').toUpperCase());
@@ -129,8 +132,8 @@ async function handlePreprocessFormSubmit(e) {
             const data = await response.json();
 
             if (!response.ok) {
-                if (stratErrorDiv) showError(stratErrorDiv, data.error || 'Preprocess failed. Please check your selections.', false);
-                else if (errorDiv) showError(errorDiv, data.error || 'Preprocess failed.', false);
+                if (stratErrorDiv) showError(stratErrorDiv, data.error || 'DiGiTerra cannot preprocess the selected columns. Check the column letters, then try again.', false);
+                else if (errorDiv) showError(errorDiv, data.error || 'DiGiTerra cannot preprocess the file.', false);
                 return;
             }
 
@@ -148,11 +151,6 @@ async function handlePreprocessFormSubmit(e) {
             }
             if (typeof showTab === 'function') showTab('modeling');
 
-            stratifyStr = '';
-            if (stratifyColumn && stratifyColumn.trim() !== '' && data.stratify) {
-                stratifyStr = 'with stratification by ' + data.stratify + ' value';
-            }
-
             const preds = data.predictors;
             let predictorsColNameString = Array.isArray(preds) ? preds.join(',').substring(0, 10) : (preds || '').substring(0, 10);
             if (predictorsColNameString.length >= 10) {
@@ -163,7 +161,7 @@ async function handlePreprocessFormSubmit(e) {
             const outputTypeLabel = outputType === 'Numeric' ? 'Regression' : outputType;
 
             if (!IndicatorsPredictorsSection) {
-                if (errorDiv) showError(errorDiv, 'Modeling header section not found.');
+                if (errorDiv) showError(errorDiv, 'DiGiTerra cannot find the modeling header section. Reload the page.');
                 return;
             }
 
@@ -178,7 +176,7 @@ async function handlePreprocessFormSubmit(e) {
                 if (automlNote) automlNote.innerHTML = noteText;
                 IndicatorsPredictorsSection.innerHTML = `
                 <div class='columnOutputSection' style="display: flex; gap: 12px; align-items: center;">
-                    <button class="success-button" onclick="predictionPage()">Move Forward to Apply this Model for Inferencing on New Data</button>
+                    <button class="success-button" onclick="predictionPage()">Continue to Inference on New Data</button>
                 </div>`;
             }
             else {
@@ -191,12 +189,12 @@ async function handlePreprocessFormSubmit(e) {
                 if (automlNote) automlNote.innerHTML = noteText;
                 IndicatorsPredictorsSection.innerHTML = `
                 <div class='columnOutputSection' style="display: flex; gap: 12px; align-items: center;">
-                    <button class="success-button" onclick="predictionPage()">Move Forward to Apply this Model for Inferencing on New Data</button>
+                    <button class="success-button" onclick="predictionPage()">Continue to Inference on New Data</button>
                 </div>`;
             }
         } catch (error) {
             console.error('Preprocess submit error:', error);
-            const msg = error && error.message ? error.message : 'Request failed. See console for details.';
+            const msg = error && error.message ? error.message : 'The request failed. Open the browser console for the details.';
             if (stratErrorDiv) showError(stratErrorDiv, msg, false);
             else if (errorDiv) showError(errorDiv, msg, false);
         }
@@ -506,11 +504,11 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
             const outputTypeEl = document.getElementById('outputType1');
             const isCluster = outputTypeEl && outputTypeEl.value === 'Cluster';
             if (!indicatorsSelect || !indicatorsSelect.value.trim()) {
-                alert('Please enter Indicator columns first (e.g., A-D).');
+                alert('Enter the indicator columns first, for example A-D.');
                 return;
             }
             if (!isCluster && (!predictorsSelect || !predictorsSelect.value.trim())) {
-                alert('Please enter Indicator and Target columns first (e.g., A-D and A).');
+                alert('Enter the indicator columns and the target columns first, for example A-D and E.');
                 return;
             }
             const indicatorIndices = getColumnIndices(indicatorsSelect.value.toUpperCase().replace(/\s/g, ""));
@@ -518,11 +516,11 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
                 ? []
                 : getColumnIndices(predictorsSelect.value.toUpperCase().replace(/\s/g, ""));
             if (indicatorIndices.length === 0) {
-                alert('Could not parse indicator column indices. Use format like "A-D" or "A,B,C".');
+                alert('DiGiTerra cannot read the indicator columns. Use the form "A-D" or "A,B,C".');
                 return;
             }
             if (!isCluster && predictorIndices.length === 0) {
-                alert('Could not parse target column indices. Use format like "A-D" or "A,B,C".');
+                alert('DiGiTerra cannot read the target columns. Use the form "A-D" or "A,B,C".');
                 return;
             }
             try {
@@ -565,7 +563,7 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
                 }
             } catch (err) {
                 console.error(err);
-                dataCleaningAutodetectMessage.textContent = 'Autodetect failed. Check console.';
+                dataCleaningAutodetectMessage.textContent = 'Autodetect failed. Open the browser console for the details.';
                 if (dataCleaningMissingWrapper) dataCleaningMissingWrapper.classList.remove('autodetect-greyed');
                 if (dataCleaningZerosWrapper) dataCleaningZerosWrapper.classList.remove('autodetect-greyed');
                 if (dropMissingSelect) dropMissingSelect.disabled = false;
@@ -612,12 +610,12 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
     if (autoDetectTransformersTopBtn) {
         autoDetectTransformersTopBtn.addEventListener('click', async function() {
             if (!indicatorsSelect || !indicatorsSelect.value.trim()) {
-                alert('Please enter indicator columns first (e.g., A-D).');
+                alert('Enter the indicator columns first, for example A-D.');
                 return;
             }
             const indicatorIndices = getColumnIndices(indicatorsSelect.value.toUpperCase().replace(/\s/g, ""));
             if (indicatorIndices.length === 0) {
-                alert('Could not parse indicator column indices. Use format like "A-D" or "A,B,C".');
+                alert('DiGiTerra cannot read the indicator columns. Use the form "A-D" or "A,B,C".');
                 return;
             }
             try {
@@ -650,12 +648,12 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
         autoDetectTransformersBtn.addEventListener('click', async function() {
             const indicatorsInput = document.getElementById('indicators');
             if (!indicatorsInput || !indicatorsInput.value.trim()) {
-                alert('Please enter indicator columns first (e.g., A-D).');
+                alert('Enter the indicator columns first, for example A-D.');
                 return;
             }
             const indicatorIndices = getColumnIndices(indicatorsInput.value.toUpperCase().replace(/\s/g, ""));
             if (indicatorIndices.length === 0) {
-                alert('Could not parse indicator column indices. Please use format like "A-D" or "A,B,C".');
+                alert('DiGiTerra cannot read the indicator columns. Use the form "A-D" or "A,B,C".');
                 return;
             }
             try {
@@ -678,7 +676,7 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
                 }
             } catch (error) {
                 console.error('Error auto-detecting transformers:', error);
-                if (transformerAutodetectMessage) transformerAutodetectMessage.textContent = 'Error detecting categorical columns.';
+                if (transformerAutodetectMessage) transformerAutodetectMessage.textContent = 'DiGiTerra cannot detect the categorical columns.';
                 transformerOptionWrapper.classList.remove('autodetect-greyed');
                 if (useTransformerSelect) useTransformerSelect.disabled = false;
             } finally {
@@ -1614,3 +1612,401 @@ document.addEventListener('submit', handlePreprocessFormSubmit, true);
         });
     }
 
+
+/* ==========================================================================
+   Model Preprocessing as one column.
+
+   The page asked a person to press two Detect buttons and then read a grid of
+   controls for findings that had not been made yet. It now runs both detections
+   itself, on arrival and whenever the columns change, and states what it found as
+   a sentence with the action already chosen. The controls behind each sentence are
+   the ones that were always there: they are moved, not rebuilt, so every id and
+   every handler still works, and a "change" link reveals them.
+   ========================================================================== */
+
+/* The blocks each finding sentence reveals. Each set lives in its own panel under
+   its sentence (review of 2026-09-27: the text-column controls opened inside the
+   blanks panel). Blank and zero findings share the cleaning panel. */
+const CLEANING_BLOCKS = ['dataCleaningMissingWrapper', 'imputeDiv', 'dataCleaningZerosWrapper'];
+const TRANSFORM_BLOCKS = ['transformerOptionWrapper', 'transformerYes'];
+const FINDING_PANELS = { cleaning: CLEANING_BLOCKS, text: TRANSFORM_BLOCKS };
+
+function preprocessColumnsChosen() {
+    const indicators = (document.getElementById('indicators') || {}).value || '';
+    const target = (document.getElementById('predictors') || {}).value || '';
+    const isCluster = (document.getElementById('outputType1') || {}).value === 'Cluster';
+    return Boolean(indicators.trim()) && (isCluster || Boolean(target.trim()));
+}
+
+/* The settings behind the sentences: each group is one sentence in the page's
+   own words with a "change" link, and the controls open in a panel under it
+   (review of 2026-09-27: one More settings disclosure opened everything at once
+   and the transform controls appeared without a panel). */
+const SETTING_GROUPS = [
+    { key: 'stratify', heading: 'Stratify', ids: ['scalingQuestion', 'scalingYes'], text: () => {
+        const yn = document.getElementById('scalingYesNo');
+        const col = document.getElementById('specificVariableSelect');
+        if (!yn) return '';
+        if (yn.value !== 'Yes' && yn.value !== 'yes') return 'The split is not stratified.';
+        const name = col && col.value ? (col.options && col.options[col.selectedIndex] ? col.options[col.selectedIndex].text : col.value) : '';
+        return name ? `The split keeps the mix of column ${name} the same in both halves.` : 'The split is stratified; choose the column.';
+    } },
+    { key: 'scaler', ids: ['preprocessScaler'], text: () => {
+        const e = document.getElementById('scaler');
+        if (!e) return '';
+        const label = (e.options && e.options[e.selectedIndex] ? e.options[e.selectedIndex].text : e.value) || 'None';
+        return /^none$/i.test(e.value || label) ? 'Predictors are not scaled.' : `Predictors are scaled (${label}).`;
+    } },
+    { key: 'split', ids: ['preprocessSplit', 'preprocessSeed'], text: () => {
+        const t = document.getElementById('trainSize');
+        const seed = document.getElementById('seedValue');
+        const train = t && t.value ? Math.round(Number(t.value) * 100) : 80;
+        const seedText = seed && seed.value ? `Seed ${seed.value}.` : 'No seed set; one is drawn for the run.';
+        return `${train} percent of the rows train the model and ${100 - train} percent are held out. ${seedText}`;
+    } },
+];
+
+/** Build the findings block and the setting sentences, once. */
+function buildPreprocessLayout() {
+    const form = document.getElementById('preprocessform');
+    if (!form || document.getElementById('preprocessFindings')) return;
+
+    const findings = document.createElement('div');
+    findings.id = 'preprocessFindings';
+    findings.className = 'preprocess-findings';
+    findings.innerHTML = '<p class="narrative-empty">Enter the indicator and target columns.</p>';
+
+    // The cleaning and transform controls wait in two panels, parked out of the
+    // page until a finding sentence adopts one. The blocks themselves stay
+    // visible inside their panel; the panel is what opens and closes.
+    const parked = document.createElement('div');
+    parked.id = 'preprocessControls';
+    parked.className = 'preprocess-controls hidden';
+
+    const firstCard = form.querySelector('.preprocess-card');
+    if (firstCard) firstCard.insertAdjacentElement('afterend', findings);
+    else form.insertBefore(findings, form.firstChild);
+    findings.insertAdjacentElement('afterend', parked);
+
+    const transformHead = (document.getElementById('transformerOptionWrapper') || {}).previousElementSibling;
+    const makePanel = (key) => {
+        const panel = document.createElement('div');
+        panel.className = 'preprocess-panel hidden';
+        panel.id = `preprocessPanel_${key}`;
+        parked.appendChild(panel);
+        return panel;
+    };
+    const cleaningPanel = makePanel('cleaning');
+    const textPanel = makePanel('text');
+    const move = (panel, id, show) => {
+        const el = document.getElementById(id);
+        if (el) {
+            if (show) el.classList.remove('hidden');
+            panel.appendChild(el);
+        }
+    };
+    move(cleaningPanel, 'dataCleaningMissingWrapper', true);
+    move(cleaningPanel, 'imputeDiv', false);           // its own handler shows it for a fill
+    move(cleaningPanel, 'dataCleaningZerosWrapper', true);
+    if (transformHead && transformHead.tagName === 'H3') {
+        transformHead.classList.remove('hidden');
+        textPanel.appendChild(transformHead);
+    }
+    move(textPanel, 'transformerOptionWrapper', true);
+    move(textPanel, 'transformerYes', false);           // opens when "Yes" is chosen
+    // A stray "Or" preceded a hidden autodetect button; it is not drawn.
+    const optionWrap = document.getElementById('transformerOptionWrapper');
+    if (optionWrap) {
+        const walker = document.createTreeWalker(optionWrap, NodeFilter.SHOW_TEXT);
+        let node;
+        while ((node = walker.nextNode())) {
+            if (node.textContent.trim().toLowerCase() === 'or') node.textContent = '';
+        }
+    }
+
+    // One sentence and one panel per setting group, in the order of the run.
+    const lines = document.createElement('div');
+    lines.id = 'preprocessSettingLines';
+    lines.className = 'preprocess-setting-lines';
+    parked.insertAdjacentElement('afterend', lines);
+    SETTING_GROUPS.forEach((group) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'preprocess-setting-line';
+        wrap.dataset.group = group.key;
+        const line = document.createElement('p');
+        line.className = 'preprocess-finding';
+        const text = document.createElement('span');
+        text.className = 'preprocess-setting-text';
+        line.appendChild(text);
+        line.appendChild(document.createTextNode(' '));
+        const link = document.createElement('button');
+        link.type = 'button';
+        link.className = 'preprocess-change';
+        link.textContent = 'change';
+        line.appendChild(link);
+        const panel = document.createElement('div');
+        panel.className = 'preprocess-panel hidden';
+        panel.id = `preprocessPanel_${group.key}`;
+        if (group.heading) {
+            const h = document.createElement('h3');
+            h.className = 'preprocess-section-title';
+            h.textContent = group.heading;
+            panel.appendChild(h);
+        }
+        group.ids.forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) panel.appendChild(el);
+        });
+        link.addEventListener('click', () => {
+            panel.classList.toggle('hidden');
+            syncPreprocessLinks();
+        });
+        wrap.appendChild(line);
+        wrap.appendChild(panel);
+        lines.appendChild(wrap);
+    });
+    // The two cards the blocks came from are empty now.
+    form.querySelectorAll('.preprocess-card').forEach((card) => {
+        if (card !== firstCard && !card.querySelector('input, select, textarea')) card.classList.add('hidden');
+    });
+    refreshPreprocessSettingLines();
+    form.addEventListener('change', refreshPreprocessSettingLines);
+    form.addEventListener('input', refreshPreprocessSettingLines);
+}
+
+/** Rewrite each setting sentence from its controls. */
+function refreshPreprocessSettingLines() {
+    SETTING_GROUPS.forEach((group) => {
+        const el = document.querySelector(`.preprocess-setting-line[data-group="${group.key}"] .preprocess-setting-text`);
+        if (el) el.textContent = group.text();
+    });
+}
+
+/** The finding panel a block belongs to, if any. */
+function findingPanelFor(id) {
+    const el = document.getElementById(id);
+    return el ? el.closest('.preprocess-panel') : null;
+}
+
+/* exported revealPreprocessBlocks */
+/** Open the panel a sentence stands for (a setting panel too, from the rail). Called from narrative.js. */
+function revealPreprocessBlocks(ids) {
+    ids.forEach((id) => {
+        const panel = findingPanelFor(id);
+        if (panel) panel.classList.remove('hidden');
+    });
+    syncPreprocessLinks();
+}
+
+/** Every change/done link reads the state of its panel. */
+function syncPreprocessLinks() {
+    document.querySelectorAll('#preprocessform .preprocess-change[data-panel]').forEach((link) => {
+        const panel = document.getElementById(link.dataset.panel);
+        if (panel) link.textContent = panel.classList.contains('hidden') ? 'change' : 'done';
+    });
+    document.querySelectorAll('#preprocessSettingLines .preprocess-setting-line').forEach((wrap) => {
+        const panel = wrap.querySelector('.preprocess-panel');
+        const link = wrap.querySelector('.preprocess-change');
+        if (panel && link) link.textContent = panel.classList.contains('hidden') ? 'change' : 'done';
+    });
+}
+
+/** A finding sentence; `panelKey` names the panel its change link toggles. */
+function preprocessSentence(text, panelKey) {
+    const line = document.createElement('p');
+    line.className = 'preprocess-finding';
+    line.appendChild(document.createTextNode(text + ' '));
+    const panel = panelKey ? document.getElementById(`preprocessPanel_${panelKey}`) : null;
+    if (panel) {
+        const link = document.createElement('button');
+        link.type = 'button';
+        link.className = 'preprocess-change';
+        link.dataset.panel = panel.id;
+        link.textContent = panel.classList.contains('hidden') ? 'change' : 'done';
+        link.addEventListener('click', () => {
+            panel.classList.toggle('hidden');
+            syncPreprocessLinks();
+        });
+        line.appendChild(link);
+    }
+    return line;
+}
+
+/** Place a finding panel directly under the last sentence that opens it. */
+function seatFindingPanel(host, key) {
+    const panel = document.getElementById(`preprocessPanel_${key}`);
+    if (!panel) return;
+    const links = host.querySelectorAll(`.preprocess-change[data-panel="${panel.id}"]`);
+    if (links.length) {
+        links[links.length - 1].closest('.preprocess-finding').insertAdjacentElement('afterend', panel);
+    } else {
+        const parked = document.getElementById('preprocessControls');
+        if (parked) parked.appendChild(panel);
+        panel.classList.add('hidden');
+    }
+}
+
+/** Move the finding panels out of the findings block before it is rewritten. */
+function parkFindingPanels() {
+    const parked = document.getElementById('preprocessControls');
+    if (!parked) return;
+    Object.keys(FINDING_PANELS).forEach((key) => {
+        const panel = document.getElementById(`preprocessPanel_${key}`);
+        if (panel) { panel.classList.add('hidden'); parked.appendChild(panel); }
+    });
+}
+
+/** Run both detections and say what they found. */
+async function runPreprocessDetection() {
+    const host = document.getElementById('preprocessFindings');
+    if (!host) return;
+    if (!preprocessColumnsChosen()) {
+        parkFindingPanels();
+        host.innerHTML = '<p class="narrative-empty">Enter the indicator and target columns.</p>';
+        return;
+    }
+    const isCluster = (document.getElementById('outputType1') || {}).value === 'Cluster';
+    const indicators = getColumnIndices(document.getElementById('indicators').value.toUpperCase().replace(/\s/g, ''));
+    const target = isCluster ? [] : getColumnIndices(document.getElementById('predictors').value.toUpperCase().replace(/\s/g, ''));
+    if (!indicators.length) {
+        parkFindingPanels();
+        host.innerHTML = '<p class="narrative-empty">DiGiTerra cannot read the indicator columns. Use the form "A-D" or "A,B,C".</p>';
+        return;
+    }
+    const body = JSON.stringify({ indicators: indicators, predictors: target });
+    const post = (path) => fetch(`${API_ROOT}${path}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body,
+    }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+
+    const [clean, text] = await Promise.all([post('/auto-detect-nan-zeros'), post('/auto-detect-transformers')]);
+    lastNumericColumns = clean && Array.isArray(clean.numeric_columns) ? clean.numeric_columns : [];
+    // A panel opened while the detection ran (the rail's change button) stays open.
+    const wasOpen = Object.keys(FINDING_PANELS).filter((key) => {
+        const panel = document.getElementById(`preprocessPanel_${key}`);
+        return panel && !panel.classList.contains('hidden');
+    });
+    parkFindingPanels();
+    host.innerHTML = '';
+
+    let found = false;
+    if (clean && clean.blank_rows) {
+        found = true;
+        const rows = clean.blank_rows === 1 ? '1 row has a blank.' : `${clean.blank_rows} rows have a blank.`;
+        host.appendChild(preprocessSentence(`${rows} DiGiTerra will remove them.`, 'cleaning'));
+        setPreprocessDefault('missScopeAll', true);
+        setPreprocessDefault('imputeStrategy', 'none');
+    }
+    if (clean && clean.zero_columns && clean.zero_columns.length) {
+        found = true;
+        const names = clean.zero_columns.join(' and ');
+        host.appendChild(preprocessSentence(`${names} contain a zero. DiGiTerra will keep the zeros.`, 'cleaning'));
+    }
+    if (text && Array.isArray(text.transformer_indices) && text.transformer_indices.length) {
+        found = true;
+        const names = window.uploadedColumnNames || [];
+        const labels = text.transformer_indices.map((i) => names[i] || indexToColumn(i)).join(' and ');
+        const verb = text.transformer_indices.length === 1 ? 'is text' : 'are text';
+        host.appendChild(preprocessSentence(`${labels} ${verb}. DiGiTerra will one-hot encode them.`, 'text'));
+        setPreprocessDefault('useTransformer', 'Yes');
+        setPreprocessDefault('transformerColumn', text.transformer_indices.map(indexToColumn).join(', '));
+    }
+    if (!found) {
+        host.appendChild(preprocessSentence('No blanks or zeros in the selected columns.', 'cleaning'));
+    }
+    // Each panel sits under the last sentence that opens it and starts closed; a
+    // panel no sentence needs goes back to the parking block.
+    Object.keys(FINDING_PANELS).forEach((key) => {
+        const panel = document.getElementById(`preprocessPanel_${key}`);
+        if (panel) panel.classList.toggle('hidden', !wasOpen.includes(key));
+        seatFindingPanel(host, key);
+    });
+    syncPreprocessLinks();
+    applyStratifyDefault();
+}
+
+function setPreprocessDefault(id, value) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.type === 'checkbox') el.checked = Boolean(value);
+    else el.value = value;
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+function indexToColumn(index) {
+    let n = Number(index) + 1;
+    let out = '';
+    while (n > 0) {
+        const rem = (n - 1) % 26;
+        out = String.fromCharCode(65 + rem) + out;
+        n = Math.floor((n - 1) / 26);
+    }
+    return out;
+}
+
+/* Stratify defaults to Yes on the target for classification and No for regression.
+   Quantiles and bins cut a continuous column into groups, so that control belongs to
+   a numeric stratify column and is not drawn for a categorical one. */
+function applyStratifyDefault() {
+    const task = (document.getElementById('outputType1') || {}).value;
+    const toggle = document.getElementById('scalingYesNo');
+    const column = document.getElementById('specificVariableSelect');
+    if (!toggle) return;
+    if (task === 'Classifier') {
+        setPreprocessDefault('scalingYesNo', 'Yes');
+        if (column && !column.value.trim()) {
+            setPreprocessDefault('specificVariableSelect', (document.getElementById('predictors') || {}).value || '');
+        }
+    } else if (task === 'Numeric') {
+        setPreprocessDefault('scalingYesNo', 'No');
+    }
+    updateQuantileBinVisibility();
+}
+
+/* The numeric columns of the loaded file, as the last detection reported them. The
+   transformer list will not do: it names the text columns among the indicators and
+   leaves the target out, so a text target would read as numeric. */
+let lastNumericColumns = [];
+
+function stratifyColumnIsNumeric() {
+    const column = document.getElementById('specificVariableSelect');
+    if (!column || !column.value.trim() || typeof columnToIndex !== 'function') return false;
+    const first = column.value.trim().toUpperCase().match(/^[A-Z]+/);
+    if (!first) return false;
+    return lastNumericColumns.includes(columnToIndex(first[0]));
+}
+
+function updateQuantileBinVisibility() {
+    const wrapper = document.getElementById('quantileBins');
+    if (!wrapper) return;
+    const row = wrapper.closest('.scaling-container') || wrapper.parentElement;
+    const numeric = stratifyColumnIsNumeric();
+    if (row) row.classList.toggle('hidden', !numeric);
+    if (!numeric) setPreprocessDefault('quantileBins', 'None');
+}
+
+function initPreprocessPage() {
+    const host = document.getElementById('userInputSection');
+    if (!host) return;
+    buildPreprocessLayout();
+    let ran = false;
+    const refresh = () => {
+        if (host.classList.contains('hidden')) return;
+        if (!ran) {
+            ran = true;
+            buildPreprocessLayout();
+        }
+        runPreprocessDetection();
+    };
+    refresh();
+    new MutationObserver(refresh).observe(host, { attributes: true, attributeFilter: ['class'] });
+    ['indicators', 'predictors', 'outputType1'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', runPreprocessDetection);
+    });
+    ['specificVariableSelect', 'scalingYesNo'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', updateQuantileBinVisibility);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', initPreprocessPage);

@@ -3,6 +3,7 @@
 Verify that runtime dependencies from requirements.txt are installable and
 importable. Run from project root: python scripts/check_requirements.py
 """
+
 import re
 import subprocess
 import sys
@@ -12,7 +13,6 @@ from pathlib import Path
 REQUIREMENT_TO_IMPORT = {
     "flask": "flask",
     "gunicorn": "gunicorn",
-    "requests": "requests",
     "matplotlib": "matplotlib",
     "numpy": "numpy",
     "openpyxl": "openpyxl",

@@ -1,0 +1,411 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  padding: 0;
+  margin: 0;
+  font-family: Helvetica, "Helvetica Neue", "Nimbus Sans", Arial,
+    "Liberation Sans", sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+  color: #414a44;
+  background-color: #fbfaf7;
+}
+
+a {
+  color: #6a4a74;
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+.page-header {
+  color: #f6f3ee;
+  text-align: center;
+  background-color: #122e24;
+  background-position: center 42%;
+  background-size: cover;
+  padding: 3.2rem 2rem 2.6rem;
+  text-shadow: 0 1px 3px rgba(10, 24, 18, 0.85);
+}
+.page-header :last-child {
+  margin-bottom: 0.5rem;
+}
+@media screen and (max-width: 42em) {
+  .page-header {
+    padding: 1rem 1rem;
+  }
+}
+
+.project-name {
+  margin-top: 0;
+  margin-bottom: 0.4rem;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 46rem;
+  font-size: 1.7rem;
+  line-height: 1.3;
+}
+@media screen and (max-width: 42em) {
+  .project-name {
+    font-size: 1.75rem;
+  }
+}
+
+.project-tagline {
+  margin-bottom: 1rem;
+  font-weight: normal;
+  opacity: 0.7;
+  font-size: 1.5rem;
+}
+@media screen and (max-width: 42em) {
+  .project-tagline {
+    font-size: 1.2rem;
+  }
+}
+
+.project-author, .project-date {
+  font-weight: normal;
+  opacity: 0.7;
+  font-size: 1.2rem;
+}
+@media screen and (max-width: 42em) {
+  .project-author, .project-date {
+    font-size: 1rem;
+  }
+}
+
+.main-content, .toc {
+  max-width: 64rem;
+  padding: 2rem 4rem;
+  margin: 0 auto;
+  font-size: 1.1rem;
+}
+
+.toc {
+  padding-bottom: 0;
+}
+.toc .toc-box {
+  padding: 1.5rem;
+  background-color: #f0f2ee;
+  border: solid 1px #d7dbd4;
+  border-radius: 0.3rem;
+}
+.toc .toc-box .toc-title {
+  margin: 0 0 0.5rem;
+  text-align: center;
+}
+.toc .toc-box > ul {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+@media screen and (min-width: 42em) and (max-width: 64em) {
+  .toc {
+    padding: 2rem 2rem 0;
+  }
+}
+@media screen and (max-width: 42em) {
+  .toc {
+    padding: 2rem 1rem 0;
+    font-size: 1rem;
+  }
+}
+
+.main-content :first-child {
+  margin-top: 0;
+}
+@media screen and (min-width: 42em) and (max-width: 64em) {
+  .main-content {
+    padding: 2rem;
+  }
+}
+@media screen and (max-width: 42em) {
+  .main-content {
+    padding: 2rem 1rem;
+    font-size: 1rem;
+  }
+}
+.main-content img {
+  max-width: 100%;
+}
+.main-content h1,
+.main-content h2,
+.main-content h3,
+.main-content h4,
+.main-content h5,
+.main-content h6 {
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  font-weight: normal;
+  color: #24503d;
+}
+.main-content p {
+  margin-bottom: 1em;
+}
+.main-content code {
+  padding: 2px 4px;
+  font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  color: #4a544d;
+  background-color: #f0f2ee;
+  border-radius: 0.3rem;
+}
+.main-content pre {
+  padding: 0.8rem;
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font: 1rem Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  color: #4a544d;
+  word-wrap: normal;
+  background-color: #f0f2ee;
+  border: solid 1px #d7dbd4;
+  border-radius: 0.3rem;
+  line-height: 1.45;
+  overflow: auto;
+}
+@media screen and (max-width: 42em) {
+  .main-content pre {
+    font-size: 0.9rem;
+  }
+}
+.main-content pre > code {
+  padding: 0;
+  margin: 0;
+  color: #4a544d;
+  word-break: normal;
+  white-space: pre;
+  background: transparent;
+  border: 0;
+}
+@media screen and (max-width: 42em) {
+  .main-content pre > code {
+    font-size: 0.9rem;
+  }
+}
+.main-content pre code,
+.main-content pre tt {
+  display: inline;
+  max-width: initial;
+  padding: 0;
+  margin: 0;
+  overflow: initial;
+  line-height: inherit;
+  word-wrap: normal;
+  background-color: transparent;
+  border: 0;
+}
+.main-content pre code:before, .main-content pre code:after,
+.main-content pre tt:before,
+.main-content pre tt:after {
+  content: normal;
+}
+.main-content ul,
+.main-content ol {
+  margin-top: 0;
+}
+.main-content blockquote {
+  padding: 0 1rem;
+  margin-left: 0;
+  color: #6c7069;
+  border-left: 0.3rem solid #d7dbd4;
+  font-size: 1.2rem;
+}
+.main-content blockquote > :first-child {
+  margin-top: 0;
+}
+.main-content blockquote > :last-child {
+  margin-bottom: 0;
+}
+@media screen and (max-width: 42em) {
+  .main-content blockquote {
+    font-size: 1.1rem;
+  }
+}
+.main-content table {
+  width: 100%;
+  overflow: auto;
+  word-break: normal;
+  word-break: keep-all;
+  -webkit-overflow-scrolling: touch;
+  border-collapse: collapse;
+  border-spacing: 0;
+  margin: 1rem 0;
+}
+.main-content table th {
+  font-weight: bold;
+  background-color: #24503d;
+  color: #fff;
+}
+.main-content table th,
+.main-content table td {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #e2e4df;
+  text-align: left;
+}
+.main-content table tr:nth-child(odd) {
+  background-color: #f5f4f0;
+}
+.main-content dl {
+  padding: 0;
+}
+.main-content dl dt {
+  padding: 0;
+  margin-top: 1rem;
+  font-size: 1rem;
+  font-weight: bold;
+}
+.main-content dl dd {
+  padding: 0;
+  margin-bottom: 1rem;
+}
+.main-content hr {
+  height: 2px;
+  padding: 0;
+  margin: 1rem 0;
+  background-color: #e2e4df;
+  border: 0;
+}
+
+/*# sourceMappingURL=cayman.css.map */
+
+/* Source: prettydoc 0.4.1, inst/resources/css/cayman.css, Apache License
+   2.0, Yixuan Qiu, with the Cayman theme by Jason Long (CC0 1.0); see
+   THIRD_PARTY_NOTICES.md at the repository root for the notices and the
+   license text. The vignette of corrplot is built with this theme. The
+   layout is the theme as shipped. This copy is modified in three ways: the @font-face blocks for the
+   bundled Open Sans files are removed and the text is set in Helvetica, the
+   font that R measures text with on the device this port matches, the colors are a forest green and a dusty plum on a warm
+   off-white in the place of the green and blue of the theme, and the page
+   header carries a contour map. */
+
+.main-content .pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+.main-content .pair > div { min-width: 0; }
+.main-content .pair pre { margin-bottom: 0; font-size: 0.8rem; }
+/* long calls wrap inside the pane instead of running off the right edge */
+.main-content .pair pre code,
+.main-content .recipe-row pre code {
+  white-space: pre-wrap;
+}
+/* a complete example: the code on the left, the plot on the right */
+.main-content .recipe-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: 1rem;
+  align-items: start;
+  margin-bottom: 2rem;
+}
+.main-content .recipe-row pre { margin: 0; font-size: 0.74rem; }
+.main-content .recipe-row figure.recipe { margin: 0; }
+.main-content .recipe-row figure.recipe img { width: 100%; }
+.main-content .lang {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  color: #24503d;
+  margin-bottom: 0.25rem;
+}
+.main-content figure { margin: 0 0 2rem; }
+.main-content figure.recipe { margin: 0.5rem 0 2.2rem; }
+.main-content figure.recipe img { width: 420px; max-width: 100%; }
+.main-content figure img {
+  border: solid 1px #d7dbd4;
+  border-radius: 0.3rem;
+}
+.main-content .note {
+  border-left: 0.3rem solid #cfc7d4;
+  padding: 0 1rem;
+  color: #6c7069;
+  margin-bottom: 1rem;
+}
+.main-content .verification {
+  padding: 1rem 1.5rem;
+  background-color: #f0f2ee;
+  border: solid 1px #d7dbd4;
+  border-radius: 0.3rem;
+  margin-bottom: 1.5rem;
+}
+@media screen and (max-width: 42em) {
+  .main-content .pair { grid-template-columns: 1fr; }
+}
+@media screen and (max-width: 56em) {
+  .main-content .recipe-row { grid-template-columns: 1fr; }
+  .main-content .recipe-row figure.recipe img { width: 360px; max-width: 100%; }
+}
+
+/* tabs */
+.tabs {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 1.2rem 4rem 0;
+  display: flex;
+  gap: 0.5rem;
+}
+.tabs button {
+  font: inherit;
+  font-size: 1rem;
+  color: #414a44;
+  background-color: #f0f2ee;
+  border: solid 1px #d7dbd4;
+  border-bottom: none;
+  border-radius: 0.3rem 0.3rem 0 0;
+  padding: 0.55rem 1.2rem;
+  cursor: pointer;
+}
+.tabs button[aria-selected="true"] {
+  color: #24503d;
+  background-color: #fff;
+  font-weight: bold;
+  box-shadow: inset 0 3px 0 #24503d;
+}
+.tabs-rule { max-width: 64rem; margin: 0 auto; padding: 0 4rem; }
+.tabs-rule div { border-top: solid 1px #d7dbd4; }
+.main-content, .toc { background-color: transparent; }
+.main-content .verification { background-color: #f5f0f6;
+  border-color: #e2dae5; }
+[hidden] { display: none !important; }
+.main-content details.feature {
+  border: solid 1px #d7dbd4;
+  border-radius: 0.3rem;
+  background-color: #f7f6f2;
+  padding: 0.6rem 1.1rem;
+  margin-bottom: 0.6rem;
+}
+.main-content details.feature[open] { background-color: #fff; }
+.main-content details.feature > summary {
+  cursor: pointer;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #24503d;
+  padding: 0.2rem 0;
+}
+.main-content details.feature .count {
+  float: right;
+  font-size: 0.85rem;
+  font-weight: normal;
+  color: #6c7069;
+  padding-top: 0.35rem;
+}
+.main-content details.feature > :nth-child(2) { margin-top: 1rem; }
+.main-content details.guide { margin-top: 1.2rem; }
+.main-content .contents {
+  padding: 1rem 1.4rem;
+  background-color: #f0f2ee;
+  border: solid 1px #d7dbd4;
+  border-radius: 0.3rem;
+  margin-bottom: 1.5rem;
+}
+.main-content .contents ul { margin: 0.3rem 0 0; padding-left: 1.3rem; }
+@media screen and (max-width: 42em) {
+  .tabs, .tabs-rule { padding-left: 1rem; padding-right: 1rem; }
+}
+
+.page-header {padding: 2.2rem 2rem 1.6rem;background-image:linear-gradient(180deg, rgba(12,32,25,0.58), rgba(12,32,25,0.74)),none;}
+.main-content figcaption { font-size: 0.9rem; color: #6c7069; margin-top: 0.5rem; max-width: 40rem; }
+.main-content ul.reference-list { padding-left: 1.3rem; }
+.main-content ul.reference-list li { margin-bottom: 0.5rem; }
+.main-content figure.recipe img { width: 520px; }

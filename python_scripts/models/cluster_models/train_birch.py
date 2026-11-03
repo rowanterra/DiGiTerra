@@ -1,10 +1,21 @@
 from sklearn.cluster import Birch
 
-from python_scripts.preprocessing.run_clustering_pipeline import run_clustering
+from python_scripts.preprocessing.run_clustering_pipeline import clustering_options, run_clustering
 
 
-def train_birch(train_data, X, units, X_scaler_type,
-                seed, sigfig, quantileBinDict, useTransformer, categorical_cols, test_size, **kwargs):
+def train_birch(
+    train_data,
+    X,
+    units,
+    X_scaler_type,
+    seed,
+    sigfig,
+    quantileBinDict,
+    useTransformer,
+    categorical_cols,
+    test_size,
+    **kwargs,
+):
     model = Birch(
         threshold=kwargs.get("threshold", 0.5),
         branching_factor=kwargs.get("branching_factor", 50),
@@ -14,10 +25,19 @@ def train_birch(train_data, X, units, X_scaler_type,
     )
 
     return run_clustering(
-        model, "birch",
+        model,
+        "birch",
         train_data,
         X,
-        units, X_scaler_type,
-        seed, sigfig, quantileBinDict, useTransformer, categorical_cols, test_size,
-        k_min=2, k_max=8
+        units,
+        X_scaler_type,
+        seed,
+        sigfig,
+        quantileBinDict,
+        useTransformer,
+        categorical_cols,
+        test_size,
+        k_min=2,
+        k_max=8,
+        **clustering_options(kwargs),
     )

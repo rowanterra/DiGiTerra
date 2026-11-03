@@ -1,4 +1,5 @@
 """Pytest fixtures and config. Ensures project root is on path when running tests."""
+
 import os
 import sys
 import tempfile

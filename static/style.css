@@ -6,10 +6,70 @@
 
 :root {
   --header-offset: 88px;
+
+  /* The surface, type and spacing tokens for the application views. The values
+     are the ones the Modeling page's narrative treatment established; naming
+     them is what lets the header, the tab bar, upload, preprocessing and
+     inference take the same treatment instead of each carrying its own hex.
+     The Documentation view keeps its own --doc-* palette, defined further down.
+
+     The accent green does not change between light and dark: every rule that
+     used it did so identically in both, so it is one value in one place. */
+  --app-accent: #357a53;
+  --app-accent-dark: #2d6543;
+  --app-accent-deep: #24503d;
+  --app-accent-lift: #4a9d6e;
+  --app-on-accent: #ffffff;
+
+  --app-page: #fbfaf7;
+  --app-panel: #ffffff;
+  --app-panel-head: #f0f2ee;
+  --app-sunken: #f3f4f0;
+  --app-border: #d7dbd4;
+  --app-rule: #d7dbd4;
+  --app-hairline: #e6e9e3;
+
+  --app-ink: #2b2f2c;
+  --app-heading: var(--app-accent-deep);
+  --app-muted: #6c7069;
+  --app-soft: #4a544d;
+  --app-accent-wash: #eaf1ec;
+
+  /* The caution note on the welcome screen and beside the risky options. */
+  --app-caution-ink: #6f5a1e;
+  --app-caution-bg: #f6f2e6;
+  --app-caution-rule: #cdbb84;
+
+  --app-radius: 4px;
+  --app-radius-sm: 3px;
+  --app-pad: 14px;
+  --app-gap: 16px;
+  --app-gap-sm: 8px;
 }
 
-html,
-body {
+/* Dark mode moves the surfaces, not the accent. The values are the ones the
+   narrative panels already used, so a view that takes these tokens matches the
+   Modeling page in both themes. */
+body.dark-mode {
+  --app-page: #1a1a1a;
+  --app-panel: #242424;
+  --app-panel-head: #2c332e;
+  --app-sunken: #1f1f1f;
+  --app-border: #3a3a3a;
+  --app-rule: #3a3a3a;
+  --app-hairline: #3a3a3a;
+
+  --app-ink: #e0e0e0;
+  --app-heading: #8fbfa3;
+  --app-muted: #b9b9b9;
+  --app-soft: #cfd6d0;
+  --app-accent-wash: #2b3a30;
+  --app-caution-ink: #d8c48a;
+  --app-caution-bg: #2a2718;
+  --app-caution-rule: #5a4f2a;
+}
+
+html {
   width: 100%;
   margin: 0;
   padding: 0;
@@ -17,27 +77,44 @@ body {
   overflow-y: auto;
 }
 
+/* body must not scroll on its own. html already scrolls, and because html's
+   overflow is not visible the body's own value stays on the body instead of
+   propagating to the viewport, which made body a scroll container. A sticky child
+   then measured its offset from body's content edge, which already starts one
+   header-offset down, so the rail sat a header lower than the views beside it and
+   went behind the fixed header on scroll. Measured on the page: rail top 216
+   against views top 102 at rest, and 67 against an 86px header once scrolled.
+
+   overflow-x on its own is what did it: a box with one axis not visible computes
+   the other axis to auto rather than visible, so overflow-x: hidden alone made the
+   body a scroller. html keeps the horizontal clamp; body sets neither axis. */
+body {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
 body {
     font-family: Arial, sans-serif;
-    background-color: #f4f4f9;
+    background-color: var(--app-page);
     padding-top: var(--header-offset, 88px);
 }
 
 /* Ensure body background is visible - override any dark mode if not explicitly enabled */
 body:not(.dark-mode) {
-    background-color: #f4f4f9 !important;
-    color: #000000;
+    background-color: var(--app-page) !important;
+    color: var(--app-ink);
 }
 
 main,
 #main-content {
-    background-color: #f4f4f9;
+    background-color: var(--app-page);
     scroll-margin-top: var(--header-offset, 88px);
 }
 
 body:not(.dark-mode) main,
 body:not(.dark-mode) #main-content {
-    background-color: #f4f4f9 !important;
+    background-color: var(--app-page) !important;
 }
 
 .header {
@@ -46,7 +123,7 @@ body:not(.dark-mode) #main-content {
   left: 0;           /* Aligns to the left */
   width: 100%;       /* Full width */
   min-height: 72px;      /* Set height */
-  background-color: #357a53; /* Dark background */
+  background-color: var(--app-accent); /* Dark background */
   color: white;
   display: flex;
   align-items: center;
@@ -136,7 +213,7 @@ input:focus,
 select:focus,
 textarea:focus,
 a:focus {
-  outline: 3px solid #357a53;
+  outline: 3px solid var(--app-accent);
   outline-offset: 2px;
   box-shadow: 0 0 0 2px rgba(53, 122, 83, 0.2);
 }
@@ -146,7 +223,7 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 a:focus-visible {
-  outline: 3px solid #357a53;
+  outline: 3px solid var(--app-accent);
   outline-offset: 2px;
 }
 
@@ -155,7 +232,7 @@ a:focus-visible {
   position: absolute;
   top: -40px;
   left: 0;
-  background: #357a53;
+  background: var(--app-accent);
   color: white;
   padding: 8px;
   text-decoration: none;
@@ -199,22 +276,22 @@ a:focus-visible {
 
 /* Mode selector radio button styling */
 label:has(input[type="radio"][name="modelingMode"]:checked) {
-  border-color: #357a53 !important;
+  border-color: var(--app-accent) !important;
   background-color: #f0fff4;
 }
 
 label:has(input[type="radio"][name="modelingMode"]:checked) strong {
-  color: #357a53;
+  color: var(--app-accent);
 }
 
 /* Firefox-safe fallback for modeling mode selector */
 .modeling-mode-option.is-selected {
-  border-color: #357a53 !important;
+  border-color: var(--app-accent) !important;
   background-color: #f0fff4;
 }
 
 .modeling-mode-option.is-selected strong {
-  color: #357a53;
+  color: var(--app-accent);
 }
 /* .welcome{
   text-align: center;
@@ -249,7 +326,7 @@ label:has(input[type="radio"][name="modelingMode"]:checked) strong {
   width: 100%; /* Span full width of parent container */
   max-width: 100%; /* Span full width of logo + DiGiTerra text container */
   margin: 0 auto;
-  background-color: #357a53; /* Match banner green */
+  background-color: var(--app-accent); /* Match banner green */
   box-sizing: border-box;
   border-radius: 8px;
   display: block; /* Ensure it's a block element to respect width */
@@ -348,7 +425,7 @@ label:has(input[type="radio"][name="modelingMode"]:checked) strong {
   vertical-align: middle;
   display: inline-block;
   font-size: 1.8em;
-  color: #357a53;
+  color: var(--app-accent);
   word-wrap: break-word;
 }
 /* .uploadform{
@@ -580,7 +657,7 @@ input[type="file"] {
   position: relative;
   /* Visual indicators for scrollable content - enhanced scrollbar */
   scrollbar-width: thin;
-  scrollbar-color: #357a53 #f0f0f0;
+  scrollbar-color: var(--app-accent) #f0f0f0;
   /* Subtle inset shadow to indicate scrollable area */
   box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.04);
 }
@@ -601,7 +678,7 @@ input[type="file"] {
 
 .stats-table-wrapper::-webkit-scrollbar-thumb,
 .model-stats-table-wrapper::-webkit-scrollbar-thumb {
-  background: #357a53;
+  background: var(--app-accent);
   border-radius: 4px;
   border: 1px solid #f0f0f0;
   min-height: 30px; /* Make scrollbar thumb more visible */
@@ -617,7 +694,7 @@ input[type="file"] {
 .model-stats-table-wrapper:has(table tbody tr:nth-child(6)),
 .stats-table-wrapper:has(table tr:nth-child(6)),
 .model-stats-table-wrapper:has(table tr:nth-child(6)) {
-  border-color: #357a53;
+  border-color: var(--app-accent);
   border-width: 1.5px;
 }
 
@@ -907,8 +984,8 @@ input[type="file"] {
   font-style: italic;
   margin: 16px 0 20px 0;
   padding: 12px 16px;
-  background-color: #f8f9fa;
-  border-left: 3px solid #357a53;
+  background-color: var(--doc-panel);
+  border-left: 3px solid var(--app-accent);
   border-radius: 4px;
 }
 
@@ -971,7 +1048,7 @@ input[type="file"] {
 .doc-modeling-type-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-color: #357a53;
+  border-color: var(--app-accent);
 }
 
 /* Approach Cards */
@@ -1006,7 +1083,7 @@ input[type="file"] {
 
 .doc-advanced {
   background-color: #f0fff4;
-  border-color: #357a53;
+  border-color: var(--app-accent);
 }
 
 .doc-approach-header {
@@ -1042,15 +1119,15 @@ input[type="file"] {
   content: "•";
   position: absolute;
   left: 0;
-  color: #357a53;
+  color: var(--app-accent);
   font-weight: bold;
 }
 
 .doc-note {
   margin-top: 20px;
   padding: 12px 16px;
-  background-color: #f8f9fa;
-  border-left: 4px solid #357a53;
+  background-color: var(--doc-panel);
+  border-left: 4px solid var(--app-accent);
   border-radius: 4px;
   font-size: 0.95em;
 }
@@ -1065,9 +1142,9 @@ input[type="file"] {
 
 .doc-concept-item {
   padding: 16px;
-  background-color: #f8f9fa;
+  background-color: var(--doc-panel);
   border-radius: 8px;
-  border-left: 4px solid #357a53;
+  border-left: 4px solid var(--app-accent);
 }
 
 .doc-concept-item strong {
@@ -1094,9 +1171,9 @@ input[type="file"] {
 
 .doc-tip-item {
   padding: 16px;
-  background-color: #f8f9fa;
+  background-color: var(--doc-panel);
   border-radius: 8px;
-  border-left: 4px solid #357a53;
+  border-left: 4px solid var(--app-accent);
 }
 
 .doc-tip-item strong {
@@ -1114,21 +1191,21 @@ input[type="file"] {
 
 /* Warning Content */
 .doc-warning-content {
-  background-color: #fff3cd;
-  border-left: 4px solid #ffc107;
+  background-color: var(--app-caution-bg);
+  border-left: 4px solid var(--app-caution-rule);
   padding: 20px;
   border-radius: 6px;
 }
 
 .doc-warning-title {
   font-weight: 600;
-  color: #856404;
+  color: var(--app-caution-ink);
   margin-bottom: 12px;
   font-size: 1.1em;
 }
 
 .doc-warning-content p {
-  color: #856404;
+  color: var(--app-caution-ink);
   margin: 0 0 12px 0;
   line-height: 1.6;
 }
@@ -1147,7 +1224,7 @@ input[type="file"] {
 
 .doc-feature-card {
   padding: 16px;
-  background-color: #f8f9fa;
+  background-color: var(--doc-panel);
   border-radius: 8px;
   border: 1px solid #e5e5e5;
   transition: background-color 0.2s ease;
@@ -1199,7 +1276,7 @@ input[type="file"] {
 
 .doc-method-card {
   padding: 18px;
-  background-color: #f8f9fa;
+  background-color: var(--doc-panel);
   border-radius: 8px;
   border: 1px solid #e5e5e5;
 }
@@ -1247,7 +1324,7 @@ input[type="file"] {
 .doc-action-note {
   margin-top: 16px;
   padding: 12px 16px;
-  background-color: #f8f9fa;
+  background-color: var(--doc-panel);
   border-radius: 6px;
   font-size: 0.95em;
 }
@@ -1255,7 +1332,7 @@ input[type="file"] {
 .doc-action-badge {
   display: inline-block;
   padding: 4px 10px;
-  background-color: #357a53;
+  background-color: var(--app-accent);
   color: white;
   border-radius: 12px;
   font-size: 0.85em;
@@ -1266,10 +1343,10 @@ input[type="file"] {
 .doc-warning-box {
   margin-top: 20px;
   padding: 16px;
-  background-color: #fff3cd;
-  border-left: 4px solid #ffc107;
+  background-color: var(--app-caution-bg);
+  border-left: 4px solid var(--app-caution-rule);
   border-radius: 6px;
-  color: #856404;
+  color: var(--app-caution-ink);
   font-size: 0.95em;
   line-height: 1.6;
 }
@@ -1278,7 +1355,7 @@ input[type="file"] {
   margin: 24px auto 28px auto;
   text-align: center;
   padding: 24px 20px;
-  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  background: linear-gradient(135deg, var(--doc-panel) 0%, #ffffff 100%);
   border-radius: 12px;
   max-width: 100%;
   overflow-x: auto;
@@ -1441,7 +1518,7 @@ button {
 }
 
 button:hover {
-    background-color: #0056b3;
+    background-color: var(--app-accent-dark);
 }
 .processButton{
   padding: 20px 48px 20px 40px; /* Extra padding on right for triangle */
@@ -1629,22 +1706,23 @@ button:hover {
   flex: 0 0 auto !important;
 }
 
+/* The toggle switch when it is on. */
 input:checked + .slider {
-  background-color: #2196f3;
+  background-color: var(--app-accent);
 }
 
 /* Advanced options warning styling */
 .advanced-options-warning {
-  background-color: #fff3cd;
-  border-left: 4px solid #ffc107;
+  background-color: var(--app-caution-bg);
+  border-left: 4px solid var(--app-caution-rule);
   padding: 12px 16px;
   margin: 12px 0;
   border-radius: 4px;
-  color: #856404;
+  color: var(--app-caution-ink);
 }
 
 .advanced-options-warning strong {
-  color: #856404;
+  color: var(--app-caution-ink);
 }
 
 input:checked + .slider:before {
@@ -1760,7 +1838,7 @@ body.dark-mode .close-btn {
 }
 
 .success-button {
-  background-color: #357a53; /* Match banner green */
+  background-color: var(--app-accent); /* Match banner green */
   position: relative;
   padding-right: 28px; /* Make room for right triangle */
 }
@@ -1838,8 +1916,8 @@ button.success-button::after,
 
 .advanced-options-button {
   background-color: transparent;
-  border: 2px solid #357a53;
-  color: #357a53;
+  border: 2px solid var(--app-accent);
+  color: var(--app-accent);
   padding: 10px 20px;
   border-radius: 4px;
   cursor: pointer;
@@ -1871,7 +1949,7 @@ button.success-button::after,
   padding: 10px 20px;
   font-size: 1rem ;
   /* margin-left: 10%; */
-  background-color: #357a53; /* Match banner green */
+  background-color: var(--app-accent); /* Match banner green */
 }
 
 .inference-row {
@@ -2074,13 +2152,13 @@ body.dark-mode #loading {
 .progress-overall {
   margin-bottom: 30px;
   padding: 20px;
-  background-color: #f8f9fa;
+  background-color: var(--app-sunken);
   border-radius: 8px;
 }
 
 .progress-overall h3 {
   margin: 0 0 10px 0;
-  color: #357a53;
+  color: var(--app-accent);
   font-size: 1.2em;
 }
 
@@ -2096,7 +2174,7 @@ body.dark-mode #loading {
 
 .progress-bar {
   height: 100%;
-  background: linear-gradient(90deg, #357a53 0%, #4a9d6e 100%);
+  background: linear-gradient(90deg, var(--app-accent) 0%, #4a9d6e 100%);
   transition: width 0.3s ease;
   border-radius: 12px;
 }
@@ -2162,7 +2240,7 @@ body.dark-mode #loading {
 
 .progress-stage-percent {
   font-weight: 600;
-  color: #357a53;
+  color: var(--app-accent);
   min-width: 50px;
   text-align: right;
 }
@@ -2263,7 +2341,7 @@ body.dark-mode .doc-simple {
 
 body.dark-mode .doc-advanced {
   background-color: #1a2d1f;
-  border-color: #357a53;
+  border-color: var(--app-accent);
 }
 
 body.dark-mode .doc-approach-header h4 {
@@ -2280,7 +2358,7 @@ body.dark-mode .doc-modeling-type-card {
 }
 
 body.dark-mode .doc-modeling-type-card:hover {
-  border-color: #357a53;
+  border-color: var(--app-accent);
 }
 
 body.dark-mode .doc-modeling-type-card h4 {
@@ -2295,7 +2373,7 @@ body.dark-mode .doc-modeling-type-card p {
   margin-top: 12px;
   padding: 10px 14px;
   background-color: #f0f7f3;
-  border-left: 3px solid #357a53;
+  border-left: 3px solid var(--app-accent);
   border-radius: 4px;
   font-size: 0.9em;
   color: #2c3e50;
@@ -2322,7 +2400,7 @@ body.dark-mode .doc-modeling-type-card p {
 .doc-not-supported-list li {
   padding: 12px 16px;
   margin-bottom: 10px;
-  background-color: #f8f9fa;
+  background-color: var(--doc-panel);
   border-left: 3px solid #9e9e9e;
   border-radius: 4px;
   color: #555;
@@ -2334,7 +2412,7 @@ body.dark-mode .doc-modeling-type-card p {
 
 body.dark-mode .doc-type-example {
   background-color: #1a2d1f;
-  border-left-color: #357a53;
+  border-left-color: var(--app-accent);
   color: #b0b0b0;
 }
 
@@ -2362,13 +2440,13 @@ body.dark-mode .doc-feature-list li {
 
 body.dark-mode .doc-note {
   background-color: #3a3a3a;
-  border-left-color: #357a53;
+  border-left-color: var(--app-accent);
   color: #b0b0b0;
 }
 
 body.dark-mode .doc-concept-item {
   background-color: #3a3a3a;
-  border-left-color: #357a53;
+  border-left-color: var(--app-accent);
 }
 
 body.dark-mode .doc-concept-item strong {
@@ -2381,7 +2459,7 @@ body.dark-mode .doc-concept-item p {
 
 body.dark-mode .doc-tip-item {
   background-color: #3a3a3a;
-  border-left-color: #357a53;
+  border-left-color: var(--app-accent);
 }
 
 body.dark-mode .doc-tip-item strong {
@@ -2394,15 +2472,15 @@ body.dark-mode .doc-tip-item p {
 
 body.dark-mode .doc-warning-content {
   background-color: #3d3420;
-  border-left-color: #ffc107;
+  border-left-color: var(--app-caution-rule);
 }
 
 body.dark-mode .doc-warning-title {
-  color: #ffc107;
+  color: var(--app-caution-rule);
 }
 
 body.dark-mode .doc-warning-content p {
-  color: #ffc107;
+  color: var(--app-caution-rule);
 }
 
 body.dark-mode .doc-feature-card {
@@ -2473,14 +2551,14 @@ body.dark-mode .doc-action-note {
 }
 
 body.dark-mode .doc-action-badge {
-  background-color: #357a53;
+  background-color: var(--app-accent);
   color: #ffffff;
 }
 
 body.dark-mode .doc-warning-box {
   background-color: #3d3420;
-  border-left-color: #ffc107;
-  color: #ffc107;
+  border-left-color: var(--app-caution-rule);
+  color: var(--app-caution-rule);
 }
 
 body.dark-mode .section-header {
@@ -2509,12 +2587,12 @@ body.dark-mode input[type="text"]:focus,
 body.dark-mode input[type="number"]:focus,
 body.dark-mode select:focus,
 body.dark-mode textarea:focus {
-  border-color: #357a53;
+  border-color: var(--app-accent);
   background-color: #444;
 }
 
 body.dark-mode button:not(.dark-mode-toggle):not(.documentation-button) {
-  background-color: #357a53;
+  background-color: var(--app-accent);
   color: #ffffff;
 }
 
@@ -2523,7 +2601,7 @@ body.dark-mode button:not(.dark-mode-toggle):not(.documentation-button):hover {
 }
 
 body.dark-mode .welcomebutton {
-  background-color: #357a53;
+  background-color: var(--app-accent);
   color: #ffffff;
 }
 
@@ -2576,7 +2654,7 @@ body.dark-mode .disclaimer {
 
 body.dark-mode #welcomeDisclaimerContent {
   background-color: #3a3a3a !important;
-  border-left-color: #ffc107 !important;
+  border-left-color: var(--app-caution-rule) !important;
   color: #e0e0e0 !important;
 }
 
@@ -2603,7 +2681,7 @@ body.dark-mode .progress-bar-container {
 }
 
 body.dark-mode .progress-bar {
-  background: linear-gradient(90deg, #357a53 0%, #4a9d6e 100%);
+  background: linear-gradient(90deg, var(--app-accent) 0%, #4a9d6e 100%);
 }
 
 body.dark-mode .progress-time {
@@ -2699,10 +2777,14 @@ body.dark-mode #fileuploaddiv,
 body.dark-mode #columnsection,
 body.dark-mode #modelpreprocessing,
 body.dark-mode #modeling,
-body.dark-mode #historic,
-body.dark-mode #documentation {
+body.dark-mode #historic {
   background-color: #1a1a1a !important;
   color: #e0e0e0;
+  position: relative;
+  z-index: 1;
+}
+/* The documentation view paints its own paper in both modes. */
+body.dark-mode #documentation {
   position: relative;
   z-index: 1;
 }
@@ -2712,9 +2794,13 @@ body:not(.dark-mode) #fileuploaddiv,
 body:not(.dark-mode) #columnsection,
 body:not(.dark-mode) #modelpreprocessing,
 body:not(.dark-mode) #modeling,
-body:not(.dark-mode) #historic,
+body:not(.dark-mode) #historic {
+  background-color: var(--app-page) !important;
+  position: relative;
+  z-index: 1;
+}
+/* The documentation view paints its own paper; see the corrplotpy block below. */
 body:not(.dark-mode) #documentation {
-  background-color: #f4f4f9 !important;
   position: relative;
   z-index: 1;
 }
@@ -2760,3 +2846,2742 @@ body.dark-mode h4 {
 #transformerOptionWrapper.autodetect-greyed select {
   cursor: not-allowed;
 }
+
+/* Run notes above a result: data checks, split method, baseline comparison. */
+.run-notes {
+    margin: 0 0 14px 0;
+}
+.run-note {
+    margin: 0 0 8px 0;
+    padding: 8px 12px;
+    border-left: 3px solid #b8b8b8;
+    background: #f7f7f5;
+    font-size: 0.95em;
+    line-height: 1.45;
+}
+.run-note-warn {
+    border-left-color: #b07a1a;
+    background: #fbf5e8;
+}
+.run-note-block {
+    border-left-color: #8a2a2a;
+    background: #f8ecec;
+}
+
+/* ---------------------------------------------------------------------------
+   Documentation, in the style of the corrplotpy comparison page: an evergreen
+   masthead over a contour map, warm off-white paper, a forest green for
+   headings, a dusty plum for links, and Helvetica for text with Consolas for
+   code. Every rule is scoped to the documentation view, so the rest of the
+   application keeps its own appearance.
+
+   Colors are those of that page: paper #fbfaf7, ink #414a44, panel #f0f2ee,
+   rule #d7dbd4, masthead #122e24, heading #24503d, link #6a4a74.
+   -------------------------------------------------------------------------- */
+.documentation {
+    --doc-paper: #fbfaf7;
+    --doc-ink: #414a44;
+    --doc-panel: #f0f2ee;
+    --doc-rule: #d7dbd4;
+    --doc-evergreen: #122e24;
+    --doc-heading: #24503d;
+    --doc-link: #6a4a74;
+    --doc-muted: #6c7069;
+    --doc-code: #4a544d;
+    --doc-stop: #6b2e2e;
+    --doc-sans: Helvetica, "Helvetica Neue", "Nimbus Sans", Arial, "Liberation Sans", sans-serif;
+    --doc-mono: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+
+    background-color: var(--doc-paper) !important;
+    color: var(--doc-ink);
+    font-family: var(--doc-sans);
+    font-size: 16px;
+    line-height: 1.55;
+    padding: 0 0 4rem 0;
+    margin: 0;
+}
+
+.documentation a {
+    color: var(--doc-link);
+    text-decoration: none;
+}
+.documentation a:hover {
+    text-decoration: underline;
+}
+
+/* Masthead. The contour map is drawn by scripts/make_doc_banner.py from a
+   fixed seed, so it is reproducible and involves no third-party artwork. */
+.doc-masthead {
+    position: relative;
+    background-color: var(--doc-evergreen);
+    background-position: center 45%;
+    background-size: cover;
+    color: #f6f3ee;
+    text-align: center;
+    padding: 3.2rem 2rem 2.6rem;
+}
+/* The contour lines run behind the words, so a scrim carries the text. Without
+   it the tagline sits at the contrast of the lines themselves and disappears. */
+.doc-masthead::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(10, 26, 20, 0.86) 0%, rgba(10, 26, 20, 0.55) 55%, rgba(10, 26, 20, 0.25) 100%);
+}
+.doc-masthead > * {
+    position: relative;
+}
+.documentation .doc-masthead-title {
+    margin: 0 auto 0.4rem;
+    max-width: 46rem;
+    font-size: 2.2rem;
+    font-weight: normal;
+    line-height: 1.3;
+    color: #f6f3ee;
+}
+.documentation .doc-masthead-tagline {
+    margin: 0 auto 0.6rem;
+    max-width: 46rem;
+    font-size: 1.35rem;
+    font-weight: normal;
+    color: #e8e4da;
+}
+.documentation .doc-masthead-meta {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: normal;
+    color: #bcc9be;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+/* Contents box, above the cards, in the theme's panel color. */
+.doc-toc {
+    max-width: 64rem;
+    margin: 0 auto;
+    padding: 2rem 4rem 0;
+}
+.doc-toc-box {
+    padding: 1.25rem 1.5rem;
+    background-color: var(--doc-panel);
+    border: solid 1px var(--doc-rule);
+    border-radius: 0.3rem;
+}
+.documentation .doc-toc-title {
+    margin: 0 0 0.5rem;
+    text-align: center;
+    color: var(--doc-heading);
+    font-size: 1.05rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+.doc-toc-box ul {
+    margin: 0;
+    padding-left: 1.5rem;
+    columns: 2;
+    column-gap: 2rem;
+}
+.doc-toc-box li {
+    margin-bottom: 0.25rem;
+    break-inside: avoid;
+}
+
+/* Cards read as sections of one page rather than as panels on a dashboard. */
+.documentation .documentation-card {
+    max-width: 64rem;
+    margin: 0 auto;
+    padding: 2rem 4rem 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+.documentation .doc-header {
+    margin: 0 0 1rem 0;
+    padding: 0 0 0.4rem 0;
+    background: none;
+    border: 0;
+    border-bottom: 1px solid var(--doc-rule);
+}
+.documentation .doc-header h3,
+.documentation .doc-subsection-header {
+    margin: 0;
+    color: var(--doc-heading);
+    font-family: var(--doc-sans);
+    font-size: 1.5rem;
+    font-weight: normal;
+}
+.documentation h4,
+.documentation h5 {
+    color: var(--doc-heading);
+    font-weight: normal;
+}
+.documentation p {
+    margin-bottom: 1em;
+    color: var(--doc-ink);
+}
+.documentation strong {
+    color: var(--doc-ink);
+}
+.documentation code {
+    padding: 2px 4px;
+    font-family: var(--doc-mono);
+    font-size: 0.92em;
+    color: var(--doc-code);
+    background-color: var(--doc-panel);
+    border-radius: 0.3rem;
+}
+.documentation pre {
+    padding: 0.8rem;
+    font: 1rem var(--doc-mono);
+    color: var(--doc-code);
+    background-color: var(--doc-panel);
+    border: solid 1px var(--doc-rule);
+    border-radius: 0.3rem;
+    overflow: auto;
+}
+
+/* Journal-style tables: a solid header row, hairline rules, no vertical lines. */
+.documentation table {
+    width: 100%;
+    border-collapse: collapse;
+    border-spacing: 0;
+    margin: 1rem 0;
+}
+.documentation table th {
+    font-weight: bold;
+    background-color: var(--doc-heading);
+    color: #fff;
+}
+.documentation table th,
+.documentation table td {
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid #e2e4df;
+    text-align: left;
+}
+.documentation table tr:nth-child(odd) {
+    background-color: #f5f4f0;
+}
+
+/* The item grids keep their arrangement and take the paper palette. */
+.documentation .doc-tip-item,
+.documentation .doc-concept-item,
+.documentation .doc-modeling-type-card,
+.documentation .doc-approach-card,
+.documentation .doc-option-card {
+    background-color: var(--doc-panel);
+    border: solid 1px var(--doc-rule);
+    border-left: 3px solid var(--doc-heading);
+    border-radius: 0.3rem;
+    box-shadow: none;
+}
+.documentation .doc-tip-item strong,
+.documentation .doc-concept-item strong {
+    color: var(--doc-heading);
+}
+
+/* The five-step row reads as a sequence, not as buttons. */
+.documentation .doc-badge {
+    background-color: var(--doc-panel);
+    color: var(--doc-heading);
+    border: solid 1px var(--doc-rule);
+    border-radius: 0.3rem;
+    font-weight: normal;
+}
+.documentation .doc-workflow-arrow {
+    background: none;
+    border: 0;
+    color: var(--doc-muted);
+}
+
+/* The disclaimer keeps its warning color, in the warmer register of the page. */
+.documentation .doc-warning-content {
+    background-color: #fbf5e8 !important;
+    border-left: 3px solid #b07a1a !important;
+    border-radius: 0.3rem;
+}
+.documentation .doc-warning-content p {
+    color: #6b5316 !important;
+}
+
+/* Notes between sections take the panel color rather than the old pale blue. */
+.documentation .doc-note,
+.documentation .doc-info-box,
+.documentation .doc-callout,
+.documentation .doc-modes-note {
+    background-color: var(--doc-panel);
+    border-left: 3px solid var(--doc-heading);
+    border-radius: 0.3rem;
+    color: var(--doc-ink);
+}
+
+/* The heading of the view is the masthead, so the old header row is gone. */
+.documentation > .section-header {
+    display: none;
+}
+
+@media screen and (max-width: 64em) {
+    .doc-toc,
+    .documentation .documentation-card {
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+}
+@media screen and (max-width: 42em) {
+    .doc-toc,
+    .documentation .documentation-card {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    .doc-masthead {
+        padding: 2rem 1rem;
+    }
+    .documentation .doc-masthead-title {
+        font-size: 1.75rem;
+    }
+    .doc-toc-box ul {
+        columns: 1;
+    }
+}
+
+/* Dark mode: the paper darkens, the masthead and the accents stay. */
+body.dark-mode .documentation {
+    --doc-paper: #1b1f1d;
+    --doc-ink: #ddd9d0;
+    --doc-panel: #232825;
+    --doc-rule: #39413c;
+    --doc-heading: #8fbfa3;
+    --doc-link: #c0a6c9;
+    --doc-muted: #9a9f97;
+    --doc-code: #cfd6d0;
+    --doc-stop: #d99a9a;
+}
+body.dark-mode .documentation {
+    background-color: var(--doc-paper) !important;
+    color: var(--doc-ink);
+}
+body.dark-mode .documentation table tr:nth-child(odd) {
+    background-color: #20241f;
+}
+body.dark-mode .documentation .doc-warning-content {
+    background-color: #2b2418 !important;
+}
+body.dark-mode .documentation .doc-warning-content p {
+    color: #e2c98d !important;
+}
+
+/* ---------------------------------------------------------------------------
+   Modeling as a narrative: a data panel and a model catalog on the left, the run
+   as a numbered sequence in the middle. The arrangement follows KBase, which is
+   what people who work in that environment already know how to read. The mode
+   sections keep their own markup and ids; this only places them.
+   -------------------------------------------------------------------------- */
+/* The page: one rail, then the views. The rail is a sibling of the view column
+   rather than a child of any view, which is what lets it exist from a cold load. */
+.narrative-page {
+    display: grid;
+    grid-template-columns: 288px minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+    padding: 0 12px;
+}
+.narrative-views {
+    min-width: 0;
+}
+
+/* Before a file is loaded the views take the whole page and the rail is not drawn.
+   The shell is the same one, collapsed to a single column, so there is one layout
+   rather than two. narrative.js removes this class when a file arrives. */
+.narrative-page.is-single {
+    grid-template-columns: minmax(0, 1fr);
+}
+.narrative-page.is-single > .narrative-rail {
+    display: none;
+}
+
+.narrative-rail {
+    position: sticky;
+    top: var(--header-offset, 88px);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-height: calc(100vh - var(--header-offset, 88px) - 32px);
+}
+
+/* Navigation, at the top of the rail. The buttons are the old tab bar's own
+   nodes, so they arrive carrying .tab-button; the rail restates them as rows. */
+.narrative-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px;
+    background-color: var(--app-panel);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius);
+}
+.narrative-nav .tab-button {
+    width: 100%;
+    text-align: left;
+    padding: 7px 10px;
+    font-size: 0.9em;
+    font-weight: 600;
+    color: var(--app-ink);
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--app-radius-sm);
+    opacity: 1;
+    cursor: pointer;
+}
+.narrative-nav .tab-button:hover:not(:disabled) {
+    background-color: var(--app-panel-head);
+}
+.narrative-nav .tab-button.active {
+    color: var(--app-on-accent);
+    background-color: var(--app-accent);
+    border-color: var(--app-accent);
+}
+/* A gated entry says why in its title and does not fire. */
+.narrative-nav .tab-button:disabled,
+.narrative-nav .tab-button.is-gated {
+    color: var(--app-muted);
+    background-color: transparent;
+    border-color: transparent;
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+/* The forward step, at the foot of the rail. It repeats the current view's own
+   continue button, which the rail hides so the step is offered in one place. */
+.narrative-nav .narrative-next {
+    width: 100%;
+    margin-top: 8px;
+    padding: 8px 28px 8px 10px;
+    text-align: left;
+    font-size: 0.9em;
+    font-weight: 600;
+}
+.narrative-nav .narrative-next.hidden {
+    display: none;
+}
+.narrative-nav .narrative-next:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+.narrative-views #continueToPreprocessButton,
+.narrative-views #continueToModelingButton,
+.narrative-views #continueToInferenceButton {
+    display: none;
+}
+.narrative-nav-aside {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--app-hairline);
+}
+.narrative-nav-aside .tab-button.documentation-button {
+    background-color: transparent !important;
+    border-color: transparent !important;
+    color: var(--app-muted) !important;
+}
+.narrative-nav-aside .tab-button.documentation-button:hover {
+    background-color: var(--app-panel-head) !important;
+    color: var(--app-ink) !important;
+}
+.narrative-nav-aside .tab-button.documentation-button.active {
+    background-color: var(--app-accent) !important;
+    border-color: var(--app-accent) !important;
+    color: var(--app-on-accent) !important;
+}
+
+/* The bar the buttons came from keeps its node, because core.js addresses it. */
+.app-tabs.is-retired {
+    display: none;
+}
+
+/* An entry in the catalog before a task type is known. */
+.narrative-app.is-inert {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+.narrative-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+/* The data panel sizes to its content; the catalog takes the rest of the rail. */
+#narrativeDataPanel {
+    flex: 0 0 auto;
+}
+#narrativeDataPanel .narrative-panel-body {
+    overflow: visible;
+}
+.narrative-apps {
+    flex: 1 1 auto;
+    min-height: 220px;
+}
+.narrative-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background-color: #f0f2ee;
+    border-bottom: 1px solid #e0e0e0;
+}
+.narrative-panel-head h3 {
+    margin: 0;
+    font-size: 0.95em;
+    font-weight: 600;
+    color: #24503d;
+}
+.narrative-count {
+    min-width: 22px;
+    padding: 1px 7px;
+    text-align: center;
+    font-size: 0.8em;
+    color: #4a544d;
+    background-color: #ffffff;
+    border: 1px solid #d7dbd4;
+    border-radius: 10px;
+}
+.narrative-panel-body {
+    padding: 8px;
+    overflow-y: auto;
+}
+.narrative-search {
+    padding: 8px;
+    border-bottom: 1px solid #eeeeee;
+}
+.narrative-search input {
+    width: 100%;
+    padding: 6px 8px;
+    font-size: 0.9em;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+.narrative-empty {
+    margin: 0;
+    padding: 12px 6px;
+    font-size: 0.88em;
+    font-style: italic;
+    color: #6b6b6b;
+}
+.narrative-group {
+    margin: 10px 0 4px 6px;
+    font-size: 0.72em;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #6b6b6b;
+}
+.narrative-group span {
+    color: #9a9a9a;
+}
+
+/* One row per model, a lettered tile and a name, as an app list reads. */
+.narrative-item {
+    display: flex;
+    gap: 9px;
+    align-items: center;
+    width: 100%;
+    padding: 6px 8px;
+    text-align: left;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    font: inherit;
+    color: #2c3e50;
+    cursor: pointer;
+}
+.narrative-item-data {
+    align-items: flex-start;
+    cursor: default;
+}
+.narrative-app:hover {
+    background-color: var(--app-panel-head);
+    border-color: var(--app-rule);
+}
+.narrative-app.is-selected {
+    background-color: #eaf1ec;
+    border-color: var(--app-accent);
+}
+.narrative-app-name {
+    font-size: 0.9em;
+    line-height: 1.35;
+}
+.narrative-tile {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    font-size: 0.72em;
+    font-weight: 700;
+    color: #ffffff;
+    background-color: var(--app-accent);
+    border-radius: 5px;
+}
+.narrative-item-data strong {
+    display: block;
+    font-size: 0.92em;
+    word-break: break-word;
+}
+.narrative-item-data p {
+    margin: 3px 0 0;
+    font-size: 0.82em;
+    color: #6b6b6b;
+    line-height: 1.35;
+}
+
+/* The run as a numbered sequence. The current step is filled, the steps behind
+   it are marked done, the steps ahead are outlined. */
+.narrative-flow {
+    margin: 0 0 16px 0;
+    padding: 12px 14px;
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+}
+.narrative-flow ol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.narrative-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-right: 14px;
+    margin-right: 8px;
+    font-size: 0.88em;
+    color: #8a8a8a;
+    border-right: 1px solid #e6e6e6;
+}
+.narrative-step:last-child {
+    padding-right: 0;
+    margin-right: 0;
+    border-right: 0;
+}
+.narrative-step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    font-size: 0.85em;
+    font-weight: 600;
+    color: #8a8a8a;
+    background-color: #ffffff;
+    border: 1px solid #d5d5d5;
+    border-radius: 50%;
+}
+.narrative-step.is-done {
+    color: var(--app-accent);
+}
+.narrative-step.is-done .narrative-step-num {
+    color: #ffffff;
+    background-color: var(--app-accent);
+    border-color: var(--app-accent);
+}
+.narrative-step.is-current {
+    color: #24503d;
+    font-weight: 600;
+}
+.narrative-step.is-current .narrative-step-num {
+    color: #ffffff;
+    background-color: #24503d;
+    border-color: #24503d;
+}
+
+@media (max-width: 1100px) {
+    .narrative-page {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .narrative-rail {
+        position: static;
+        max-height: none;
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    .narrative-panel {
+        flex: 1 1 320px;
+    }
+    .narrative-apps {
+        max-height: 320px;
+    }
+}
+
+body.dark-mode .narrative-panel,
+body.dark-mode .narrative-flow {
+    background-color: #242424;
+    border-color: #3a3a3a;
+}
+body.dark-mode .narrative-panel-head {
+    background-color: #2c332e;
+    border-bottom-color: #3a3a3a;
+}
+body.dark-mode .narrative-panel-head h3 {
+    color: #8fbfa3;
+}
+body.dark-mode .narrative-count {
+    color: #ddd9d0;
+    background-color: #1f1f1f;
+    border-color: #3a3a3a;
+}
+body.dark-mode .narrative-item {
+    color: #e0e0e0;
+}
+body.dark-mode .narrative-app:hover {
+    background-color: #2c332e;
+    border-color: #3a3a3a;
+}
+body.dark-mode .narrative-app.is-selected {
+    background-color: #2b3a30;
+    border-color: #4f9d72;
+}
+body.dark-mode .narrative-step-num {
+    background-color: #1f1f1f;
+    border-color: #3a3a3a;
+}
+
+/* The stages of a run, under the step strip. */
+.narrative-stages {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #eeeeee;
+}
+.narrative-stage {
+    padding: 2px 9px;
+    font-size: 0.8em;
+    color: #6b6b6b;
+    background-color: #f6f6f4;
+    border: 1px solid #e2e4df;
+    border-radius: 11px;
+}
+.narrative-stage.is-running {
+    color: #24503d;
+    font-weight: 600;
+    background-color: #eaf1ec;
+    border-color: var(--app-accent);
+}
+.narrative-stage.is-done {
+    color: #4a544d;
+    background-color: #ffffff;
+}
+.narrative-stage.is-done::before {
+    content: "\2713\00a0";
+    color: var(--app-accent);
+}
+body.dark-mode .narrative-stages {
+    border-top-color: #3a3a3a;
+}
+body.dark-mode .narrative-stage {
+    color: #b9b9b9;
+    background-color: #1f1f1f;
+    border-color: #3a3a3a;
+}
+body.dark-mode .narrative-stage.is-running {
+    color: #8fbfa3;
+    background-color: #2b3a30;
+    border-color: #4f9d72;
+}
+
+/* ============================================================================
+   One treatment across the views.
+
+   The narrative work reached the Modeling page only, because narrative.js builds
+   inside #columnSelection. The panel, rail, type and spacing it established are
+   named as tokens at the top of this file; this section hands the same tokens to
+   the header, the tab bar, and the cards that upload, preprocessing, modeling and
+   inference already share, so the application reads as one thing rather than
+   three. The Documentation view keeps its own --doc-* palette and is untouched.
+
+   These rules come last on purpose: they retune existing classes at equal
+   specificity, so no !important is needed to reach the old values.
+   ========================================================================== */
+
+/* --- The panels the inline styles used to draw ---------------------------- */
+
+/* An aside with an accent rail. This replaces four inline
+   "background: #f8f9fa; border-left: 3px solid #357a53" blocks that no
+   stylesheet change could reach. */
+.app-note {
+    margin-bottom: var(--app-gap);
+    padding: 12px;
+    background-color: var(--app-sunken);
+    border-radius: var(--app-radius-sm);
+    border-left: 3px solid var(--app-accent);
+    color: var(--app-ink);
+}
+.app-note--tight {
+    margin-bottom: 12px;
+    padding: 10px 12px;
+}
+
+.app-panel {
+    background-color: var(--app-panel);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius);
+    color: var(--app-ink);
+}
+.app-panel--accent {
+    padding: var(--app-gap);
+    margin: 12px 0;
+    background-color: var(--app-accent-wash);
+    border: 2px solid var(--app-accent);
+}
+.app-panel--run {
+    margin-top: 20px;
+    padding: var(--app-gap);
+    background-color: var(--app-sunken);
+}
+.app-panel--status {
+    margin-top: 20px;
+    padding: 20px;
+    max-width: 100%;
+    background-color: var(--app-sunken);
+}
+
+/* --- The shared cards, retuned to the narrative panel --------------------- */
+
+/* Every view builds from these, so aligning them is what carries the treatment
+   to upload, preprocessing and inference without touching their markup. The
+   narrative panel's border, radius and flat surface replace the old 12px card
+   with its shadow. */
+.preprocess-card,
+.model-card,
+.exploration-card,
+.section-header,
+.results-header {
+    background-color: var(--app-panel);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius);
+    box-shadow: none;
+    color: var(--app-ink);
+}
+
+.preprocess-card,
+.model-card,
+.exploration-card {
+    padding: 12px var(--app-pad);
+    margin-bottom: 12px;
+}
+
+/* The heading strip of a card reads as the narrative panel head does. */
+.section-header,
+.results-header {
+    padding: 10px var(--app-pad);
+    background-color: var(--app-panel-head);
+    border-radius: var(--app-radius) var(--app-radius) 0 0;
+}
+
+.section-header h2,
+.results-header h2,
+.preprocess-card > h2,
+.model-card > h2,
+.exploration-card > h2 {
+    font-size: 1.02em;
+    font-weight: 600;
+    color: var(--app-heading);
+}
+
+.preprocess-section-title {
+    border-top: 1px solid var(--app-rule);
+    color: var(--app-heading);
+}
+
+.field-note {
+    color: var(--app-muted);
+}
+
+.modeling-selection-note {
+    color: var(--app-soft);
+}
+
+/* --- The header and the tab bar ------------------------------------------ */
+
+.header {
+    background-color: var(--app-accent);
+    color: var(--app-on-accent);
+}
+
+.header .tab-button {
+    border-radius: var(--app-radius-sm);
+    font-weight: 600;
+    opacity: 0.72;
+    transition: opacity 120ms ease, border-color 120ms ease;
+}
+.header .tab-button:hover {
+    opacity: 1;
+}
+.header .tab-button.active {
+    background-color: rgba(255, 255, 255, 0.16);
+    border-color: var(--app-on-accent);
+    opacity: 1;
+}
+
+/* Off the header the tab bar sits on the page, so it takes page tokens. */
+.app-tabs {
+    background-color: var(--app-panel-head);
+    border-bottom: 1px solid var(--app-border);
+}
+.tab-button {
+    border: 1px solid var(--app-rule);
+    background-color: var(--app-panel);
+    border-radius: var(--app-radius-sm);
+    color: var(--app-ink);
+}
+.tab-button.active {
+    background-color: var(--app-accent);
+    border-color: var(--app-accent);
+    color: var(--app-on-accent);
+    opacity: 1;
+}
+
+/* --- The single navigation band on the Modeling page ---------------------- */
+
+/* narrative.js moves the page's .section-header into the run strip, so the
+   title, its actions and the five steps are one band instead of three stacked
+   ones. The strip keeps its own border; the header inside it gives up card
+   chrome and becomes a title row. */
+.narrative-flow .section-header {
+    margin: 0 0 10px;
+    padding: 0 0 10px;
+    background-color: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--app-hairline);
+    border-radius: 0;
+    box-shadow: none;
+    min-height: 0;
+}
+.narrative-flow .section-header h2 {
+    font-size: 1.05em;
+}
+.narrative-flow .section-header-content {
+    width: 100%;
+    justify-content: space-between;
+}
+
+/* --- Dark mode ------------------------------------------------------------ */
+
+body.dark-mode .preprocess-card,
+body.dark-mode .model-card,
+body.dark-mode .exploration-card,
+body.dark-mode .section-header,
+body.dark-mode .results-header,
+body.dark-mode .app-panel {
+    background-color: var(--app-panel);
+    border-color: var(--app-border);
+    color: var(--app-ink);
+}
+body.dark-mode .section-header,
+body.dark-mode .results-header {
+    background-color: var(--app-panel-head);
+}
+body.dark-mode .app-note,
+body.dark-mode .app-panel--run,
+body.dark-mode .app-panel--status {
+    background-color: var(--app-sunken);
+    color: var(--app-ink);
+}
+body.dark-mode .app-panel--accent {
+    background-color: var(--app-accent-wash);
+}
+body.dark-mode .narrative-flow .section-header {
+    background-color: transparent;
+    border-bottom-color: var(--app-hairline);
+}
+
+/* --- The two views that carried no card class ----------------------------- */
+
+/* Upload and inference were built from a bare form and an .upload-card, so the
+   retune above did not reach them. They take the same panel and the same head
+   band by id and class, without a markup change, so every element keeps its id. */
+.upload-card,
+form#uploadPredictDf {
+    display: block;
+    background-color: var(--app-panel);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius);
+    box-shadow: none;
+    padding: 0 0 var(--app-pad);
+    margin-bottom: 12px;
+    color: var(--app-ink);
+    overflow: hidden;
+}
+/* The id selector above outranks .hidden, so the form has to be hidden by id too;
+   inference.js hides it once a result is on the page. */
+form#uploadPredictDf.hidden {
+    display: none;
+}
+
+/* The title-and-actions row of each reads as a panel head. */
+.upload-card > .RedoButton,
+form#uploadPredictDf > h3 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 0 0 var(--app-pad);
+    padding: 10px var(--app-pad);
+    background-color: var(--app-panel-head);
+    border-bottom: 1px solid var(--app-border);
+}
+
+.upload-card > .RedoButton > h2,
+#uploadPredictDf > h3,
+#uploadHeader {
+    margin: 0;
+    font-size: 1.02em;
+    font-weight: 600;
+    color: var(--app-heading);
+}
+
+.upload-card > form,
+.upload-card > .exploration-panel,
+form#uploadPredictDf > input,
+form#uploadPredictDf > div {
+    margin-left: var(--app-pad);
+    margin-right: var(--app-pad);
+}
+
+/* --- Controls ------------------------------------------------------------- */
+
+/* The default button was #007bff, which read as a second accent beside the
+   green header. One accent is what makes the views look like one application.
+   Buttons that carry their own class (secondary, success, tab, toggle) set
+   their own colour and win on specificity, so this reaches only the plain ones. */
+button {
+    background-color: var(--app-accent);
+    border-radius: var(--app-radius-sm);
+}
+
+input:checked + .slider {
+    background-color: var(--app-accent);
+}
+
+body.dark-mode .upload-card,
+body.dark-mode #uploadPredictDf {
+    background-color: var(--app-panel);
+    border-color: var(--app-border);
+    color: var(--app-ink);
+}
+body.dark-mode .upload-card > .RedoButton,
+body.dark-mode #uploadPredictDf > h3 {
+    background-color: var(--app-panel-head);
+    border-bottom-color: var(--app-border);
+}
+
+/* A pseudo-class outranks a bare element rule whatever the source order, so the
+   accent above did not reach a hovered, focused or disabled plain button. These
+   restate it at the same specificity as the rules that were winning. */
+button:hover {
+    background-color: var(--app-accent-dark);
+}
+button:focus-visible {
+    outline: 3px solid var(--app-accent-deep);
+    outline-offset: 2px;
+}
+button:active {
+    background-color: var(--app-accent-deep);
+}
+button:disabled,
+button[aria-disabled="true"] {
+    background-color: var(--app-sunken);
+    color: var(--app-muted);
+    cursor: not-allowed;
+}
+/* The rail's own entries are transparent rows, not filled buttons. */
+.narrative-nav .tab-button:disabled,
+.narrative-nav .tab-button[aria-disabled="true"] {
+    background-color: transparent;
+}
+
+/* Documentation and Tutorial sit beside the wordmark. They must work with no data
+   loaded, and with no data there is no rail to hold them. */
+.header-links {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: 20px;
+    flex: 0 0 auto;
+}
+.header-links .tab-button {
+    border-radius: var(--app-radius-sm);
+    font-weight: 600;
+}
+/* --- Documentation flow diagram -------------------------------------------
+   The diagram is inlined rather than loaded as an image so these rules reach
+   it, which is what lets it follow the light and dark palettes. Geometry lives
+   in the SVG; only colour and type live here. */
+
+.dg-flow {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: 900px;
+    margin: 16px auto 24px;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.dg-flow text {
+    fill: var(--doc-ink);
+    text-anchor: middle;
+    dominant-baseline: middle;
+}
+
+.dg-band { fill: var(--doc-panel); stroke: var(--doc-rule); stroke-width: 1; }
+.dg-band--upload  { fill: #f1f5f0; }
+.dg-band--explore { fill: #f6f2e8; }
+.dg-band--prep    { fill: #edf2f2; }
+.dg-band--model   { fill: #f3f0f4; }
+.dg-band--infer   { fill: #f6f0ef; }
+
+.dg-band-label { font-size: 11px; font-weight: 700; }
+.dg-lane       { font-size: 15px; font-weight: 700; }
+.dg-tag        { font-size: 12px; font-style: italic; }
+.dg-tag--stop  { fill: var(--doc-stop, #6b2e2e); }
+
+.dg-data,
+.dg-decision { fill: var(--doc-paper); stroke: var(--doc-ink); stroke-width: 1; }
+.dg-terminal { fill: var(--doc-paper); stroke: var(--doc-stop, #6b2e2e);
+               stroke-width: 1; stroke-dasharray: 5 4; }
+
+.dg-edge      { stroke: var(--doc-ink); stroke-width: 1; fill: none; }
+.dg-edge--stop { stroke: var(--doc-stop, #6b2e2e); }
+.dg-arrowhead       { fill: var(--doc-ink); }
+.dg-arrowhead--stop { fill: var(--doc-stop, #6b2e2e); }
+.dg-divider   { stroke: var(--doc-rule); stroke-width: 1; }
+
+/* A band tint that reads on paper is invisible on a dark ground, so the bands
+   become a faint lift of the panel colour and the labels carry the meaning. */
+body.dark-mode .dg-band,
+body.dark-mode .dg-band--upload,
+body.dark-mode .dg-band--explore,
+body.dark-mode .dg-band--prep,
+body.dark-mode .dg-band--model,
+body.dark-mode .dg-band--infer {
+    fill: var(--doc-panel);
+}
+
+body.dark-mode .dg-band--explore { fill: color-mix(in srgb, var(--doc-panel) 88%, #b08a2a); }
+body.dark-mode .dg-band--prep    { fill: color-mix(in srgb, var(--doc-panel) 88%, #3f8f92); }
+body.dark-mode .dg-band--model   { fill: color-mix(in srgb, var(--doc-panel) 88%, #8a6ba0); }
+body.dark-mode .dg-band--infer   { fill: color-mix(in srgb, var(--doc-panel) 88%, #a05a5a); }
+
+@media (max-width: 720px) {
+    .dg-flow { font-size: 15px; }
+}
+
+@media print {
+    .dg-flow { max-width: 100%; }
+}
+
+/* --- Documentation sections as disclosures -------------------------------- */
+
+/* corrplotpy folds its sections. The marker is removed so the chevron below can
+   replace it, which means <summary> has to carry its own focus ring: a keyboard
+   user has nothing else to see. */
+.doc-section > .doc-summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    list-style: none;
+    cursor: pointer;
+    padding: 4px 2px;
+    border-radius: var(--app-radius-sm);
+}
+.doc-section > .doc-summary::-webkit-details-marker {
+    display: none;
+}
+.doc-section > .doc-summary:focus-visible {
+    outline: 3px solid var(--doc-heading);
+    outline-offset: 3px;
+}
+.doc-section > .doc-summary h3 {
+    margin: 0;
+}
+.doc-section > .doc-summary:hover h3 {
+    text-decoration: underline;
+}
+
+/* The disclosure triangle, put back as a chevron that turns when the section opens. */
+.doc-chevron {
+    flex: 0 0 auto;
+    width: 9px;
+    height: 9px;
+    border-right: 2px solid var(--doc-heading);
+    border-bottom: 2px solid var(--doc-heading);
+    transform: rotate(-45deg);
+    transition: transform 140ms ease;
+}
+.doc-section[open] > .doc-summary .doc-chevron {
+    transform: rotate(45deg);
+}
+
+.doc-section-body {
+    padding-top: 8px;
+}
+
+/* An h4 subsection stays inside its parent section. */
+.doc-section-body h4 {
+    color: var(--doc-heading);
+}
+
+/* Tutorial: an instruction and what the reader should see after it. */
+.doc-step {
+    margin: 8px 0;
+    padding: 8px 12px;
+    background-color: var(--doc-panel);
+    border-left: 3px solid var(--doc-heading);
+    border-radius: var(--app-radius-sm);
+}
+.doc-tutorial .doc-note {
+    margin: 4px 0 14px 12px;
+    color: var(--doc-muted);
+    font-style: italic;
+    border-left: 0;
+    background: none;
+    padding: 0;
+}
+
+/* --- The welcome screen --------------------------------------------------
+   It is the whole page now and the first thing anyone sees, and the restyle had
+   not reached it. Its sections take the same panel, type and spacing tokens the
+   other views take. */
+.welcome {
+    color: var(--app-ink);
+    gap: var(--app-gap);
+}
+.welcome-header {
+    color: var(--app-heading);
+}
+.welcome-text {
+    color: var(--app-muted);
+}
+.welcome-text2 {
+    color: var(--app-accent);
+}
+.welcomesection {
+    background-color: var(--app-panel);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius);
+    color: var(--app-ink);
+}
+.welcomesection.logos {
+    background-color: transparent;
+    border: 0;
+}
+.welcomesection.disclaimer {
+    background-color: var(--app-caution-bg);
+    border: 1px solid var(--app-caution-rule);
+    border-left: 4px solid var(--app-caution-rule);
+}
+.welcomesection.disclaimer p {
+    color: var(--app-caution-ink);
+}
+.welcomebutton {
+    background-color: var(--app-accent);
+    color: var(--app-on-accent);
+    border: 0;
+    border-radius: var(--app-radius);
+}
+.welcomebutton:hover {
+    background-color: var(--app-accent-dark);
+}
+
+/* The caution note wherever it appears, not only on the welcome screen. */
+.advanced-options-warning {
+    background-color: var(--app-caution-bg);
+    border-left-color: var(--app-caution-rule);
+    color: var(--app-caution-ink);
+}
+.caution-note {
+    color: var(--app-caution-ink);
+}
+.welcome-disclaimer-box {
+    padding: 12px;
+    background-color: var(--app-caution-bg);
+    border-left: 4px solid var(--app-caution-rule);
+    border-radius: var(--app-radius-sm);
+    color: var(--app-caution-ink);
+}
+
+/* The second way into the app: an example file, for someone with nothing to upload. */
+.welcomebutton--secondary {
+    margin-top: 10px;
+    font-size: 1.2em;
+    background-color: var(--app-panel);
+    color: var(--app-accent);
+    border: 2px solid var(--app-accent);
+}
+.welcomebutton--secondary:hover {
+    background-color: var(--app-accent-wash);
+}
+.welcome-example-note {
+    max-width: 700px;
+    margin: 8px auto 0;
+    font-size: 0.85em;
+    text-align: center;
+    color: var(--app-muted);
+}
+
+
+/* =====================================================================
+   Plain layer. Appended last so it wins on source order. Everything
+   below removes chrome rather than adding it: one panel style, no
+   badges, no chips, no colored callouts, prose where there were cards.
+   ===================================================================== */
+
+/* -- Documentation ---------------------------------------------------- */
+
+.documentation .doc-header {
+    min-height: 0;
+    padding: 34px 24px 30px;
+}
+.documentation .doc-header h3 { font-size: 2rem; margin: 0 0 6px; }
+.documentation .doc-header .doc-subtitle,
+.documentation .doc-header p { font-size: 1.05rem; margin: 0; }
+
+/* Contents: a two-column list on the page, not a boxed panel. */
+.documentation .doc-toc .doc-toc-box {
+    background: none;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+}
+.documentation .doc-toc {
+    background: none;
+    border: 0;
+    border-bottom: 1px solid var(--doc-rule);
+    border-radius: 0;
+    padding: 20px 0 16px;
+    max-width: 900px;
+    margin: 0 auto 8px;
+}
+.documentation .doc-toc .doc-toc-title {
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--doc-muted);
+    text-align: left;
+    margin: 0 0 8px;
+}
+.documentation .doc-toc ul { columns: 2; column-gap: 40px; margin: 0; padding-left: 1.1em; }
+.documentation .doc-toc li { break-inside: avoid; margin: 2px 0; }
+
+/* Every grid becomes a single flow of terms and definitions. */
+.documentation .doc-method-grid,
+.documentation .doc-modeling-types-grid,
+.documentation .doc-approach-grid,
+.documentation .doc-concepts-grid,
+.documentation .doc-tips-list,
+.documentation .doc-features,
+.documentation .doc-feature-grid {
+    display: block;
+    gap: 0;
+}
+.documentation .doc-method-card,
+.documentation .doc-modeling-type-card,
+.documentation .doc-approach-card,
+.documentation .doc-concept-item,
+.documentation .doc-tip-item,
+.documentation .doc-feature-card {
+    background: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0 0 0 1.25rem;
+    margin: 0 0 14px;
+    transition: none;
+}
+.documentation .doc-method-card:hover,
+.documentation .doc-modeling-type-card:hover,
+.documentation .doc-approach-card:hover { box-shadow: none; transform: none; }
+
+.documentation .doc-method-card > strong,
+.documentation .doc-concept-item > strong,
+.documentation .doc-tip-item > strong,
+.documentation .doc-feature-card > strong,
+.documentation .doc-approach-header h4,
+.documentation .doc-modeling-type-card h4 {
+    display: inline;
+    margin: 0 0 4px -1.25rem;
+    padding: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--doc-heading);
+}
+.documentation .doc-method-card > p,
+.documentation .doc-concept-item > p,
+.documentation .doc-tip-item > p,
+.documentation .doc-feature-card > p { margin: 2px 0 0; }
+
+/* Badges become a parenthetical after the term. No pill, no color. */
+.documentation .doc-badge,
+.documentation .doc-method-badge,
+.documentation .doc-approach-badge {
+    display: inline;
+    padding: 0;
+    margin: 0 0 0 0.35em;
+    border: 0;
+    border-radius: 0;
+    background: none !important;
+    color: var(--doc-muted) !important;
+    font-size: 0.9em;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+}
+.documentation .doc-badge:not(.doc-workflow-step)::before,
+.documentation .doc-method-badge::before,
+.documentation .doc-approach-badge::before { content: "("; }
+.documentation .doc-badge:not(.doc-workflow-step)::after,
+.documentation .doc-method-badge::after,
+.documentation .doc-approach-badge::after { content: ")"; }
+.documentation .doc-workflow-step:not(:last-child)::after { content: ", "; font-weight: 400; color: var(--doc-muted); }
+.documentation .doc-count { font-size: 0.85em; font-weight: 400; color: var(--doc-muted); }
+
+/* The five-step row reads as a sentence. */
+.documentation .doc-workflow-badges { display: block; }
+.documentation .doc-workflow-step {
+    display: inline;
+    padding: 0;
+    border: 0;
+    background: none;
+    border-radius: 0;
+    font-weight: 600;
+    color: var(--doc-heading);
+}
+.documentation .doc-workflow-arrow { display: inline; padding: 0 0.4em; color: var(--doc-muted); }
+
+/* Notes and steps: plain paragraphs, a note is quieter than a step. */
+.documentation .doc-note,
+.documentation .doc-tutorial .doc-note,
+.documentation .doc-intro-text {
+    background: none;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    margin: 4px 0 10px;
+    color: var(--doc-muted);
+    font-size: 0.95rem;
+}
+.documentation .doc-tutorial .doc-step {
+    background: none;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    margin: 0 0 4px;
+}
+.documentation .doc-tutorial h4 { margin: 18px 0 4px; font-size: 1rem; }
+
+/* Cautions: small, ochre lead line, hairlines above and below, no fill. */
+.documentation .doc-warning-content,
+.documentation .doc-warning-box,
+.documentation .welcome-disclaimer-box,
+.documentation .doc-warning-content.welcome-disclaimer-box {
+    background: none !important;
+    border: 0;
+    border-top: 1px solid var(--doc-rule);
+    border-bottom: 1px solid var(--doc-rule);
+    border-radius: 0;
+    padding: 12px 0;
+    margin: 20px 0 8px;
+}
+.documentation .caution-note {
+    color: var(--doc-ink);
+    font-size: 0.92rem;
+    margin: 0 0 6px !important;
+}
+.documentation .caution-note:first-child { color: var(--app-caution-ink); }
+
+/* Subsections: a rule and a heading, not another panel. */
+.documentation .doc-subsection {
+    background: none;
+    border: 0;
+    border-top: 1px solid var(--doc-rule);
+    border-radius: 0;
+    padding: 14px 0 0;
+    margin: 18px 0 0;
+}
+.documentation .doc-subsection-header h4 { margin: 0 0 6px; }
+
+/* Three parallel task types compare better as a table than as three cards. */
+.documentation table.doc-compare {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0 14px;
+    font-size: 0.95rem;
+}
+.documentation table.doc-compare th,
+.documentation table.doc-compare td {
+    text-align: left;
+    vertical-align: top;
+    padding: 8px 12px 8px 0;
+    border-bottom: 1px solid var(--doc-rule);
+}
+/* Journal tables: bold header, no fill, no zebra stripes. Overrides the general rule above. */
+.documentation table th { background: none; color: var(--doc-ink); border-bottom: 2px solid var(--doc-ink); }
+.documentation table tr:nth-child(odd) { background: none; }
+.documentation table.doc-compare th { font-weight: 700; color: var(--doc-ink); border-bottom: 2px solid var(--doc-ink); background: none; }
+.documentation table.doc-compare th .doc-count { font-weight: 400; color: var(--doc-muted); display: inline; margin-left: 0.3em; }
+.documentation table.doc-compare th:first-child,
+.documentation table.doc-compare td:first-child { width: 9em; color: var(--doc-muted); font-weight: 600; }
+.documentation table.doc-compare ul { margin: 0; padding-left: 1.1em; }
+
+/* -- Welcome ------------------------------------------------------------ */
+
+.welcome {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 24px 16px;
+    display: flex;
+    justify-content: center;
+}
+.welcome.hidden { display: none; }
+.welcome {
+    flex-direction: column;
+    gap: 22px;
+    min-height: calc(100vh - var(--header-offset, 88px) - 16px);
+    justify-content: center;
+}
+.welcomesection {
+    background: var(--app-panel);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius);
+    box-shadow: none;
+    padding: 28px 32px 24px;
+    max-width: 640px;
+    margin: 0 auto;
+    width: 100%;
+}
+.welcome-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    margin: 0 0 6px;
+}
+.welcome-header .welcome-text { display: none; }
+.welcome-header .logo-inline { width: 84px; height: auto; }
+.welcome-header .welcome-text2 {
+    font-size: 2.6rem;
+    font-weight: 700;
+    color: var(--app-heading);
+    letter-spacing: -0.01em;
+}
+.welcomesection h4 {
+    text-align: center;
+    font-weight: 500;
+    color: var(--app-muted);
+    margin: 0 0 20px;
+    font-size: 1rem;
+}
+.welcome-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.welcomebutton,
+#startModelingButton,
+#tryExampleButton {
+    min-width: 200px;
+    width: auto;
+    padding: 12px 22px;
+    font-size: 1.05rem;
+    border-radius: var(--app-radius);
+    box-shadow: none;
+    margin: 0;
+}
+#tryExampleButton {
+    background: transparent;
+    color: var(--app-accent-deep);
+    border: 1px solid var(--app-accent);
+}
+#tryExampleButton:hover { background: var(--app-accent-wash); }
+.welcome-example-note,
+.welcomesection .field-note {
+    text-align: center;
+    color: var(--app-muted);
+    font-size: 0.85rem;
+    margin: 12px 0 0;
+}
+.welcomesection.logos {
+    background: none;
+    border: 0;
+    padding: 0;
+    max-width: 900px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 32px;
+}
+.welcomesection.logos img { max-height: 56px; width: auto; max-width: 260px; object-fit: contain; }
+.welcomesection.disclaimer {
+    background: none;
+    border: 0;
+    border-top: 1px solid var(--app-hairline);
+    border-radius: 0;
+    padding: 12px 0 0;
+    max-width: 1100px;
+}
+.welcomesection.disclaimer p,
+.welcomesection.disclaimer #welcomeDisclaimerContent p {
+    color: var(--app-muted) !important;
+    font-size: 0.74rem !important;
+    line-height: 1.45;
+    text-align: left !important;
+    margin: 0;
+}
+.welcomesection.disclaimer .welcome-disclaimer-box {
+    background: none;
+    border: 0;
+    padding: 0;
+}
+
+/* -- Documentation, second pass ------------------------------------------ */
+
+/* The masthead is a title bar, not a hero. */
+.documentation .doc-masthead { padding: 1.5rem 2rem 1.3rem; }
+.documentation .doc-masthead-title { font-size: 1.7rem; margin-bottom: 0.2rem; }
+.documentation .doc-masthead-tagline { font-size: 1.05rem; margin-bottom: 0; }
+
+/* Heading scale: section 1.35rem, subsection 1.12rem, entry 1rem. */
+.documentation .doc-section > .doc-summary h3 { font-size: 1.35rem; font-weight: 600; }
+.documentation .doc-subsection-header { font-size: 1.12rem; font-weight: 600; margin: 0 0 4px; }
+.documentation .doc-subsection-intro { margin: 0 0 8px; color: var(--doc-muted); }
+
+/* What the reader should see after a step: indented, quiet, upright. */
+.documentation .doc-tutorial .doc-note {
+    font-style: normal;
+    color: var(--doc-muted);
+    background: none;
+    border: 0;
+    border-left: 2px solid var(--doc-rule);
+    border-radius: 0;
+    padding: 0 0 0 10px;
+    margin: 4px 0 12px 0;
+}
+
+/* Contents: one rule below, none above the first section. */
+.documentation .documentation-card:first-of-type,
+.documentation #doc-about { border-top: 0; }
+
+/* Core concepts and method entries: term, then definition on the next line, tight. */
+.documentation .doc-concept-item,
+.documentation .doc-method-card { margin: 0 0 8px; }
+.documentation .doc-concept-item strong { display: block; }
+.documentation .doc-method-card strong { display: inline; }
+.documentation .doc-not-supported-header { font-size: 1.12rem; font-weight: 600; margin: 14px 0 4px; }
+.documentation .doc-action-note { background: none; border: 0; padding: 0; margin: 6px 0 0; color: var(--doc-ink); }
+.documentation .doc-concept-item p,
+.documentation .doc-method-card p { margin: 0 0 0 0; }
+
+/* The disclaimer lead is in the caution color; the rest is body ink. */
+.documentation .caution-note strong { color: var(--app-caution-ink); }
+.documentation .caution-note { color: var(--doc-ink); }
+
+/* =========================================================================
+   Density layer. Appended last so it wins on source order. Every working
+   view should fit a 1440 x 900 window without scrolling the page. Type is
+   one step smaller, spacer <br> elements are gone, controls share one
+   height, and the page header is a single title row rather than a panel
+   inside a panel.
+   ========================================================================= */
+
+.narrative-views { font-size: 0.92rem; }
+.narrative-views p,
+.narrative-views label,
+.narrative-views span,
+.narrative-views small,
+.narrative-views li { font-size: inherit; }
+.narrative-views .field-note { font-size: 0.86em; margin: 2px 0 6px; }
+.narrative-views .field-note i { font-style: normal; }
+
+/* Spacer breaks are replaced by margins. */
+.preprocess-card br,
+.exploration-card br,
+.model-card br,
+.upload-card br,
+.selectcolumns br,
+.scaling-container br,
+.stratify-options br,
+#quantileInput br,
+#binInput br,
+.narrative-views div > br:only-child { display: none; }
+.narrative-views .selectcolumns > div:empty { display: none; }
+
+/* Page header: a title row, no outer frame. */
+.narrative-views .section-header,
+.narrative-views .results-header {
+    padding: 8px 12px;
+    margin: 0 0 10px;
+    min-height: 0;
+}
+.narrative-views .section-header h2 { font-size: 1.05em; margin: 0; }
+.narrative-views .section-header-content { gap: 10px; }
+.narrative-views .section-header-content .header-forward,
+.narrative-views .section-header-content .success-button { margin-left: auto; }
+.narrative-views .RedoButton { padding: 8px 12px; margin: 0 0 10px; }
+.narrative-views .RedoButton h2 { font-size: 1.05em; }
+
+/* Panels. */
+.narrative-views .preprocess-card,
+.narrative-views .model-card,
+.narrative-views .exploration-card,
+.narrative-views .upload-card {
+    padding: 10px 14px 12px;
+    margin-bottom: 10px;
+}
+.narrative-views .preprocess-card > h2,
+.narrative-views .model-card > h2,
+.narrative-views .exploration-card > h2 {
+    font-size: 0.98em;
+    margin: 0 0 8px;
+    padding: 0 0 6px;
+    border-bottom: 1px solid var(--app-hairline);
+}
+.narrative-views .preprocess-card h3,
+.narrative-views .model-card h3,
+.narrative-views .exploration-card h3,
+.narrative-views .preprocess-section-title {
+    font-size: 0.95em;
+    font-weight: 600;
+    color: var(--app-heading);
+    margin: 12px 0 6px;
+    padding: 8px 0 0;
+    border-top: 1px solid var(--app-hairline);
+}
+.narrative-views .preprocess-card h3:first-of-type,
+.narrative-views .preprocess-card > h2 + h3,
+.narrative-views .preprocess-card > h2 + .preprocess-section-title { border-top: 0; padding-top: 0; margin-top: 4px; }
+.narrative-views .preprocess-card h4,
+.narrative-views .model-card h4 { font-size: 0.95em; margin: 8px 0 4px; }
+.narrative-views .field-label-block { margin: 6px 0 2px; }
+.narrative-views .scaling-container { margin: 0 0 6px; }
+.narrative-views .split-row { display: flex; gap: 12px; }
+
+/* One control height everywhere. */
+.narrative-views select,
+.narrative-views input[type="text"],
+.narrative-views input[type="number"],
+.narrative-views input[type="search"] {
+    font: inherit;
+    font-size: 0.95em;
+    color: var(--app-ink);
+    background-color: var(--app-panel);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-sm);
+    padding: 3px 8px;
+    height: 28px;
+    line-height: 20px;
+    box-sizing: border-box;
+    max-width: 100%;
+}
+.narrative-views select { padding-right: 24px; }
+.narrative-views select:focus,
+.narrative-views input:focus { outline: 2px solid var(--app-accent); outline-offset: 0; border-color: var(--app-accent); }
+.narrative-views input[type="checkbox"],
+.narrative-views input[type="radio"] { accent-color: var(--app-accent); width: 14px; height: 14px; margin: 0 4px 0 0; vertical-align: -2px; }
+.narrative-views label { margin: 0 0 2px; }
+.narrative-views .cleaning-scope-checkboxes { font-size: 0.92em !important; }
+
+/* Buttons: one size, no inline sizing. */
+.narrative-views button,
+.narrative-views .button-secondary,
+.narrative-views .processButton,
+.narrative-views .success-button,
+.narrative-views .secondary-button,
+.narrative-views .export-button {
+    font: inherit;
+    font-size: 0.92em;
+    font-weight: 600;
+    padding: 5px 12px;
+    height: 28px;
+    line-height: 18px;
+    border-radius: var(--app-radius-sm);
+    box-sizing: border-box;
+}
+.narrative-views .success-button { padding-right: 24px; }
+.narrative-views .secondary-button { padding-left: 24px; }
+.narrative-views .success-button::after { border-top-width: 5px; border-bottom-width: 5px; border-left-width: 6px; right: 8px; }
+.narrative-views .secondary-button::before { border-top-width: 5px; border-bottom-width: 5px; border-right-width: 6px; left: 8px; }
+.narrative-views button.button-secondary {
+    background: var(--app-panel);
+    color: var(--app-accent-deep);
+    border: 1px solid var(--app-accent);
+}
+.narrative-views button.button-secondary:hover { background: var(--app-accent-wash); }
+.narrative-views .secondary-button { background-color: var(--app-panel); color: var(--app-soft); border: 1px solid var(--app-border); }
+.narrative-views .secondary-button::before { border-right-color: var(--app-soft); }
+.narrative-views .secondary-button:hover { background-color: var(--app-sunken); }
+.narrative-views .processButton { background-color: var(--app-accent); color: var(--app-on-accent); }
+.narrative-views .processButton:hover { background-color: var(--app-accent-dark); }
+
+/* Downloads and the restart confirm take the app palette. */
+.narrative-views .export-button,
+.export-button {
+    background-color: var(--app-panel);
+    color: var(--app-accent-deep);
+    border: 1px solid var(--app-accent);
+}
+.narrative-views .export-button:hover,
+.export-button:hover { background-color: var(--app-accent-wash); }
+.narrative-views .export-button--muted,
+.export-button--muted { color: var(--app-muted); border-color: var(--app-border); background: var(--app-sunken); }
+.orangebutton { background-color: var(--app-caution-ink); color: #fff; }
+.orangebutton:hover { background-color: #574614; }
+
+/* Modeling mode: one row of three radios. */
+.narrative-views .mode-select { padding: 8px 14px; margin: 0 0 10px; }
+.narrative-views .mode-select > h2 { display: inline-block; border: 0; margin: 0 16px 0 0; padding: 0; vertical-align: middle; }
+.narrative-views .mode-select-options { display: inline-flex; flex-wrap: wrap; gap: 6px 22px; vertical-align: middle; }
+.narrative-views .modeling-mode-option {
+    display: inline-flex; align-items: center; gap: 6px;
+    cursor: pointer; padding: 2px 0; border: 0; background: none; margin: 0;
+}
+.narrative-views .modeling-mode-option strong { color: var(--app-ink); font-weight: 600; }
+.narrative-views .modeling-mode-option small { color: var(--app-muted); font-size: 0.88em; }
+.narrative-views .modeling-mode-option.is-selected { background: none; border: 0; }
+.narrative-views .modeling-mode-option.is-selected strong { color: var(--app-accent-deep); text-decoration: underline; text-underline-offset: 3px; }
+label:has(input[type="radio"][name="modelingMode"]:checked) { background: none; border-color: transparent; }
+
+/* The selection sentence lives in the rail's Data panel; the view does not repeat it. */
+.narrative-views .modeling-selection-note,
+.narrative-views .app-note:has(> .modeling-selection-note) { display: none; }
+
+/* Inline padding on a few selects would otherwise clip the text at this height. */
+.narrative-views select { padding: 2px 24px 2px 8px !important; }
+.narrative-views input[type="text"],
+.narrative-views input[type="number"] { padding: 2px 8px !important; }
+.narrative-views .processButton { padding-right: 24px; }
+.narrative-views .section-header-content { width: 100%; }
+.narrative-views .split-row .scaling-container { flex: 1; }
+.narrative-views .target-input-row label,
+.narrative-views .selectcolumns label { display: inline-block; min-width: 0; margin-right: 6px; }
+.narrative-views .selectcolumns input[type="text"] { width: 60%; }
+
+/* Toggle rows and settings headings inside the model card. */
+.narrative-views .model-card h3,
+.narrative-views #modelConfigurationCard h3 { font-size: 0.95em; }
+.narrative-views .matrix-toggle { margin: 6px 0 8px; }
+.narrative-views .matrix-toggle label { font-weight: 600; font-size: 0.95em; }
+.narrative-views .switch { transform: scale(0.8); transform-origin: left center; }
+
+/* Tables in results: hairline rules, no colored frame. */
+.narrative-views table { font-size: 0.92em; }
+.narrative-views .stats-table,
+.narrative-views .hyperparameterstable,
+.narrative-views .model-stats-table,
+.narrative-views .column-summary-table { border: 1px solid var(--app-border); }
+.narrative-views .stats-table th, .narrative-views .stats-table td,
+.narrative-views .hyperparameterstable th, .narrative-views .hyperparameterstable td,
+.narrative-views .model-stats-table th, .narrative-views .model-stats-table td,
+.narrative-views .column-summary-table th, .narrative-views .column-summary-table td {
+    padding: 4px 8px;
+    border: 0;
+    border-bottom: 1px solid var(--app-hairline);
+}
+.narrative-views .stats-table th,
+.narrative-views .hyperparameterstable th,
+.narrative-views .model-stats-table th,
+.narrative-views .column-summary-table th { background: var(--app-panel-head); color: var(--app-ink); }
+
+/* Data Exploration: the file summary is one line, the three form panels are one. */
+.narrative-views .column-summary-table { width: 100%; }
+.narrative-views .column-summary-table th { width: 40%; text-align: left; }
+
+/* Results: downloads in one row, table frames to hairline, graphics headings smaller. */
+.narrative-views .model-stats-table-wrapper { border: 1px solid var(--app-border); border-radius: var(--app-radius-sm); }
+.narrative-views .downloadperformanceButton,
+.narrative-views .export-button { display: inline-block; margin: 6px 8px 0 0; }
+.narrative-views .result-graphic-box h4 { font-size: 0.95em !important; margin: 10px 0 4px !important; }
+.narrative-views .result-graphic-box img { max-width: 100%; height: auto; }
+.narrative-views .visualSection > h3,
+.narrative-views .visualSection h3 { font-size: 0.95em; }
+
+/* Folded option groups: a plain disclosure, the summary reads as a subheading. */
+.narrative-views details.app-details { margin: 8px 0; border-top: 1px solid var(--app-hairline); padding-top: 6px; }
+.narrative-views details.app-details > summary {
+    cursor: pointer; font-weight: 600; color: var(--app-heading); font-size: 0.95em;
+    list-style: none; padding: 2px 0; display: flex; align-items: center; gap: 6px;
+}
+.narrative-views details.app-details > summary::-webkit-details-marker { display: none; }
+.narrative-views details.app-details > summary::before {
+    content: ""; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent;
+    border-top: 5px solid var(--app-muted); transform: rotate(-90deg); transition: transform 120ms ease;
+}
+.narrative-views details.app-details[open] > summary::before { transform: rotate(0); }
+.narrative-views details.app-details > summary:focus-visible { outline: 2px solid var(--app-accent); outline-offset: 2px; }
+.narrative-views .corr-actions { margin-top: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.narrative-views .corr-actions > button[type="submit"] { background: var(--app-accent); color: var(--app-on-accent); }
+
+/* Once data is loaded the upload card is only the page header, so it drops its frame. */
+.narrative-views .upload-card:has(#redobutton:not(.hidden)) { border: 0; background: none; padding: 0; margin: 0; box-shadow: none; }
+.narrative-views .upload-card:has(#redobutton:not(.hidden)) > form { display: none; }
+.narrative-views .RedoButton { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--app-panel-head); border: 1px solid var(--app-border); border-radius: var(--app-radius); }
+.narrative-views .RedoButton h2 { margin: 0; }
+.narrative-views #redobutton { margin-left: auto; display: flex; gap: 8px; }
+.narrative-views #redobutton.hidden { display: none; }
+
+/* The placeholder line goes once output exists. */
+.narrative-views .exploration-results:has(#explorationOutput:not(:empty)) .results-header p { display: none; }
+.narrative-views .results-header p { display: inline; margin: 0 0 0 8px; color: var(--app-muted); }
+.narrative-views .results-header h2 { display: inline; }
+
+/* Chart selectors sit on one line with their labels. */
+.narrative-views .exploration-results label { margin-right: 4px; }
+.narrative-views .exploration-results select { margin: 2px 8px 6px 0; }
+.narrative-views .exploration-results h3 { font-size: 1em; margin: 6px 0 4px; }
+.narrative-views .exploration-results img { max-width: 100%; height: auto; }
+/* Figures fit the window. The two exploration figures stay side by side and are
+   capped to the height left under the header and the results heading, so both are
+   in view when they arrive; the statistics table below them is its own bounded
+   region. The same cap applies to the modeling figures, which move to the top of
+   the results so they are the first thing shown, and to the inference figure. */
+.narrative-views .exploration-graphic-row { flex-wrap: nowrap; }
+.narrative-views .exploration-graphic { min-width: 0; }
+.narrative-views .exploration-graphic img {
+    width: auto;
+    max-width: 100%;
+    max-height: calc(100vh - var(--header-offset, 88px) - 340px);
+    min-height: 120px;
+    object-fit: contain;
+    margin: 0;
+}
+.narrative-views .exploration-table { margin-top: 10px; }
+.narrative-views [id$="ResultDiv"] { display: flex; flex-direction: column; }
+.narrative-views [id$="ResultDiv"] > h3 { order: -2; margin: 0 0 4px; }
+.narrative-views [id$="ResultDiv"] > .result-graphic-row-train-test { order: -1; flex-wrap: nowrap !important; margin-bottom: 10px; }
+.narrative-views .result-graphic-box { min-width: 0 !important; }
+.narrative-views .result-graphic-box br { display: none; }
+.narrative-views .result-graphic-box select { display: block; margin: 2px 0 6px; max-width: 100%; }
+.narrative-views .result-graphic-box img {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    max-height: calc(100vh - var(--header-offset, 88px) - 360px);
+    min-height: 120px;
+    object-fit: contain;
+}
+.narrative-views .matrix-heading { gap: 6px 8px; margin-bottom: 4px; }
+.narrative-views .matrix-heading h3 { margin: 0 6px 0 0; }
+.narrative-views .matrix-heading select { margin: 0; max-width: 150px; }
+.narrative-views .stats-table-wrapper:has(table tr:nth-child(6)),
+.narrative-views .model-stats-table-wrapper:has(table tr:nth-child(6)) { border-color: var(--app-border); border-width: 1px; }
+.narrative-views .download-buttons { display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.narrative-views .download-buttons a { display: inline-block; }
+.narrative-views .download-buttons .export-button { margin: 0; }
+
+/* The descriptive statistics table sent column names cut to ten characters, so
+   bill_length_mm read as bill_lengt. The name is whole now, and the first column
+   takes the width it needs while the numeric columns stay on one line. */
+.stats-table td:first-child,
+.stats-table th:first-child,
+.model-stats-table td:first-child,
+.model-stats-table th:first-child {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    min-width: 12ch;
+    max-width: 28ch;
+    text-align: left;
+}
+.stats-table td:not(:first-child),
+.model-stats-table td:not(:first-child) {
+    white-space: nowrap;
+}
+
+/* The welcome screen sits inside the view column but is not a working view;
+   its two buttons keep their own size. */
+.welcome .welcomebutton,
+.welcome #startModelingButton,
+.welcome #tryExampleButton {
+    height: auto;
+    line-height: 1.3;
+    padding: 12px 22px;
+    font-size: 1.05rem;
+    font-weight: 600;
+}
+
+/* .hidden is a bare class and .narrative-panel sets display: flex further down the
+   file, so the panel won the tie on source order and stayed on screen. */
+.narrative-panel.hidden {
+    display: none;
+}
+
+/* The way on sits at the end of the work, not in a band above it. */
+.preprocess-actions,
+.results-forward {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: var(--app-gap);
+}
+.corr-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+/* Replace the file, from the panel that names it. */
+.narrative-replace {
+    margin-left: 8px;
+    padding: 0;
+    font-size: 0.8em;
+    font-weight: 600;
+    color: var(--app-accent);
+    background: none;
+    border: 0;
+    text-decoration: underline;
+    cursor: pointer;
+}
+.narrative-replace:hover {
+    background: none;
+    color: var(--app-accent-deep);
+}
+
+/* --- Model Preprocessing as one column ------------------------------------ */
+.model-preprocess-layout.is-single {
+    display: block;
+    max-width: 720px;
+}
+.model-preprocess-layout.is-single .preprocess-column {
+    width: 100%;
+}
+.preprocess-findings {
+    margin: 12px 0;
+    padding: 12px var(--app-pad);
+    background-color: var(--app-sunken);
+    border-left: 3px solid var(--app-accent);
+    border-radius: var(--app-radius-sm);
+}
+.preprocess-finding {
+    margin: 0 0 6px;
+    color: var(--app-ink);
+}
+.preprocess-finding:last-child {
+    margin-bottom: 0;
+}
+.preprocess-change {
+    padding: 0;
+    font-size: 0.85em;
+    font-weight: 600;
+    color: var(--app-accent);
+    background: none;
+    border: 0;
+    text-decoration: underline;
+    cursor: pointer;
+}
+.preprocess-change:hover {
+    background: none;
+    color: var(--app-accent-deep);
+}
+.preprocess-controls:empty {
+    display: none;
+}
+.preprocess-more {
+    margin: 12px 0;
+    padding: 10px var(--app-pad);
+    background-color: var(--app-panel);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius);
+}
+.preprocess-more > .doc-summary h3 {
+    font-size: 0.98em;
+}
+.preprocess-more-body {
+    padding-top: 8px;
+}
+
+/* Units and significant figures are one short row, not a toggle and a block. */
+.model-run-row {
+    display: flex;
+    gap: var(--app-gap);
+    flex-wrap: wrap;
+    align-items: flex-end;
+    margin: 12px 0;
+}
+/* .scaling-container is itself a flex row of label and input, so the two inputs sat
+   at different heights. Stacking each label over its input lines them up. */
+.model-run-row .scaling-container {
+    flex: 1 1 130px;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+.model-run-row .scaling-container input {
+    width: 100%;
+}
+
+
+/* =====================================================================
+   Review pass of 2026-09-27. Appended last so it wins on source order.
+   ===================================================================== */
+
+/* Welcome: the two buttons and the logos stand on the page, with no card
+   around them. The example note belongs to Try an Example alone, so it is
+   set under that button and no wider than it. */
+.welcomesection:not(.disclaimer) {
+    background: none;
+    border: 0;
+    box-shadow: none;
+}
+.welcome-actions {
+    align-items: flex-start;
+    gap: 16px;
+}
+.welcome-action {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    max-width: 280px;
+}
+.welcome-action .welcome-example-note {
+    max-width: none;
+    margin: 8px 2px 0;
+    text-align: left;
+    font-size: 0.82rem;
+    line-height: 1.4;
+}
+.welcomesection.logos {
+    gap: 48px;
+    margin-top: 28px;
+}
+.welcomesection.logos img { max-height: none; max-width: 340px; }
+.welcomesection.logos img.ORISE { height: 104px; }
+.welcomesection.logos img.doe { height: 112px; }
+.welcomesection.logos img.bottomlogo { height: 92px; }
+/* The welcome block sits higher: less air between the banner and the title. */
+.welcome { padding-top: 12px; }
+.welcome .welcomesection:first-child { padding-top: 0; }
+
+/* Rail: one muted green ground the full height of the left column, so the
+   column reads as the place the run is kept rather than a stack of cards to
+   work through. The panels sit on the ground without borders or shadows; the
+   active entry is marked by weight and a bar, and the Continue button is the
+   one strong element. */
+:root {
+    --app-rail-bg: #e7ede8;
+    --app-rail-rule: #d3dcd5;
+    --app-rail-ink: #3a4a40;
+}
+.narrative-page:not(.is-single) {
+    position: relative;
+    min-height: calc(100vh - var(--header-offset, 88px));
+    padding-left: 0;
+    column-gap: 24px;
+}
+.narrative-page:not(.is-single)::before {
+    content: "";
+    position: absolute;
+    top: -12px;
+    bottom: -40px;
+    left: -12px;
+    width: 312px;
+    background: var(--app-rail-bg);
+    border-right: 1px solid var(--app-rail-rule);
+    z-index: 0;
+}
+.narrative-page:not(.is-single) > .narrative-rail {
+    position: sticky;
+    z-index: 1;
+    padding: 10px 12px 12px 12px;
+    gap: 18px;
+}
+.narrative-nav,
+.narrative-panel,
+.narrative-panel-head,
+.narrative-search {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    border-radius: 0;
+}
+.narrative-nav {
+    padding: 0;
+}
+.narrative-nav .tab-button {
+    padding: 6px 10px 6px 12px;
+    font-size: 0.88em;
+    font-weight: 500;
+    color: var(--app-rail-ink);
+    border-left: 3px solid transparent;
+    border-radius: 0;
+}
+.narrative-nav .tab-button:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.55);
+}
+.narrative-nav .tab-button.active {
+    color: var(--app-accent-deep);
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.7);
+    border-left-color: var(--app-accent);
+    border-top-color: transparent;
+    border-right-color: transparent;
+    border-bottom-color: transparent;
+}
+.narrative-nav .tab-button:disabled,
+.narrative-nav .tab-button.is-gated {
+    opacity: 0.5;
+}
+.narrative-nav .narrative-next {
+    margin-top: 12px;
+    border-radius: var(--app-radius-sm);
+}
+.narrative-nav-aside {
+    border-top-color: var(--app-rail-rule);
+}
+.narrative-panel-head {
+    padding: 0 12px 4px;
+    border-bottom: 1px solid var(--app-rail-rule);
+}
+.narrative-panel-head h3 {
+    font-size: 0.78em;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--app-rail-ink);
+}
+.narrative-count {
+    background: transparent;
+    border-color: var(--app-rail-rule);
+    color: var(--app-rail-ink);
+}
+.narrative-panel-body {
+    padding: 8px 4px;
+}
+.narrative-item-data strong { color: var(--app-ink); }
+.narrative-item-data p { color: var(--app-rail-ink); }
+.narrative-tile {
+    background: var(--app-accent-deep);
+}
+.narrative-search input {
+    background: rgba(255, 255, 255, 0.75);
+    border-color: var(--app-rail-rule);
+}
+.narrative-app:hover {
+    background: rgba(255, 255, 255, 0.6);
+    border-color: transparent;
+}
+.narrative-app.is-selected {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: var(--app-accent);
+}
+.narrative-group { color: var(--app-rail-ink); }
+
+/* The choices the run will use, listed in the Data panel by page. Each line
+   says the setting and its current value; "change" opens the page and the
+   control. */
+.narrative-choices {
+    margin: 10px 0 0;
+    padding: 8px 0 0;
+    border-top: 1px solid var(--app-rail-rule);
+    list-style: none;
+}
+.narrative-choices li {
+    margin: 0;
+    padding: 3px 0;
+    font-size: 0.8em;
+    line-height: 1.35;
+    color: var(--app-rail-ink);
+}
+.narrative-choices li strong {
+    font-weight: 600;
+    color: var(--app-ink);
+}
+.narrative-choices .narrative-choice-page {
+    margin-top: 6px;
+    font-size: 0.72em;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--app-muted);
+}
+.narrative-choices button {
+    margin-left: 4px;
+    padding: 0;
+    font: inherit;
+    font-size: 0.95em;
+    color: var(--app-accent-deep);
+    background: none;
+    border: 0;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* Model preprocessing: the two setting cards live inside More settings, so
+   nothing stands below the disclosure looking like its content. The orphaned
+   Transformer heading in the first card hides once its controls have moved. */
+.preprocess-more-body > .preprocess-card {
+    margin-top: 12px;
+    box-shadow: none;
+}
+.preprocess-card > h3.preprocess-section-title.is-orphan {
+    display: none;
+}
+
+/* Hover explanations on the classic page, the guided page's mechanism. The
+   words of a label take a dotted underline; the explanation opens on hover and
+   on keyboard focus of the control, and closes on Escape. */
+.tipword {
+    text-decoration: underline dotted 1px;
+    text-underline-offset: 3px;
+    cursor: help;
+}
+.helpwrap {
+    position: relative;
+    display: inline-block;
+    width: 0;
+    height: 0;
+    vertical-align: top;
+}
+.helpwrap .tip {
+    display: none;
+    position: absolute;
+    left: 0;
+    top: 1.3rem;
+    z-index: 30;
+    pointer-events: auto;
+    width: 22rem;
+    max-width: 60vw;
+    padding: 0.5rem 0.65rem;
+    background: var(--app-panel);
+    border: 1px solid var(--app-accent);
+    border-radius: var(--app-radius-sm);
+    box-shadow: 0 2px 6px rgba(7, 34, 20, 0.15);
+    font-size: 0.85rem;
+    line-height: 1.35;
+    font-weight: normal;
+    color: var(--app-ink);
+    text-align: left;
+    white-space: normal;
+}
+.helpwrap.open .tip { display: block; }
+.helpwrap.dismissed .tip { display: none; }
+
+/* Documentation takes the full page; the rail and its ground are not drawn. */
+.narrative-page.is-doc {
+    grid-template-columns: minmax(0, 1fr);
+    padding-left: 12px;
+}
+.narrative-page.is-doc::before { display: none; }
+.narrative-page.is-doc > .narrative-rail { display: none; }
+
+/* The run strip is progress: drawn from the moment a run starts, not before. */
+.narrative-flow { display: none; }
+.narrative-flow.is-live { display: block; }
+
+/* Hyperparameter forms (Simple and Advanced). Each parameter is one row: the
+   label on its own line, the control under it at one width, so a long form
+   reads as a list rather than as labels and boxes wrapping into each other.
+   Several inputs in a row (hidden layer sizes) stay side by side. The <div><br>
+   spacers the markup carries are not drawn. */
+[id$="Fields"] > label,
+[id^="nonreq"][id$="Params"] > label,
+[id^="advancedNonreq"][id$="Params"] > label {
+    display: block;
+    margin: 12px 0 4px;
+    font-size: 0.92em;
+    font-weight: 500;
+    color: var(--app-soft);
+}
+[id$="Fields"] > label:first-child,
+[id^="nonreq"][id$="Params"] > label:first-child {
+    margin-top: 4px;
+}
+[id$="Fields"] > input:not([type=checkbox]):not([type=radio]),
+[id$="Fields"] > select,
+[id^="nonreq"][id$="Params"] > input:not([type=checkbox]):not([type=radio]),
+[id^="nonreq"][id$="Params"] > select,
+[id^="advancedNonreq"][id$="Params"] > input:not([type=checkbox]):not([type=radio]),
+[id^="advancedNonreq"][id$="Params"] > select {
+    display: inline-block;
+    width: 200px;
+    max-width: 100%;
+    margin: 0 8px 0 0;
+    vertical-align: middle;
+}
+[id$="Fields"] > br,
+[id^="nonreq"][id$="Params"] > br {
+    display: none;
+}
+[id$="Fields"] > div:has(> br:only-child),
+[id^="nonreq"][id$="Params"] > div:has(> br:only-child) {
+    display: none;
+}
+[id$="Fields"] .toggle-container {
+    margin: 16px 0 4px;
+}
+
+/* Focus rings drawn inside the control, so a panel that clips its overflow cannot
+   cut them off (the Evaluate button sat at a panel edge). Two rings: a white gap
+   and the deep green, visible on filled and outlined buttons alike. */
+.narrative-views button:focus-visible,
+.narrative-views .welcomebutton:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px #ffffff, inset 0 0 0 4px var(--app-accent-deep);
+}
+.narrative-views input:focus-visible,
+.narrative-views select:focus-visible,
+.narrative-views textarea:focus-visible {
+    outline: 2px solid var(--app-accent);
+    outline-offset: 0;
+}
+
+/* Exploration results: a heading with a rule, not a filled band. */
+.exploration-results .results-header {
+    background: none;
+    border: 0;
+    border-bottom: 1px solid var(--app-hairline);
+    border-radius: 0;
+    padding: 0 0 8px;
+    margin-bottom: 12px;
+}
+.exploration-results .results-header h2 {
+    margin: 0;
+    font-size: 1.05em;
+}
+.exploration-results .results-header p {
+    margin: 4px 0 0;
+    color: var(--app-muted);
+    font-size: 0.9em;
+}
+
+/* Form rows: one label column and one control column, so the controls in a card
+   share a left edge. Applies to the exploration, preprocessing and inference
+   cards; the hyperparameter forms keep their stacked rows. */
+.exploration-card .selectcolumns,
+.exploration-card .scaling-container,
+.preprocess-card .scaling-container:not(.cleaning-scope-checkboxes),
+.preprocess-setting .scaling-container {
+    display: grid;
+    grid-template-columns: minmax(160px, 38%) minmax(0, 1fr);
+    align-items: center;
+    column-gap: 12px;
+    row-gap: 6px;
+    margin: 8px 0;
+}
+.exploration-card .selectcolumns > label,
+.exploration-card .scaling-container > label,
+.preprocess-card .scaling-container > label {
+    margin: 0;
+}
+.exploration-card .scaling-container > select,
+.exploration-card .scaling-container > input,
+.exploration-card .selectcolumns > input,
+.preprocess-card .scaling-container > select,
+.preprocess-card .scaling-container > input {
+    width: 100%;
+    max-width: 320px;
+    box-sizing: border-box;
+}
+
+/* Buttons in a row share one height and type size; the primary one is filled,
+   the others outlined. */
+.narrative-views .button-group,
+.exploration-card .button-row,
+.exploration-card form > .button-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+.narrative-views .button-group > button,
+.narrative-views .button-group > a > button,
+.exploration-card button,
+.preprocess-card button:not(.preprocess-change),
+.narrative-views .secondary-button,
+.narrative-views .button-secondary,
+.narrative-views .export-button {
+    min-height: 38px;
+    padding: 8px 16px;
+    font-size: 0.95rem;
+    line-height: 1.2;
+    border-radius: var(--app-radius-sm);
+}
+
+/* Inference results: room between the blocks, and the spread figure at the
+   width of its column. */
+.inference-results-content > div { min-width: 0; }
+.inference-model-graphic > h3,
+.inference-summary-section > h3 { margin-top: 0; }
+.inference-model-graphic .model-stats-table-wrapper,
+.inference-model-graphic h3 + p,
+.inference-model-graphic > h3:not(:first-child) { margin-top: 20px; }
+.inference-model-graphic-img { margin: 4px 0 8px; }
+
+/* A mouse click leaves :focus on a button; the ring is for keyboard focus only. */
+.narrative-views button:focus:not(:focus-visible) {
+    outline: none;
+    box-shadow: none;
+}
+/* The exploration action row no longer clips (it scrolled sideways), and the
+   download buttons join the same row as Evaluate. */
+.narrative-views .corr-actions { overflow: visible; }
+.narrative-views .corr-downloads { display: contents; }
+.narrative-views .corr-actions button {
+    padding: 8px 16px;
+    font-size: 0.95rem;
+}
+/* The hover explanation anchor is taken out of grid flow. */
+.helpwrap { position: absolute; }
+.exploration-card .scaling-container,
+.exploration-card .selectcolumns,
+.preprocess-card .scaling-container { position: relative; }
+
+/* Inference upload: the example note belongs to its button, set under it and
+   no wider than it, aligned with the controls above. */
+.predict-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-start;
+}
+.predict-example {
+    display: flex;
+    flex-direction: column;
+    max-width: 300px;
+}
+.predict-example .field-note {
+    margin: 6px 2px 0;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    text-align: left;
+}
+
+/* Units and decimal places stay inside their card. */
+.model-run-row { min-width: 0; }
+.model-run-row .scaling-container { min-width: 0; max-width: 100%; }
+.model-run-row .scaling-container input { max-width: 100%; box-sizing: border-box; }
+
+/* The check block on the inference page. */
+.inference-check { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--app-hairline); }
+.inference-check h4 { margin: 0 0 4px; font-size: 0.98em; color: var(--app-heading); }
+.inference-check-table { border-collapse: collapse; margin-top: 6px; font-size: 0.9em; }
+.inference-check-table th, .inference-check-table td { padding: 3px 10px 3px 0; text-align: left; border-bottom: 1px solid var(--app-hairline); }
+.inference-check-table td.num { text-align: right; padding-left: 10px; }
+.inference-check-table td.diag { font-weight: 600; }
+.inference-check-table.confusion th { font-weight: 600; padding-right: 10px; }
+
+/* The banner: the documentation masthead's evergreen and contour map, on every
+   page. A scrim keeps the wordmark and the button legible over the lines. */
+:root { --doc-evergreen: #122e24; }
+.header {
+    background-color: var(--doc-evergreen);
+    background-image: url("doc_banner.jpg");
+    background-position: center 45%;
+    background-size: cover;
+    box-shadow: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+.header::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(10, 26, 20, 0.88) 0%, rgba(10, 26, 20, 0.62) 45%, rgba(10, 26, 20, 0.35) 100%);
+    pointer-events: none;
+}
+.header > * { position: relative; }
+.header .tab-button,
+.header .documentation-button {
+    opacity: 1;
+    color: #f6f3ee;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+}
+.header .tab-button:hover { background: rgba(255, 255, 255, 0.18); }
+.header .tab-button.active { background: rgba(255, 255, 255, 0.22); border-color: #f6f3ee; }
+
+/* Rail: the same evergreen for the active entry and the Continue button; the
+   other entries stay muted. */
+.narrative-nav .tab-button.active {
+    color: var(--doc-evergreen);
+    border-left-color: var(--doc-evergreen);
+}
+.narrative-nav .narrative-next,
+.narrative-nav .narrative-next:hover:not(:disabled) {
+    background: var(--doc-evergreen);
+    border-color: var(--doc-evergreen);
+    color: #f6f3ee;
+}
+.narrative-tile { background: var(--doc-evergreen); }
+
+/* Exploration results: the matrix type and the pairplot axes share their
+   heading's line. */
+.matrix-heading { flex-wrap: nowrap; gap: 8px; }
+.matrix-heading h3 { flex: 0 0 auto; margin: 0 4px 0 0; }
+.matrix-heading label { flex: 0 0 auto; margin: 0; }
+.matrix-heading select { flex: 1 1 90px; min-width: 0; max-width: 200px; }
+
+/* The run strip is gone; progress is read from the result area. The element
+   stays for the tests that read the run state from it. */
+.narrative-flow, .narrative-flow.is-live { display: none; }
+
+/* Model preprocessing: a sentence per setting, its controls in a panel under it. */
+.preprocess-setting-lines { margin-top: 12px; }
+.preprocess-setting-line { margin: 0 0 6px; }
+.preprocess-setting-line .preprocess-finding { margin: 0; padding: 8px 12px; }
+.preprocess-panel {
+    margin: 4px 0 10px;
+    padding: 10px 14px;
+    background: var(--app-panel);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius);
+}
+.preprocess-panel.hidden { display: none; }
+/* The cleaning and transform panel draws only while one of its blocks is open. */
+#preprocessControls:not(:has(> :not(.hidden))) { display: none; }
+#preprocessControls > h3 { margin: 4px 0 6px; font-size: 0.95em; }
+.preprocess-more { display: none; }
+
+/* The setting sentences share the findings block's band. */
+.preprocess-setting-lines {
+    margin-top: 10px;
+    padding: 6px 0;
+    background: var(--app-sunken);
+    border-left: 3px solid var(--app-accent);
+    border-radius: 0 var(--app-radius) var(--app-radius) 0;
+}
+.preprocess-setting-line .preprocess-panel { margin: 4px 12px 10px; }
+/* Rail buttons: no ring after a mouse click, inset ring for keyboard focus. */
+.narrative-rail button:focus:not(:focus-visible) { outline: none; box-shadow: none; }
+.narrative-rail button:focus-visible { outline: none; box-shadow: inset 0 0 0 2px #ffffff, inset 0 0 0 4px var(--app-accent-deep); }
+
+/* A label and its select stay together on one line; the pairs wrap as units. */
+.matrix-heading { flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+.matrix-heading h3 { flex: 0 0 auto; margin: 0; }
+.matrix-control { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.matrix-control select { flex: 0 1 auto; min-width: 110px; max-width: 180px; }
+.exploration-card .selectcolumns > input { max-width: none; }
+
+/* Modeling: the form column takes a larger share, so the Advanced form is not a
+   narrow strip beside an empty results panel; results still get the wider side. */
+.model-layout { grid-template-columns: minmax(360px, 5fr) minmax(0, 7fr); }
+
+/* One heading style inside every preprocessing panel; no rules above sections. */
+.preprocess-panel h3,
+.preprocess-panel .preprocess-section-title,
+.preprocess-panel .field-label-block,
+#preprocessControls > h3 {
+    margin: 10px 0 6px;
+    padding: 0;
+    border: 0;
+    font-size: 0.95em;
+    font-weight: 600;
+    color: var(--app-heading);
+}
+.preprocess-panel > :first-child,
+.preprocess-panel h3:first-child { margin-top: 0; }
+.preprocess-panel .preprocess-setting { border-top: 0; padding-top: 0; margin-top: 8px; }
+.preprocess-panel .preprocess-setting:first-child { margin-top: 0; }
+
+/* The banner logo, drawn in black, reads white on the evergreen. */
+.header img.logo { filter: brightness(0) invert(1); }
+
+/* Pairplot: heading, X and Y on one line; the selects shrink to fit. */
+.pairplot-graphic .matrix-heading { flex-wrap: nowrap; }
+.pairplot-graphic .matrix-control { flex: 1 1 0; min-width: 0; }
+.pairplot-graphic .matrix-control select { flex: 1 1 0; min-width: 0; max-width: 220px; width: 100%; }
+.exploration-graphic .matrix-heading select { min-width: 0; }
+
+/* The two exploration graphics sit side by side only when each gets 420px;
+   below that they stack, so the pairplot's selects keep their labels. */
+/* The two graphics stay side by side; each takes half the row, and the images
+   scale to the column. The X and Y selects are a fixed width and clip a long
+   column name rather than pushing the row apart. */
+.narrative-views .exploration-graphic-row { display: flex; flex-wrap: nowrap; gap: 24px; }
+.narrative-views .exploration-graphic-row > .exploration-graphic { flex: 1 1 0; min-width: 0; }
+.narrative-views .exploration-graphic img { max-width: 100%; height: auto; }
+.pairplot-graphic .matrix-control { flex: 0 1 auto; min-width: 0; }
+.pairplot-graphic .matrix-control select { flex: 0 1 auto; width: 130px; min-width: 70px; max-width: 130px; text-overflow: ellipsis; }
+.exploration-graphic:not(.pairplot-graphic) .matrix-control select { width: 120px; min-width: 70px; max-width: 120px; }
+
+/* Exports. Anything that writes a file (PDF, XLSX, CSV, the model bundle) is
+   outlined in the documentation's plum, so a download reads apart from a step
+   in the run. The wording and the arrows are unchanged. */
+:root { --app-export: #6a4a74; --app-export-wash: #f3eef5; }
+.narrative-views .export-button,
+.narrative-views .corr-downloads button,
+.narrative-views .download-buttons button,
+.narrative-views .predictionresultButton,
+.narrative-views .downloadperformanceButton,
+.narrative-views a[href*="/download/"] > button {
+    background: var(--app-panel);
+    color: var(--app-export);
+    border: 1.5px solid var(--app-export);
+    font-weight: 600;
+}
+.narrative-views .export-button:hover,
+.narrative-views .corr-downloads button:hover,
+.narrative-views .download-buttons button:hover,
+.narrative-views a[href*="/download/"] > button:hover {
+    background: var(--app-export-wash);
+    color: var(--app-export);
+}
+.narrative-views .run-note a[href*="bundle"],
+.narrative-views .run-note a[href*="model_card"],
+.narrative-views .run-note a[href*="model-card"] { color: var(--app-export); }
+
+/* The forward step. The same white ground the active rail entry has, the
+   evergreen as a full border and as the text, the arrow kept. */
+.narrative-nav .narrative-next,
+.narrative-nav .narrative-next:hover:not(:disabled),
+.narrative-views .success-button {
+    background: rgba(255, 255, 255, 0.85);
+    color: var(--doc-evergreen);
+    border: 1.5px solid var(--doc-evergreen);
+    font-weight: 700;
+}
+.narrative-nav .narrative-next:hover:not(:disabled),
+.narrative-views .success-button:hover {
+    background: #ffffff;
+}
+.narrative-nav .narrative-next::after,
+.narrative-views .success-button::after {
+    border-left-color: var(--doc-evergreen);
+    color: var(--doc-evergreen);
+}
+.narrative-nav .narrative-next:disabled {
+    color: var(--app-muted);
+    border-color: var(--app-rail-rule);
+    background: transparent;
+}
+
+/* Model preprocessing findings: each sentence's panel sits under it inside the band,
+   like the setting sentences; the parking block never draws. */
+.preprocess-findings .preprocess-finding { margin: 0; padding: 8px 0; }
+.preprocess-findings .preprocess-panel { margin: 4px 0 10px; }
+#preprocessControls { display: none; }
+/* The stratify column row lines up with the question above it. */
+.preprocess-panel .stratify-options { margin-left: 0; }
+
+/* Every card title carries the rule under it, as Explore does. The modeling
+   mode card gives up its inline heading so its title reads like the others. */
+.narrative-views .preprocess-card > h3:first-child,
+.narrative-views .mode-select > h2 {
+    display: block;
+    font-size: 0.98em;
+    margin: 0 0 8px;
+    padding: 0 0 6px;
+    border-bottom: 1px solid var(--app-hairline);
+}
+.narrative-views .mode-select-options { display: flex; }
+
+/* Correlation matrix and pairplot: the title on its own line, the controls on
+   the line below. The pairplot's X and Y share that line and clip long names. */
+.matrix-heading,
+.pairplot-graphic .matrix-heading { flex-wrap: wrap; }
+.matrix-heading h3 { flex: 0 0 100%; }
+.pairplot-graphic .matrix-control { flex: 1 1 0; min-width: 0; }
+.pairplot-graphic .matrix-control select { flex: 1 1 auto; width: auto; min-width: 0; max-width: 200px; text-overflow: ellipsis; }
